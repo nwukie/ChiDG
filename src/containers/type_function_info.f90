@@ -22,12 +22,4 @@ module type_function_info
     end type function_info_t
     !*********************************************************************
 
-
-
-
-
-
-
-
-
 end module type_function_info

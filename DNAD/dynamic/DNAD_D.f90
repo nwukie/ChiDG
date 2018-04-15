@@ -1662,7 +1662,7 @@ CONTAINS
          integer        :: i,j,k
 
          do j = 1,size(u,1)
-                allocate(res(j)%xp_ad_(size(u(1,1)%xp_ad_)))
+            allocate(res(j)%xp_ad_(size(u(1,1)%xp_ad_)))
          end do
 
          res%x_ad_ = matmul(u%x_ad_,v%x_ad_)
@@ -1676,7 +1676,7 @@ CONTAINS
 
             ! Assemble derivative components for V
             do j = 1,size(v)
-                    xp_ad_v(j) = v(j)%xp_ad_(i)
+                xp_ad_v(j) = v(j)%xp_ad_(i)
             end do
 
 

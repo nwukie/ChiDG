@@ -642,7 +642,7 @@ contains
                             !   - For Chimera faces ncompute is potentially > 1
                             !
                             do icompute = 1,ncompute
-                                worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff)
+                                worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff,worker%itime)
                                 worker%function_info%idepend = icompute
 
 
@@ -786,7 +786,7 @@ contains
                             !   - For Chimera faces ncompute is potentially > 1
                             !
                             do icompute = 1,ncompute
-                                worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff)
+                                worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff,worker%itime)
                                 worker%function_info%idepend = icompute
 
                                 call self%boundary_diffusive_operator(ifcn)%op%compute(worker,prop)
@@ -884,7 +884,7 @@ contains
                     worker%function_info%ifcn    = ifcn
                     worker%function_info%idiff   = idiff
                     worker%function_info%idepend = icompute
-                    worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,icompute,idiff)
+                    worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,icompute,idiff,worker%itime)
 
                     call self%volume_advective_operator(ifcn)%op%compute(worker,prop)
 
@@ -1002,7 +1002,7 @@ contains
                             worker%function_info%ifcn    = ifcn
                             worker%function_info%idiff   = idiff
                             worker%function_info%idepend = icompute
-                            worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,icompute,idiff)
+                            worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,icompute,idiff,worker%itime)
         
                             call self%volume_diffusive_operator(ifcn)%op%compute(worker,prop)
         

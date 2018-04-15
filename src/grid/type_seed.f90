@@ -30,6 +30,7 @@ module type_seed
         integer(ik) :: neqns
         integer(ik) :: nterms_s
         integer(ik) :: iproc
+        integer(ik) :: itime
 
         ! If seed is on another processor, these are its location in the recv 
         ! container on the current processor. Otherwise, not used.
@@ -60,7 +61,7 @@ contains
     !!  @date   12/6/2016
     !!
     !-------------------------------------------------------------------------------------
-    subroutine init(self,idomain_g,idomain_l,ielement_g,ielement_l,neqns,nterms_s,iproc,recv_comm,recv_domain,recv_element)
+    subroutine init(self,idomain_g,idomain_l,ielement_g,ielement_l,neqns,nterms_s,iproc,itime,recv_comm,recv_domain,recv_element)
         class(seed_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: idomain_g
         integer(ik),    intent(in)      :: idomain_l
@@ -69,6 +70,7 @@ contains
         integer(ik),    intent(in)      :: neqns
         integer(ik),    intent(in)      :: nterms_s
         integer(ik),    intent(in)      :: iproc
+        integer(ik),    intent(in)      :: itime
         integer(ik),    intent(in)      :: recv_comm
         integer(ik),    intent(in)      :: recv_domain
         integer(ik),    intent(in)      :: recv_element
@@ -81,6 +83,7 @@ contains
         self%neqns        = neqns
         self%nterms_s     = nterms_s
         self%iproc        = iproc
+        self%itime        = itime
 
         self%recv_comm    = recv_comm
         self%recv_domain  = recv_domain
@@ -110,6 +113,7 @@ contains
         self%neqns        = 0
         self%nterms_s     = 0
         self%iproc        = NO_PROC
+        self%itime        = 0
 
         self%recv_comm    = 0
         self%recv_domain  = 0

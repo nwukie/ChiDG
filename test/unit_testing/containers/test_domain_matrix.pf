@@ -125,7 +125,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
     itime      = 1
     face_location = face_info(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
     call seed%init(     idomain_g=1,idomain_l=1,ielement_g=13,ielement_l=13, &
-                        neqns=neqns,nterms_s=nterms_s,iproc=0,recv_comm=0,recv_domain=0,recv_element=0)
+                        neqns=neqns,nterms_s=nterms_s,iproc=0,itime=itime,recv_comm=0,recv_domain=0,recv_element=0)
     call bmat%store(integral,face_location,seed,ivar,itime)
 
 
@@ -270,7 +270,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
     !
     face_location = face_info(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
     call seed%init(idomain_g=1,idomain_l=1,ielement_g=13,ielement_l=13, &
-                   neqns=neqns,nterms_s=nterms_s,iproc=0,recv_comm=0,recv_domain=0,recv_element=0)
+                   neqns=neqns,nterms_s=nterms_s,iproc=0,itime=itime,recv_comm=0,recv_domain=0,recv_element=0)
 
     ielem = 14
     itime = 1
@@ -423,7 +423,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     !
     face_location = face_info(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
     call seed%init(     idomain_g=1,idomain_l=1,ielement_g=13,ielement_l=13, &
-                        neqns=neqns,nterms_s=nterms_s,iproc=0,recv_comm=0,recv_domain=0,recv_element=0)
+                        neqns=neqns,nterms_s=nterms_s,iproc=0,itime=itime,recv_comm=0,recv_domain=0,recv_element=0)
     ivar  = 1
     itime = 1
     call bmat%store(integral,face_location,seed,ivar,itime)

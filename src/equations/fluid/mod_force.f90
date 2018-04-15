@@ -88,7 +88,7 @@ contains
         !
         ! Initialize Chidg Worker references
         !
-        call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, cache)
+        call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, data%time_manager, cache)
 
 
         !

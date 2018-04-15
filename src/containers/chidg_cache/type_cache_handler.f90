@@ -486,7 +486,7 @@ contains
         !
         idepend = 1
         eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
-        worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+        worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff,worker%itime)
         worker%function_info%idepend = idepend
         do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
             field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
@@ -619,7 +619,7 @@ contains
         !
         ! Compute Values
         !
-        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
         worker%function_info%idepend = idepend
         worker%function_info%idiff   = idiff
         eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
@@ -753,7 +753,7 @@ contains
                 field = worker%prop(eqn_ID)%get_primary_field_name(ifield)
                 do idepend = 1,ndepend
 
-                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                     worker%function_info%idepend = idepend
 
 
@@ -1010,7 +1010,7 @@ contains
             iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
             ! Set seed
-            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff,worker%itime)
             worker%function_info%idepend = idepend
             worker%function_info%idiff   = idiff
 
@@ -1095,7 +1095,7 @@ contains
             iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
             ! Set seed
-            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
             worker%function_info%idepend = idepend
             worker%function_info%idiff   = idiff
 
@@ -1186,7 +1186,7 @@ contains
                 iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
                 ! Set seed
-                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                 worker%function_info%idepend = idepend
                 worker%function_info%idiff   = idiff
 
@@ -1280,7 +1280,7 @@ contains
                 iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
                 ! Set seed
-                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                 worker%function_info%idepend = idepend
                 worker%function_info%idiff   = idiff
 
@@ -1419,7 +1419,7 @@ contains
                         end if
 
                         do idepend = 1,ndepend
-                            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+                            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff,worker%itime)
                             worker%function_info%idepend = idepend
 
                             call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
@@ -1499,7 +1499,7 @@ contains
                 end if
 
 
-                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                 worker%function_info%idepend = idepend
                 worker%function_info%idiff   = idiff
 
@@ -1547,7 +1547,7 @@ contains
                         ! Loop through external dependencies and compute model
                         !
                         do idepend = 1,ndepend
-                            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                             worker%function_info%idepend = idepend
                             worker%function_info%idiff   = idiff
 
@@ -1645,7 +1645,7 @@ contains
                 if (selected_model) then
                     do idepend = 1,ndepend
 
-                        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                         worker%function_info%idepend = idepend
 
                         call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
@@ -1679,7 +1679,7 @@ contains
                     if (selected_model) then
                         do idepend = 1,ndepend
 
-                            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                             worker%function_info%idepend = idepend
 
                             call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
@@ -1894,7 +1894,7 @@ contains
                 do idepend = 1,ndepend
 
                     ! Get Seed
-                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                     worker%function_info%idepend = idepend
 
 
@@ -1983,7 +1983,7 @@ contains
                 do idepend = 1,ndepend
 
                     ! Get Seed
-                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                     worker%function_info%idepend = idepend
 
 
@@ -2123,7 +2123,7 @@ contains
                 do idepend = 1,ndepend
 
                     ! Get Seed
-                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                     worker%function_info%idepend = idepend
 
 
@@ -2157,7 +2157,7 @@ contains
                 do idepend = 1,ndepend
 
                     ! Get Seed
-                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                     worker%function_info%idepend = idepend
 
                     if (interior_face) then

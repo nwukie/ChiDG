@@ -180,7 +180,7 @@ contains
         !
         ! Initialize Chidg Worker references
         !
-        call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, cache)
+        call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, data%time_manager, cache)
 
 
         eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
@@ -389,7 +389,7 @@ contains
         !
         ! Initialize Chidg Worker references
         !
-        call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, cache)
+        call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, data%time_manager, cache)
 
 
 

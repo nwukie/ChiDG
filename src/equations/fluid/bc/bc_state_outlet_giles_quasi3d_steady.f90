@@ -52,7 +52,7 @@ module bc_state_outlet_giles_quasi3d_steady
         real(rk)                :: theta_ref
 
         type(element_info_t),   allocatable :: donor(:,:)
-        real(rk),               allocatable :: donor_coord(:,:,:)
+        real(rk),               allocatable :: donor_node(:,:,:)
         real(rk),               allocatable :: theta(:,:)
 
     contains
@@ -537,7 +537,7 @@ contains
 
         integer(ik)             :: nmodes, nradius, ntheta, iradius, itheta, ncoeff, imode, ierr
         real(rk)                :: shift_r, shift_i
-        real(rk),   allocatable :: physical_nodes(:,:), pitch(:)
+        real(rk),   allocatable :: pitch(:)
 
         ! Define Fourier discretization
         nmodes  = self%nfourier_space
@@ -546,11 +546,6 @@ contains
         ntheta  = ncoeff
 
         pitch  = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
-        !dtheta = pitch(1)
-        
-        ! Allocate interpolation nodes
-        allocate(physical_nodes(ntheta,3), stat=ierr)
-        if (ierr /= 0) call AllocationError
 
         ! Allocate storage in result
         allocate(density_hat_real( ncoeff,nradius), density_hat_imag( ncoeff,nradius),  &
@@ -570,16 +565,14 @@ contains
 
             ! Construct theta discretization
             do itheta = 1,ntheta
-                ! this doesn't really matter anymore, since donors and coords are passed in. But the procedure requires it.
-                physical_nodes(itheta,:) = [self%r(iradius),self%theta(iradius,itheta),ZERO] 
             end do
 
             ! Interpolate solution to physical_nodes at current radial station
-            density = worker%interpolate_field_general('Density',    physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
-            mom1    = worker%interpolate_field_general('Momentum-1', physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
-            mom2    = worker%interpolate_field_general('Momentum-2', physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
-            mom3    = worker%interpolate_field_general('Momentum-3', physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
-            energy  = worker%interpolate_field_general('Energy',     physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
+            density = worker%interpolate_field_general('Density',    donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:))
+            mom1    = worker%interpolate_field_general('Momentum-1', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:))
+            mom2    = worker%interpolate_field_general('Momentum-2', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:))
+            mom3    = worker%interpolate_field_general('Momentum-3', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:))
+            energy  = worker%interpolate_field_general('Energy',     donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:))
 
             if (worker%coordinate_system() == 'Cylindrical') then
                 mom2 = mom2/self%r(iradius)  ! convert to tangential momentum
@@ -592,11 +585,11 @@ contains
             pressure = (gam-ONE)*(energy - HALF*( mom1*mom1 + mom2*mom2 + mom3*mom3 )/density )
 
             ! Compute Fourier transform
-            call dft(density,  density_real_tmp,  density_imag_tmp )
-            call dft(vel1,     vel1_real_tmp,     vel1_imag_tmp    )
-            call dft(vel2,     vel2_real_tmp,     vel2_imag_tmp    )
-            call dft(vel3,     vel3_real_tmp,     vel3_imag_tmp    )
-            call dft(pressure, pressure_real_tmp, pressure_imag_tmp)
+            call dft(density,  ZERO*density,  density_real_tmp,  density_imag_tmp )
+            call dft(vel1,     ZERO*vel1,     vel1_real_tmp,     vel1_imag_tmp    )
+            call dft(vel2,     ZERO*vel2,     vel2_real_tmp,     vel2_imag_tmp    )
+            call dft(vel3,     ZERO*vel3,     vel3_real_tmp,     vel3_imag_tmp    )
+            call dft(pressure, ZERO*pressure, pressure_real_tmp, pressure_imag_tmp)
 
             density_hat_real( :,iradius) = density_real_tmp
             density_hat_imag( :,iradius) = density_imag_tmp
@@ -639,11 +632,11 @@ contains
             end do
 
             ! Compute Fourier transform of characteristic variables
-            call dft(c1, c1_real_tmp, c1_imag_tmp)
-            call dft(c2, c2_real_tmp, c2_imag_tmp)
-            call dft(c3, c3_real_tmp, c3_imag_tmp)
-            call dft(c4, c4_real_tmp, c4_imag_tmp)
-            call dft(c5, c5_real_tmp, c5_imag_tmp)
+            call dft(c1, ZERO*c1, c1_real_tmp, c1_imag_tmp)
+            call dft(c2, ZERO*c2, c2_real_tmp, c2_imag_tmp)
+            call dft(c3, ZERO*c3, c3_real_tmp, c3_imag_tmp)
+            call dft(c4, ZERO*c4, c4_real_tmp, c4_imag_tmp)
+            call dft(c5, ZERO*c5, c5_real_tmp, c5_imag_tmp)
 
             !c1_hat_real(:,iradius) = c1_real_tmp
             !c2_hat_real(:,iradius) = c2_real_tmp
@@ -842,7 +835,7 @@ contains
     !!  ------------------------------
     !!  self%theta(:)
     !!  self%donor(:,:)
-    !!  self%donor_coord(:,:,:)
+    !!  self%donor_node(:,:,:)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/28/2018
@@ -904,7 +897,7 @@ contains
         try_offset = [ZERO, -pitch(1), ZERO]
 
         ! For each radial station, initialized donor for each node in theta grid
-        allocate(self%donor(nradius,ntheta), self%donor_coord(nradius,ntheta,3), stat=ierr)
+        allocate(self%donor(nradius,ntheta), self%donor_node(nradius,ntheta,3), stat=ierr)
         if (ierr /= 0) call AllocationError
         do iradius = 1,size(self%r)
             noverset = 0
@@ -918,7 +911,7 @@ contains
                                    [ZERO,ZERO,ZERO],                        &
                                    face_info_constructor(0,0,0,0,0),        &   ! we don't really have a receiver face
                                    self%donor(iradius,itheta),              &
-                                   self%donor_coord(iradius,itheta,1:3),    &
+                                   self%donor_node(iradius,itheta,1:3),    &
                                    donor_found)
 
                 ! Try LOCAL elements with try_offset if still not found 
@@ -928,7 +921,7 @@ contains
                                        try_offset,                              &
                                        face_info_constructor(0,0,0,0,0),        &   ! we don't really have a receiver face
                                        self%donor(iradius,itheta),              &
-                                       self%donor_coord(iradius,itheta,1:3),    &
+                                       self%donor_node(iradius,itheta,1:3),    &
                                        donor_found)
                     if (donor_found) then
                         noverset=noverset+1
@@ -943,7 +936,7 @@ contains
                                                 [ZERO,ZERO,ZERO],                       &
                                                 face_info_constructor(0,0,0,0,0),       &   ! we don't really have a receiver face
                                                 self%donor(iradius,itheta),             &
-                                                self%donor_coord(iradius,itheta,1:3),   &
+                                                self%donor_node(iradius,itheta,1:3),   &
                                                 donor_found)
                 end if
 
@@ -955,7 +948,7 @@ contains
                                                 try_offset,                             &
                                                 face_info_constructor(0,0,0,0,0),       &   ! we don't really have a receiver face
                                                 self%donor(iradius,itheta),             &
-                                                self%donor_coord(iradius,itheta,1:3),   &
+                                                self%donor_node(iradius,itheta,1:3),   &
                                                 donor_found)
                     if (donor_found) then
                         noverset=noverset+1
@@ -973,7 +966,7 @@ contains
 
             ! Shift arrays so that we start with the theta_min point
             self%donor(iradius,:)         = cshift(self%donor(iradius,:), -noverset, dim=1)
-            self%donor_coord(iradius,:,:) = cshift(self%donor_coord(iradius,:,:), -noverset, dim=1)
+            self%donor_node(iradius,:,:) = cshift(self%donor_node(iradius,:,:), -noverset, dim=1)
             self%theta(iradius,:)         = cshift(self%theta(iradius,:), -noverset, dim=1)
 
         end do !iradius

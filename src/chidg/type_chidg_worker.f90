@@ -44,6 +44,7 @@ module type_chidg_worker
     use type_point,             only: point_t
     use type_mesh,              only: mesh_t
     use type_solverdata,        only: solverdata_t
+    use type_time_manager,      only: time_manager_t
     use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t
     use type_function_info,     only: function_info_t
@@ -68,6 +69,7 @@ module type_chidg_worker
         type(mesh_t),           pointer :: mesh
         type(solverdata_t),     pointer :: solverdata
         type(chidg_cache_t),    pointer :: cache
+        type(time_manager_t),   pointer :: time_manager
         !type(properties_t),     pointer :: prop(:)
         type(properties_t), allocatable :: prop(:)
 
@@ -88,7 +90,6 @@ module type_chidg_worker
         procedure   :: set_function_info    ! Set function_info type
         procedure   :: set_face             ! Set iface index
         procedure   :: face_info            ! Return a face_info type
-
 
         ! Worker get/set data
         procedure   :: interpolate_field
@@ -115,8 +116,6 @@ module type_chidg_worker
         procedure, private   :: get_primary_field_value_ale_general
         procedure, private   :: get_primary_field_grad_ale_general
         ! END DEPRECATED
-
-
 
         ! Element/Face data access procedures
         procedure   :: normal
@@ -148,11 +147,6 @@ module type_chidg_worker
         procedure   :: get_det_jacobian_grid_element
         procedure   :: get_det_jacobian_grid_face
 
-
-
-
-
-
         ! Integration procedures
         procedure   :: integrate_boundary_average
         procedure   :: integrate_boundary_upwind
@@ -164,8 +158,6 @@ module type_chidg_worker
 
         ! Projection
         procedure   :: project_from_nodes
-
-
 
         ! Worker auxiliary flux processing procedures. Used internally
         procedure, private:: post_process_volume_advective_flux_ale
@@ -193,11 +185,12 @@ contains
     !!  @date   8/22/2016
     !!
     !---------------------------------------------------------------------------------
-    subroutine init(self,mesh,prop,solverdata,cache)
+    subroutine init(self,mesh,prop,solverdata,time_manager,cache)
         class(chidg_worker_t),  intent(inout)       :: self
         type(mesh_t),       intent(in), target  :: mesh
         type(properties_t),     intent(in), target  :: prop(:)
         type(solverdata_t),     intent(in), target  :: solverdata
+        type(time_manager_t),   intent(in), target  :: time_manager
         type(chidg_cache_t),    intent(in), target  :: cache
 
         character(:),   allocatable :: temp_name
@@ -211,6 +204,7 @@ contains
         self%prop       =  prop
         !self%prop       => prop
         self%solverdata => solverdata
+        self%time_manager => time_manager
         self%cache      => cache
 
     end subroutine init
@@ -699,39 +693,36 @@ contains
     !!  @param[in]  physical_nodes  Physical coordinates to be interpolated to.
     !!
     !---------------------------------------------------------------------------------------
-    function interpolate_field_general(self,field,physical_nodes,try_offset,donors,donor_coords) result(var)
+    function interpolate_field_general(self,field,physical_nodes,try_offset,donors,donor_nodes,itime) result(var)
         class(chidg_worker_t),  intent(in)              :: self
         character(*),           intent(in)              :: field
-        real(rk),               intent(in)              :: physical_nodes(:,:)
+        real(rk),               intent(in), optional    :: physical_nodes(:,:)
         real(rk),               intent(in), optional    :: try_offset(3)
         type(element_info_t),   intent(in), optional    :: donors(:)
-        real(rk),               intent(in), optional    :: donor_coords(:,:)
+        real(rk),               intent(in), optional    :: donor_nodes(:,:)
+        integer(ik),            intent(in), optional    :: itime
 
-        integer(ik)                             :: eqn_ID, ifield
+        integer(ik)                             :: eqn_ID, ifield, itime_in
         type(AD_D), allocatable, dimension(:)   :: var
 
+        itime_in = self%itime
+        if (present(itime)) itime_in = itime
 
-        !
         ! Get equation_set identifier and locate field index
-        !
         eqn_ID = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%eqn_ID
         ifield = self%prop(eqn_ID)%get_primary_field_index(trim(field))
 
-
-        !
         ! Arbitrary interpolation of primary field onto physical_nodes
-        !
-        var = interpolate_general_autodiff(self%mesh,               &
-                                           self%solverdata%q,       &
-                                           self%function_info,      &
-                                           ifield,                  &
-                                           self%itime,              &
-                                           'value',                 &
-                                           physical_nodes,          &
-                                           try_offset=try_offset,   &
-                                           donors=donors,           &
-                                           donor_coords=donor_coords)
-
+        var = interpolate_general_autodiff(self%mesh,                   &
+                                           self%solverdata%q,           &
+                                           self%function_info,          &
+                                           ifield,                      &
+                                           itime_in,                    &
+                                           'value',                     &
+                                           nodes=physical_nodes,        &
+                                           try_offset=try_offset,       &
+                                           donors=donors,               &
+                                           donor_nodes=donor_nodes)
 
     end function interpolate_field_general
     !**************************************************************************************

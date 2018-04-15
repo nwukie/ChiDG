@@ -654,10 +654,6 @@ contains
 
 
 
-
-
-
-
     !> Interpolate variable from polynomial expansion to explicit values at quadrature nodes. The automatic
     !! differentiation process really starts here, when the polynomial expansion is evaluated.
     !!
@@ -669,25 +665,18 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]      mesh        Array of mesh instances.
-    !!  @param[in]      face        Face info, such as indices for locating the face in the mesh.
-    !!  @param[in]      q           Solution vector
-    !!  @param[in]      ieqn        Index of the equation variable being interpolated
-    !!  @param[inout]   var_gq      Array of auto-diff values of the equation evaluated at gq points that is passed back
-    !!  @param[in]      source      ME/NEIGHBOR indicating which element to interpolate from
-    !!
     !-----------------------------------------------------------------------------------------------------------
-    function interpolate_general_autodiff(mesh,vector,fcn_info,ifield,itime,interpolation_type,physical_nodes,try_offset,donors,donor_coords) result(var)
+    function interpolate_general_autodiff(mesh,vector,fcn_info,ifield,itime,interpolation_type,nodes,try_offset,donors,donor_nodes) result(var)
         type(mesh_t),           intent(in)              :: mesh
         type(chidg_vector_t),   intent(in)              :: vector
         type(function_info_t),  intent(in)              :: fcn_info
         integer(ik),            intent(in)              :: ifield
         integer(ik),            intent(in)              :: itime
         character(*),           intent(in)              :: interpolation_type
-        real(rk),               intent(in)              :: physical_nodes(:,:)
+        real(rk),               intent(in), optional    :: nodes(:,:)
         real(rk),               intent(in), optional    :: try_offset(3)
         type(element_info_t),   intent(in), optional    :: donors(:)
-        real(rk),               intent(in), optional    :: donor_coords(:,:)
+        real(rk),               intent(in), optional    :: donor_nodes(:,:)
 
         type(element_info_t)    :: donor
         type(recv_t)            :: recv_info
@@ -695,31 +684,32 @@ contains
         type(AD_D), allocatable  :: qdiff(:), var(:), tmp(:)
         real(rk),   allocatable  :: interpolator(:,:)
 
-        real(rk)        :: donor_coord(3), donor_volume
+        real(rk)        :: donor_node(3), donor_volume
         integer(ik)     :: nderiv, set_deriv, iterm, ierr, nterms_s, inode, nnodes
         logical         :: differentiate_me = .false.
         logical         :: donor_found      = .false.
         logical         :: parallel_donor   = .false.
 
         
-        !
         ! 1: Check incoming node array makes sense
         ! 2: Check interpolation_type
-        !
-        if (size(physical_nodes,2) /= 3) call chidg_signal(FATAL,'interpolate_general_autodiff: size(physical_nodes,2) /= 3.')
+        if (present(nodes)) then
+            if (size(nodes,2) /= 3) call chidg_signal(FATAL,'interpolate_general_autodiff: size(nodes,2) /= 3.')
+        else if (present(donor_nodes)) then
+            if (size(donor_nodes,2) /= 3) call chidg_signal(FATAL,'interpolate_general_autodiff: size(donor_nodes,2) /= 3.')
+        end if
         if (interpolation_type /= 'value') call chidg_signal(FATAL,"interpolation_general_autodiff: currently only supports interpolation_type == 'value'.")
 
-
-        !
         ! Get number of derivatives to initialize for automatic differentiation
-        !
         nderiv = get_interpolation_nderiv(mesh,fcn_info%seed)
 
 
-        !
+        ! Get nnodes
+        if (present(nodes)) nnodes = size(nodes,1)
+        if (present(donor_nodes)) nnodes = size(donor_nodes,1)
+
+
         ! Allocate result and derivatives
-        !
-        nnodes = size(physical_nodes,1)
         allocate(var(nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -728,27 +718,23 @@ contains
         end do
 
 
-
-
-        !
         ! Find donor elements for incoming nodes
-        !
-        do inode = 1,size(physical_nodes,1)
+        do inode = 1,nnodes
 
-            if (present(donors) .and. present(donor_coords)) then
+            if (present(donors) .and. present(donor_nodes)) then
                 donor       = donors(inode)
-                donor_coord = donor_coords(inode,:)
+                donor_node = donor_nodes(inode,:)
 
             else
                 !
                 ! Try processor-LOCAL elements
                 !
                 call find_gq_donor(mesh,                                &
-                                   physical_nodes(inode,1:3),           &
+                                   nodes(inode,1:3),                    &
                                    [ZERO,ZERO,ZERO],                    &
                                    face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
                                    donor,                               &
-                                   donor_coord,                         &
+                                   donor_node,                          &
                                    donor_found,                         &
                                    donor_volume=donor_volume)
 
@@ -758,11 +744,11 @@ contains
                 !
                 if ( (.not. donor_found) .and. (present(try_offset)) ) then
                     call find_gq_donor(mesh,                                &
-                                       physical_nodes(inode,1:3),           &
+                                       nodes(inode,1:3),                    &
                                        try_offset,                          &
                                        face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
                                        donor,                               &
-                                       donor_coord,                         &
+                                       donor_node,                          &
                                        donor_found,                         &
                                        donor_volume=donor_volume)
 
@@ -774,13 +760,13 @@ contains
                 ! Try PARALLEL_ELEMENTS if donor not found amongst local elements
                 !
                 if (.not. donor_found) then
-                    call find_gq_donor_parallel(mesh,                                &
-                                                physical_nodes(inode,1:3),           &
-                                                [ZERO,ZERO,ZERO],                    &
-                                                face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
-                                                donor,                               &
-                                                donor_coord,                         &
-                                                donor_found,                         &
+                    call find_gq_donor_parallel(mesh,                               &
+                                                nodes(inode,1:3),                   &
+                                                [ZERO,ZERO,ZERO],                   &
+                                                face_info_constructor(0,0,0,0,0),   &   ! we don't really have a receiver face
+                                                donor,                              &
+                                                donor_node,                         &
+                                                donor_found,                        &
                                                 donor_volume=donor_volume)
                 end if
 
@@ -790,18 +776,15 @@ contains
                 ! try_offset is present
                 !
                 if ( (.not. donor_found) .and. (present(try_offset)) ) then
-                    call find_gq_donor_parallel(mesh,                                &
-                                                physical_nodes(inode,1:3),           &
-                                                try_offset,                          &
-                                                face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
-                                                donor,                               &
-                                                donor_coord,                         &
-                                                donor_found,                         &
+                    call find_gq_donor_parallel(mesh,                               &
+                                                nodes(inode,1:3),                   &
+                                                try_offset,                         &
+                                                face_info_constructor(0,0,0,0,0),   &   ! we don't really have a receiver face
+                                                donor,                              &
+                                                donor_node,                         &
+                                                donor_found,                        &
                                                 donor_volume=donor_volume)
                 end if 
-
-
-
 
                 ! Abort if we didn't find a donor
                 if (.not. donor_found) call chidg_signal(FATAL,"interpolate_general_autodiff: no donor element found for interpolation node.")
@@ -813,10 +796,7 @@ contains
             parallel_donor = (donor%iproc /= IRANK)
 
 
-
-            !
             ! Get nterms
-            !
             if (parallel_donor) then
                 nterms_s = mesh%parallel_element(donor%pelem_ID)%nterms_s
             else
@@ -824,25 +804,18 @@ contains
             end if
 
             
-
-
-            !
             ! Construct interpolator
-            !
             if (allocated(interpolator)) deallocate(interpolator)
             allocate(interpolator(1,nterms_s), stat=ierr)
             if (ierr /= 0) call AllocationError
 
 
             do iterm = 1,nterms_s
-                interpolator(1,iterm) = polynomial_val(3,nterms_s,iterm,donor_coord)
+                interpolator(1,iterm) = polynomial_val(3,nterms_s,iterm,donor_node)
             end do ! iterm
 
 
-
-            !
             ! Allocate solution and derivative arrays for temporary solution variable
-            !
             if ( allocated(qdiff) ) deallocate(qdiff)
             allocate(qdiff(nterms_s), stat=ierr)
             if (ierr /= 0) call AllocationError
@@ -852,12 +825,7 @@ contains
             end do
 
 
-
-
-
-            !
             ! Retrieve modal coefficients for ifield from vector
-            !
             if (parallel_donor) then
                 recv_info%comm    = mesh%parallel_element(donor%pelem_ID)%recv_comm
                 recv_info%domain  = mesh%parallel_element(donor%pelem_ID)%recv_domain
@@ -868,12 +836,11 @@ contains
             end if
 
 
-            !
             ! If the current element is being differentiated (ielem == ielem_seed)
             ! then copy the solution modes to local AD variable and seed derivatives
-            !
             differentiate_me = ( (donor%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-                                 (donor%ielement_g == fcn_info%seed%ielement_g) )
+                                 (donor%ielement_g == fcn_info%seed%ielement_g) .and. &
+                                 (itime            == fcn_info%seed%itime) )
 
             if ( differentiate_me ) then
                 ! Loop through the terms in qdiff, seed appropriate derivatives to ONE
@@ -892,15 +859,9 @@ contains
             end if
 
 
-
-
-            !
             ! Interpolate solution to GQ nodes via matrix-vector multiplication
-            !
             tmp = matmul(interpolator,  qdiff)
             var(inode) = tmp(1)
-
-
 
         end do ! inode
 

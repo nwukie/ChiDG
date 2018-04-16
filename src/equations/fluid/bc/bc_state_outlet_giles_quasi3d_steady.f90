@@ -46,7 +46,7 @@ module bc_state_outlet_giles_quasi3d_steady
     type, public, extends(bc_fluid_averaging_t) :: outlet_giles_quasi3d_steady_t
 
         integer(ik) :: nr = 10
-        integer(ik) :: nfourier_space = 10
+        integer(ik) :: nfourier_space = 8
 
         real(rk),   allocatable :: r(:)
         real(rk)                :: theta_ref
@@ -175,7 +175,7 @@ contains
         real(rk),       allocatable, dimension(:)   :: p_user, r, pitch
         real(rk)                                    :: theta_offset
         type(point_t),  allocatable                 :: coords(:)
-        integer                                     :: i, ngq, ivec, imode, iradius, nmodes, ierr, igq
+        integer                                     :: i, ngq, ivec, imode, iradius, ierr, igq
 
 
         ! Get back pressure from function.
@@ -271,8 +271,8 @@ contains
                                                 c5_hat_real,       c5_hat_imag)
 
 
+
         ! Solve for c5 using nonreflecting condition
-        nmodes = size(density_hat_real,1)
         do iradius = 1,size(self%r)
             ! Get average parts
             density_bar_r  = density_hat_real( 1,iradius)
@@ -296,7 +296,7 @@ contains
             !
             !   hat{c5} = A3*hat{c3}  -  A4*hat{c4}
             !
-            do imode = 2,nmodes 
+            do imode = 2,size(c5_hat_real,1) 
                 c5_hat_real(imode,iradius) = (A3_real*c3_hat_real(imode,iradius) - A3_imag*c3_hat_imag(imode,iradius))  &   ! A3*c3 (real)
                                            - (A4_real*c4_hat_real(imode,iradius) - A4_imag*c4_hat_imag(imode,iradius))      ! A4*c4 (real)
                 c5_hat_imag(imode,iradius) = (A3_imag*c3_hat_real(imode,iradius) + A3_real*c3_hat_imag(imode,iradius))  &   ! A3*c3 (imag)
@@ -315,7 +315,7 @@ contains
         c5_hat_real_gq = ZERO   
         c5_hat_imag_gq = ZERO
         do igq = 1,size(coords)
-            do imode = 2,nmodes ! not interpolating mode1, so it remains zero and isn't present in idft
+            do imode = 2,size(c5_hat_real,1) ! not interpolating mode1, so it remains zero and isn't present in idft
                 c5_hat_real_gq(imode,igq) = interpolate_linear_ad(self%r,c5_hat_real(imode,:),coords(igq)%c1_)
                 c5_hat_imag_gq(imode,igq) = interpolate_linear_ad(self%r,c5_hat_imag(imode,:),coords(igq)%c1_)
             end do
@@ -336,7 +336,6 @@ contains
                            [theta_offset]/pitch(1), &
                            c5_3d(igq:igq),          &
                            expect_zero)
-
         end do
 
 
@@ -563,10 +562,6 @@ contains
         ! Perform Fourier decomposition at each radial station.
         do iradius = 1,nradius
 
-            ! Construct theta discretization
-            do itheta = 1,ntheta
-            end do
-
             ! Interpolate solution to physical_nodes at current radial station
             density = worker%interpolate_field_general('Density',    donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:))
             mom1    = worker%interpolate_field_general('Momentum-1', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:))
@@ -638,17 +633,6 @@ contains
             call dft(c4, ZERO*c4, c4_real_tmp, c4_imag_tmp)
             call dft(c5, ZERO*c5, c5_real_tmp, c5_imag_tmp)
 
-            !c1_hat_real(:,iradius) = c1_real_tmp
-            !c2_hat_real(:,iradius) = c2_real_tmp
-            !c3_hat_real(:,iradius) = c3_real_tmp
-            !c4_hat_real(:,iradius) = c4_real_tmp
-            !c5_hat_real(:,iradius) = c5_real_tmp
-
-            !c1_hat_imag(:,iradius) = c1_imag_tmp
-            !c2_hat_imag(:,iradius) = c2_imag_tmp
-            !c3_hat_imag(:,iradius) = c3_imag_tmp
-            !c4_hat_imag(:,iradius) = c4_imag_tmp
-            !c5_hat_imag(:,iradius) = c5_imag_tmp
 
             ! Adjust Fourier coefficients so their phase is relative to self%theta_ref
             ! instead of the minimum theta of the transform.

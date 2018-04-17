@@ -1038,7 +1038,7 @@ contains
         type(point_t),  allocatable                 :: coords(:)
         real(rk),       allocatable, dimension(:)   :: p_user, r, pitch
         real(rk)                                    :: theta_offset
-        integer(ik)                                 :: iradius, igq, ierr, imode
+        integer(ik)                                 :: iradius, igq, ierr, imode, nmodes
 
 
         ! Retrieve target average pressure
@@ -1081,6 +1081,7 @@ contains
 
 
         ! Solve for c5 using nonreflecting condition
+        nmodes = size(c5_hat_real,1)
         do iradius = 1,size(self%r)
             ! Get average parts
             density_bar_r  = density_bar(iradius)
@@ -1090,26 +1091,52 @@ contains
             pressure_bar_r = pressure_bar(iradius)
             c_bar_r        = sqrt(gam*pressure_bar_r/density_bar_r)
 
-            ! The imaginary part of beta has already been accounted for in
-            ! the expressions for A2 and A3
-            beta = sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
-            A3_real = -TWO*vel3_bar_r*vel2_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
-            A3_imag = -TWO*beta*vel3_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
+            !! The imaginary part of beta has already been accounted for in
+            !! the expressions for A2 and A3
+            !beta = sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
+            !A3_real = -TWO*vel3_bar_r*vel2_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
+            !A3_imag = -TWO*beta*vel3_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
 
-            A4_real = (beta*beta - vel2_bar_r*vel2_bar_r)/(beta*beta + vel2_bar_r*vel2_bar_r)
-            A4_imag = -TWO*beta*vel2_bar_r/(beta*beta + vel2_bar_r*vel2_bar_r)
+            !A4_real = (beta*beta - vel2_bar_r*vel2_bar_r)/(beta*beta + vel2_bar_r*vel2_bar_r)
+            !A4_imag = -TWO*beta*vel2_bar_r/(beta*beta + vel2_bar_r*vel2_bar_r)
 
 
-            ! Compute c5 according to nonreflecting condition
-            !
-            !   hat{c5} = A3*hat{c3}  -  A4*hat{c4}
-            !
-            do imode = 2,size(c5_hat_real,1)
+            !! Compute c5 according to nonreflecting condition
+            !!
+            !!   hat{c5} = A3*hat{c3}  -  A4*hat{c4}
+            !!
+            !do imode = 2,size(c5_hat_real,1)
+            !    c5_hat_real(imode,iradius) = (A3_real*c3_hat_real(imode,iradius) - A3_imag*c3_hat_imag(imode,iradius))  &   ! A3*c3 (real)
+            !                               - (A4_real*c4_hat_real(imode,iradius) - A4_imag*c4_hat_imag(imode,iradius))      ! A4*c4 (real)
+            !    c5_hat_imag(imode,iradius) = (A3_imag*c3_hat_real(imode,iradius) + A3_real*c3_hat_imag(imode,iradius))  &   ! A3*c3 (imag)
+            !                               - (A4_imag*c4_hat_real(imode,iradius) + A4_real*c4_hat_imag(imode,iradius))      ! A4*c4 (imag)
+            !end do !imode
+
+
+            do imode = 2,nmodes ! -1 here because the first mode is treated with 1D characteristics
+                ! The imaginary part of beta has already been accounted for in
+                ! the expressions for A2 and A3
+                if (imode <= (nmodes-1)/2 + 1) then
+                    beta = sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
+                else if (imode > (nmodes-1)/2 + 1) then
+                    beta = -sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
+                end if
+
+                A3_real = -TWO*vel3_bar_r*vel2_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
+                A3_imag = -TWO*beta*vel3_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
+
+                A4_real = (beta*beta - vel2_bar_r*vel2_bar_r)/(beta*beta + vel2_bar_r*vel2_bar_r)
+                A4_imag = -TWO*beta*vel2_bar_r/(beta*beta + vel2_bar_r*vel2_bar_r)
+
                 c5_hat_real(imode,iradius) = (A3_real*c3_hat_real(imode,iradius) - A3_imag*c3_hat_imag(imode,iradius))  &   ! A3*c3 (real)
                                            - (A4_real*c4_hat_real(imode,iradius) - A4_imag*c4_hat_imag(imode,iradius))      ! A4*c4 (real)
                 c5_hat_imag(imode,iradius) = (A3_imag*c3_hat_real(imode,iradius) + A3_real*c3_hat_imag(imode,iradius))  &   ! A3*c3 (imag)
                                            - (A4_imag*c4_hat_real(imode,iradius) + A4_real*c4_hat_imag(imode,iradius))      ! A4*c4 (imag)
             end do !imode
+
+
+
+
         end do !iradius
 
 

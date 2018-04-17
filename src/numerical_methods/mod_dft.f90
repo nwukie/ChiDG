@@ -249,7 +249,11 @@ contains
 
         do itheta = 1,size(theta)
             do imode = 1,size(inreal)
-                freq = TWO*PI*real(imode-1,rk)
+                if (imode <= ((size(inreal)-1)/2 + 1)) then
+                    freq = TWO*PI*real(imode-1,rk)  ! positive frequencies
+                else
+                    freq = -TWO*PI*real(size(inreal)-imode+1,rk) ! negative frequencies
+                end if
                 outreal(itheta) = outreal(itheta) + inreal(imode)*cos(freq*theta(itheta)) - inimag(imode)*sin(freq*theta(itheta))
                 outimag(itheta) = outimag(itheta) + inreal(imode)*sin(freq*theta(itheta)) + inimag(imode)*cos(freq*theta(itheta))
             end do

@@ -166,9 +166,9 @@ contains
             c5_hat_real_gq,   c5_hat_imag_gq
 
 
-        type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg,     &
-                       c_avg, ddensity_mean, dvel1_mean, dvel2_mean, dvel3_mean,    &
-                       dpressure_mean, density_bar_r, vel1_bar_r, vel2_bar_r,       &
+        type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, &
+                       !ddensity_mean, dvel1_mean, dvel2_mean, dvel3_mean, dpressure_mean,   &
+                       density_bar_r, vel1_bar_r, vel2_bar_r,       &
                        vel3_bar_r, pressure_bar_r, c_bar_r, A3_real, A3_imag,       &
                        A4_real, A4_imag, beta
 
@@ -270,8 +270,6 @@ contains
                                                 c4_hat_real,       c4_hat_imag,        &
                                                 c5_hat_real,       c5_hat_imag)
 
-
-
         ! Solve for c5 using nonreflecting condition
         nmodes = size(c5_hat_real,1)
         do iradius = 1,size(self%r)
@@ -283,36 +281,18 @@ contains
             pressure_bar_r = pressure_hat_real(1,iradius)
             c_bar_r        = sqrt(gam*pressure_bar_r/density_bar_r)
 
-!            ! The imaginary part of beta has already been accounted for in
-!            ! the expressions for A2 and A3
-!            beta = sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
-!            A3_real = -TWO*vel3_bar_r*vel2_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
-!            A3_imag = -TWO*beta*vel3_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
-!
-!            A4_real = (beta*beta - vel2_bar_r*vel2_bar_r)/(beta*beta + vel2_bar_r*vel2_bar_r)
-!            A4_imag = -TWO*beta*vel2_bar_r/(beta*beta + vel2_bar_r*vel2_bar_r)
-!
-!
-!            ! Compute c5 according to nonreflecting condition
-!            !
-!            !   hat{c5} = A3*hat{c3}  -  A4*hat{c4}
-!            !
-!            do imode = 2,size(c5_hat_real,1) 
-!                c5_hat_real(imode,iradius) = (A3_real*c3_hat_real(imode,iradius) - A3_imag*c3_hat_imag(imode,iradius))  &   ! A3*c3 (real)
-!                                           - (A4_real*c4_hat_real(imode,iradius) - A4_imag*c4_hat_imag(imode,iradius))      ! A4*c4 (real)
-!                c5_hat_imag(imode,iradius) = (A3_imag*c3_hat_real(imode,iradius) + A3_real*c3_hat_imag(imode,iradius))  &   ! A3*c3 (imag)
-!                                           - (A4_imag*c4_hat_real(imode,iradius) + A4_real*c4_hat_imag(imode,iradius))      ! A4*c4 (imag)
-!            end do !imode
-
-            do imode = 2,nmodes ! -1 here because the first mode is treated with 1D characteristics
-                ! The imaginary part of beta has already been accounted for in
-                ! the expressions for A2 and A3
+            ! starting with 2 here because the first mode is treated with 1D characteristics
+            do imode = 2,nmodes 
+                ! Account for sign(mode) in the calculation of beta. The second half of the
+                ! modes are negative frequencies.
                 if (imode <= (nmodes-1)/2 + 1) then
                     beta = sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
                 else if (imode > (nmodes-1)/2 + 1) then
                     beta = -sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
                 end if
 
+                ! The imaginary part of beta has already been accounted for in
+                ! the expressions for A2 and A3
                 A3_real = -TWO*vel3_bar_r*vel2_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
                 A3_imag = -TWO*beta*vel3_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
 
@@ -324,10 +304,7 @@ contains
                 c5_hat_imag(imode,iradius) = (A3_imag*c3_hat_real(imode,iradius) + A3_real*c3_hat_imag(imode,iradius))  &   ! A3*c3 (imag)
                                            - (A4_imag*c4_hat_real(imode,iradius) + A4_real*c4_hat_imag(imode,iradius))      ! A4*c4 (imag)
             end do !imode
-
-
         end do !iradius
-
 
         ! Interpolate c5 to the correct radial stations for quadrature nodes
         coords = worker%coords()
@@ -354,7 +331,6 @@ contains
             theta_offset = coords(igq)%c2_ - self%theta_ref
             ! We include all modes here for generality, but we already set mode1 to zero
             ! so we are only getting the perturbation part.
-            !c5_3d(igq:igq) = idft_eval(c5_hat_real_gq(:,igq),c5_hat_imag_gq(:,igq),[theta_offset]/pitch(1))
             call idft_eval(c5_hat_real_gq(:,igq),   &
                            c5_hat_imag_gq(:,igq),   &
                            [theta_offset]/pitch(1), &
@@ -364,24 +340,15 @@ contains
 
 
         ! Handle perturbation from local radial mean (m /= 0)
-        c1_3d = c5_3d
-        c2_3d = c5_3d
-        c3_3d = c5_3d
-        c4_3d = c5_3d
-        c1_3d = ZERO
-        c2_3d = ZERO
-        c3_3d = ZERO
-        c4_3d = ZERO
-        density_bar  = c5_3d
-        vel1_bar     = c5_3d
-        vel2_bar     = c5_3d
-        vel3_bar     = c5_3d
-        pressure_bar = c5_3d
-        density_bar  = ZERO
-        vel1_bar     = ZERO
-        vel2_bar     = ZERO
-        vel3_bar     = ZERO
-        pressure_bar = ZERO
+        c1_3d = ZERO*c5_3d
+        c2_3d = ZERO*c5_3d
+        c3_3d = ZERO*c5_3d
+        c4_3d = ZERO*c5_3d
+        density_bar  = ZERO*c5_3d
+        vel1_bar     = ZERO*c5_3d
+        vel2_bar     = ZERO*c5_3d
+        vel3_bar     = ZERO*c5_3d
+        pressure_bar = ZERO*c5_3d
         do igq = 1,size(coords)
             density_bar(igq)  = interpolate_linear_ad(self%r, density_hat_real( 1,:), coords(igq)%c1_)
             vel1_bar(igq)     = interpolate_linear_ad(self%r, vel1_hat_real(    1,:), coords(igq)%c1_)
@@ -407,16 +374,11 @@ contains
         c4_3d = (density_bar*c_bar)*dvel3  +  (ONE)*dpressure
 
         ! Handle m=0 perturbation
-        c1_1d = density_m
-        c2_1d = density_m
-        c3_1d = density_m
-        c4_1d = density_m
-        c5_1d = density_m
-        c1_1d = ZERO
-        c2_1d = ZERO
-        c3_1d = ZERO
-        c4_1d = ZERO
-        c5_1d = ZERO
+        c1_1d = ZERO*density_m
+        c2_1d = ZERO*density_m
+        c3_1d = ZERO*density_m
+        c4_1d = ZERO*density_m
+        c5_1d = ZERO*density_m
 
         ! Compute 1-4 characteristics from extrapolation
         ddensity  = density_bar  - density_avg 
@@ -429,19 +391,8 @@ contains
             c2_1d(igq) = density_avg*c_avg*dvel1(igq)
             c3_1d(igq) = density_avg*c_avg*dvel2(igq)
             c4_1d(igq) = density_avg*c_avg*dvel3(igq)  +  dpressure(igq)
+            c5_1d(igq) = -TWO*(pressure_avg - p_user(1))
         end do
-
-        ! Compute characteristic 5 to achieve average pressure
-        c5_1d          = -TWO*(pressure_avg - p_user(1))
-        ddensity_mean  =  c5_1d(1)/(TWO*c_avg*c_avg)
-        dvel3_mean     = -c5_1d(1)/(TWO*density_avg*c_avg)
-        dpressure_mean = HALF*c5_1d(1)
-
-        dvel1_mean = dvel3_mean
-        dvel2_mean = dvel3_mean
-        dvel1_mean = ZERO
-        dvel2_mean = ZERO
-
 
         ! Contribute average part to boundary state
         density_bc  = density_m
@@ -449,7 +400,6 @@ contains
         vel2_bc     = density_m
         vel3_bc     = density_m
         pressure_bc = density_m
-
 
         ! Compose boundary state beginning with average
         density_bc  = density_avg

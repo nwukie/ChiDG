@@ -45,6 +45,7 @@ module mod_bc
     use bc_state_wall,                              only: wall_t
     use bc_state_moving_wall,                       only: moving_wall_t
     use bc_state_inlet_total,                       only: inlet_total_t
+    use bc_state_inlet_characteristic,              only: inlet_characteristic_t
     use bc_state_outlet_constant_pressure,          only: outlet_constant_pressure_t
     use bc_state_outlet_auxiliary_equations,        only: outlet_auxiliary_equations_t
     use bc_state_outlet_neumann_pressure_fd,        only: outlet_neumann_pressure_fd_t
@@ -66,6 +67,7 @@ module mod_bc
     use bc_state_momentum_inlet,                only: momentum_inlet_t
     use bc_state_symmetry,                      only: symmetry_t
     use bc_state_farfield,                      only: farfield_t
+    use bc_state_farfield_perturbation,         only: farfield_perturbation_t
 
     ! Turbulence boundary conditions
     use bc_state_spalart_allmaras_inlet,        only: spalart_allmaras_inlet_t
@@ -156,6 +158,7 @@ contains
         type(wall_t)                            :: WALL
         type(moving_wall_t)                     :: MOVING_WALL
         type(inlet_total_t)                     :: INLET_TOTAL
+        type(inlet_characteristic_t)            :: INLET_CHARACTERISTIC
         type(outlet_constant_pressure_t)        :: OUTLET_CONSTANT_PRESSURE
         type(outlet_auxiliary_equations_t)      :: OUTLET_AUXILIARY_EQUATIONS
         type(outlet_neumann_pressure_fd_t)      :: OUTLET_NEUMANN_PRESSURE_FD
@@ -177,6 +180,7 @@ contains
         type(momentum_inlet_t)                  :: MOMENTUM_INLET
         type(symmetry_t)                        :: SYMMETRY
         type(farfield_t)                        :: FARFIELD
+        type(farfield_perturbation_t)           :: FARFIELD_PERTURBATION
 
         type(spalart_allmaras_inlet_t)          :: SPALART_ALLMARAS_INLET
         type(spalart_allmaras_outlet_t)         :: SPALART_ALLMARAS_OUTLET
@@ -240,6 +244,7 @@ contains
             call registered_bcs%push_back(WALL)
             call registered_bcs%push_back(MOVING_WALL)
             call registered_bcs%push_back(INLET_TOTAL)
+            call registered_bcs%push_back(INLET_CHARACTERISTIC)
             call registered_bcs%push_back(OUTLET_CONSTANT_PRESSURE)
             call registered_bcs%push_back(OUTLET_AUXILIARY_EQUATIONS)
             call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_FD)
@@ -261,6 +266,7 @@ contains
             call registered_bcs%push_back(MOMENTUM_INLET)
             call registered_bcs%push_back(SYMMETRY)
             call registered_bcs%push_back(FARFIELD)
+            call registered_bcs%push_back(FARFIELD_PERTURBATION)
 
             call registered_bcs%push_back(SPALART_ALLMARAS_INLET)
             call registered_bcs%push_back(SPALART_ALLMARAS_OUTLET)

@@ -1,6 +1,7 @@
 add_lib_sources(
                 bc_state_fluid_averaging.f90
                 bc_state_inlet_total.f90
+                bc_state_inlet_characteristic.f90
                 bc_state_outlet_constant_pressure.f90
                 bc_state_outlet_auxiliary_equations.f90
                 bc_state_outlet_neumann_pressure_fd.f90
@@ -15,6 +16,7 @@ add_lib_sources(
                 bc_state_momentum_inlet.f90
                 bc_state_symmetry.f90
                 bc_state_farfield.f90
+                bc_state_farfield_perturbation.f90
                 bc_state_outlet_steady_1dchar.f90
                 bc_state_outlet_3dgiles.f90
                 bc_state_outlet_3dgiles_innerproduct.f90

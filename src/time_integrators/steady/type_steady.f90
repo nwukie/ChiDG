@@ -155,7 +155,6 @@ contains
         data%time_manager%t     = ZERO
         call update_space(data,differentiate,timing)
 
-
 !        !
 !        ! Filter q, rhs
 !        !

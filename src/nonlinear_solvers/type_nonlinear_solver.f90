@@ -22,6 +22,7 @@ module type_nonlinear_solver
 
         ! OPTIONS
         real(rk)        :: cfl0              = 1.0_rk       ! Initial CFL number
+        real(rk)        :: cflmax            = -1.0_rk
         real(rk)        :: tol               = 1.e-13_rk    ! Convergence tolerance
         integer(ik)     :: nsteps            = 100          ! Max number of steps to take in the nonlinear solver
         integer(ik)     :: nwrite            = 100          ! Write data every 'nwrite' steps
@@ -168,6 +169,7 @@ contains
 
         if (options%contains('tol'   )) call options%get('tol',   self%tol   )
         if (options%contains('cfl0'  )) call options%get('cfl0',  self%cfl0  )
+        if (options%contains('cflmax')) call options%get('cflmax',self%cflmax)
         if (options%contains('nsteps')) call options%get('nsteps',self%nsteps)
         if (options%contains('nwrite')) call options%get('nwrite',self%nwrite)
         if (options%contains('norders_reduction')) call options%get('norders_reduction',self%norders_reduction)

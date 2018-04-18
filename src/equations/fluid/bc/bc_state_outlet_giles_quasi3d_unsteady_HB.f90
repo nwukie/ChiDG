@@ -149,19 +149,16 @@ contains
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::                                                      &
-            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,                                            &
             density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, pressure_bc, vel1_bc, vel2_bc, vel3_bc,   &
             density_bc_tmp, vel1_bc_tmp, vel2_bc_tmp, vel3_bc_tmp, pressure_bc_tmp,                     &
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,                  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,                  &
-            grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,                  &
-            vel1_m,  vel2_m,  vel3_m,  pressure_m,                                                      &
-            c1,    c2,    c3,    c4,    c5,                                                             &
-            c1_3d, c2_3d, c3_3d, c4_3d, c5_3d,                                                          &
-            c1_1d, c2_1d, c3_1d, c4_1d, c5_1d,                                                          &
-            density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar,                             &
-            ddensity, dvel1, dvel2, dvel3, dpressure, expect_zero,                                      &
-            density_steady_bc, vel1_steady_bc, vel2_steady_bc, vel3_steady_bc, pressure_steady_bc
+            grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m, expect_zero
+!            c1,    c2,    c3,    c4,    c5,                                                             &
+!            c1_3d, c2_3d, c3_3d, c4_3d, c5_3d,                                                          &
+!            c1_1d, c2_1d, c3_1d, c4_1d, c5_1d,                                                          &
+!            density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar,                             &
+!            ddensity, dvel1, dvel2, dvel3, dpressure, expect_zero
 
         type(AD_D), allocatable, dimension(:,:) ::                                  &
             density_t_real, vel1_t_real, vel2_t_real, vel3_t_real, pressure_t_real, &
@@ -187,12 +184,12 @@ contains
         p_user = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
         pitch  = self%bcproperties%compute('Pitch',           worker%time(),worker%coords())
 
-        ! Interpolate interior solution to face quadrature nodes
-        density_m = worker%get_field('Density'   , 'value', 'face interior')
-        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
-        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
-        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
-        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
+!        ! Interpolate interior solution to face quadrature nodes
+!        density_m = worker%get_field('Density'   , 'value', 'face interior')
+!        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
+!        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
+!        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
+!        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
 
         grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')
         grad2_density_m = worker%get_field('Density'   , 'grad2', 'face interior')
@@ -238,20 +235,20 @@ contains
         call worker%store_bc_state('Energy'    , grad3_energy_m,  'grad3')
 
 
-        ! Account for cylindrical. Get tangential momentum from angular momentum.
-        r = worker%coordinate('1','boundary')
-        if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / r
-            grad1_mom2_m = (grad1_mom2_m/r) - mom2_m/r
-            grad2_mom2_m = (grad2_mom2_m/r)
-            grad3_mom2_m = (grad3_mom2_m/r)
-        end if
-
-        ! Compute velocity and pressure
-        vel1_m = mom1_m/density_m
-        vel2_m = mom2_m/density_m
-        vel3_m = mom3_m/density_m
-        pressure_m = worker%get_field('Pressure', 'value', 'face interior')
+!        ! Account for cylindrical. Get tangential momentum from angular momentum.
+!        r = worker%coordinate('1','boundary')
+!        if (worker%coordinate_system() == 'Cylindrical') then
+!            mom2_m = mom2_m / r
+!            grad1_mom2_m = (grad1_mom2_m/r) - mom2_m/r
+!            grad2_mom2_m = (grad2_mom2_m/r)
+!            grad3_mom2_m = (grad3_mom2_m/r)
+!        end if
+!
+!        ! Compute velocity and pressure
+!        vel1_m = mom1_m/density_m
+!        vel2_m = mom2_m/density_m
+!        vel3_m = mom3_m/density_m
+!        pressure_m = worker%get_field('Pressure', 'value', 'face interior')
 
 
         ! Compute Fourier decomposition of temporal data at points
@@ -281,12 +278,12 @@ contains
                                       pressure_Fts_real, pressure_Fts_imag)
 
 
-        ! Get spatio-temporal average at each radial station
-        density_bar  = density_Fts_real(:,1,1)
-        vel1_bar     = vel1_Fts_real(:,1,1)
-        vel2_bar     = vel2_Fts_real(:,1,1)
-        vel3_bar     = vel3_Fts_real(:,1,1)
-        pressure_bar = pressure_Fts_real(:,1,1)
+        !! Get spatio-temporal average at each radial station
+        !density_bar  = density_Fts_real(:,1,1)
+        !vel1_bar     = vel1_Fts_real(:,1,1)
+        !vel2_bar     = vel2_Fts_real(:,1,1)
+        !vel3_bar     = vel3_Fts_real(:,1,1)
+        !pressure_bar = pressure_Fts_real(:,1,1)
 
         call compute_steady_nrbc(self,worker,bc_comm,       &
                                  density_Fts_real(:,:,1),   &
@@ -298,13 +295,7 @@ contains
                                  vel3_Fts_real(:,:,1),      &
                                  vel3_Fts_imag(:,:,1),      &
                                  pressure_Fts_real(:,:,1),  &
-                                 pressure_Fts_imag(:,:,1),  &
-                                 density_steady_bc,         &
-                                 vel1_steady_bc,            &
-                                 vel2_steady_bc,            &
-                                 vel3_steady_bc,            &
-                                 pressure_steady_bc)
-
+                                 pressure_Fts_imag(:,:,1))
 
 
 !        !
@@ -363,19 +354,19 @@ contains
             end do !itheta
         end do !igq
 
-        ! Zero out Fourier modes for Zero-th temporal mode. We will handle the time-average
-        ! with the standard Steady Giles approach
-        density_Fts_real_gq(:,:,1)  = ZERO
-        density_Fts_imag_gq(:,:,1)  = ZERO
-        vel1_Fts_real_gq(:,:,1)     = ZERO
-        vel1_Fts_imag_gq(:,:,1)     = ZERO
-        vel2_Fts_real_gq(:,:,1)     = ZERO
-        vel2_Fts_imag_gq(:,:,1)     = ZERO
-        vel3_Fts_real_gq(:,:,1)     = ZERO
-        vel3_Fts_imag_gq(:,:,1)     = ZERO
-        pressure_Fts_real_gq(:,:,1) = ZERO
-        pressure_Fts_imag_gq(:,:,1) = ZERO
-
+!        ! Zero out Fourier modes for Zero-th temporal mode. We will handle the time-average
+!        ! with the standard Steady Giles approach
+!        density_Fts_real_gq(:,:,1)  = ZERO
+!        density_Fts_imag_gq(:,:,1)  = ZERO
+!        vel1_Fts_real_gq(:,:,1)     = ZERO
+!        vel1_Fts_imag_gq(:,:,1)     = ZERO
+!        vel2_Fts_real_gq(:,:,1)     = ZERO
+!        vel2_Fts_imag_gq(:,:,1)     = ZERO
+!        vel3_Fts_real_gq(:,:,1)     = ZERO
+!        vel3_Fts_imag_gq(:,:,1)     = ZERO
+!        pressure_Fts_real_gq(:,:,1) = ZERO
+!        pressure_Fts_imag_gq(:,:,1) = ZERO
+!
 !        ! Impose constant pressure
 !        pressure_Fts_real_gq(:,:,:) = ZERO
 !        pressure_Fts_imag_gq(:,:,:) = ZERO
@@ -433,19 +424,19 @@ contains
             end do !itime
         end do !igq
 
-        density_bc  = ZERO*density_m
-        vel1_bc     = ZERO*density_m
-        vel2_bc     = ZERO*density_m
-        vel3_bc     = ZERO*density_m
-        pressure_bc = ZERO*density_m
+        density_bc  = ZERO*density_Fts_real_gq(:,1,1)
+        vel1_bc     = ZERO*density_Fts_real_gq(:,1,1)
+        vel2_bc     = ZERO*density_Fts_real_gq(:,1,1)
+        vel3_bc     = ZERO*density_Fts_real_gq(:,1,1)
+        pressure_bc = ZERO*density_Fts_real_gq(:,1,1)
 
         ! Inverse DFT of temporal Fourier modes to give primitive variables
         ! at quarature nodes for the current time instance.
-        density_bc_tmp  = [ZERO*density_m(1)]
-        vel1_bc_tmp     = [ZERO*density_m(1)]
-        vel2_bc_tmp     = [ZERO*density_m(1)]
-        vel3_bc_tmp     = [ZERO*density_m(1)]
-        pressure_bc_tmp = [ZERO*density_m(1)]
+        density_bc_tmp  = [ZERO*density_Fts_real_gq(1,1,1)]
+        vel1_bc_tmp     = [ZERO*density_Fts_real_gq(1,1,1)]
+        vel2_bc_tmp     = [ZERO*density_Fts_real_gq(1,1,1)]
+        vel3_bc_tmp     = [ZERO*density_Fts_real_gq(1,1,1)]
+        pressure_bc_tmp = [ZERO*density_Fts_real_gq(1,1,1)]
         do igq = 1,size(coords)
             ! **** WARNING: probably want ipdft_eval here ****
             call idft_eval(density_t_real(igq,:),   &
@@ -485,21 +476,6 @@ contains
             vel3_bc(igq)     = vel3_bc(igq)     + vel3_bc_tmp(1)
             pressure_bc(igq) = pressure_bc(igq) + pressure_bc_tmp(1)
         end do
-
-!        print*, 'outlet unsteady contribution:'
-!        print*, density_bc(:)%x_ad_
-!        print*, vel1_bc(:)%x_ad_
-!        print*, vel2_bc(:)%x_ad_
-!        print*, vel3_bc(:)%x_ad_
-!        print*, pressure_bc(:)%x_ad_
-
-
-        density_bc  = density_bc  + density_steady_bc
-        vel1_bc     = vel1_bc     + vel1_steady_bc
-        vel2_bc     = vel2_bc     + vel2_steady_bc
-        vel3_bc     = vel3_bc     + vel3_steady_bc
-        pressure_bc = pressure_bc + pressure_steady_bc
-
 
 
 
@@ -1008,30 +984,20 @@ contains
                                    vel3_Fts_real,       &
                                    vel3_Fts_imag,       &
                                    pressure_Fts_real,   &
-                                   pressure_Fts_imag,   &
-                                   density_steady_bc,   &
-                                   vel1_steady_bc,      &
-                                   vel2_steady_bc,      &
-                                   vel3_steady_bc,      &
-                                   pressure_steady_bc)
+                                   pressure_Fts_imag)
         class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
-        type(AD_D),                                 intent(in)      :: density_Fts_real(:,:)
-        type(AD_D),                                 intent(in)      :: density_Fts_imag(:,:)
-        type(AD_D),                                 intent(in)      :: vel1_Fts_real(:,:)
-        type(AD_D),                                 intent(in)      :: vel1_Fts_imag(:,:)
-        type(AD_D),                                 intent(in)      :: vel2_Fts_real(:,:)
-        type(AD_D),                                 intent(in)      :: vel2_Fts_imag(:,:)
-        type(AD_D),                                 intent(in)      :: vel3_Fts_real(:,:)
-        type(AD_D),                                 intent(in)      :: vel3_Fts_imag(:,:)
-        type(AD_D),                                 intent(in)      :: pressure_Fts_real(:,:)
-        type(AD_D),                                 intent(in)      :: pressure_Fts_imag(:,:)
-        type(AD_D),     allocatable,                intent(inout)   :: density_steady_bc(:)
-        type(AD_D),     allocatable,                intent(inout)   :: vel1_steady_bc(:)
-        type(AD_D),     allocatable,                intent(inout)   :: vel2_steady_bc(:)
-        type(AD_D),     allocatable,                intent(inout)   :: vel3_steady_bc(:)
-        type(AD_D),     allocatable,                intent(inout)   :: pressure_steady_bc(:)
+        type(AD_D),                                 intent(inout)   :: density_Fts_real(:,:)
+        type(AD_D),                                 intent(inout)   :: density_Fts_imag(:,:)
+        type(AD_D),                                 intent(inout)   :: vel1_Fts_real(:,:)
+        type(AD_D),                                 intent(inout)   :: vel1_Fts_imag(:,:)
+        type(AD_D),                                 intent(inout)   :: vel2_Fts_real(:,:)
+        type(AD_D),                                 intent(inout)   :: vel2_Fts_imag(:,:)
+        type(AD_D),                                 intent(inout)   :: vel3_Fts_real(:,:)
+        type(AD_D),                                 intent(inout)   :: vel3_Fts_imag(:,:)
+        type(AD_D),                                 intent(inout)   :: pressure_Fts_real(:,:)
+        type(AD_D),                                 intent(inout)   :: pressure_Fts_imag(:,:)
 
 
         ! Storage at quadrature nodes
@@ -1040,14 +1006,11 @@ contains
             c1_3d, c2_3d, c3_3d, c4_3d, c5_3d,                                          &
             c1_1d, c2_1d, c3_1d, c4_1d, c5_1d,                                          &
             c_bar, ddensity, dvel1, dvel2, dvel3, dpressure, expect_zero,               &
-            density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar,                    &
-            density_bar_gq, vel1_bar_gq, vel2_bar_gq, vel3_bar_gq, pressure_bar_gq, c_bar_gq
+            density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar
 
         type(AD_D), allocatable, dimension(:,:) ::                              &
             c1_hat_real, c2_hat_real, c3_hat_real, c4_hat_real, c5_hat_real,    &
-            c1_hat_imag, c2_hat_imag, c3_hat_imag, c4_hat_imag, c5_hat_imag,    &
-            c1_hat_real_gq, c2_hat_real_gq, c3_hat_real_gq, c4_hat_real_gq, c5_hat_real_gq, &
-            c1_hat_imag_gq, c2_hat_imag_gq, c3_hat_imag_gq, c4_hat_imag_gq, c5_hat_imag_gq
+            c1_hat_imag, c2_hat_imag, c3_hat_imag, c4_hat_imag, c5_hat_imag
 
         type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg,              &
                        density_bar_r, vel1_bar_r, vel2_bar_r, vel3_bar_r, pressure_bar_r, c_bar_r,  &
@@ -1056,7 +1019,7 @@ contains
         type(point_t),  allocatable                 :: coords(:)
         real(rk),       allocatable, dimension(:)   :: p_user, r, pitch
         real(rk)                                    :: theta_offset
-        integer(ik)                                 :: iradius, igq, ierr, imode, nmodes
+        integer(ik)                                 :: iradius, igq, ierr, imode, nmodes, itheta
 
         ! Get spatio-temporal average at radial stations
         density_bar  = density_Fts_real(:,1)
@@ -1121,159 +1084,61 @@ contains
         end do !iradius
 
 
-        ! Interpolate c5 to the correct radial stations for quadrature nodes
-        coords = worker%coords()
-        allocate(c1_hat_real_gq(size(c1_hat_real,1),size(coords)), &
-                 c1_hat_imag_gq(size(c1_hat_real,1),size(coords)), &
-                 c2_hat_real_gq(size(c2_hat_real,1),size(coords)), &
-                 c2_hat_imag_gq(size(c2_hat_imag,1),size(coords)), &
-                 c3_hat_real_gq(size(c3_hat_real,1),size(coords)), &
-                 c3_hat_imag_gq(size(c3_hat_imag,1),size(coords)), &
-                 c4_hat_real_gq(size(c4_hat_real,1),size(coords)), &
-                 c4_hat_imag_gq(size(c4_hat_imag,1),size(coords)), &
-                 c5_hat_real_gq(size(c5_hat_real,1),size(coords)), &
-                 c5_hat_imag_gq(size(c5_hat_imag,1),size(coords)), stat=ierr)
-        if (ierr /= 0) call AllocationError
-        c1_hat_real_gq = ZERO*c1_hat_real(1,1)
-        c1_hat_imag_gq = ZERO*c1_hat_real(1,1)
-        c2_hat_real_gq = ZERO*c2_hat_real(1,1)
-        c2_hat_imag_gq = ZERO*c2_hat_real(1,1)
-        c3_hat_real_gq = ZERO*c3_hat_real(1,1)
-        c3_hat_imag_gq = ZERO*c3_hat_real(1,1)
-        c4_hat_real_gq = ZERO*c4_hat_real(1,1)
-        c4_hat_imag_gq = ZERO*c4_hat_real(1,1)
-        c5_hat_real_gq = ZERO*c5_hat_real(1,1)
-        c5_hat_imag_gq = ZERO*c5_hat_real(1,1)
-        do igq = 1,size(coords)
-            do imode = 2,size(c5_hat_real,1) ! not interpolating mode1, so it remains zero and isn't present in idft
-                c1_hat_real_gq(imode,igq) = interpolate_linear_ad(self%r,c1_hat_real(imode,:),coords(igq)%c1_)
-                c1_hat_imag_gq(imode,igq) = interpolate_linear_ad(self%r,c1_hat_imag(imode,:),coords(igq)%c1_)
-                c2_hat_real_gq(imode,igq) = interpolate_linear_ad(self%r,c2_hat_real(imode,:),coords(igq)%c1_)
-                c2_hat_imag_gq(imode,igq) = interpolate_linear_ad(self%r,c2_hat_imag(imode,:),coords(igq)%c1_)
-                c3_hat_real_gq(imode,igq) = interpolate_linear_ad(self%r,c3_hat_real(imode,:),coords(igq)%c1_)
-                c3_hat_imag_gq(imode,igq) = interpolate_linear_ad(self%r,c3_hat_imag(imode,:),coords(igq)%c1_)
-                c4_hat_real_gq(imode,igq) = interpolate_linear_ad(self%r,c4_hat_real(imode,:),coords(igq)%c1_)
-                c4_hat_imag_gq(imode,igq) = interpolate_linear_ad(self%r,c4_hat_imag(imode,:),coords(igq)%c1_)
-                c5_hat_real_gq(imode,igq) = interpolate_linear_ad(self%r,c5_hat_real(imode,:),coords(igq)%c1_)
-                c5_hat_imag_gq(imode,igq) = interpolate_linear_ad(self%r,c5_hat_imag(imode,:),coords(igq)%c1_)
-            end do
-        end do
-
-
-        ! Evaluate c5 at radius to correct theta
-        expect_zero = [AD_D(1)]
-        c1_3d = ZERO*c5_hat_real_gq(1,:)
-        c2_3d = ZERO*c5_hat_real_gq(1,:)
-        c3_3d = ZERO*c5_hat_real_gq(1,:)
-        c4_3d = ZERO*c5_hat_real_gq(1,:)
-        c5_3d = ZERO*c5_hat_real_gq(1,:)
-        do igq = 1,size(coords)
-            theta_offset = coords(igq)%c2_ - self%theta_ref
-            ! We include all modes here for generality, but we already set mode1 to zero
-            ! so we are only getting the perturbation part.
-            call idft_eval(c1_hat_real_gq(:,igq),   &
-                           c1_hat_imag_gq(:,igq),   &
-                           [theta_offset]/pitch(1), &
-                           c1_3d(igq:igq),          &
-                           expect_zero)
-
-            call idft_eval(c2_hat_real_gq(:,igq),   &
-                           c2_hat_imag_gq(:,igq),   &
-                           [theta_offset]/pitch(1), &
-                           c2_3d(igq:igq),          &
-                           expect_zero)
-
-            call idft_eval(c3_hat_real_gq(:,igq),   &
-                           c3_hat_imag_gq(:,igq),   &
-                           [theta_offset]/pitch(1), &
-                           c3_3d(igq:igq),          &
-                           expect_zero)
-
-            call idft_eval(c4_hat_real_gq(:,igq),   &
-                           c4_hat_imag_gq(:,igq),   &
-                           [theta_offset]/pitch(1), &
-                           c4_3d(igq:igq),          &
-                           expect_zero)
-
-            call idft_eval(c5_hat_real_gq(:,igq),   &
-                           c5_hat_imag_gq(:,igq),   &
-                           [theta_offset]/pitch(1), &
-                           c5_3d(igq:igq),          &
-                           expect_zero)
-        end do
-
-
-        ! Handle perturbation from local radial mean (m /= 0)
-        density_bar_gq  = ZERO*c5_3d
-        vel1_bar_gq     = ZERO*c5_3d
-        vel2_bar_gq     = ZERO*c5_3d
-        vel3_bar_gq     = ZERO*c5_3d
-        pressure_bar_gq = ZERO*c5_3d
-        do igq = 1,size(coords)
-            density_bar_gq(igq)  = interpolate_linear_ad(self%r, density_bar(:),  coords(igq)%c1_)
-            vel1_bar_gq(igq)     = interpolate_linear_ad(self%r, vel1_bar(:),     coords(igq)%c1_)
-            vel2_bar_gq(igq)     = interpolate_linear_ad(self%r, vel2_bar(:),     coords(igq)%c1_)
-            vel3_bar_gq(igq)     = interpolate_linear_ad(self%r, vel3_bar(:),     coords(igq)%c1_)
-            pressure_bar_gq(igq) = interpolate_linear_ad(self%r, pressure_bar(:), coords(igq)%c1_)
-        end do
-        c_bar_gq = sqrt(gam*pressure_bar_gq/density_bar_gq)
-
-
-        ! Handle m=0 perturbation
-        c1_1d = ZERO*c5_3d
-        c2_1d = ZERO*c5_3d
-        c3_1d = ZERO*c5_3d
-        c4_1d = ZERO*c5_3d
-        c5_1d = ZERO*c5_3d
 
         ! Compute 1-4 characteristics from extrapolation: difference in radius-local mean and boundary average
         call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar, &
                                                           density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
         c_avg = sqrt(gam*pressure_avg/density_avg)
 
-        ddensity  = density_bar_gq  - density_avg 
-        dvel1     = vel1_bar_gq     - vel1_avg
-        dvel2     = vel2_bar_gq     - vel2_avg
-        dvel3     = vel3_bar_gq     - vel3_avg
-        dpressure = pressure_bar_gq - pressure_avg
-        do igq = 1,size(ddensity)
-            c1_1d(igq) = -c_avg*c_avg*ddensity(igq)    +  dpressure(igq)
-            c2_1d(igq) = density_avg*c_avg*dvel1(igq)
-            c3_1d(igq) = density_avg*c_avg*dvel2(igq)
-            c4_1d(igq) = density_avg*c_avg*dvel3(igq)  +  dpressure(igq)
-            c5_1d(igq) = -TWO*(pressure_avg - p_user(1))
+
+        ddensity  = density_bar  - density_avg 
+        dvel1     = vel1_bar     - vel1_avg
+        dvel2     = vel2_bar     - vel2_avg
+        dvel3     = vel3_bar     - vel3_avg
+        dpressure = pressure_bar - pressure_avg
+        c1_1d = ZERO*ddensity
+        c2_1d = ZERO*ddensity
+        c3_1d = ZERO*ddensity
+        c4_1d = ZERO*ddensity
+        c5_1d = ZERO*ddensity
+        ! Add 1D contribution to Fourier modes
+        do iradius = 1,size(self%r)
+            c1_1d(iradius) = -c_avg*c_avg*ddensity(iradius)    +  dpressure(iradius)
+            c2_1d(iradius) = density_avg*c_avg*dvel1(iradius)
+            c3_1d(iradius) = density_avg*c_avg*dvel2(iradius)
+            c4_1d(iradius) = density_avg*c_avg*dvel3(iradius)  +  dpressure(iradius)
+            c5_1d(iradius) = -TWO*(pressure_avg - p_user(1))
         end do
-
-        ! Compose boundary state beginning with average
-        density_steady_bc  = ZERO*c1_3d
-        vel1_steady_bc     = ZERO*c1_3d
-        vel2_steady_bc     = ZERO*c1_3d
-        vel3_steady_bc     = ZERO*c1_3d
-        pressure_steady_bc = ZERO*c1_3d
-        density_steady_bc  = density_avg
-        vel1_steady_bc     = vel1_avg
-        vel2_steady_bc     = vel2_avg
-        vel3_steady_bc     = vel3_avg
-        pressure_steady_bc = pressure_avg
-
-        ! Contribute perturbation from boundary-global 1D characteristic update
-        do igq = 1,size(c1_1d)
-            density_steady_bc(igq)  = density_steady_bc(igq)   +  (-ONE/(c_avg*c_avg))*c1_1d(igq)  +  (ONE/(TWO*c_avg*c_avg))*c4_1d(igq)  +  (ONE/(TWO*c_avg*c_avg))*c5_1d(igq)
-            vel1_steady_bc(igq)     = vel1_steady_bc(igq)      +  (ONE/(density_avg*c_avg))*c2_1d(igq)
-            vel2_steady_bc(igq)     = vel2_steady_bc(igq)      +  (ONE/(density_avg*c_avg))*c3_1d(igq)
-            vel3_steady_bc(igq)     = vel3_steady_bc(igq)      +  (ONE/(TWO*density_avg*c_avg))*c4_1d(igq)  -  (ONE/(TWO*density_avg*c_avg))*c5_1d(igq)
-            pressure_steady_bc(igq) = pressure_steady_bc(igq)  +  HALF*c4_1d(igq)  +  HALF*c5_1d(igq)
-        end do
+        c1_hat_real(1,:) = c1_hat_real(1,:) + c1_1d(:)
+        c2_hat_real(1,:) = c2_hat_real(1,:) + c2_1d(:)
+        c3_hat_real(1,:) = c3_hat_real(1,:) + c3_1d(:)
+        c4_hat_real(1,:) = c4_hat_real(1,:) + c4_1d(:)
+        c5_hat_real(1,:) = c5_hat_real(1,:) + c5_1d(:)
 
 
-        ! Contribute perturbation from perturbation about radius-local mean from 
-        ! quasi-3d nrbc.
-        density_steady_bc  = density_steady_bc   +  (-ONE/(c_bar_gq*c_bar_gq))*c1_3d  +  (ONE/(TWO*c_bar_gq*c_bar_gq))*c4_3d  +  (ONE/(TWO*c_bar_gq*c_bar_gq))*c5_3d
-        vel1_steady_bc     = vel1_steady_bc      +  (ONE/(density_bar_gq*c_bar_gq))*c2_3d
-        vel2_steady_bc     = vel2_steady_bc      +  (ONE/(density_bar_gq*c_bar_gq))*c3_3d
-        vel3_steady_bc     = vel3_steady_bc      +  (ONE/(TWO*density_bar_gq*c_bar_gq))*c4_3d  -  (ONE/(TWO*density_bar_gq*c_bar_gq))*c5_3d
-        pressure_steady_bc = pressure_steady_bc  +  HALF*c4_3d  +  HALF*c5_3d
+        ! Convert characteristic Fourier modes back to primitive Fourier modes and store
+        do iradius = 1,size(self%r)
+            ! Get average parts
+            density_bar_r  = density_bar(iradius)
+            vel1_bar_r     = vel1_bar(iradius)
+            vel2_bar_r     = vel2_bar(iradius)
+            vel3_bar_r     = vel3_bar(iradius)
+            pressure_bar_r = pressure_bar(iradius)
+            c_bar_r        = sqrt(gam*pressure_bar_r/density_bar_r)
+            do itheta = 1,size(c1_hat_real,1)
+                density_Fts_real(iradius,itheta) = -(ONE/(c_bar_r*c_bar_r))*c1_hat_real(itheta,iradius) + (ONE/(TWO*c_bar_r*c_bar_r))*c4_hat_real(itheta,iradius) + (ONE/(TWO*c_bar_r*c_bar_r))*c5_hat_real(itheta,iradius)
+                vel1_Fts_real(iradius,itheta) = (ONE/(density_bar_r*c_bar_r))*c2_hat_real(itheta,iradius)
+                vel2_Fts_real(iradius,itheta) = (ONE/(density_bar_r*c_bar_r))*c3_hat_real(itheta,iradius)
+                vel3_Fts_real(iradius,itheta) = (ONE/(TWO*density_bar_r*c_bar_r))*c4_hat_real(itheta,iradius) - (ONE/(TWO*density_bar_r*c_bar_r))*c5_hat_real(itheta,iradius)
+                pressure_Fts_real(iradius,itheta) = HALF*c4_hat_real(itheta,iradius) + HALF*c5_hat_real(itheta,iradius)
 
+                density_Fts_imag(iradius,itheta) = -(ONE/(c_bar_r*c_bar_r))*c1_hat_imag(itheta,iradius) + (ONE/(TWO*c_bar_r*c_bar_r))*c4_hat_imag(itheta,iradius) + (ONE/(TWO*c_bar_r*c_bar_r))*c5_hat_imag(itheta,iradius)
+                vel1_Fts_imag(iradius,itheta) = (ONE/(density_bar_r*c_bar_r))*c2_hat_imag(itheta,iradius)
+                vel2_Fts_imag(iradius,itheta) = (ONE/(density_bar_r*c_bar_r))*c3_hat_imag(itheta,iradius)
+                vel3_Fts_imag(iradius,itheta) = (ONE/(TWO*density_bar_r*c_bar_r))*c4_hat_imag(itheta,iradius) - (ONE/(TWO*density_bar_r*c_bar_r))*c5_hat_imag(itheta,iradius)
+                pressure_Fts_imag(iradius,itheta) = HALF*c4_hat_imag(itheta,iradius) + HALF*c5_hat_imag(itheta,iradius)
+            end do
+        end do 
 
     end subroutine compute_steady_nrbc
     !********************************************************************************

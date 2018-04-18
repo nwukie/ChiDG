@@ -42,6 +42,7 @@ module mod_io
     real(rk),               save    :: ntol              = 1.e-8
     integer(ik),            save    :: norders_reduction = 10
     real(rk),               save    :: cfl0              = 1._rk
+    real(rk),               save    :: cflmax            = -1._rk
     type(dict_t),           save    :: noptions
     
     ! Linear solver
@@ -87,6 +88,7 @@ module mod_io
                                         nonlinear_steps,       &
                                         norders_reduction,     &
                                         cfl0,                  &
+                                        cflmax,                &
                                         ntol
 
     namelist /linear_solve/             linear_solver,         &
@@ -201,6 +203,7 @@ contains
         call noptions%set('tol',ntol)
         call noptions%set('norders_reduction',norders_reduction)
         call noptions%set('cfl0',cfl0)
+        call noptions%set('cflmax',cflmax)
         call noptions%set('nsteps',nonlinear_steps)
 
         ! Set linear solver options

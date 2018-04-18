@@ -183,6 +183,10 @@ contains
                     cfln = 0.1
                 end where
 
+                do icfl = 1,size(cfln)
+                    if (self%cflmax > 0. .and. cfln(icfl) > self%cflmax) cfln(icfl) = self%cflmax
+                end do
+
                 !if (IRANK == GLOBAL_MASTER) then
                 !    call add_to_line("  CFL: ")
                 !    do icfl = 1,size(cfln)

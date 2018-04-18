@@ -147,6 +147,7 @@ contains
         integer(ik)             :: ntime
         integer(ik)             :: ierr,i,j, xstart, xend
         real(rk),allocatable    :: D(:,:)
+        type(chidg_vector_t)    :: rhs_tmp
 
         
         associate ( rhs => data%sdata%rhs, lhs => data%sdata%lhs, q => data%sdata%q )
@@ -209,7 +210,6 @@ contains
 
         end associate
 
-        
 
     end subroutine assemble
     !*********************************************************************************

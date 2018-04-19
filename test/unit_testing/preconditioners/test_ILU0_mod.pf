@@ -85,20 +85,20 @@ contains
         ielem = 1
         itime = 1
 
-        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,1)
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,1,itime)
         this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = ONE
-        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,2)
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,2,itime)
         this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = -TWO
 
 
         ielem = 2
         itime = 1
 
-        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,1)
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,1,itime)
         this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = TWO
-        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,2)
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,2,itime)
         this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = -FIVE
-        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,3)
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,3,itime)
         this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = 12._rk
 
 
@@ -107,9 +107,9 @@ contains
         ielem = 3
         itime = 1
 
-        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,2)
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,2,itime)
         this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = TWO
-        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,3)
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,3,itime)
         this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = -TEN
 
 
@@ -170,23 +170,23 @@ contains
         !
         ielem = 1
         itime = 1
-        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,1)
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,1,itime)
         @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat))
 
 
         ielem = 2
         itime = 1
-        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,1)
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,1,itime)
         @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat))
-        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,2)
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,2,itime)
         @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat))
 
         
         ielem = 3
         itime = 1
-        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,2)
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,2,itime)
         @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat))
-        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,3)
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,3,itime)
         @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat))
 
 
@@ -254,23 +254,23 @@ contains
         !
         ielem = 1
         itime = 1
-        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,1)
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,1,itime)
         @assertEqual(ONE,self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat(1,1))
 
 
         ielem = 2
         itime = 1
-        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,1)
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,1,itime)
         @assertEqual(TWO,self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat(1,1))
-        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,2)
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,2,itime)
         @assertEqual(-ONE,self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat(1,1))
 
 
         ielem = 3
         itime = 1
-        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,2)
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,2,itime)
         @assertEqual(-TWO,self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat(1,1))
-        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,3)
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,3,itime)
         @assertEqual((ONE/14._rk),self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat(1,1))
 
 

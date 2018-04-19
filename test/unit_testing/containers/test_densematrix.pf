@@ -14,7 +14,7 @@ subroutine test_densematrix__init()
     implicit none
     type(densematrix_t)  :: blk
     integer(ik)          :: nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l, &
-                            nentries, parent_proc
+                            nentries, parent_proc, itime
     
     !    
     ! Test initialization procedure
@@ -27,12 +27,12 @@ subroutine test_densematrix__init()
     eparent_g   = 60
     eparent_l   = 55
     parent_proc = 3
+    itime = 1
     
     !
     ! Call initialization procedure. THIS IS BEING TESTED.
     !
-    !call blk%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
-    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
     
     @assertEqual(nterms*nfields,blk%idim())
     @assertEqual(nterms*nfields,blk%jdim())
@@ -42,6 +42,7 @@ subroutine test_densematrix__init()
     @assertEqual(eparent_g,blk%eparent_g())
     @assertEqual(eparent_l,blk%eparent_l())
     @assertEqual(parent_proc,blk%parent_proc())
+    @assertEqual(itime,blk%tparent())
 
 end subroutine test_densematrix__init
 !**************************************************************************************************
@@ -65,7 +66,7 @@ subroutine test_densematrix__reinit()
     implicit none
     type(densematrix_t)  :: blk
     integer(ik)          :: nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l, &
-                            nentries, parent_proc
+                            nentries, parent_proc, itime
 
 
 
@@ -80,8 +81,9 @@ subroutine test_densematrix__reinit()
     eparent_g   = 60
     eparent_l   = 55
     parent_proc = 3
+    itime       = 1
     
-    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
 
 
 
@@ -97,8 +99,9 @@ subroutine test_densematrix__reinit()
     eparent_g   = 66
     eparent_l   = 65
     parent_proc = 2
+    itime = 2
     
-    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
     
     @assertEqual(nterms*nfields,blk%idim())
     @assertEqual(nterms*nfields,blk%jdim())
@@ -108,6 +111,7 @@ subroutine test_densematrix__reinit()
     @assertEqual(eparent_g,blk%eparent_g())
     @assertEqual(eparent_l,blk%eparent_l())
     @assertEqual(parent_proc,blk%parent_proc())
+    @assertEqual(itime,blk%tparent())
     
 end subroutine test_densematrix__reinit
 !***************************************************************************************
@@ -136,7 +140,7 @@ subroutine test_densematrix__resize()
     implicit none
     type(densematrix_t) :: blk
     integer(ik)         :: nterms,nfields,idim,jdim,dparent_g,dparent_l,eparent_g,  &
-                           eparent_l,parent_proc,nentries
+                           eparent_l,parent_proc,nentries,itime
     
     
     !
@@ -149,7 +153,8 @@ subroutine test_densematrix__resize()
     eparent_g   = 66
     eparent_l   = 65
     parent_proc = 2
-    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    itime = 1
+    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
     
     !
     ! Test resize procedure
@@ -168,6 +173,7 @@ subroutine test_densematrix__resize()
     @assertEqual(eparent_g,blk%eparent_g())
     @assertEqual(eparent_l,blk%eparent_l())
     @assertEqual(parent_proc,blk%parent_proc())
+    @assertEqual(itime,blk%tparent())
 
 end subroutine test_densematrix__resize
 !*******************************************************************************************
@@ -198,7 +204,7 @@ subroutine test_densematrix__restrict()
     type(densematrix_t) :: dmatrix, restricted
     real(rk)            :: tol
     integer(ik)         :: nterms,nfields,idim,jdim,dparent_g,dparent_l,eparent_g,  &
-                           eparent_l,parent_proc,nentries
+                           eparent_l,parent_proc,nentries,itime
 
     tol = 1.e-6_rk
     
@@ -212,7 +218,8 @@ subroutine test_densematrix__restrict()
     eparent_g   = 66
     eparent_l   = 65
     parent_proc = 2
-    call dmatrix%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    itime = 1
+    call dmatrix%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
 
 
     !
@@ -235,6 +242,7 @@ subroutine test_densematrix__restrict()
     @assertEqual(eparent_g,   restricted%eparent_g()   )
     @assertEqual(eparent_l,   restricted%eparent_l()   )
     @assertEqual(parent_proc, restricted%parent_proc() )
+    @assertEqual(itime,       restricted%tparent() )
 
     ! Check values of restricted matrix
     @assertEqual(dmatrix%mat(1,1), restricted%mat(1,1), tol)

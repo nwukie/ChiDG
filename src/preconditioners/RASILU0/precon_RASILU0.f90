@@ -253,7 +253,7 @@ contains
                     dparent_g_lower = A%dom(idom)%lblks(irow,1)%dparent_g(ilowerA)
                     eparent_g_lower = A%dom(idom)%lblks(irow,1)%eparent_g(ilowerA)
 
-                    ilowerLD = self%LD%dom(idom)%lblks(irow,1)%loc(dparent_g_lower,eparent_g_lower)
+                    ilowerLD = self%LD%dom(idom)%lblks(irow,1)%loc(dparent_g_lower,eparent_g_lower,itime)
 
                     if (A%dom(idom)%lblks(irow,1)%parent_proc(ilowerA) == IRANK) then
 
@@ -468,7 +468,7 @@ contains
                     dparent_g_lower = A%dom(idom)%lblks(irow,1)%dparent_g(ilowerA)
                     eparent_g_lower = A%dom(idom)%lblks(irow,1)%eparent_g(ilowerA)
 
-                    ilowerLD = self%LD%dom(idom)%lblks(irow,1)%loc(dparent_g_lower,eparent_g_lower)
+                    ilowerLD = self%LD%dom(idom)%lblks(irow,1)%loc(dparent_g_lower,eparent_g_lower,itime)
 
                     if ( A%dom(idom)%lblks(irow,1)%parent_proc(ilowerA) == IRANK) then
                             ! Get associated parent block index

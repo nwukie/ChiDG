@@ -1,4 +1,5 @@
 @Test
+    !iblk    = 7
 subroutine test_integrate_boundary_constant()
     use pfunit_mod
     use mod_kinds,          only: rk, ik
@@ -91,10 +92,7 @@ subroutine test_integrate_boundary_constant()
     !
     ! Set seed. Doesn't really matter what, since we are just checking the values here
     !
-    seed%idomain_g  = 1
-    seed%idomain_l  = 1
-    seed%ielement_g = 1
-    seed%ielement_l = 1
+    call seed%init(1,1,1,1,1,1,0,1,1,1,1)
     
     face%idomain_g  = 1
     face%idomain_l  = 1
@@ -105,7 +103,6 @@ subroutine test_integrate_boundary_constant()
     idomain = 1
     ieqn    = 1
     itime   = 1
-    !iblk    = 7
     iblk    = face%iface
     idonor  = 1
     ifcn    = 1

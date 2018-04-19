@@ -40,6 +40,7 @@ module mod_equations
     use eqn_graddemo,                       only: graddemo
     use eqn_pgradtest,                      only: pgradtest
     use eqn_primitive_linearized_euler,     only: primitive_linearized_euler
+    use eqn_empty,                          only: empty
     implicit none
 
 
@@ -144,6 +145,7 @@ contains
         type(graddemo)                      :: graddemo_builder
         type(pgradtest)                     :: pgradtest_builder
         type(primitive_linearized_euler)    :: primitive_linearized_euler_builder
+        type(empty)                         :: empty_builder
 
 
         !
@@ -175,6 +177,7 @@ contains
             call equation_set_factory%register(graddemo_builder%build('default'))
             call equation_set_factory%register(pgradtest_builder%build('default'))
             call equation_set_factory%register(primitive_linearized_euler_builder%build('default'))
+            call equation_set_factory%register(empty_builder%build('default'))
 
 
 

@@ -79,7 +79,7 @@ contains
                                        itime_i, recv_comm, recv_domain, recv_element
         integer(ik)                 :: dparent_g, dparent_l, eparent_g, eparent_l
         integer(ik)                 :: matrix_proc, vector_proc, nrows, ncols, ierr
-        integer(ik)                 :: res_istart, res_iend, x_istart, x_iend, xstart, xend
+        integer(ik)                 :: res_istart, res_iend, x_istart, x_iend, xstart, xend, tparent
         logical                     :: local_multiply, parallel_multiply
         logical                     :: nonconforming = .false.
         logical                     :: HB_flag_status = .false.
@@ -250,7 +250,51 @@ contains
                                     ! Test matrix vector sizes
                                     !
                                     nonconforming = ( size(Amat,2) /= size(xvec) )
-                                    if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
+                                    if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Boundary m-v operation")
+
+                                    call timer_blas%start()
+                                    resvec = resvec + matmul(Amat,xvec)
+                                    call timer_blas%stop()
+
+                                end associate
+                            end if
+
+
+                        end do !imat
+                    end do ! ielem
+                end if  ! allocated
+
+
+                !
+                ! Routine for proc-local HARMONIC BALANCE coupling (hb_blks)
+                !
+                if (allocated(A%dom(idom)%hb_blks)) then
+                    do ielem = 1,size(A%dom(idom)%hb_blks,1)
+                        do imat = 1,A%dom(idom)%hb_blks(ielem,itime)%size()
+
+                            matrix_proc = IRANK
+                            vector_proc = A%dom(idom)%hb_blks(ielem,itime)%parent_proc(imat)
+
+                            local_multiply    = ( matrix_proc == vector_proc )
+                            parallel_multiply = ( matrix_proc /= vector_proc )
+
+
+                            if ( local_multiply ) then
+                                dparent_l = A%dom(idom)%hb_blks(ielem,itime)%dparent_l(imat)
+                                eparent_l = A%dom(idom)%hb_blks(ielem,itime)%eparent_l(imat)
+                                tparent   = A%dom(idom)%hb_blks(ielem,itime)%tparent(imat)
+
+                                res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
+                                res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
+                                x_istart   = x%dom(dparent_l)%vecs(eparent_l)%get_time_start(tparent)
+                                x_iend     = x%dom(dparent_l)%vecs(eparent_l)%get_time_end(tparent)
+                                associate ( resvec => res%dom(idom)%vecs(ielem)%vec(res_istart:res_iend),    &
+                                            xvec   => x%dom(dparent_l)%vecs(eparent_l)%vec(x_istart:x_iend), &
+                                            Amat   => A%dom(idom)%hb_blks(ielem,itime)%data_(imat)%mat ) 
+
+                                    ! Test matrix vector sizes
+                                    nonconforming = ( size(Amat,2) /= size(xvec) )
+                                    if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Harmonic Balance m-v operation")
 
                                     call timer_blas%start()
                                     resvec = resvec + matmul(Amat,xvec)
@@ -269,62 +313,60 @@ contains
 
 
 
-
-
                 
-                !
-                ! Routine for harmonic balance computations
-                ! Used only when harmonic balance is specified
-                !
-                HB_flag = time_manager_global%get_name()
-
-                if (HB_flag == 'Harmonic Balance' .or. HB_flag == 'Harmonic_Balance' .or. HB_flag == 'harmonic balance' &
-                    .or. HB_flag == 'harmonic_balance' .or. HB_flag == 'HB') then
-
-                    D = time_manager_global%D
-
-                    do ielem = 1,size(A%dom(idom)%lblks,1) 
-
-                        imat = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
-
-                        matrix_proc = IRANK
-                        vector_proc = A%dom(idom)%lblks(ielem,itime)%parent_proc(imat)
-
-                        local_multiply    = (matrix_proc == vector_proc)
-                        parallel_multiply = (matrix_proc /= vector_proc)
-
-                        if (local_multiply) then
-                            do itime_i = 1,size(A%dom(idom)%lblks,2)
-                                if (itime_i /= itime) then
-
-                                    associate ( nvars  => x%dom(idom)%vecs(ielem)%nvars(), &
-                                                nterms => x%dom(idom)%vecs(ielem)%nterms(), &
-                                                mass   => A%dom(idom)%lblks(ielem,itime_i)%mass )
-
-                                    if (allocated(temp_1)) deallocate(temp_1)
-                                    if (allocated(temp_2)) deallocate(temp_2)
-                                    allocate(temp_1(nterms),temp_2(nterms), stat=ierr)
-                                    if (ierr /= 0) call AllocationError
-
-                                    call timer_blas%start()
-                                    do ivar = 1,nvars
-
-                                        temp_1 = D(itime,itime_i)*matmul(mass,x%dom(idom)%vecs(ielem)%getvar(ivar,itime_i))
-                                        temp_2 = res%dom(idom)%vecs(ielem)%getvar(ivar,itime) + temp_1
-                                        call res%dom(idom)%vecs(ielem)%setvar(ivar,itime,temp_2)
-
-                                    end do  ! ivar
-                                    call timer_blas%stop()
-
-                                    end associate
-
-                                end if 
-                            end do  ! itime_i
-                        end if  ! local_multiply
-
-                    end do  ! ielem
-
-                end if  ! HB_flag
+!                !
+!                ! Routine for harmonic balance computations
+!                ! Used only when harmonic balance is specified
+!                !
+!                HB_flag = time_manager_global%get_name()
+!
+!                if (HB_flag == 'Harmonic Balance' .or. HB_flag == 'Harmonic_Balance' .or. HB_flag == 'harmonic balance' &
+!                    .or. HB_flag == 'harmonic_balance' .or. HB_flag == 'HB') then
+!
+!                    D = time_manager_global%D
+!
+!                    do ielem = 1,size(A%dom(idom)%lblks,1) 
+!
+!                        imat = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
+!
+!                        matrix_proc = IRANK
+!                        vector_proc = A%dom(idom)%lblks(ielem,itime)%parent_proc(imat)
+!
+!                        local_multiply    = (matrix_proc == vector_proc)
+!                        parallel_multiply = (matrix_proc /= vector_proc)
+!
+!                        if (local_multiply) then
+!                            do itime_i = 1,size(A%dom(idom)%lblks,2)
+!                                if (itime_i /= itime) then
+!
+!                                    associate ( nvars  => x%dom(idom)%vecs(ielem)%nvars(), &
+!                                                nterms => x%dom(idom)%vecs(ielem)%nterms(), &
+!                                                mass   => A%dom(idom)%lblks(ielem,itime_i)%mass )
+!
+!                                    if (allocated(temp_1)) deallocate(temp_1)
+!                                    if (allocated(temp_2)) deallocate(temp_2)
+!                                    allocate(temp_1(nterms),temp_2(nterms), stat=ierr)
+!                                    if (ierr /= 0) call AllocationError
+!
+!                                    call timer_blas%start()
+!                                    do ivar = 1,nvars
+!
+!                                        temp_1 = D(itime,itime_i)*matmul(mass,x%dom(idom)%vecs(ielem)%getvar(ivar,itime_i))
+!                                        temp_2 = res%dom(idom)%vecs(ielem)%getvar(ivar,itime) + temp_1
+!                                        call res%dom(idom)%vecs(ielem)%setvar(ivar,itime,temp_2)
+!
+!                                    end do  ! ivar
+!                                    call timer_blas%stop()
+!
+!                                    end associate
+!
+!                                end if 
+!                            end do  ! itime_i
+!                        end if  ! local_multiply
+!
+!                    end do  ! ielem
+!
+!                end if  ! HB_flag
 
 
 

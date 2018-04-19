@@ -132,7 +132,7 @@ module integration_test_DIRK_mod
     ! to test the nonlinear convergence between a case running on
     ! a different number of procs.
     !
-    ! Integrators:   = ['backward_euler', 'backward_euler',    'DIRK',    'DIRK']
+    ! Integrators:   = ['Backward Euler', 'Backward Euler',    'DIRK',    'DIRK']
     ! dt:            = [ 0.0125,                   0.00625,    0.10,       0.08 ]
     ! nsteps:        = [   1600,                      3200,     200,        250 ]
     !
@@ -503,7 +503,7 @@ contains
         integer(ik),        allocatable :: nsteps(:), expected_order(:)
         integer(ik)                     :: icase
 
-        integrators = [string_t('backward_euler'),   string_t('backward_euler'), &
+        integrators = [string_t('Backward Euler'),   string_t('Backward Euler'), &
                        string_t('DIRK'),             string_t('DIRK')]
 
         files       = [ string_t('1D_linear_advection.h5'), string_t('1D_linear_advection.h5'), &
@@ -639,6 +639,8 @@ contains
         preconditioner   = 'RASILU0'
         nwrite           = 10000000
         IO_DESTINATION   = 'file'
+!        IO_DESTINATION   = 'both'
+!        verbosity = 4
         !------------------------------------------------------------------------------
 
 
@@ -779,7 +781,8 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    @Test(npes=[6])
+    !@Test(npes=[6])
+    @Test(npes=[4])
     subroutine run_calculations(self)
         class(linear_advection_1D),  intent(inout)   :: self
 
@@ -1025,7 +1028,7 @@ contains
         integer(ik) :: ind
 
         select case (trim(integrator))
-            case('backward_euler')
+            case('Backward Euler')
                 ind = 1
             case('DIRK')
                 ind = 2

@@ -275,6 +275,8 @@ contains
         linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'file'
+        !IO_DESTINATION   = 'both'
+        !verbosity = 4
         !------------------------------------------------------------------------------
 
 

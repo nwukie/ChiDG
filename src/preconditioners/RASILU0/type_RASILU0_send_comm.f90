@@ -72,10 +72,14 @@ contains
         type(ivector_t)             :: dom_send
         integer(ik)                 :: idom, idom_send, ierr, iblk, ielem, iface, &
                                        nelem_send, ielem_send, ielem_n, iface_n, iblk_send, nblks, idiag, imat, imat_n, &
-                                       idomain_g_n, ielement_g_n, ielement_l_n
+                                       idomain_g_n, ielement_g_n, ielement_l_n, itime
         integer(ik),    allocatable :: send_procs_dom(:)
         logical                     :: comm_domain, overlap_elem
         type(MPI_REQUEST)           :: request
+
+
+        ! WARNING! Assuming single time-level. Not valid for Harmonic Balance
+        itime = 1
 
         !
         ! Set send processor
@@ -90,16 +94,11 @@ contains
         do idom = 1,mesh%ndomains()
 
             send_procs_dom = mesh%domain(idom)%get_send_procs_local()
-
             ! Check if this domain is communicating with 'proc'
             comm_domain = any(send_procs_dom == proc)
-
             if (comm_domain) call dom_send%push_back(idom)
 
         end do !idom
-
-
-
 
 
         !
@@ -147,9 +146,6 @@ contains
             !
             call MPI_ISend(self%dom(idom_send)%elem_send%size_, 1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
             call self%mpi_requests%push_back(request)
-
-
-
 
 
             !
@@ -200,7 +196,7 @@ contains
                         !
                         ! Find linearization of ielem wrt neighbor, ielem_n
                         !
-                        imat_n = A%dom(idom)%lblks(ielem,1)%loc(idomain_g_n,ielement_g_n)
+                        imat_n = A%dom(idom)%lblks(ielem,1)%loc(idomain_g_n,ielement_g_n,itime)
 
 
                         do imat = 1,A%dom(idom)%lblks(ielement_l_n,1)%size()

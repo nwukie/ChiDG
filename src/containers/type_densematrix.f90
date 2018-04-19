@@ -41,6 +41,7 @@ module type_densematrix
         integer(ik)     :: dparent_l_   = 0   ! Local domain index of the element matrix was linearized with respect to
         integer(ik)     :: eparent_g_   = 0   ! Global element index of the element matrix was linearized with respect to
         integer(ik)     :: eparent_l_   = 0   ! Local element index of the element matrix was linearized with respect to
+        integer(ik)     :: tparent_     = 0   ! Time-level the linearization was computed with respect to
 
         ! imat index of transposed densematrix
         integer(ik)     :: itranspose_  = 0
@@ -66,6 +67,7 @@ module type_densematrix
         procedure :: dparent_l          ! return parent domain
         procedure :: eparent_g          ! return parent element
         procedure :: eparent_l          ! return parent element
+        procedure :: tparent
         procedure :: parent_proc        ! return the processor rank of the parent
         procedure :: itranspose         ! return imat index of transposed densematrix
         procedure :: nentries           ! return number of matrix entries
@@ -115,7 +117,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     !subroutine init(self,idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
-    subroutine init(self,nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    subroutine init(self,nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,tparent)
         class(densematrix_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms
         integer(ik),            intent(in)      :: nfields
@@ -124,6 +126,7 @@ contains
         integer(ik),            intent(in)      :: eparent_g
         integer(ik),            intent(in)      :: eparent_l
         integer(ik),            intent(in)      :: parent_proc
+        integer(ik),            intent(in)      :: tparent
 
         integer(ik) :: ierr, idim, jdim
 
@@ -143,7 +146,7 @@ contains
         self%eparent_g_   = eparent_g
         self%eparent_l_   = eparent_l
         self%parent_proc_ = parent_proc
-
+        self%tparent_     = tparent
 
         !
         ! Set matrix size
@@ -158,7 +161,6 @@ contains
         if ( allocated(self%mat) ) deallocate(self%mat)
         allocate(self%mat(idim,jdim),stat=ierr)
         if (ierr /= 0) call AllocationError
-
 
         !
         ! Initialize to zero
@@ -240,15 +242,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
     !> return index of parent domain
     !!
     !!  @author Nathan A. Wukie
@@ -289,9 +282,6 @@ contains
 
 
 
-
-
-
     !> return index of parent element
     !!
     !!  @author Nathan A. Wukie
@@ -326,6 +316,26 @@ contains
         par = self%eparent_l_
 
     end function eparent_l
+    !******************************************************************************************
+
+
+
+
+    !> return index of parent element
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2018
+    !!
+    !!  @return     par     Integer index of the parent element.
+    !!
+    !------------------------------------------------------------------------------------------
+    function tparent(self) result(par)
+        class(densematrix_t), intent(in) :: self
+        integer(ik)                      :: par
+
+        par = self%tparent_
+
+    end function tparent
     !******************************************************************************************
 
 

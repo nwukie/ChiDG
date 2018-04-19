@@ -133,7 +133,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
     ! Check that the derivatives were assigned to their correct locations in the domain matrix.
     ! The xp_ad_ arrays should be stored as rows of the domain matrix.
     !
-    imat = bmat%lblks(ielement_l,itime)%loc(idomain_g=1,ielem_g=13)
+    imat = bmat%lblks(ielement_l,itime)%loc(idomain_g=1,ielem_g=13,itime=itime)
     mat  = bmat%lblks(ielement_l,itime)%dmat(imat)
 
     @assertEqual(integral(1)%xp_ad_, mat(1,:) )
@@ -282,7 +282,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
     ! Check that the derivatives were assigned to their correct locations in the domain matrix.
     ! The xp_ad_ arrays should be stored as rows of the domain matrix.
     !
-    imat = bmat%lblks(ielem,itime)%loc(idomain_g=1,ielem_g=13)
+    imat = bmat%lblks(ielem,itime)%loc(idomain_g=1,ielem_g=13,itime=itime)
     mat  = bmat%lblks(ielem,itime)%dmat(imat)
     @assertEqual(integral(1)%xp_ad_, mat(9,:) )
     @assertEqual(integral(2)%xp_ad_, mat(10,:) )
@@ -350,10 +350,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     call chidg%start_up('core')
     
 
-
-    !
     ! Create a 3x3x3 mesh
-    !
     call create_mesh_file("D1 NxNxN", filename = 'file.h5',                             &
                                       equation_sets = [string_t('Scalar Advection')],   &
                                       nelem_xi   = 3,                                   &
@@ -371,28 +368,19 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     call chidg%read_mesh('file.h5')
 
 
-
-    !
     ! Call initialization on domain matrix
-    !
     call bmat%init(chidg%data%mesh,idom=1,mtype='full')
 
 
-
-    !
     ! Initialize AD variables with allocated derivative arrays
-    !
     nderiv = neqns*nterms_s
     do i = 1,8
         integral(i) = AD_D(nderiv)
     end do
 
 
-
-    integral = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
-    !
     ! Set the first and last element of each derivative array so they aren't just zeros
-    !
+    integral = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
     integral(1)%xp_ad_(1) = ONE
     integral(1)%xp_ad_(8) = ONE
     
@@ -418,39 +406,27 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     integral(8)%xp_ad_(8) = EIGHT
 
 
-    !
     ! Store Derivatives
-    !
-    face_location = face_info(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
-    call seed%init(     idomain_g=1,idomain_l=1,ielement_g=13,ielement_l=13, &
-                        neqns=neqns,nterms_s=nterms_s,iproc=0,itime=itime,recv_comm=0,recv_domain=0,recv_element=0)
     ivar  = 1
     itime = 1
+    face_location = face_info(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
+    call seed%init(idomain_g=1,idomain_l=1,ielement_g=13,ielement_l=13, &
+                   neqns=neqns,nterms_s=nterms_s,iproc=0,itime=itime,recv_comm=0,recv_domain=0,recv_element=0)
     call bmat%store(integral,face_location,seed,ivar,itime)
 
 
-
-    !
     ! TESTING THIS
-    !
     call bmat%clear()
     
 
-    
-    !
     ! Loop through all domains and assert ZERO
-    !
     do ielem = 1,27
         do imat = 1,bmat%lblks(ielem,itime)%size()
             @assertEqual(ZERO, bmat%lblks(ielem,itime)%dmat(imat), tol)
         end do
     end do
 
-
-
-    !
     ! Close ChiDG interface
-    !
     call chidg%shut_down('core')
     
 end subroutine test_domain_matrix__clear_1eq_8terms

@@ -85,19 +85,19 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine update(self,A,b)
-        class(precon_ILU0_t),    intent(inout)   :: self
-        type(chidg_matrix_t),        intent(in)      :: A
-        type(chidg_vector_t),        intent(in)      :: b
+        class(precon_ILU0_t),   intent(inout)   :: self
+        type(chidg_matrix_t),   intent(in)      :: A
+        type(chidg_vector_t),   intent(in)      :: b
 
 
         integer(ik) :: idom, ielem, itime, idiagA, idiagLD, irow, icol, &
                        eparent_l, ilowerA, ilowerLD, itranspose, dparent_g_lower, &
-                       eparent_g_lower, new_mat
+                       eparent_g_lower
 
 
         call write_line(' Computing ILU0 factorization', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
-        new_mat = self%LD%dom(1)%lblks(2,1)%loc(1,2)
+        !new_mat = self%LD%dom(1)%lblks(2,1)%loc(1,2)
 
         !
         ! Test preconditioner initialization
@@ -156,7 +156,7 @@ contains
                         dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
                         eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
 
-                        ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower)
+                        ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower,itime)
 
                         if (A%dom(idom)%lblks(irow,itime)%parent_proc(ilowerA) == IRANK) then
 
@@ -277,7 +277,7 @@ contains
                         dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
                         eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
                         
-                        ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower)
+                        ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower,itime)
 
                         if ( A%dom(idom)%lblks(irow,itime)%parent_proc(ilowerA) == IRANK ) then
                                 

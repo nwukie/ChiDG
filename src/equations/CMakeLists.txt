@@ -36,5 +36,6 @@ add_lib_sources(type_field.f90
                 type_model.f90
                 type_model_wrapper.f90
                 mock_model.f90
+                eqn_empty.f90
                 )
 

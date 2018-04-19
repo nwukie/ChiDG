@@ -37,6 +37,8 @@ module type_domain_matrix
         type(densematrix_vector_t), allocatable :: lblks(:,:)       
         type(densematrix_vector_t), allocatable :: chi_blks(:,:)       
         type(densematrix_vector_t), allocatable :: bc_blks(:,:)       
+        type(densematrix_vector_t), allocatable :: hb_blks(:,:)
+
 
         !
         ! Supporting data
@@ -56,10 +58,12 @@ module type_domain_matrix
 
 
         ! Setters
-        procedure :: store                                              ! Store linearization data for local blocks
-        procedure :: store_chimera                                      ! Store linearization data for chimera blocks
-        procedure :: store_bc                                           ! Store linearization data for boundary condition blocks
-        procedure :: clear                                              ! Zero all data storage
+        procedure :: store              ! Store linearization data for local blocks
+        procedure :: store_chimera      ! Store linearization data for chimera blocks
+        procedure :: store_bc           ! Store linearization data for boundary condition blocks
+        procedure :: store_hb           ! Store linearization data for coupling across harmonic balance levels
+        procedure :: store_hb_element   ! Make direct contribution to matrix entry instead of from AD variables
+        procedure :: clear              ! Zero all data storage
 
         ! Processors
         procedure :: restrict
@@ -111,13 +115,14 @@ contains
                                        imat_trans, ChiID, ndonors, max_coupled_elems,   &
                                        ncoupled_elems, icoupled_elem, icoupled_elem_bc, &
                                        ielem_bc, ibc, imat, group_ID, patch_ID,         &
-                                       face_ID, elem_ID, idomain_l, ielement_l
+                                       face_ID, elem_ID, idomain_l, ielement_l, itime_couple
         logical                     :: new_elements, chimera_face, more_donors,         &
                                        already_added, contains_chimera_face,            &
                                        block_initialized, lower_block, upper_block,     &
                                        transposed_block, domain_has_face
         logical                     :: init_chimera = .false.
         logical                     :: init_bc      = .false.
+        logical                     :: init_hb      = .false.
 
         type(densematrix_t)         :: temp_blk, temp1
         !
@@ -128,31 +133,37 @@ contains
                 blocks       = [XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG]
                 init_chimera = .true.
                 init_bc      = .true.
+                init_hb      = .true.
 
             case ('L','l','Lower','lower')
                 blocks       = [XI_MIN,ETA_MIN,ZETA_MIN]
                 init_chimera = .false.
                 init_bc      = .false.
+                init_hb      = .false.
 
             case ('U','u','Upper','upper')
                 blocks       = [XI_MAX,ETA_MAX,ZETA_MAX]
                 init_chimera = .false.
                 init_bc      = .false.
+                init_hb      = .false.
 
             case ('LD','ld','LowerDiagonal','lowerdiagonal')
                 blocks       = [XI_MIN,ETA_MIN,ZETA_MIN,DIAG]
                 init_chimera = .false.
                 init_bc      = .false.
+                init_hb      = .false.
                 
             case ('UD','ud','UpperDiagonal','upperdiagonal')
                 blocks       = [XI_MAX,ETA_MAX,ZETA_MAX,DIAG]
                 init_chimera = .false.
                 init_bc      = .false.
+                init_hb      = .false.
 
             case ('D', 'd', 'Diagonal', 'diagonal')
                 blocks       = [DIAG]
                 init_chimera = .false.
                 init_bc      = .false.
+                init_hb      = .false.
 
             case default
                 call chidg_signal(FATAL,'domain_matrix%init: unrecognized matrix type')
@@ -186,13 +197,14 @@ contains
         !
         if (allocated(self%chi_blks)) deallocate(self%chi_blks)
         if (allocated(self%bc_blks))  deallocate(self%bc_blks)
+        if (allocated(self%hb_blks))  deallocate(self%hb_blks)
 
         if (init_chimera) allocate(self%chi_blks(nelem,ntime), stat=ierr)
         if (ierr /= 0) call AllocationError
         if (init_bc) allocate(self%bc_blks(nelem,ntime), stat=ierr)
         if (ierr /= 0) call AllocationError
-
-
+        if (init_hb) allocate(self%hb_blks(nelem,ntime), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
 
 
@@ -223,7 +235,6 @@ contains
                     iblk = blocks(block_index)
                     nterms_s = mesh%domain(idom)%elems(ielem)%nterms_s
                     neqns    = mesh%domain(idom)%elems(ielem)%neqns
-                    !size1d = mesh%domain(idom)%elems(ielem)%neqns  *  mesh%domain(idom)%elems(ielem)%nterms_s
 
                     !
                     ! Parent is the element with respect to which the linearization is computed
@@ -251,7 +262,7 @@ contains
                     if (eparent_l /= NO_INTERIOR_NEIGHBOR) then
 
                         ! Initialize dense block
-                        call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+                        call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
                         call self%lblks(ielem,itime)%push_back(temp_blk)
 
                         ! Store data about number of equations and number of terms in solution expansion
@@ -265,7 +276,6 @@ contains
                         !
                         ! TODO: Add consideration for ntime and how that affects upper/lower status.
                         !
-
                         lower_block = ( (parent_proc == IRANK .and. eparent_l < ielem) .or. (parent_proc < IRANK) )
                         upper_block = ( (parent_proc == IRANK .and. eparent_l > ielem) .or. (parent_proc > IRANK) )
 
@@ -346,26 +356,18 @@ contains
                                 ! If a block for the donor element hasn't yet been initialized, call initialization procedure
                                 !
                                 if (.not. already_added) then
-
-                                    !
-                                    ! Call block initialization, store
-                                    !
-                                    call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+                                    call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
                                     call self%chi_blks(ielem,itime)%push_back(temp_blk)
 
                                 end if
 
                             end do ! idonor
-
-                        end if
-
+                        end if ! if chimera
                     end do ! iface
-
                 end if  ! init_chimera
                 !********************************************
             
             end do  ! itime
-
         end do ! ielem
 
 
@@ -448,7 +450,7 @@ contains
                                     ! Call initialization, store initialized matrix to bc_blks
                                     !
                                     if (.not. already_added) then
-                                        call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+                                        call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
                                         call self%bc_blks(ielement_l,itime)%push_back(temp_blk)
                                     end if
 
@@ -461,6 +463,51 @@ contains
             end do !itime
 
         end if !init_bc
+
+
+
+
+        !---------------------------------------------------------------
+        !
+        ! Initialization  --  HARMONIC BALANCE cross time-level coupling
+        !
+        !---------------------------------------------------------------
+        if (init_hb) then
+
+            ! Default coupling for each element with all its other time levels
+            do ielem = 1,mesh%domain(idom)%nelem
+                do itime = 1,mesh%domain(idom)%ntime 
+                    ! Set the element indices that the densematrix_vector is associated with.
+                    self%hb_blks(ielem,itime)%idomain_g  = mesh%domain(idom)%elems(ielem)%idomain_g
+                    self%hb_blks(ielem,itime)%idomain_l  = mesh%domain(idom)%elems(ielem)%idomain_l
+                    self%hb_blks(ielem,itime)%ielement_g = mesh%domain(idom)%elems(ielem)%ielement_g
+                    self%hb_blks(ielem,itime)%ielement_l = mesh%domain(idom)%elems(ielem)%ielement_l
+                    self%hb_blks(ielem,itime)%mass       = mesh%domain(idom)%elems(ielem)%mass
+
+                    ! Get problem size for a given time-level
+                    neqns    = mesh%domain(idom)%elems(ielem)%neqns
+                    nterms_s = mesh%domain(idom)%elems(ielem)%nterms_s
+
+                    ! Get indices for coupled element. Actually coupled with itself, but at different time-level
+                    dparent_g   = mesh%domain(idom)%elems(ielem)%idomain_g
+                    dparent_l   = mesh%domain(idom)%elems(ielem)%idomain_l
+                    eparent_g   = mesh%domain(idom)%elems(ielem)%ielement_g
+                    eparent_l   = mesh%domain(idom)%elems(ielem)%ielement_l
+                    parent_proc = IRANK
+
+                    ! Call initialization, store initialized matrix to hb_blks
+                    do itime_couple = 1,mesh%domain(idom)%ntime
+                        if (itime_couple /= itime) then
+                            call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime_couple)
+                            call self%hb_blks(ielem,itime)%push_back(temp_blk)
+                        end if
+                    end do !itime_couple
+
+                end do !itime
+            end do !ielem
+
+        end if !init_hb
+
 
 
 
@@ -548,39 +595,29 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine store(self,integral,face_info,seed,ivar,itime)
-        class(domain_matrix_t),   intent(inout)   :: self
+        class(domain_matrix_t), intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
         type(face_info_t),      intent(in)      :: face_info
         type(seed_t),           intent(in)      :: seed
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: itime
 
-        integer(ik) :: nterms, imat
-        integer(ik) :: ielement_l, idonor_domain_g, idonor_element_g
-        
+        integer(ik) :: nterms, imat, ielement_l
 
         ielement_l = face_info%ielement_l
-
-        idonor_domain_g  = seed%idomain_g
-        idonor_element_g = seed%ielement_g
-
 
         ! Get stored information for the block
         nterms = self%ldata(ielement_l,2)  
 
         ! Find donor densematrix location 
-        imat = self%lblks(ielement_l,itime)%loc(idonor_domain_g,idonor_element_g)
+        imat = self%lblks(ielement_l,itime)%loc(seed%idomain_g,seed%ielement_g,seed%itime)
+        if (imat == 0) call chidg_signal(FATAL,"domain_matrix%store: no allocation found to store data.")
 
         ! Call subroutine on densematrix 
         call self%lblks(ielement_l,itime)%store(imat,ivar,nterms,integral)
 
     end subroutine store
     !******************************************************************************************
-
-
-
-
-
 
 
 
@@ -609,34 +646,21 @@ contains
         integer(ik),                intent(in)      :: ivar
         integer(ik),                intent(in)      :: itime
 
-        integer(ik) :: nterms, imat
-        integer(ik) :: ielement_l, idonor_domain_g, idonor_element_g
-        
+        integer(ik) :: nterms, imat, ielement_l
 
         ielement_l = face_info%ielement_l
-
-        idonor_domain_g  = seed%idomain_g
-        idonor_element_g = seed%ielement_g
-
 
         ! Get stored information for the block
         nterms = self%ldata(ielement_l,2)
 
-
         ! Find donor densematrix location 
-        imat = self%chi_blks(ielement_l,itime)%loc(idonor_domain_g,idonor_element_g)
-
+        imat = self%chi_blks(ielement_l,itime)%loc(seed%idomain_g,seed%ielement_g,seed%itime)
 
         ! Store derivatives
         call self%chi_blks(ielement_l,itime)%store(imat,ivar,nterms,integral)
 
-
     end subroutine store_chimera
     !******************************************************************************************
-
-
-
-
 
 
 
@@ -662,59 +686,131 @@ contains
     !!
     !------------------------------------------------------------------------------------
     subroutine store_bc(self,integral,face,seed,ivar,itime)
-        class(domain_matrix_t),       intent(inout)   :: self
+        class(domain_matrix_t),     intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar
         integer(ik),                intent(in)      :: itime
 
-        integer(ik) :: ielement_l
-        integer(ik) :: icoupled_domain_g, icoupled_element_g, icoupled_element_l, imat
-        integer(ik) :: nterms, size_integral
+        integer(ik) :: ielement_l, imat, nterms
         logical     :: local_coupling = .false.
 
-
-        ielement_l = face%ielement_l
-
-        icoupled_domain_g  = seed%idomain_g
-        icoupled_element_g = seed%ielement_g
-        icoupled_element_l = seed%ielement_l
-
-
-        !
-        ! If ielem = ielem_d then the linearization is with respect to the local element. 
-        ! So, this is stored in the self%lblks array in the DIAG location, instead of
-        ! the self%bc_blks array. In general, the storage location is not important,
-        ! but the ILU preconditioner expects the full diagonal contribution to be in 
-        ! lblks.
-        !
-        local_coupling = (ielement_l == icoupled_element_l)
-
-        if ( local_coupling ) then
-
-            call self%store(integral,face,seed,ivar,itime)
-
+        ! If cross-timelevel harmonic balance term store separately
+        if (itime /= seed%itime) then
+            call self%store_hb(integral,face,seed,ivar,itime)
         else
 
+            ielement_l = face%ielement_l
 
-            ! Get stored information for the block
-            nterms = self%ldata(ielement_l,2)
+            ! If ielem = ielem_d then the linearization is with respect to the local element. 
+            ! So, this is stored in the self%lblks array in the DIAG location, instead of
+            ! the self%bc_blks array. In general, the storage location is not important,
+            ! but the ILU preconditioner expects the full diagonal contribution to be in 
+            ! lblks.
+            local_coupling = (ielement_l == seed%ielement_l)
 
-            ! Find coupled bc densematrix location 
-            imat = self%bc_blks(ielement_l,itime)%loc(icoupled_domain_g,icoupled_element_g)
+            if ( local_coupling ) then
+                call self%store(integral,face,seed,ivar,itime)
+            else
 
-            ! Store derivatives
-            call self%bc_blks(ielement_l,itime)%store(imat,ivar,nterms,integral)
+                ! Get stored information for the block
+                nterms = self%ldata(ielement_l,2)
 
+                ! Find coupled bc densematrix location 
+                imat = self%bc_blks(ielement_l,itime)%loc(seed%idomain_g,seed%ielement_g,seed%itime)
 
-        end if ! check local block.
+                ! Store derivatives
+                call self%bc_blks(ielement_l,itime)%store(imat,ivar,nterms,integral)
 
+            end if ! check local block.
+
+        end if
 
     end subroutine store_bc
     !********************************************************************************
 
 
+
+
+
+    !>  Stores data due to harmonic balance cross-timelevel coupling from boundary conditions.
+    !!
+    !!  This means seed%itime /= itime
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2018
+    !!
+    !!  @param[in]  integral    Array of modes with embedded partial derivatives 
+    !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
+    !!  @param[in]  seed        seed_t containing indices of the element against which the linearization was computed.
+    !!  @param[in]  ivar        Index of the variable
+    !!  @param[in]  itime       Index of a time level for the linearization of the given element
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine store_hb(self,integral,face,seed,ivar,itime)
+        class(domain_matrix_t),     intent(inout)   :: self
+        type(AD_D),                 intent(in)      :: integral(:)
+        type(face_info_t),          intent(in)      :: face
+        type(seed_t),               intent(in)      :: seed
+        integer(ik),                intent(in)      :: ivar
+        integer(ik),                intent(in)      :: itime
+
+        integer(ik) :: ielement_l, imat, nterms
+
+        ! Get stored information for the block
+        ielement_l = face%ielement_l
+        nterms = self%ldata(ielement_l,2)
+
+        ! Find coupled hb densematrix location 
+        imat = self%hb_blks(ielement_l,itime)%loc(seed%idomain_g,seed%ielement_g,seed%itime)
+
+        ! Store derivatives
+        call self%hb_blks(ielement_l,itime)%store(imat,ivar,nterms,integral)
+
+    end subroutine store_hb
+    !********************************************************************************
+
+
+
+
+
+
+
+    !>  Stores data due to harmonic balance cross-timelevel coupling from boundary conditions.
+    !!
+    !!  This means seed%itime /= itime
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2018
+    !!
+    !!  @param[in]  integral    Array of modes with embedded partial derivatives 
+    !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
+    !!  @param[in]  seed        seed_t containing indices of the element against which the linearization was computed.
+    !!  @param[in]  ivar        Index of the variable
+    !!  @param[in]  itime       Index of a time level for the linearization of the given element
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine store_hb_element(self,contribution,face,seed,itime)
+        class(domain_matrix_t),     intent(inout)   :: self
+        real(rk),                   intent(in)      :: contribution(:,:)
+        type(face_info_t),          intent(in)      :: face
+        type(seed_t),               intent(in)      :: seed
+        integer(ik),                intent(in)      :: itime
+
+        integer(ik) :: ielement_l, imat
+
+        ! Get stored information for the block
+        ielement_l = face%ielement_l
+
+        ! Find coupled hb densematrix location 
+        imat = self%hb_blks(ielement_l,itime)%loc(seed%idomain_g,seed%ielement_g,seed%itime)
+
+        ! Store derivatives
+        call self%hb_blks(ielement_l,itime)%store_element(imat,contribution)
+
+    end subroutine store_hb_element
+    !********************************************************************************
 
 
 
@@ -736,19 +832,15 @@ contains
     subroutine clear(self)
         class(domain_matrix_t),   intent(inout)   :: self
 
-        integer(ik)             :: ielem, itime
+        integer(ik) :: ielem, itime
 
-        !
         ! For each element
-        !
         do ielem = 1,size(self%lblks,1)
-
 
             ! Clear local matrices
             do itime = 1,size(self%lblks,2)
                 call self%lblks(ielem,itime)%setzero()
             end do  ! itime
-
 
             ! Clear chimera matrices
             if (allocated(self%chi_blks)) then
@@ -757,7 +849,6 @@ contains
                 end do ! itime
             end if
 
-
             ! Clear bc matrices
             if (allocated(self%bc_blks)) then
                 do itime = 1,size(self%bc_blks,2)
@@ -765,9 +856,14 @@ contains
                 end do ! itime
             end if
 
+            ! Clear hb matrices
+            if (allocated(self%hb_blks)) then
+                do itime = 1,size(self%hb_blks,2)
+                    call self%hb_blks(ielem,itime)%setzero()
+                end do ! itime
+            end if
 
         end do ! ielem
-
 
     end subroutine clear
     !*******************************************************************************

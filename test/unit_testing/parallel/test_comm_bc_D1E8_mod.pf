@@ -1122,6 +1122,7 @@ contains
         real(rk)             :: computed_dot, expected_dot
 
         IRANK = self%getProcessRank()
+        itime = 1
 
         !
         ! Create chidg_matrix and two chidg_vectors
@@ -1144,22 +1145,22 @@ contains
             !
 
             ! Coupling of element 2 with element 8 through BC
-            imat = A%dom(1)%bc_blks(2,1)%loc(1,8)
+            imat = A%dom(1)%bc_blks(2,1)%loc(1,8,itime)
             A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 2.8_rk
 
 
             ! Coupling of element 8 with element 2 through BC
-            imat = A%dom(1)%bc_blks(8,1)%loc(1,2)
+            imat = A%dom(1)%bc_blks(8,1)%loc(1,2,itime)
             A%dom(1)%bc_blks(8,1)%data_(imat)%mat = 8.2_rk
 
 
             ! Coupling of element 4 with element 6 through BC
-            imat = A%dom(1)%bc_blks(4,1)%loc(1,6)
+            imat = A%dom(1)%bc_blks(4,1)%loc(1,6,itime)
             A%dom(1)%bc_blks(4,1)%data_(imat)%mat = 4.6_rk
 
 
             ! Coupling of element 6 with element 4 through BC
-            imat = A%dom(1)%bc_blks(6,1)%loc(1,4)
+            imat = A%dom(1)%bc_blks(6,1)%loc(1,4,itime)
             A%dom(1)%bc_blks(6,1)%data_(imat)%mat = 6.4_rk
 
             !
@@ -1178,11 +1179,11 @@ contains
             if (IRANK == 0) then
 
                 ! Coupling of element 4 with element 6 through BC
-                imat = A%dom(1)%bc_blks(2,1)%loc(1,6)
+                imat = A%dom(1)%bc_blks(2,1)%loc(1,6,itime)
                 A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 4.6_rk
 
                 ! Coupling of element 8 with element 2 through BC
-                imat = A%dom(1)%bc_blks(4,1)%loc(1,2)
+                imat = A%dom(1)%bc_blks(4,1)%loc(1,2,itime)
                 A%dom(1)%bc_blks(4,1)%data_(imat)%mat = 8.2_rk
 
                 !
@@ -1194,11 +1195,11 @@ contains
             else if (IRANK == 1) then
 
                 ! Coupling of element 2 with element 8 through BC
-                imat = A%dom(1)%bc_blks(2,1)%loc(1,8)
+                imat = A%dom(1)%bc_blks(2,1)%loc(1,8,itime)
                 A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 2.8_rk
 
                 ! Coupling of element 6 with element 4 through BC
-                imat = A%dom(1)%bc_blks(4,1)%loc(1,4)
+                imat = A%dom(1)%bc_blks(4,1)%loc(1,4,itime)
                 A%dom(1)%bc_blks(4,1)%data_(imat)%mat = 6.4_rk
 
 
@@ -1216,11 +1217,11 @@ contains
             if (IRANK == 0) then
 
                 ! Coupling of element 2 with element 8 through BC
-                imat = A%dom(1)%bc_blks(1,1)%loc(1,8)
+                imat = A%dom(1)%bc_blks(1,1)%loc(1,8,itime)
                 A%dom(1)%bc_blks(1,1)%data_(imat)%mat = 2.8_rk
 
                 ! Coupling of element 4 with element 6 through BC
-                imat = A%dom(1)%bc_blks(2,1)%loc(1,6)
+                imat = A%dom(1)%bc_blks(2,1)%loc(1,6,itime)
                 A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 4.6_rk
 
 
@@ -1236,11 +1237,11 @@ contains
 
 
                 ! Coupling of element 6 with element 4 through BC
-                imat = A%dom(1)%bc_blks(1,1)%loc(1,4)
+                imat = A%dom(1)%bc_blks(1,1)%loc(1,4,itime)
                 A%dom(1)%bc_blks(1,1)%data_(imat)%mat = 6.4_rk
 
                 ! Coupling of element 8 with element 2 through BC
-                imat = A%dom(1)%bc_blks(3,1)%loc(1,2)
+                imat = A%dom(1)%bc_blks(3,1)%loc(1,2,itime)
                 A%dom(1)%bc_blks(3,1)%data_(imat)%mat = 8.2_rk
 
                 ! Initialize chidg_vector elements on the boundary.
@@ -1254,7 +1255,7 @@ contains
             if (IRANK == 0) then
 
                 ! Coupling of element 4 with element 6 through BC
-                imat = A%dom(1)%bc_blks(2,1)%loc(1,6)
+                imat = A%dom(1)%bc_blks(2,1)%loc(1,6,itime)
                 A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 4.6_rk
 
                 ! Initialize chidg_vector elements on the boundary.
@@ -1263,7 +1264,7 @@ contains
             else if (IRANK == 1) then
 
                 ! Coupling of element 8 with element 2 through BC
-                imat = A%dom(1)%bc_blks(2,1)%loc(1,2)
+                imat = A%dom(1)%bc_blks(2,1)%loc(1,2,itime)
                 A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 8.2_rk
 
                 ! Initialize chidg_vector elements on the boundary.
@@ -1272,11 +1273,11 @@ contains
             else if (IRANK == 2) then
 
                 ! Coupling of element 2 with element 8 through BC
-                imat = A%dom(1)%bc_blks(1,1)%loc(1,8)
+                imat = A%dom(1)%bc_blks(1,1)%loc(1,8,itime)
                 A%dom(1)%bc_blks(1,1)%data_(imat)%mat = 2.8_rk
 
                 ! Coupling of element 6 with element 4 through BC
-                imat = A%dom(1)%bc_blks(2,1)%loc(1,4)
+                imat = A%dom(1)%bc_blks(2,1)%loc(1,4,itime)
                 A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 6.4_rk
 
                 ! Initialize chidg_vector elements on the boundary.

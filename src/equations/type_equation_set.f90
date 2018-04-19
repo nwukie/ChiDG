@@ -604,23 +604,14 @@ contains
             end if
 
 
-            !
             ! Execute compute pattern
-            !
             do ipattern = 1,size(compute_pattern)
-
-                !
                 ! Set differentiation indicator
-                !
                 idiff = compute_pattern(ipattern)
 
-
-                !
                 ! Determine the number of times to execute the functions.
                 ! Depends on if we are differentiating or not.
-                !
                 ncompute = self%get_face_ncompute(mesh,worker%face_info(),idiff)
-
 
                 if (allocated(self%boundary_advective_operator)) then
                     nfcn = size(self%boundary_advective_operator)
@@ -635,32 +626,23 @@ contains
                         
 
                         if ( compute_function .or. differentiate_function ) then
-                            !
                             ! If we are differentiating, compute boundary flux once for each 
                             ! contributing element:
                             !   - For conforming faces ncompute == 1. 
                             !   - For Chimera faces ncompute is potentially > 1
-                            !
                             do icompute = 1,ncompute
                                 worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff,worker%itime)
                                 worker%function_info%idepend = icompute
-
 
                                 call self%boundary_advective_operator(ifcn)%op%compute(worker,prop)
 
                             end do !icompute
                         end if
 
-
                     end do ! ifcn
-
                 end if ! allocated boundary_advective_flux
-
             end do !ipattern
-
         end if !compute
-
-
 
         end associate
 
@@ -699,46 +681,32 @@ contains
                    iface => worker%iface,                   &
                    prop  => self%prop)
 
-
-
-        !
         ! Only call 'Boundary Advective' operators for face type:
         !   - INTERIOR
         !   - CHIMERA
-        !
         interior_face = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
         chimera_face  = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA  )
         compute       = (interior_face .or. chimera_face)
 
-
-        !
         ! Determine if multi-fidelity interface. Check that equation sets match:
         !   - interior faces: should have the same equation set. No need to skip
         !   - chimera faces: could be different. If they are, we want to skip 
-        !
         skip = .false.
         if (interior_face) then
             skip = .false.
-
         else if (chimera_face) then
-
             ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
             eqn_m = self%eqn_ID
             eqn_p = mesh%domain(idom)%chimera%recv(ChiID)%donor(1)%eqn_ID
             skip = (eqn_m /= eqn_p)
-
         end if
-
-
 
 
         if (compute .and. (.not. skip)) then
 
-            !
             ! Determine pattern to compute functions. Depends on if we are differentiating 
             ! or not. These will be used to set idiff, indicating the differentiation
             ! direction.
-            !
             if (differentiate) then
                 ! compute function, wrt internal, external(in direction iface) states
                 compute_pattern = [DIAG,iface]
@@ -747,24 +715,13 @@ contains
                 compute_pattern = [0]
             end if
 
-
-            !
             ! Execute compute pattern
-            !
             do ipattern = 1,size(compute_pattern)
-
-            
-                !
                 ! Set differentiation indicator
-                !
                 idiff = compute_pattern(ipattern)
 
-
-                !
                 ! Get number of elements we are linearizing with respect to
-                !
                 ncompute = self%get_face_ncompute(mesh,worker%face_info(),idiff)
-
 
                 if (allocated(self%boundary_diffusive_operator)) then
                     nfcn = size(self%boundary_diffusive_operator)
@@ -777,14 +734,11 @@ contains
                         compute_function     = worker%solverdata%function_status%compute_function(   worker%face_info(), worker%function_info )
                         linearize_function   = worker%solverdata%function_status%linearize_function( worker%face_info(), worker%function_info )
                         
-
                         if ( compute_function .or. linearize_function ) then
-                            !
                             ! If we are differentiating, compute boundary flux once for each 
                             ! contributing element:
                             !   - For conforming faces ncompute == 1. 
                             !   - For Chimera faces ncompute is potentially > 1
-                            !
                             do icompute = 1,ncompute
                                 worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff,worker%itime)
                                 worker%function_info%idepend = icompute
@@ -794,16 +748,10 @@ contains
                             end do
                         end if
 
-
                     end do ! ifcn
-
                 end if ! boundary_diffusive_flux loop
-
             end do !ipattern
-
         end if ! compute
-
-
 
         end associate
 
@@ -845,12 +793,9 @@ contains
                    ielem     => worker%element_info%ielement_l, &
                    prop      => self%prop)
 
-
-        !
         ! Determine pattern to compute functions. Depends on if we are differentiating 
         ! or not. These will be used to set idiff, indicating the differentiation
         ! direction.
-        !
         if (differentiate) then
             ! compute function, wrt internal state
             compute_pattern = [DIAG]
@@ -860,20 +805,12 @@ contains
         end if
 
 
-
-        !
         ! Execute compute pattern
-        !
         do ipattern = 1,size(compute_pattern)
-
-            !
             ! Set differentiation indicator
-            !
             idiff = compute_pattern(ipattern)
 
-            !
             ! Volume advective flux only depends on the interior element
-            !
             icompute = 1
 
             if (allocated(self%volume_advective_operator)) then
@@ -897,8 +834,6 @@ contains
 
     end subroutine compute_volume_advective_operators
     !***************************************************************************************
-
-
 
 
 
@@ -931,12 +866,9 @@ contains
                    ielem     => worker%element_info%ielement_l, &
                    prop      => self%prop)
 
-
-        !
         ! Determine pattern to compute functions. Depends on if we are differentiating 
         ! or not. These will be used to set idiff, indicating the differentiation
         ! direction.
-        !
         if (differentiate) then
             ! compute function, wrt (all exterior)/interior states
             compute_pattern = [1,2,3,4,5,6,DIAG]
@@ -945,15 +877,9 @@ contains
             compute_pattern = [0]
         end if
 
-        !
         ! Execute compute pattern
-        !
         do ipattern = 1,size(compute_pattern)
-
-        
-            !
             ! Set differentiation indicator
-            !
             idiff = compute_pattern(ipattern)
 
             diff_none = (idiff == 0)
@@ -963,12 +889,8 @@ contains
                               (idiff == 5) .or. (idiff == 6) )
 
 
-
-            !
             ! Get number of elements we are linearizing with respect to
-            !
             ncompute = self%get_element_ncompute(mesh,elem_info,idiff)
-
 
 
             if (diff_none) then
@@ -980,9 +902,6 @@ contains
                                      (mesh%domain(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == CHIMERA) )
             end if
 
-
-
-
                                 
 
             if (compute_function) then
@@ -990,12 +909,9 @@ contains
                 if (allocated(self%volume_diffusive_operator)) then
                     nfcn = size(self%volume_diffusive_operator)
                     do ifcn = 1,nfcn
-        
-                        !
                         ! Compute boundary flux once for each donor. 
                         !   - For interior faces ndepend == 1. 
                         !   - For Chimera faces ndepend is potentially > 1.
-                        !
                         do icompute = 1,ncompute
         
                             worker%function_info%type    = VOLUME_DIFFUSIVE_FLUX
@@ -1010,22 +926,13 @@ contains
         
                     end do ! ifcn
                 end if
-
             end if
-
         end do !ipattern
 
         end associate
 
     end subroutine compute_volume_diffusive_operators
     !***************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -1056,22 +963,18 @@ contains
                    iface => worker%iface,                   &
                    prop  => self%prop )
 
-        !
         ! Only call the following routines for interior faces -- ftype == 0
         ! Furthermore, only call the routines if we are computing derivatives for the 
         ! neighbor of iface or for the current element(DIAG). This saves a lot of 
         ! unnecessary compute_boundary calls.
-        !
         boundary_face = (mesh%domain(idom)%faces(ielem,iface)%ftype == BOUNDARY)
         compute       = (boundary_face)
 
         if (compute) then
 
-            !
             ! Determine pattern to compute functions. Depends on if we are differentiating 
             ! or not. These will be used to set idiff, indicating the differentiation
             ! direction.
-            !
             if (differentiate) then
                 ! compute function, wrt (all exterior)/interior states
                 !compute_pattern = [DIAG]
@@ -1083,21 +986,13 @@ contains
 
             
             do ipattern = 1,size(compute_pattern)
-
-                !
                 ! Set differentiation indicator
-                !
                 idiff = compute_pattern(ipattern)
 
-                !
                 ! Get number of elements we are linearizing with respect to
-                !
                 ncompute = self%get_face_ncompute(mesh,worker%face_info(),idiff)
 
-
-                !
                 ! Get index of boundary condition, patch, patch face. 
-                !
                 group_ID = mesh%domain(idom)%faces(ielem,iface)%group_ID
                 patch_ID = mesh%domain(idom)%faces(ielem,iface)%patch_ID
                 face_ID  = mesh%domain(idom)%faces(ielem,iface)%face_ID
@@ -1111,37 +1006,27 @@ contains
                         worker%function_info%ifcn   = ifcn
                         worker%function_info%idiff  = idiff
 
-                        !
                         ! Compute boundary flux once for each donor. 
                         !   - For interior faces ndepend == 1. 
                         !   - For Chimera faces ndepend is potentially > 1.
                         !   - For BC faces ndepend is potentially > 1.
-                        !
                         do icompute = 1,ncompute
-
-
-                            !
                             ! Get coupled element to linearize against.
-                            !
-                            worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(icompute)
-                            worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(icompute)
-                            worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icompute)
-                            worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icompute)
-                            worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(icompute)
+                            !worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(icompute)
+                            !worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(icompute)
+                            !worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icompute)
+                            !worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icompute)
+                            !worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(icompute)
+                            worker%function_info%seed = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff,worker%itime)
                             worker%function_info%idepend         = icompute
 
-
                             call self%bc_operator(ifcn)%op%compute(worker,prop)
-
                         end do
-
 
                     end do ! ifcn
 
                 end if ! boundary_advective_flux loop
-
             end do ! ipattern
-
         end if !compute
 
         end associate

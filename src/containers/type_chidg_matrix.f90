@@ -46,6 +46,7 @@ module type_chidg_matrix
         procedure   :: store                            ! Store interior coupling
         procedure   :: store_chimera                    ! Store chimera coupling
         procedure   :: store_bc                         ! Store boundary condition coupling
+        procedure   :: store_hb                         ! Store linearization data for coupling across harmonic balance levels 
         procedure   :: clear                            ! Zero matrix-values
 
         ! Processors
@@ -80,40 +81,27 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh,mtype)
-        class(chidg_matrix_t),   intent(inout)          :: self
-        type(mesh_t),        intent(in)             :: mesh
-        character(*),           intent(in)              :: mtype
+        class(chidg_matrix_t),  intent(inout)   :: self
+        type(mesh_t),           intent(in)      :: mesh
+        character(*),           intent(in)      :: mtype
 
         integer(ik) :: ierr, ndomains, idom
 
-
-        !
         ! Deallocate storage if necessary in case this is being called as a 
         ! reinitialization routine.
-        !
         if (allocated(self%dom)) deallocate(self%dom)
 
-
-        !
         ! Allocate domain_matrix_t for each domain
-        !
         ndomains = mesh%ndomains()
         allocate(self%dom(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
-
-        !
         ! Call initialization procedure for each domain_matrix_t
-        !
         do idom = 1,ndomains
              call self%dom(idom)%init(mesh,idom,mtype=mtype)
         end do
 
-
-        !
         ! Set initialization to true
-        !
         self%local_initialized = .true.
 
     end subroutine initialize
@@ -123,16 +111,10 @@ contains
 
 
 
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/1/2016
-    !!
     !!
     !------------------------------------------------------------------------------------------
     subroutine init_recv(self,x)
@@ -389,15 +371,8 @@ contains
         end do ! idom
 
 
-
-
-
-
-        !
         ! Set recv initialization to true
-        !
         self%recv_initialized = .true.
-
 
     end subroutine init_recv
     !*******************************************************************************************
@@ -434,20 +409,14 @@ contains
 
         idomain_l = face_info%idomain_l
 
-        !
         ! Store linearization in associated domain domain_matrix_t
-        !
         call self%dom(idomain_l)%store(integral,face_info,seed,ivar,itime)
-
 
         ! Update stamp
         call date_and_time(values=self%stamp)
 
     end subroutine store
     !*******************************************************************************************
-
-
-
 
 
 
@@ -480,9 +449,7 @@ contains
 
         idomain_l = face_info%idomain_l
 
-        !
         ! Store linearization in associated domain domain_matrix_t
-        !
         call self%dom(idomain_l)%store_chimera(integral,face_info,seed,ivar,itime)
 
         ! Update stamp
@@ -499,7 +466,7 @@ contains
 
 
 
-    !>  Procedure for stiring linearization information for boundary condition faces
+    !>  Procedure for storing linearization information for boundary condition faces
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -525,9 +492,7 @@ contains
 
         idomain_l = face_info%idomain_l
 
-        !
         ! Store linearization in associated domain domain_matrix_t
-        !
         call self%dom(idomain_l)%store_bc(integral,face_info,seed,ivar,itime)
 
         ! Update stamp
@@ -540,6 +505,43 @@ contains
 
 
 
+    !>  Procedure for storing linearization information for harmonic-balance cross-timelevel
+    !!  coupling.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2018
+    !!
+    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial
+    !!                          derivatives for the linearization matrix
+    !!  @param[in]  face        face_info_t containing the indices defining the Chimera face
+    !!  @param[in]  seed        seed_t containing the indices defining the element against 
+    !!                          which the Chimera face was linearized
+    !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine store_hb(self,integral,face_info,seed,ivar,itime)
+        class(chidg_matrix_t),      intent(inout)   :: self
+        type(AD_D),                 intent(in)      :: integral(:)
+        type(face_info_t),          intent(in)      :: face_info
+        type(seed_t),               intent(in)      :: seed
+        integer(ik),                intent(in)      :: ivar 
+        integer(ik),                intent(in)      :: itime
+
+        integer(ik) :: idomain_l
+
+        idomain_l = face_info%idomain_l
+
+        ! Store linearization in associated domain domain_matrix_t
+        call self%dom(idomain_l)%store_hb(integral,face_info,seed,ivar,itime)
+
+        ! Update stamp
+        call date_and_time(values=self%stamp)
+
+    end subroutine store_hb
+    !*******************************************************************************************
+
+
+
 
 
 
@@ -548,21 +550,16 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !! 
-    !! 
     !----------------------------------------------------------------------------------
     subroutine clear(self)
         class(chidg_matrix_t),   intent(inout)   :: self
 
         integer(ik) :: idom
     
-
-        !
         ! Call domain_matrix_t%clear() on all matrices
-        !
         do idom = 1,size(self%dom)
            call self%dom(idom)%clear() 
         end do
-    
     
     end subroutine clear
     !**********************************************************************************
@@ -586,26 +583,18 @@ contains
         type(chidg_matrix_t)    :: restricted
         integer(ik)             :: ierr, idom
 
-
-        !
         ! Allocate storage
-        !
         allocate(restricted%dom(size(self%dom)), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
-        !
         ! Copy restricted versions of domain_matrix_t's
-        !
         do idom = 1,size(self%dom)
             restricted%dom(idom) = self%dom(idom)%restrict(nterms_r)
         end do !idom
 
-
         restricted%local_initialized = self%local_initialized
         restricted%recv_initialized  = self%recv_initialized
         restricted%stamp             = self%stamp
-
 
     end function restrict
     !**********************************************************************************
@@ -631,11 +620,8 @@ contains
 
         integer(ik)         :: ntime
 
-        !
         ! Get ntime from densematrix vector array of the 1st domain
-        !
         ntime = size(self%dom(1)%lblks,2)
-
 
     end function get_ntime
     !**********************************************************************************
@@ -661,7 +647,6 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   1/23/2018
     !!
-    !!
     !-----------------------------------------------------------------------------------------
     subroutine to_real(self,real_matrix)
         class(chidg_matrix_t),      intent(in)      :: self
@@ -674,9 +659,7 @@ contains
 
         if (allocated(self%dom)) then
 
-        !
         ! Compute total number of dof's
-        !
         ndof = 0
         do idom = 1,self%ndomains()
             do itime = 1,self%dom(idom)%ntime()
@@ -688,17 +671,12 @@ contains
         end do
 
 
-        !
         ! Allocate storage for LHS matrix
-        !
         allocate(real_matrix(ndof,ndof), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-
-        !
         ! Store matrix entries in LHS
-        !
         real_matrix = ZERO
         do idom = 1,self%ndomains()
             do itime = 1,self%dom(idom)%ntime()
@@ -740,13 +718,6 @@ contains
 
     end subroutine to_real
     !**************************************************************************
-
-
-
-
-
-
-
 
 
 

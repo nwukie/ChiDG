@@ -118,10 +118,6 @@ contains
 
         call loop_timer%start()
         do idom = 1,data%mesh%ndomains()
-            !eqn_ID = worker%mesh%domain(idom)%eqn_ID
-            !associate ( domain => data%mesh%domain(idom), eqnset => data%eqnset(eqn_ID) )
-
-            ! Loop through elements in the current domain
             do ielem = 1,data%mesh%domain(idom)%nelements()
                 eqn_ID = worker%mesh%domain(idom)%elems(ielem)%eqn_ID
                 associate ( domain => data%mesh%domain(idom), eqnset => data%eqnset(eqn_ID) )

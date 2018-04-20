@@ -757,7 +757,7 @@ contains
 
         type(AD_D),     allocatable :: var_gq(:), tmp_gq(:)
         character(:),   allocatable :: cache_component, cache_type, lift_source, lift_nodes, user_msg, interp_source
-        integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface_loop, iface_use, iface_select
+        integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface_loop, iface_use, iface_select, i
         real(rk)                    :: stabilization
         logical                     :: lift
 
@@ -910,6 +910,14 @@ contains
             user_msg = "chidg_worker%get_field: invalid cache_type."
             call chidg_signal(FATAL,user_msg)
 
+        end if
+
+
+        ! Check if linearization was supposed to be with respect to another time level
+        if (self%function_info%seed%itime /= self%itime) then
+            do i = 1,size(var_gq)
+                var_gq(i)%xp_ad_(:) = ZERO
+            end do
         end if
 
 

@@ -954,7 +954,7 @@ contains
 
         integer(ik),    allocatable :: compute_pattern(:)
         integer(ik)                 :: nfcn, ifcn, icompute, ncompute, group_ID, patch_ID, &
-                                       face_ID, idiff, ipattern
+                                       face_ID, idiff, ipattern, itime_start, itime_end, itime_couple
         logical                     :: boundary_face, compute
 
         associate( mesh  => worker%mesh,                    &
@@ -997,35 +997,48 @@ contains
                 patch_ID = mesh%domain(idom)%faces(ielem,iface)%patch_ID
                 face_ID  = mesh%domain(idom)%faces(ielem,iface)%face_ID
 
+                ! Get range of time instances we need to compute coupling for
+                if (differentiate) then
+                    if (mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling == 'Global') then
+                        itime_start = 1
+                        itime_end = mesh%domain(idom)%ntime
+                    else
+                        itime_start = worker%itime
+                        itime_end = worker%itime
+                    end if
+                else
+                    itime_start = worker%itime
+                    itime_end = worker%itime
+                end if
 
-                if (allocated(self%bc_operator)) then
-                    nfcn = size(self%bc_operator)
-                    do ifcn = 1,nfcn
 
-                        worker%function_info%type   = BC_FLUX
-                        worker%function_info%ifcn   = ifcn
-                        worker%function_info%idiff  = idiff
+                do itime_couple = itime_start,itime_end
+                    if (allocated(self%bc_operator)) then
+                        nfcn = size(self%bc_operator)
+                        do ifcn = 1,nfcn
 
-                        ! Compute boundary flux once for each donor. 
-                        !   - For interior faces ndepend == 1. 
-                        !   - For Chimera faces ndepend is potentially > 1.
-                        !   - For BC faces ndepend is potentially > 1.
-                        do icompute = 1,ncompute
-                            ! Get coupled element to linearize against.
-                            !worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(icompute)
-                            !worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(icompute)
-                            !worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icompute)
-                            !worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icompute)
-                            !worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(icompute)
-                            worker%function_info%seed = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff,worker%itime)
-                            worker%function_info%idepend         = icompute
+                            worker%function_info%type   = BC_FLUX
+                            worker%function_info%ifcn   = ifcn
+                            worker%function_info%idiff  = idiff
 
-                            call self%bc_operator(ifcn)%op%compute(worker,prop)
-                        end do
+                            ! Compute boundary flux once for each donor. 
+                            !   - For interior faces ndepend == 1. 
+                            !   - For Chimera faces ndepend is potentially > 1.
+                            !   - For BC faces ndepend is potentially > 1.
+                            do icompute = 1,ncompute
+                                ! Get coupled element to linearize against.
+                                !worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff,worker%itime)
+                                worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff,itime_couple)
+                                worker%function_info%idepend = icompute
 
-                    end do ! ifcn
+                                call self%bc_operator(ifcn)%op%compute(worker,prop)
+                            end do
 
-                end if ! boundary_advective_flux loop
+                        end do ! ifcn
+
+                    end if ! boundary_advective_flux loop
+                end do !itime_couple
+
             end do ! ipattern
         end if !compute
 

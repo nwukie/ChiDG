@@ -613,11 +613,19 @@ contains
         elements1 = get_block_elements_plot3d(xcoords1,ycoords1,zcoords1,mapping,idomain=1)
         elements2 = get_block_elements_plot3d(xcoords2,ycoords2,zcoords2,mapping,idomain=2)
 
+
         !
         ! Add domains
         !
-        call add_domain_hdf(file_id,'01',nodes1,elements1,'Cartesian','Scalar Advection')
-        call add_domain_hdf(file_id,'02',nodes2,elements2,'Cartesian','Scalar Advection')
+        if ( present(equation_sets) ) then
+            call add_domain_hdf(file_id,'01',nodes1,elements1,'Cartesian',equation_sets(1)%get())
+            call add_domain_hdf(file_id,'02',nodes2,elements2,'Cartesian',equation_sets(2)%get())
+        else
+            call add_domain_hdf(file_id,'01',nodes1,elements1,'Cartesian','Scalar Advection')
+            call add_domain_hdf(file_id,'02',nodes2,elements2,'Cartesian','Scalar Advection')
+        end if
+
+
 
 
         !

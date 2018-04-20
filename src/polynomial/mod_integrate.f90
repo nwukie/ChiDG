@@ -511,9 +511,12 @@ contains
                 !                      computed multiple times. The residual should be the same for any value of idepend, 
                 !                      only the derivatives will change.
                 !
-                !if (  (boundary_face .and. diff_interior) .or. &
-                if (  (boundary_face .and. diff_exterior) .or. &
-                      (boundary_face .and. diff_none    ) ) then
+                !!if (  (boundary_face .and. diff_interior) .or. &
+                !if (  (boundary_face .and. diff_exterior) .or. &
+                !      (boundary_face .and. diff_none    ) ) then
+                if ( ((boundary_face .and. diff_exterior) .or. &
+                      (boundary_face .and. diff_none    )) .and. &
+                      function_info%seed%itime == itime ) then
 
                     if (idepend == 1) then
                         vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_

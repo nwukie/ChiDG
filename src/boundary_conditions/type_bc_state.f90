@@ -530,6 +530,7 @@ contains
         ! For each face, initialize coupling with all faces on the current processor.
         !
         do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+            mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling = 'Global'
             do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
                 

@@ -780,29 +780,19 @@ contains
 
         integer(ik) :: ibc
 
-
         call write_line("Initialize: bc communication...", io_proc=GLOBAL_MASTER)
         do ibc = 1,self%nbc_state_groups()
 
-            !
             ! Prepare boundary condition parallel communication
-            !
             call self%bc_state_group(ibc)%init_comm(self%mesh)
 
-            !
             ! Call bc-specific specialized routine. Default does nothing
-            !
             call self%bc_state_group(ibc)%init_precomm(self%mesh)
 
-            !
             ! Initialize boundary condition coupling. 
-            !
             call self%bc_state_group(ibc)%init_coupling(self%mesh)
 
-
         end do
-
-
 
     end subroutine initialize_solution_bc
     !***************************************************************************************
@@ -816,41 +806,22 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/28/2017
     !!
-    !!
     !---------------------------------------------------------------------------------------
     subroutine initialize_postcomm_bc(self)
         class(chidg_data_t),    intent(inout)   :: self
 
         integer(ik) :: ibc
 
-
         call write_line("Initialize: bc specializations...", io_proc=GLOBAL_MASTER)
         do ibc = 1,self%nbc_state_groups()
 
-            !
             ! Call bc-specific specialized routine. Default does nothing
-            !
             call self%bc_state_group(ibc)%init_postcomm(self%mesh)
-
 
         end do
 
-
-
     end subroutine initialize_postcomm_bc
     !***************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -879,11 +850,6 @@ contains
 
     end function get_domain_index
     !****************************************************************************************
-
-
-
-
-
 
 
 

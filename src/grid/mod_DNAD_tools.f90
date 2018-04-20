@@ -364,16 +364,16 @@ contains
         else
 
             ! no linearization. 
-            call seed%init(idomain_g    = 0, &
-                           idomain_l    = 0, &
-                           ielement_g   = 0, &
-                           ielement_l   = 0, &
-                           neqns        = 0, &
-                           nterms_s     = 0, &
-                           iproc        = 0, &
-                           itime        = 0, &
-                           recv_comm    = 0, &
-                           recv_domain  = 0, &
+            call seed%init(idomain_g    = 0,     &
+                           idomain_l    = 0,     &
+                           ielement_g   = 0,     &
+                           ielement_l   = 0,     &
+                           neqns        = 0,     &
+                           nterms_s     = 0,     &
+                           iproc        = 0,     &
+                           itime        = itime, &  ! need itime here because the residual storage relies on it
+                           recv_comm    = 0,     &
+                           recv_domain  = 0,     &
                            recv_element = 0)
 
 
@@ -415,13 +415,13 @@ contains
     !!  @param[in]  idiff   Linearization index
     !!
     !-----------------------------------------------------------------------------------------------------------
-    function element_compute_seed(mesh,idomain_l,ielement_l,idepend,idiff,itime) result(seed)
+    function element_compute_seed(mesh,idomain_l,ielement_l,idepend,idiff,itime_couple) result(seed)
         type(mesh_t),   intent(in)  :: mesh
         integer(ik),        intent(in)  :: idomain_l
         integer(ik),        intent(in)  :: ielement_l
         integer(ik),        intent(in)  :: idepend
         integer(ik),        intent(in)  :: idiff
-        integer(ik),        intent(in)  :: itime
+        integer(ik),        intent(in)  :: itime_couple
 
 
         type(seed_t)    :: seed
@@ -451,7 +451,7 @@ contains
                                neqns        = mesh%domain(idomain_l)%elems(ielement_l)%neqns,       &
                                nterms_s     = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,    &
                                iproc        = IRANK,                                                &
-                               itime        = itime,                                                &
+                               itime        = itime_couple,                                         &
                                recv_comm    = 0,                                                    &
                                recv_domain  = 0,                                                    &
                                recv_element = 0)
@@ -487,7 +487,7 @@ contains
                                    neqns        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,       &
                                    nterms_s     = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,    &
                                    iproc        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,        &
-                                   itime        = itime,                                                                &
+                                   itime        = itime_couple,                                                         &
                                    recv_comm    = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,             &
                                    recv_domain  = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,           &
                                    recv_element = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_element)
@@ -506,7 +506,7 @@ contains
                                    neqns        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nfields,        &
                                    nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nterms_s,       &
                                    iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%iproc,          &
-                                   itime        = itime,                                                                    &
+                                   itime        = itime_couple,                                                             &
                                    recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_comm,      &
                                    recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_domain,    &
                                    recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_element )
@@ -528,7 +528,7 @@ contains
                                    neqns        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%neqns(idepend),       &
                                    nterms_s     = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(idepend),    &
                                    iproc        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend),        &
-                                   itime        = itime,                                                                                &
+                                   itime        = itime_couple,                                                                         &
                                    recv_comm    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(idepend),   &
                                    recv_domain  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(idepend), &
                                    recv_element = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(idepend) )

@@ -111,7 +111,7 @@ contains
                                        block_index, neqns, nterms_s, ntime,             &
                                        nchimera_elements, maxdonors, idonor, iface,     &
                                        itime, dparent_g, dparent_l, eparent_g,          &
-                                       eparent_l, parent_proc, eparent_l_trans,         &
+                                       eparent_l, tparent, parent_proc, eparent_l_trans,&
                                        imat_trans, ChiID, ndonors, max_coupled_elems,   &
                                        ncoupled_elems, icoupled_elem, icoupled_elem_bc, &
                                        ielem_bc, ibc, imat, group_ID, patch_ID,         &
@@ -119,7 +119,7 @@ contains
         logical                     :: new_elements, chimera_face, more_donors,         &
                                        already_added, contains_chimera_face,            &
                                        block_initialized, lower_block, upper_block,     &
-                                       transposed_block, domain_has_face
+                                       transposed_block, domain_has_face, add_hb_coupling
         logical                     :: init_chimera = .false.
         logical                     :: init_bc      = .false.
         logical                     :: init_hb      = .false.
@@ -505,6 +505,82 @@ contains
 
                 end do !itime
             end do !ielem
+
+
+            ! Additional cross time-level coupling between other elements due to boundary condition
+            do itime = 1,mesh%domain(idom)%ntime 
+                do group_ID = 1,mesh%nbc_patch_groups()
+                    do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+
+                        ! Check if the patch requires cross-timelevel coupling
+                        add_hb_coupling = (mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling == 'Global')
+
+                        if (add_hb_coupling) then
+                            do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+                                ! Get indices of the local element to determine if it is on 'idom'
+                                idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
+                                ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
+                                domain_has_face = (idom == idomain_l)
+
+
+                                ! If domain contains current face, add all coupling information.
+                                !   ASSUMPTIONS:
+                                !       - all coupled elements use the same number of equations
+                                !       - all coupled elements run with the same nterms_s
+                                if (domain_has_face) then
+                                    do elem_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
+                                        ! Add coupling with all time-levels of spatially-coupled elements 
+                                        ! on the boundary.
+                                        do itime_couple = 1,mesh%domain(idom)%ntime
+                                            if (itime_couple /= itime) then
+
+                                                ! Compute size of coupling matrix
+                                                neqns    = mesh%domain(idomain_l)%elems(ielement_l)%neqns
+                                                nterms_s = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
+
+                                                ! Get indices for coupled element
+                                                dparent_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(elem_ID)
+                                                dparent_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(elem_ID)
+                                                eparent_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(elem_ID)
+                                                eparent_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(elem_ID)
+                                                parent_proc = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(elem_ID)
+
+                                                ! We need to check that we dont try to add the local element more than once.
+                                                ! For example, if an element had two different boundary conditions on different
+                                                ! faces, they would both try to add the local element.
+                                                already_added = .false.
+                                                do imat = 1,self%hb_blks(ielement_l,itime)%size()
+                                                    
+                                                    ! dummy densematrix to get a specific densematrix inside the hb_blks
+                                                    ! densematrix_vector temporary variable to access densematrix routine
+                                                    temp1 = self%hb_blks(ielement_l,itime)%at(imat)
+                                                    
+                                                    already_added = ( dparent_g    == temp1%dparent_g() .and. &
+                                                                      dparent_l    == temp1%dparent_l() .and. &
+                                                                      eparent_g    == temp1%eparent_g() .and. &
+                                                                      eparent_l    == temp1%eparent_l() .and. &
+                                                                      itime_couple == temp1%tparent() )
+                                                    if (already_added) exit
+                                                end do
+
+                                                ! Call initialization, store initialized matrix to hb_blks
+                                                if (.not. already_added) then
+                                                    call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime_couple)
+                                                    call self%hb_blks(ielement_l,itime)%push_back(temp_blk)
+                                                end if
+
+                                            end if
+                                        end do !itime_couple
+                                    end do !elem_ID, coupling
+                                end if
+
+                            end do !face_ID
+                        end if !add_hb_coupling
+                    end do !patch_ID
+                end do !group_ID
+            end do !itime
+
 
         end if !init_hb
 

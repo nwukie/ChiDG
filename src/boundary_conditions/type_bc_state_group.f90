@@ -48,21 +48,16 @@ module type_bc_state_group
         procedure   :: set_family
         procedure   :: get_family
 
-
         procedure   :: add_bc_state
         procedure   :: new_bc_state
         procedure   :: remove_states
         procedure   :: nbc_states
-
 
         procedure   :: init_comm
         procedure   :: init_coupling
         procedure   :: init_precomm
         procedure   :: init_postcomm
 
-!        procedure   :: init_coupling_data
-
-        
     end type bc_state_group_t
     !*****************************************************************************************
 
@@ -540,29 +535,19 @@ contains
         class(bc_state_group_t),    intent(inout)  :: self
         type(mesh_t),               intent(inout)  :: mesh
 
-
         integer(ik) :: iop, group_ID
 
-        !
         ! Have bc_operators initialize the boundary condition coupling
-        !
         if (allocated(self%bc_state)) then
-
             group_ID = mesh%get_bc_patch_group_id(self%name)
             if (group_ID /= NO_ID) then
                 if (mesh%bc_patch_group(group_ID)%npatches() > 0) then
-
                     do iop = 1,size(self%bc_state)
                         call self%bc_state(iop)%state%init_bc_coupling(mesh,group_ID,self%bc_COMM)
                     end do !iop
-
                 end if !bc_patch
             end if !NO_ID
-
         end if !bc_state
-
-
-
 
     end subroutine init_coupling
     !****************************************************************************************

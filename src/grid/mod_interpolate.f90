@@ -153,12 +153,17 @@ contains
         end if
 
 
-        !
+        !!
+        !! If the current element is being differentiated (ielem == ielem_seed)
+        !! then copy the solution modes to local AD variable and seed derivatives
+        !!
+        !differentiate_me = ( (elem_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
+        !                     (elem_info%ielement_g == fcn_info%seed%ielement_g) )
         ! If the current element is being differentiated (ielem == ielem_seed)
         ! then copy the solution modes to local AD variable and seed derivatives
-        !
         differentiate_me = ( (elem_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-                             (elem_info%ielement_g == fcn_info%seed%ielement_g) )
+                             (elem_info%ielement_g == fcn_info%seed%ielement_g) .and. &
+                             (itime                == fcn_info%seed%itime) )
 
         if (differentiate_me) then
             ! Differentiating element, initialize appropriate derivatives to ONE
@@ -364,12 +369,17 @@ contains
 
 
 
-            !
+            !!
+            !! If the current element is being differentiated (ielem == ielem_seed)
+            !! then copy the solution modes to local AD variable and seed derivatives
+            !!
+            !differentiate_me = ( (iface_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
+            !                     (iface_info%ielement_g == fcn_info%seed%ielement_g) )
             ! If the current element is being differentiated (ielem == ielem_seed)
             ! then copy the solution modes to local AD variable and seed derivatives
-            !
             differentiate_me = ( (iface_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-                                 (iface_info%ielement_g == fcn_info%seed%ielement_g) )
+                                 (iface_info%ielement_g == fcn_info%seed%ielement_g) .and. &
+                                 (itime                 == fcn_info%seed%itime) )
 
             if ( differentiate_me ) then
                 ! Loop through the terms in qdiff, seed appropriate derivatives to ONE

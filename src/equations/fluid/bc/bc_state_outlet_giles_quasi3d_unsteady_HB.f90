@@ -141,10 +141,10 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_comm)
-        class(outlet_giles_quasi3d_unsteady_HB_t),   intent(inout)   :: self
-        type(chidg_worker_t),                           intent(inout)   :: worker
-        class(properties_t),                            intent(inout)   :: prop
-        type(mpi_comm),                                 intent(in)      :: bc_comm
+        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
+        class(properties_t),                        intent(inout)   :: prop
+        type(mpi_comm),                             intent(in)      :: bc_comm
 
 
         ! Storage at quadrature nodes

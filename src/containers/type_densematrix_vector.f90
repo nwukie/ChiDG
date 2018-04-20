@@ -31,15 +31,14 @@ module type_densematrix_vector
         real (rk),              allocatable :: mass(:,:)
 
     contains
+
         ! Initializers
         procedure, public   :: init                 ! initialize with size and capacity = 0
-
 
         procedure, public   :: capacity             ! return the current allocated capacity
         procedure, public   :: loc                  ! return the location of a stored value
         procedure, public   :: size => data_size    ! return the number of stored elements.
                                                     ! Associate to avoid clash with intrinsic.
-
 
         ! Data modifiers
         procedure, public   :: push_back
@@ -104,22 +103,15 @@ contains
         class(densematrix_vector_t),    intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g,ielement_g,idomain_l,ielement_l
         
-        !
         ! set domain and element index
-        !
-
         self%idomain_g  = idomain_g
         self%ielement_g = ielement_g
         self%idomain_l  = idomain_l
         self%ielement_l = ielement_l
 
-        !
         ! set size and capacity to zero
-        !
-        
         self%size_      = ZERO
         self%capacity_  = ZERO
-
 
     end subroutine init
     !*****************************************************************************************
@@ -260,7 +252,6 @@ contains
 
 
 
-
     !>  This function returns the location of a given value. If not found, returns 0
     !!
     !!  @author Mayank Sharma + Matteo Ugolotti + Nathan A. Wukie
@@ -289,6 +280,7 @@ contains
 
     end function loc
     !******************************************************************************************
+
 
 
 
@@ -414,18 +406,13 @@ contains
         logical             :: out_of_bounds
         type(densematrix_t) :: res
 
-        !
         ! Check vector bounds
-        !
         out_of_bounds = (index > self%size())
         if (out_of_bounds) then
             call chidg_signal(FATAL,"densematrix_vector_t%at: out of bounds access")
         end if
 
-
-        !
         ! Allocate result
-        !
         res = self%data_(index)
 
     end function at
@@ -442,7 +429,6 @@ contains
     !!  @Matteo Ugolotti
     !!  @date   11/12/2016
     !!
-    !!
     !----------------------------------------------------------------------------------------
     function dmat(self,index) result (res)
         class(densematrix_vector_t),    intent(in)  :: self
@@ -451,14 +437,11 @@ contains
         real(rk),   allocatable     :: res(:,:)
         logical                     :: out_of_bounds
         
-        !
         ! Check vector bounds
-        !
         out_of_bounds = (index > self%size())
         if (out_of_bounds) then
             call chidg_signal(FATAL,"densematrix_vector_t%dmat: out of bounds access")
         end if
-
 
         res = self%data_(index)%mat
 
@@ -473,15 +456,12 @@ contains
     !!  @Mayank Sharma + Matteo Ugolotti
     !!  @date   2/13/2017
     !!
-    !!
     !----------------------------------------------------------------------------------------
     subroutine get_mass_matrix(self,elem)
         class(densematrix_vector_t),    intent(inout)   :: self
         class(element_t),               intent(in)      :: elem
 
-
         self%mass = elem%mass
-
 
     end subroutine get_mass_matrix
     !****************************************************************************************

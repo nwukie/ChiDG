@@ -26,11 +26,17 @@ module type_bc_patch
     !!        including those elements/faces that are not located on the current 
     !!        processor.
     !!
+    !!  NOTE: regarding temporal_coupling, most boundary conditions will want
+    !!        temporal_coupling = 'Local' and this is the default. For boundary
+    !!        conditions that involve cross-timelevel coupling, such as some
+    !!        for harmonic balance that incorporate terms across time levels
+    !!        and across elements on the boundary, 'Global' will indicate that
+    !!        the coupling between these interactions should be included.
+    !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
     !!  @date   2/27/2017   ! updated for added generality
-    !!
-    !!
+    !!  @date   4/20/2018   ! added temporal_coupling attribute
     !!
     !----------------------------------------------------------------------------
     type, public :: bc_patch_t
@@ -51,6 +57,7 @@ module type_bc_patch
         
         ! For each face in the patch, a list of elements it is coupled with
         type(bc_element_coupling_t), allocatable    :: coupling(:)
+        character(:),                allocatable    :: temporal_coupling    ! 'Local' or 'Global'
 
     contains
 
@@ -109,11 +116,12 @@ contains
         type(boundary_connectivity_t),  intent(in)      :: bc_connectivity
 
 
-        self%name         = trim(patch_name)
-        self%patch_ID     = patch_ID
-        self%idomain_g_   = idomain_g
-        self%idomain_l_   = idomain_l
-        self%connectivity = bc_connectivity
+        self%name              = trim(patch_name)
+        self%patch_ID          = patch_ID
+        self%idomain_g_        = idomain_g
+        self%idomain_l_        = idomain_l
+        self%connectivity      = bc_connectivity
+        self%temporal_coupling = 'Local' ! Default, can be overwritten
 
     end subroutine init
     !****************************************************************************

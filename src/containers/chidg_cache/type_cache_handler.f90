@@ -850,7 +850,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
-                                       istate, bc_ID, group_ID, patch_ID, face_ID, eqn_ID
+                                       istate, bc_ID, group_ID, patch_ID, face_ID, eqn_ID, itime_start, itime_end, itime_couple
         character(:),   allocatable :: field
 
 
@@ -871,28 +871,41 @@ contains
 
             ndepend = get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate)
 
+
+            if ( worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling == 'Global') then
+                itime_start = 1
+                itime_end   = worker%time_manager%ntime
+            else
+                itime_start = worker%itime
+                itime_end   = worker%itime
+            end if
+
             do istate = 1,size(bc_state_group(bc_ID)%bc_state)
                 do idepend = 1,ndepend
+                    do itime_couple = itime_start,itime_end
 
-                    ! Get coupled bc element to linearize against.
-                    if (differentiate) then
-                        worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(idepend)
-                        worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(idepend)
-                        worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend)
-                        worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend)
-                        worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend)
-                    else
-                        worker%function_info%seed%idomain_g  = 0
-                        worker%function_info%seed%idomain_l  = 0
-                        worker%function_info%seed%ielement_g = 0
-                        worker%function_info%seed%ielement_l = 0
-                        worker%function_info%seed%iproc      = NO_PROC
-                    end if
+                        ! Get coupled bc element to linearize against.
+                        if (differentiate) then
+                            worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(idepend)
+                            worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(idepend)
+                            worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend)
+                            worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend)
+                            worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend)
+                            worker%function_info%seed%itime      = itime_couple
+                        else
+                            worker%function_info%seed%idomain_g  = 0
+                            worker%function_info%seed%idomain_l  = 0
+                            worker%function_info%seed%ielement_g = 0
+                            worker%function_info%seed%ielement_l = 0
+                            worker%function_info%seed%iproc      = NO_PROC
+                            worker%function_info%seed%itime      = itime_couple
+                        end if
 
-                    eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+                        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
 
-                    call bc_state_group(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop, bc_state_group(bc_ID)%bc_COMM)
+                        call bc_state_group(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop, bc_state_group(bc_ID)%bc_COMM)
 
+                    end do !itime_couple
                 end do !idepend
             end do !istate
 
@@ -1720,7 +1733,7 @@ contains
         character(*),               intent(in)      :: model_type
 
         integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
-                                       istate, bc_ID, group_ID, patch_ID, face_ID, imodel, eqn_ID
+                                       istate, bc_ID, group_ID, patch_ID, face_ID, imodel, eqn_ID, itime_start, itime_end, itime_couple
         character(:),   allocatable :: field, model_dependency
         logical                     :: selected_model
 
@@ -1748,6 +1761,17 @@ contains
             patch_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
             face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
 
+            if ( worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling == 'Global') then
+                itime_start = 1
+                itime_end   = worker%time_manager%ntime
+            else
+                itime_start = worker%itime
+                itime_end   = worker%itime
+            end if
+
+
+
+
             do imodel = 1,equation_set(eqn_ID)%nmodels()
 
                 !
@@ -1758,29 +1782,33 @@ contains
 
                 if (selected_model) then
                     do idepend = 1,ndepend
+                        do itime_couple = itime_start,itime_end
 
 
-                        if (differentiate) then
-                            ! Get coupled bc element to differentiate wrt
-                            worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(idepend)
-                            worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(idepend)
-                            worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend)
-                            worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend)
-                            worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend)
+                            if (differentiate) then
+                                ! Get coupled bc element to differentiate wrt
+                                worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(idepend)
+                                worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(idepend)
+                                worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend)
+                                worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend)
+                                worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend)
+                                worker%function_info%seed%itime      = itime_couple
 
-                        else
-                            ! Set no differentiation
-                            worker%function_info%seed%idomain_g  = 0
-                            worker%function_info%seed%idomain_l  = 0
-                            worker%function_info%seed%ielement_g = 0
-                            worker%function_info%seed%ielement_l = 0
-                            worker%function_info%seed%iproc      = NO_PROC
-                        end if
+                            else
+                                ! Set no differentiation
+                                worker%function_info%seed%idomain_g  = 0
+                                worker%function_info%seed%idomain_l  = 0
+                                worker%function_info%seed%ielement_g = 0
+                                worker%function_info%seed%ielement_l = 0
+                                worker%function_info%seed%iproc      = NO_PROC
+                                worker%function_info%seed%itime      = itime_couple
+                            end if
 
 
 
-                        call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
+                            call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
 
+                        end do !itime_couple
                     end do !idepend
                 end if !select model
 

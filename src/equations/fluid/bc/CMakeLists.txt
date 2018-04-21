@@ -23,4 +23,5 @@ add_lib_sources(
                 bc_state_outlet_giles_quasi3d_steady.f90
                 bc_state_outlet_giles_quasi3d_steady_extrapolate_average.f90
                 bc_state_outlet_giles_quasi3d_unsteady_HB.f90
+                bc_state_outlet_characteristic_quasi3d_unsteady_HB.f90
                 )

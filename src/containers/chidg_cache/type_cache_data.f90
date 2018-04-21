@@ -295,8 +295,11 @@ contains
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%value_seeds)
                     
+                    !has_seed = (self%fields(field_index)%value_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                    !           (self%fields(field_index)%value_seeds(iseed)%ielement_g == seed%ielement_g)
                     has_seed = (self%fields(field_index)%value_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                               (self%fields(field_index)%value_seeds(iseed)%ielement_g == seed%ielement_g)
+                               (self%fields(field_index)%value_seeds(iseed)%ielement_g == seed%ielement_g) .and. &
+                               (self%fields(field_index)%value_seeds(iseed)%itime      == seed%itime)
 
                     if (has_seed) then
             
@@ -328,8 +331,11 @@ contains
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%gradient_seeds)
                     
+                    !has_seed = (self%fields(field_index)%gradient_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                    !           (self%fields(field_index)%gradient_seeds(iseed)%ielement_g == seed%ielement_g)
                     has_seed = (self%fields(field_index)%gradient_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                               (self%fields(field_index)%gradient_seeds(iseed)%ielement_g == seed%ielement_g)
+                               (self%fields(field_index)%gradient_seeds(iseed)%ielement_g == seed%ielement_g) .and. &
+                               (self%fields(field_index)%gradient_seeds(iseed)%itime      == seed%itime)
 
                     if (has_seed) then
                         cache_data = self%fields(field_index)%gradient(:,idirection,iseed)
@@ -358,8 +364,11 @@ contains
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%lift_seeds)
                     
+                    !has_seed = (self%fields(field_index)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                    !           (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
                     has_seed = (self%fields(field_index)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                               (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
+                               (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g) .and. &
+                               (self%fields(field_index)%lift_seeds(iseed)%itime      == seed%itime)
 
                     if (has_seed) then
                         cache_data = self%fields(field_index)%lift_face(:,idirection,iseed)
@@ -386,8 +395,11 @@ contains
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%lift_seeds)
                     
+                    !has_seed = (self%fields(field_index)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                    !           (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
                     has_seed = (self%fields(field_index)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                               (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
+                               (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g) .and. &
+                               (self%fields(field_index)%lift_seeds(iseed)%itime      == seed%itime)
 
                     if (has_seed) then
                         cache_data = self%fields(field_index)%lift_element(:,idirection,iseed)

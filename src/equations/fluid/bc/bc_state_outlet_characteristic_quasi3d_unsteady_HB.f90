@@ -1,4 +1,4 @@
-module bc_state_outlet_giles_quasi3d_unsteady_HB
+module bc_state_outlet_characteristic_quasi3d_unsteady_HB
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL,    &
@@ -40,7 +40,7 @@ module bc_state_outlet_giles_quasi3d_unsteady_HB
     !!  @date   2/8/2018
     !!
     !---------------------------------------------------------------------------------
-    type, public, extends(bc_fluid_averaging_t) :: outlet_giles_quasi3d_unsteady_HB_t
+    type, public, extends(bc_fluid_averaging_t) :: outlet_characteristic_quasi3d_unsteady_HB_t
 
         integer(ik) :: nr = 10
         integer(ik) :: nfourier_space = 14
@@ -67,7 +67,7 @@ module bc_state_outlet_giles_quasi3d_unsteady_HB
         procedure   :: analyze_bc_geometry
         procedure   :: initialize_fourier_discretization
 
-    end type outlet_giles_quasi3d_unsteady_HB_t
+    end type outlet_characteristic_quasi3d_unsteady_HB_t
     !*********************************************************************************
 
 
@@ -84,10 +84,10 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_giles_quasi3d_unsteady_HB_t),   intent(inout) :: self
+        class(outlet_characteristic_quasi3d_unsteady_HB_t),   intent(inout) :: self
 
         ! Set name, family
-        call self%set_name('Outlet - Giles Quasi3D Unsteady HB')
+        call self%set_name('Outlet - Characteristic Quasi3D Unsteady HB')
         call self%set_family('Outlet')
 
         ! Add functions
@@ -115,7 +115,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------
     subroutine init_bc_postcomm(self,mesh,group_ID,bc_comm)
-        class(outlet_giles_quasi3d_unsteady_HB_t),   intent(inout)   :: self
+        class(outlet_characteristic_quasi3d_unsteady_HB_t),   intent(inout)   :: self
         type(mesh_t),                                intent(inout)   :: mesh
         integer(ik),                                 intent(in)      :: group_ID
         type(mpi_comm),                              intent(in)      :: bc_comm
@@ -141,7 +141,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_comm)
-        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        class(outlet_characteristic_quasi3d_unsteady_HB_t),  intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         class(properties_t),                        intent(inout)   :: prop
         type(mpi_comm),                             intent(in)      :: bc_comm
@@ -154,6 +154,11 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,                  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,                  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m, expect_zero
+!            c1,    c2,    c3,    c4,    c5,                                                             &
+!            c1_3d, c2_3d, c3_3d, c4_3d, c5_3d,                                                          &
+!            c1_1d, c2_1d, c3_1d, c4_1d, c5_1d,                                                          &
+!            density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar,                             &
+!            ddensity, dvel1, dvel2, dvel3, dpressure, expect_zero
 
         type(AD_D), allocatable, dimension(:,:) ::                                  &
             density_t_real, vel1_t_real, vel2_t_real, vel3_t_real, pressure_t_real, &
@@ -524,7 +529,7 @@ contains
                                     vel2_Ft_real,     vel2_Ft_imag,         &
                                     vel3_Ft_real,     vel3_Ft_imag,         &
                                     pressure_Ft_real, pressure_Ft_imag)
-        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        class(outlet_characteristic_quasi3d_unsteady_HB_t),  intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
         type(AD_D),     allocatable,                intent(inout)   :: density_Ft_real(:,:,:)
@@ -651,7 +656,7 @@ contains
                                    vel2_Fts_real,     vel2_Fts_imag,      &
                                    vel3_Fts_real,     vel3_Fts_imag,      &
                                    pressure_Fts_real, pressure_Fts_imag)
-        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        class(outlet_characteristic_quasi3d_unsteady_HB_t),  intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
         type(AD_D),     allocatable,                intent(inout)   :: density_Ft_real(:,:,:)
@@ -759,7 +764,7 @@ contains
                                              vel2_Fts_real,     vel2_Fts_imag,      &
                                              vel3_Fts_real,     vel3_Fts_imag,      &
                                              pressure_Fts_real, pressure_Fts_imag)
-        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        class(outlet_characteristic_quasi3d_unsteady_HB_t),  intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
         type(AD_D),     allocatable,                intent(inout)   :: density_Fts_real(:,:,:)
@@ -980,7 +985,7 @@ contains
                                    vel3_Fts_imag,       &
                                    pressure_Fts_real,   &
                                    pressure_Fts_imag)
-        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        class(outlet_characteristic_quasi3d_unsteady_HB_t),  intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
         type(AD_D),                                 intent(inout)   :: density_Fts_real(:,:)
@@ -1158,7 +1163,7 @@ contains
                                             c3_hat_real,       c3_hat_imag,         &
                                             c4_hat_real,       c4_hat_imag,         &
                                             c5_hat_real,       c5_hat_imag)
-        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        class(outlet_characteristic_quasi3d_unsteady_HB_t),  intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
         type(AD_D),                                 intent(in)      :: density_Fts_real(:,:)
@@ -1260,7 +1265,7 @@ contains
 !                                            c3_hat_real,       c3_hat_imag,                             &
 !                                            c4_hat_real,       c4_hat_imag,                             &
 !                                            c5_hat_real,       c5_hat_imag)
-!        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+!        class(outlet_characteristic_quasi3d_unsteady_HB_t),  intent(inout)   :: self
 !        type(chidg_worker_t),                       intent(inout)   :: worker
 !        type(mpi_comm),                             intent(in)      :: bc_comm
 !        type(AD_D),                                 intent(in)      :: density_bar(:)
@@ -1401,7 +1406,7 @@ contains
     !--------------------------------------------------------------------------------
     subroutine compute_boundary_average(self,worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar, &
                                                             density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
-        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        class(outlet_characteristic_quasi3d_unsteady_HB_t),  intent(inout)   :: self
         type(chidg_worker_t),                       intent(in)      :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
         type(AD_D),                                 intent(in)      :: density_bar(:)
@@ -1477,7 +1482,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine analyze_bc_geometry(self,mesh,group_ID,bc_comm)
-        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        class(outlet_characteristic_quasi3d_unsteady_HB_t),  intent(inout)   :: self
         type(mesh_t),                               intent(in)      :: mesh
         integer(ik),                                intent(in)      :: group_ID
         type(mpi_comm),                             intent(in)      :: bc_comm
@@ -1558,7 +1563,7 @@ contains
                     ref_nodes(8,:) = [ ZERO, -ONE, ONE]
 
                 else
-                    call chidg_signal(FATAL,"outlet_giles_quasi3d_unsteady_HB: analyze_bc_geometry, invalid face indec.")
+                    call chidg_signal(FATAL,"outlet_characteristic_quasi3d_unsteady_HB: analyze_bc_geometry, invalid face indec.")
                 end if
 
                 ! Evaluate physical coordinates on face edges
@@ -1623,7 +1628,7 @@ contains
     !!
     !----------------------------------------------------------------------------------
     subroutine initialize_fourier_discretization(self,mesh,group_ID,bc_comm)
-        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        class(outlet_characteristic_quasi3d_unsteady_HB_t),  intent(inout)   :: self
         type(mesh_t),                               intent(in)      :: mesh
         integer(ik),                                intent(in)      :: group_ID
         type(mpi_comm),                             intent(in)      :: bc_comm
@@ -1739,7 +1744,7 @@ contains
 
 
                 ! Abort if we didn't find a donor
-                user_msg = "bc_state_outlet_giles_quasi3d_unsteady_HB%initialize_fourier_discretization: &
+                user_msg = "bc_state_outlet_characteristic_quasi3d_unsteady_HB%initialize_fourier_discretization: &
                             no donor element found for Fourier discretization node."
                 if (.not. donor_found) call chidg_signal(FATAL,user_msg)
 
@@ -1758,4 +1763,4 @@ contains
 
 
 
-end module bc_state_outlet_giles_quasi3d_unsteady_HB
+end module bc_state_outlet_characteristic_quasi3d_unsteady_HB

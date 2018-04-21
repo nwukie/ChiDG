@@ -260,8 +260,11 @@ contains
                 seed_location = 0
                 seed_found = .false.
                 do iseed = 1,size(self%value_seeds)
+                    !seed_found = ( (seed%idomain_g  == self%value_seeds(iseed)%idomain_g) .and. &
+                    !               (seed%ielement_g == self%value_seeds(iseed)%ielement_g) )
                     seed_found = ( (seed%idomain_g  == self%value_seeds(iseed)%idomain_g) .and. &
-                                   (seed%ielement_g == self%value_seeds(iseed)%ielement_g) )
+                                   (seed%ielement_g == self%value_seeds(iseed)%ielement_g) .and. &
+                                   (seed%itime      == self%value_seeds(iseed)%itime) )
 
                     if (seed_found) then
                         seed_location = iseed
@@ -301,8 +304,11 @@ contains
                 seed_location = 0
                 seed_found = .false.
                 do iseed = 1,size(self%gradient_seeds)
+                    !seed_found = ( (seed%idomain_g  == self%gradient_seeds(iseed)%idomain_g) .and. &
+                    !               (seed%ielement_g == self%gradient_seeds(iseed)%ielement_g) )
                     seed_found = ( (seed%idomain_g  == self%gradient_seeds(iseed)%idomain_g) .and. &
-                                   (seed%ielement_g == self%gradient_seeds(iseed)%ielement_g) )
+                                   (seed%ielement_g == self%gradient_seeds(iseed)%ielement_g) .and. &
+                                   (seed%itime      == self%gradient_seeds(iseed)%itime) )
 
                     if (seed_found) then
                         seed_location = iseed
@@ -342,8 +348,11 @@ contains
                 seed_location = 0
                 seed_found = .false.
                 do iseed = 1,size(self%lift_seeds)
+                    !seed_found = ( (seed%idomain_g  == self%lift_seeds(iseed)%idomain_g) .and. &
+                    !               (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) )
                     seed_found = ( (seed%idomain_g  == self%lift_seeds(iseed)%idomain_g) .and. &
-                                   (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) )
+                                   (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) .and. &
+                                   (seed%itime      == self%lift_seeds(iseed)%itime) )
 
                     if (seed_found) then
                         seed_location = iseed
@@ -381,8 +390,11 @@ contains
                 seed_location = 0
                 seed_found = .false.
                 do iseed = 1,size(self%lift_seeds)
+                    !seed_found = ( (seed%idomain_g  == self%lift_seeds(iseed)%idomain_g) .and. &
+                    !               (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) )
                     seed_found = ( (seed%idomain_g  == self%lift_seeds(iseed)%idomain_g) .and. &
-                                   (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) )
+                                   (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) .and. &
+                                   (seed%itime      == self%lift_seeds(iseed)%itime) )
 
                     if (seed_found) then
                         seed_location = iseed
@@ -474,6 +486,11 @@ contains
             patch_ID = mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
             face_ID  = mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
             ndepend  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
+
+            ! Additional storage for multiple time-levels if boundary requires global time-level coupling
+            if (mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling == 'Global') then
+                ndepend = ndepend * mesh%domain(idomain_l)%ntime
+            end if
 
         else
             user_msg = "cache_data_field%get_ndepend_face_exterior: Invalid face type detected."

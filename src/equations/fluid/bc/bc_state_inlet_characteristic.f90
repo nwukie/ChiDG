@@ -101,7 +101,7 @@ contains
             vel1_bc,   vel2_bc,   vel3_bc,                                                       &
             T_bc,   vmag2_m, vmag, f, df, dT, T, vel, veln, rminus, asp_ext, asp_int, M, ddensity, dvel1, dvel2, dvel3, dp, denergy, dmom1, dmom2, dmom3, &
             density_real, vel1_real, vel2_real, vel3_real, pressure_real,   &
-            density_imag, vel1_imag, vel2_imag, vel3_imag, pressure_imag
+            density_imag, vel1_imag, vel2_imag, vel3_imag, pressure_imag, c1, c2, c3, c4, c5
 
 
         type(AD_D)  :: vel1_avg, vel2_avg, vel3_avg, density_avg, pressure_avg, c_avg
@@ -118,16 +118,19 @@ contains
 
 
         call self%compute_temporal_dft(worker,bc_comm,density_real,  density_imag,    &
-                                                 vel1_real,     vel1_imag,       &
-                                                 vel2_real,     vel2_imag,       &
-                                                 vel3_real,     vel3_imag,       &
-                                                 pressure_real, pressure_imag)
+                                                      vel1_real,     vel1_imag,       &
+                                                      vel2_real,     vel2_imag,       &
+                                                      vel3_real,     vel3_imag,       &
+                                                      pressure_real, pressure_imag)
 
+        ! Get spatio-temporal averages
         density_avg = density_real(1)
         vel1_avg    = vel1_real(1)
         vel2_avg    = vel2_real(1)
         vel3_avg    = vel3_real(1)
         pressure_avg = pressure_real(1)
+        !call self%compute_averages(worker,bc_COMM,vel1_avg, vel2_avg, vel3_avg, density_avg, pressure_avg)
+        c_avg = sqrt(gam*pressure_avg/density_avg)
 
 
         ! Get boundary condition Total Temperature, Total Pressure, and normal vector
@@ -156,6 +159,7 @@ contains
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
         mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
         energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
+        p_m       = worker%get_field('Pressure'  , 'value', 'face interior')
 
 
 
@@ -190,9 +194,6 @@ contains
         u_m = mom1_m/density_m
         v_m = mom2_m/density_m
         w_m = mom3_m/density_m
-!        u_m = vel1_avg
-!        v_m = vel2_avg
-!        w_m = vel3_avg
 
         ! Compute velocity magnitude squared from interior state
         vmag2_m = (u_m*u_m) + (v_m*v_m) + (w_m*w_m)
@@ -211,52 +212,81 @@ contains
         dvel3    = ZERO*density_m
         dp       = ZERO*density_m
 
-        ! Compute averages
-        !call self%compute_averages(worker,bc_COMM,vel1_avg, vel2_avg, vel3_avg, density_avg, pressure_avg)
-        c_avg = sqrt(gam*pressure_avg/density_avg)
 
+        ! Compute perturbation from time-mean
+        do igq = 1,size(ddensity)
+            ddensity(igq) = density_m(igq) - density_avg
+            dvel1(igq)    = u_m(igq)       - vel1_avg
+            dvel2(igq)    = v_m(igq)       - vel2_avg
+            dvel3(igq)    = w_m(igq)       - vel3_avg
+            dp(igq)       = p_m(igq)       - pressure_avg
+        end do
 
-        ! Compute perturbation
+        ! Compute 1D characteristics
+        c1 = ZERO*density_m
+        c2 = ZERO*density_m
+        c3 = ZERO*density_m
+        c4 = ZERO*density_m
+        c5 = ZERO*density_m
+        do igq = 1,size(ddensity)
+            c1(igq) = -(   c_avg*c_avg   )*ddensity(igq) + dp(igq)
+            c2(igq) =  (density_avg*c_avg)*dvel1(igq)
+            c3(igq) =  (density_avg*c_avg)*dvel2(igq)
+            c4(igq) =  (density_avg*c_avg)*dvel3(igq)    + dp(igq)
+            c5(igq) = -(density_avg*c_avg)*dvel3(igq)    + dp(igq)
+        end do
+
+        ! From the characteristics computed, 1-4 should be 0 unless we want to set an incoming 
+        ! perturbation. c5 is kept from the interior.
+        c1 = ZERO
+        c2 = ZERO
+        c3 = ZERO
+        c4 = ZERO
+
+        ! Incoming pressure wave
         amp = 10._rk
         omega = worker%time_manager%freqs(1)
         do igq = 1,size(ddensity)
-            ddensity(igq) = -(ONE/(c_avg*c_avg))*amp*cos(omega*worker%time())
-            !ddensity(igq) = (ONE/(TWO*c_avg*c_avg))*amp*sin(omega*worker%time())
-            !dvel3(igq)    = -(ONE/(TWO*density_avg*c_avg))*amp*sin(omega*worker%time())
-            !dp(igq)       = HALF*amp*sin(omega*worker%time())
+            c4(igq) = amp*cos(omega*worker%time())
         end do
 
 
+        ! Reconstruct perturbation field
+        do igq = 1,size(ddensity)
+            ddensity(igq) = -(ONE/(c_avg*c_avg))*c1(igq) + (ONE/(TWO*c_avg*c_avg))*c4(igq) + (ONE/(TWO*c_avg*c_avg))*c5(igq)
+            dvel1(igq)    = (ONE/(density_avg*c_avg))*c2(igq)
+            dvel2(igq)    = (ONE/(density_avg*c_avg))*c3(igq)
+            dvel3(igq)    = (ONE/(TWO*density_avg*c_avg))*c4(igq) - (ONE/(TWO*density_avg*c_avg))*c5(igq)
+            dp(igq)       = HALF*c4(igq) + HALF*c5(igq)
+        end do
 
 
-        ! Compute boundary condition temperature and pressure
-        !T_bc = TT - (vmag2_m)/(TWO*cp)
-        !p_bc = PT*((T_bc/TT)**(gam/(gam-ONE))) + dp_bc
-        T_mean = TT - (vmag2_m)/(TWO*cp)
-        p_mean = PT*((T_mean/TT)**(gam/(gam-ONE)))
+        p_mean = ZERO*density_m
+        p_mean(:) = pressure_avg
+        T_mean = TT*(p_mean/PT)**((gam-ONE)/gam)
         density_mean = p_mean/(T_mean*Rgas)
-        mom1_mean = density_mean*vel1_mean
-        mom2_mean = density_mean*vel2_mean
-        mom3_mean = density_mean*vel3_mean
-        energy_mean = p_mean/(gam - ONE) + HALF*((mom1_mean*mom1_mean) + (mom2_mean*mom2_mean) + (mom3_mean*mom3_mean))/density_mean
+
+        vmag = sqrt(TWO*cp*(TT-T_mean))
+        vel1_mean = n1*vmag
+        vel2_mean = n2*vmag
+        vel3_mean = n3*vmag
+
         
-
-        dmom1 = ddensity*dvel1
-        dmom2 = ddensity*dvel2
-        dmom3 = ddensity*dvel3
-        denergy = dp/(gam-ONE) + HALF*((dmom1*dmom1) + (dmom2*dmom2) + (dmom3*dmom3))/ddensity
-
-        ! Compute boundary condition density from ideal gas law
+        ! Assemble mean + perturbation
         density_bc = density_mean + ddensity
-        mom1_bc    = mom1_mean    + dmom1
-        mom2_bc    = mom2_mean    + dmom2
-        mom3_bc    = mom3_mean    + dmom3
-        energy_bc  = energy_mean  + denergy
-        !density_bc = density_mean
-        !mom1_bc    = mom1_mean
-        !mom2_bc    = mom2_mean
-        !mom3_bc    = mom3_mean
-        !energy_bc  = energy_mean
+        vel1_bc    = vel1_mean    + dvel1
+        vel2_bc    = vel2_mean    + dvel2
+        vel3_bc    = vel3_mean    + dvel3
+        p_bc       = p_mean       + dp
+
+        ! Form conserved variables
+        density_bc = density_bc
+        mom1_bc    = density_bc*vel1_bc
+        mom2_bc    = density_bc*vel2_bc
+        mom3_bc    = density_bc*vel3_bc
+        energy_bc  = p_bc/(gam - ONE) + (density_bc*HALF)*(vel1_bc*vel1_bc + &
+                                                           vel2_bc*vel2_bc + &
+                                                           vel3_bc*vel3_bc)
 
 
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
@@ -335,7 +365,8 @@ contains
 
         physical_nodes(1,:) = [0.5_rk, 0.5_rk, ZERO]
 
-        ntime   = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%ntime
+        !ntime   = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%ntime
+        ntime   = worker%time_manager%ntime
 
         ! Allocate storage for discrete time instances
         allocate(density(ntime),  &

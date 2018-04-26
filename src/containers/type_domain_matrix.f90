@@ -455,7 +455,7 @@ contains
                                     end if
 
                                 end do !elem_ID, coupling
-                            end if
+                            end if !domain_has_face
 
                         end do !face_ID
                     end do !patch_ID
@@ -573,7 +573,7 @@ contains
                                             end if
                                         end do !itime_couple
                                     end do !elem_ID, coupling
-                                end if
+                                end if !domain_has_face
 
                             end do !face_ID
                         end if !add_hb_coupling
@@ -687,7 +687,7 @@ contains
 
         ! Find donor densematrix location 
         imat = self%lblks(ielement_l,itime)%loc(seed%idomain_g,seed%ielement_g,seed%itime)
-        if (imat == 0) call chidg_signal(FATAL,"domain_matrix%store: no allocation found to store data.")
+        if (imat == 0) call chidg_signal_three(FATAL,"domain_matrix%store: no allocation found to store data.",seed%idomain_g,seed%ielement_g,seed%itime)
 
         ! Call subroutine on densematrix 
         call self%lblks(ielement_l,itime)%store(imat,ivar,nterms,integral)
@@ -769,7 +769,7 @@ contains
         integer(ik),                intent(in)      :: ivar
         integer(ik),                intent(in)      :: itime
 
-        integer(ik) :: ielement_l, imat, nterms
+        integer(ik) :: imat, nterms
         logical     :: local_coupling = .false.
 
         ! If cross-timelevel harmonic balance term store separately
@@ -777,27 +777,25 @@ contains
             call self%store_hb(integral,face,seed,ivar,itime)
         else
 
-            ielement_l = face%ielement_l
-
             ! If ielem = ielem_d then the linearization is with respect to the local element. 
             ! So, this is stored in the self%lblks array in the DIAG location, instead of
             ! the self%bc_blks array. In general, the storage location is not important,
             ! but the ILU preconditioner expects the full diagonal contribution to be in 
             ! lblks.
-            local_coupling = (ielement_l == seed%ielement_l)
+            local_coupling = (face%idomain_g == seed%idomain_g) .and. (face%ielement_g == seed%ielement_g)
 
             if ( local_coupling ) then
                 call self%store(integral,face,seed,ivar,itime)
             else
 
                 ! Get stored information for the block
-                nterms = self%ldata(ielement_l,2)
+                nterms = self%ldata(face%ielement_l,2)
 
                 ! Find coupled bc densematrix location 
-                imat = self%bc_blks(ielement_l,itime)%loc(seed%idomain_g,seed%ielement_g,seed%itime)
+                imat = self%bc_blks(face%ielement_l,itime)%loc(seed%idomain_g,seed%ielement_g,seed%itime)
 
                 ! Store derivatives
-                call self%bc_blks(ielement_l,itime)%store(imat,ivar,nterms,integral)
+                call self%bc_blks(face%ielement_l,itime)%store(imat,ivar,nterms,integral)
 
             end if ! check local block.
 
@@ -1011,6 +1009,17 @@ contains
             end do !ielem
         end if
 
+
+        if (allocated(self%hb_blks)) then
+            allocate(restricted%hb_blks(size(self%hb_blks,1),size(self%hb_blks,2)), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            do ielem = 1,size(self%hb_blks,1)
+                do itime = 1,size(self%hb_blks,2)
+                    restricted%hb_blks(ielem,itime) = self%hb_blks(ielem,itime)%restrict(nterms_r)
+                end do !itime
+            end do !ielem
+        end if
 
 
         !

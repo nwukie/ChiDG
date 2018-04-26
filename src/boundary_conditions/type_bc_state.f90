@@ -533,12 +533,11 @@ contains
             mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling = 'Global'
             do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
-                
                 !
-                ! Loop through, initialize coupling
+                ! Loop through, initialize coupling with all other patches/faces
                 !
                 do patch_ID_coupled = 1,mesh%bc_patch_group(group_ID)%npatches()
-                    do face_ID_coupled = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+                    do face_ID_coupled = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%nfaces()
 
 
                         !
@@ -569,6 +568,7 @@ contains
                                                                                                         iface,      &
                                                                                                         IRANK)
 
+
                         call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g,     &
                                                                                                              ielement_g,    &
                                                                                                              neqns,         &
@@ -583,7 +583,6 @@ contains
 
             end do ! face_ID
         end do ! patch_ID
-
 
 
         !
@@ -708,20 +707,15 @@ contains
                                                                                                                  areas,                 &
                                                                                                                  interp_coords_def)
 
-
                         end do ! face_ID
                     end do ! patch_ID
 
                 end do !ielem
 
-
             end if
-
 
             call MPI_Barrier(bc_COMM,ierr)
         end do
-
-
 
     end subroutine init_bc_coupling_global
     !******************************************************************************************

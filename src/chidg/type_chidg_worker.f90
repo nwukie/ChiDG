@@ -913,16 +913,6 @@ contains
         end if
 
 
-!        ! Check if linearization was supposed to be with respect to another time level
-!        !if ( (self%function_info%seed%itime /= self%itime) .and. (trim(interp_source) /= 'boundary')) then
-!        if ( (self%function_info%seed%itime /= self%itime) ) then
-!            do i = 1,size(var_gq)
-!                var_gq(i)%xp_ad_(:) = ZERO
-!            end do
-!        end if
-
-
-
     end function get_field
     !***************************************************************************************
 

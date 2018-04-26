@@ -1,4 +1,4 @@
-module bc_state_outlet_giles_quasi3d_unsteady_HB
+module bc_state_inlet_giles_quasi3d_unsteady_HB
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL,    &
@@ -12,7 +12,6 @@ module bc_state_outlet_giles_quasi3d_unsteady_HB
     use type_point,             only: point_t
     use type_mesh,              only: mesh_t
     use type_bc_state,          only: bc_state_t
-    !use bc_state_fluid_averaging,   only: bc_fluid_averaging_t
     use bc_giles_HB_base,       only: giles_HB_base_t
     use type_bc_patch,          only: bc_patch_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -28,7 +27,7 @@ module bc_state_outlet_giles_quasi3d_unsteady_HB
 
 
 
-    !>  Name: Outlet - 3D Giles
+    !>  Name: inlet - 3D Giles
     !!
     !!  Options:
     !!      : Average Pressure
@@ -41,14 +40,14 @@ module bc_state_outlet_giles_quasi3d_unsteady_HB
     !!  @date   2/8/2018
     !!
     !---------------------------------------------------------------------------------
-    type, public, extends(giles_HB_base_t) :: outlet_giles_quasi3d_unsteady_HB_t
+    type, public, extends(giles_HB_base_t) :: inlet_giles_quasi3d_unsteady_HB_t
 
     contains
 
         procedure   :: init                 ! Set-up bc state with options/name etc.
         procedure   :: compute_bc_state     ! boundary condition function implementation
 
-    end type outlet_giles_quasi3d_unsteady_HB_t
+    end type inlet_giles_quasi3d_unsteady_HB_t
     !*********************************************************************************
 
 
@@ -65,14 +64,21 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_giles_quasi3d_unsteady_HB_t),   intent(inout) :: self
+        class(inlet_giles_quasi3d_unsteady_HB_t),   intent(inout) :: self
 
         ! Set name, family
-        call self%set_name('Outlet - Giles Quasi3D Unsteady HB')
-        call self%set_family('Outlet')
+        call self%set_name('Inlet - Giles Quasi3D Unsteady HB')
+        call self%set_family('Inlet')
 
         ! Add functions
-        call self%bcproperties%add('Average Pressure',    'Required')
+        call self%bcproperties%add('Total Pressure',       'Required')
+        call self%bcproperties%add('Total Temperature',    'Required')
+
+        call self%bcproperties%add('Normal-1', 'Required')
+        call self%bcproperties%add('Normal-2', 'Required')
+        call self%bcproperties%add('Normal-3', 'Required')
+
+        ! Add functions
         call self%bcproperties%add('Pitch',               'Required')
         call self%bcproperties%add('Spatial Periodicity', 'Required')
 
@@ -93,7 +99,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_comm)
-        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        class(inlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         class(properties_t),                        intent(inout)   :: prop
         type(mpi_comm),                             intent(in)      :: bc_comm
@@ -122,15 +128,14 @@ contains
             density_grid, vel1_grid, vel2_grid, vel3_grid, pressure_grid
 
 
-        real(rk),       allocatable, dimension(:)   :: p_user, r, pitch
+        real(rk),       allocatable, dimension(:)   :: r, pitch
         real(rk)                                    :: theta_offset
         type(point_t),  allocatable                 :: coords(:)
         integer                                     :: i, ngq, ivec, imode, itheta, itime, iradius, nmodes, ierr, igq
 
 
         ! Get back pressure from function.
-        p_user = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
-        pitch  = self%bcproperties%compute('Pitch',           worker%time(),worker%coords())
+        pitch  = self%bcproperties%compute('Pitch', worker%time(),worker%coords())
 
         ! Interpolate interior solution to face quadrature nodes
         grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')
@@ -216,17 +221,17 @@ contains
                                       pressure_Fts_real, pressure_Fts_imag)
 
 
-        call self%compute_absorbing_outlet(worker,bc_comm,       &
-                                           density_Fts_real,     &
-                                           density_Fts_imag,     &
-                                           vel1_Fts_real,        &
-                                           vel1_Fts_imag,        &
-                                           vel2_Fts_real,        &
-                                           vel2_Fts_imag,        &
-                                           vel3_Fts_real,        &
-                                           vel3_Fts_imag,        &
-                                           pressure_Fts_real,    &
-                                           pressure_Fts_imag)
+        call self%compute_absorbing_inlet(worker,bc_comm,       &
+                                          density_Fts_real,     &
+                                          density_Fts_imag,     &
+                                          vel1_Fts_real,        &
+                                          vel1_Fts_imag,        &
+                                          vel2_Fts_real,        &
+                                          vel2_Fts_imag,        &
+                                          vel3_Fts_real,        &
+                                          vel3_Fts_imag,        &
+                                          pressure_Fts_real,    &
+                                          pressure_Fts_imag)
 
 
 
@@ -416,218 +421,4 @@ contains
 
 
 
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   4/12/2018
-!    !!
-!    !---------------------------------------------------------------------------------
-!    subroutine apply_nonreflecting_condition(self,worker,bc_comm,                   &
-!                                             density_Fts_real,  density_Fts_imag,   &
-!                                             vel1_Fts_real,     vel1_Fts_imag,      &
-!                                             vel2_Fts_real,     vel2_Fts_imag,      &
-!                                             vel3_Fts_real,     vel3_Fts_imag,      &
-!                                             pressure_Fts_real, pressure_Fts_imag)
-!        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
-!        type(chidg_worker_t),                       intent(inout)   :: worker
-!        type(mpi_comm),                             intent(in)      :: bc_comm
-!        type(AD_D),     allocatable,                intent(inout)   :: density_Fts_real(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: density_Fts_imag(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: vel1_Fts_real(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: vel1_Fts_imag(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: vel2_Fts_real(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: vel2_Fts_imag(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: vel3_Fts_real(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: vel3_Fts_imag(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: pressure_Fts_real(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: pressure_Fts_imag(:,:,:)
-!
-!        integer(ik)             :: iradius, itheta, itime, ntheta
-!        real(rk),   allocatable :: pitch(:), spatial_periodicity(:), p_user(:)
-!        real(rk)                :: omega, kz
-!        type(AD_D)              :: state_real(5), state_imag(5), alpha_real(5), alpha_imag(5),  &
-!                                   density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar,     &
-!                                   k123, k4, k5, pyramid, c5, ddensity, dvel3, dpressure, c_bar, T(5,5), Tinv(5,5)
-!
-!        p_user              = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
-!        pitch               = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
-!        spatial_periodicity = self%bcproperties%compute('Spatial Periodicity', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
-!
-!        ! Initialize derivatives for eigenvectors
-!        T    = ZERO*density_Fts_real(1,1,1)
-!        Tinv = ZERO*density_Fts_real(1,1,1)
-!
-!        do iradius = 1,size(density_Fts_real,1)
-!
-!            ! Get spatio-temporal average
-!            density_bar  = density_Fts_real(iradius,1,1)
-!            vel1_bar     = vel1_Fts_real(iradius,1,1)
-!            vel2_bar     = vel2_Fts_real(iradius,1,1)
-!            vel3_bar     = vel3_Fts_real(iradius,1,1)
-!            pressure_bar = pressure_Fts_real(iradius,1,1)
-!            c_bar = sqrt(gam*pressure_bar/density_bar)
-!
-!            do itime = 1,size(density_Fts_real,3)
-!
-!                if (itime == 1) then
-!                    omega = ZERO
-!                else
-!                    print*, 'WARNING: accesing frequency incorrectly'
-!                    !omega = worker%time_manager%freqs(itime-1)
-!                    omega = worker%time_manager%freqs(1)
-!                end if
-!
-!                ntheta = size(density_Fts_real,2)
-!                !do itheta = 1,ntheta
-!                print*, 'Warning: only accounting for a single spatial mode'
-!                do itheta = 1,1
-!
-!
-!                    ! Handle all other modes with nonreflecting outlet condition
-!                    if (itime > 1) then
-!
-!                        ! Compute transverse wave number 
-!                        ! **** WARNING: spatial_periodicity here might not be general enough! ****
-!                        !kz = TWO*PI*real(itheta-1,rk)/spatial_periodicity(1)
-!                        if (itheta <= ((ntheta-1)/2 + 1)) then
-!                            kz = TWO*PI*real(itheta-1,rk)/spatial_periodicity(1)  ! positive frequencies
-!                        else
-!                            kz = -TWO*PI*real(ntheta-itheta+1,rk)/spatial_periodicity(1) ! negative frequencies
-!                        end if
-!                        
-!                        !print*, 'omega: ', omega
-!                        !print*, 'kz: ', kz
-!                        !print*, 'c_bar: ', c_bar%x_ad_
-!                        !print*, 'vel3_bar: ', vel3_bar%x_ad_
-!
-!                        ! Compute wave number for convected modes
-!                        k123 = (omega - kz*vel2_bar)/vel3_bar
-!
-!                        ! Compute wave number for acoustic modes
-!                        ! **** WARNING: ASSUMING PYRAMID IS ALWAYS POSITIVE!!!! ****
-!                        pyramid = (omega - kz*vel2_bar)**TWO - kz*kz*(c_bar**TWO - vel3_bar**TWO)
-!                        if (pyramid < ZERO) print*, 'WARNING! pyramid < 0'
-!                        k4 = (-vel3_bar*(omega-kz*vel2_bar) + c_bar*sqrt(pyramid))/(c_bar**TWO - vel3_bar**TWO)
-!                        k5 = (-vel3_bar*(omega-kz*vel2_bar) - c_bar*sqrt(pyramid))/(c_bar**TWO - vel3_bar**TWO)
-!                        
-!                        ! Assemble right eigenvectors
-!                        T(1,1) = density_bar
-!                        T(2,1) = ZERO
-!                        T(3,1) = ZERO
-!                        T(4,1) = ZERO
-!                        T(5,1) = ZERO
-!
-!                        T(1,2) = ZERO
-!                        T(2,2) = ZERO
-!                        T(3,2) = c_bar
-!                        T(4,2) = ZERO
-!                        T(5,2) = ZERO
-!
-!                        T(1,3) = ZERO
-!                        T(2,3) = -c_bar*kz
-!                        T(3,3) = ZERO
-!                        T(4,3) = c_bar*k123
-!                        T(5,3) = ZERO
-!
-!                        T(1,4) = density_bar
-!                        T(2,4) = -c_bar*c_bar*k4/(vel3_bar*k4 - vel3_bar*k123)
-!                        T(3,4) = ZERO
-!                        T(4,4) = -c_bar*c_bar*kz/(vel3_bar*k4 - vel3_bar*k123)
-!                        T(5,4) = density_bar*c_bar*c_bar
-!
-!                        T(1,5) = density_bar
-!                        T(2,5) = -c_bar*c_bar*k5/(vel3_bar*k5 - vel3_bar*k123)
-!                        T(3,5) = ZERO
-!                        T(4,5) = -c_bar*c_bar*kz/(vel3_bar*k5 - vel3_bar*k123)
-!                        T(5,5) = density_bar*c_bar*c_bar
-!
-!
-!                        ! Assemble left eigenvectors
-!                        Tinv(1,1) = ONE/density_bar
-!                        Tinv(2,1) = ZERO
-!                        Tinv(3,1) = ZERO
-!                        Tinv(4,1) = ZERO
-!                        Tinv(5,1) = ZERO
-!
-!                        Tinv(1,2) = ZERO
-!                        Tinv(2,2) = ZERO
-!                        Tinv(3,2) = -kz/(c_bar*(k123*k123 + kz*kz))
-!                        Tinv(4,2) = -vel3_bar*(k4*k123 - k123*k123)/(TWO*c_bar*c_bar*(k4*k123 + kz*kz))
-!                        Tinv(5,2) = -vel3_bar*(k5*k123 - k123*k123)/(TWO*c_bar*c_bar*(k5*k123 + kz*kz))
-!
-!                        Tinv(1,3) = ZERO
-!                        Tinv(2,3) = ONE/c_bar
-!                        Tinv(3,3) = ZERO
-!                        Tinv(4,3) = ZERO
-!                        Tinv(5,3) = ZERO
-!
-!                        Tinv(1,4) = ZERO
-!                        Tinv(2,4) = ZERO
-!                        Tinv(3,4) = k123/(c_bar*(k123*k123 + kz*kz))
-!                        Tinv(4,4) = -vel3_bar*(k4*kz - k123*kz)/(TWO*c_bar*c_bar*(k4*k123 + kz*kz))
-!                        Tinv(5,4) = -vel3_bar*(k5*kz - k123*kz)/(TWO*c_bar*c_bar*(k5*k123 + kz*kz))
-!
-!                        Tinv(1,5) = -ONE/(density_bar*c_bar*c_bar)
-!                        Tinv(2,5) = ZERO
-!                        Tinv(3,5) = -kz/(density_bar*c_bar*vel3_bar*(k123*k123 + kz*kz))
-!                        Tinv(4,5) = ONE/(TWO*density_bar*c_bar*c_bar)
-!                        Tinv(5,5) = ONE/(TWO*density_bar*c_bar*c_bar)
-!
-!                        ! Assemble state for current Fourier mode
-!                        state_real(1:5) = [density_Fts_real(iradius,itheta,itime),  &
-!                                           vel1_Fts_real(iradius,itheta,itime),     &
-!                                           vel2_Fts_real(iradius,itheta,itime),     &
-!                                           vel3_Fts_real(iradius,itheta,itime),     &
-!                                           pressure_Fts_real(iradius,itheta,itime)]
-!                        state_imag(1:5) = [density_Fts_imag(iradius,itheta,itime),  &
-!                                           vel1_Fts_imag(iradius,itheta,itime),     &
-!                                           vel2_Fts_imag(iradius,itheta,itime),     &
-!                                           vel3_Fts_imag(iradius,itheta,itime),     &
-!                                           pressure_Fts_imag(iradius,itheta,itime)]
-!
-!                        ! Measure composition of interior solution in terms of the right eigenvectors by multiplying 
-!                        ! by the left eigenvectors
-!                        alpha_real = matmul(Tinv,state_real)
-!                        alpha_imag = matmul(Tinv,state_imag)
-!
-!                        ! ***** WARNING: ASSUMING alpha(4) is always outgoing!! ******
-!                        ! ***** WARNING: ASSUMING alpha(5) is always incoming!! ******
-!                        alpha_real(5) = ZERO
-!                        alpha_imag(5) = ZERO
-!
-!                        ! Reconstruct primitive Fourier modes from absorbing eigenvectors
-!                        state_real(1:5) = matmul(T,alpha_real)
-!                        state_imag(1:5) = matmul(T,alpha_imag)
-!
-!                        !print*, 'state_real: '
-!                        !print*, state_real(:)%x_ad_
-!                        !print*, 'state_imag: '
-!                        !print*, state_imag(:)%x_ad_
-!
-!                        ! Store
-!                        density_Fts_real(iradius,itheta,itime)  = state_real(1)
-!                        vel1_Fts_real(iradius,itheta,itime)     = state_real(2)
-!                        vel2_Fts_real(iradius,itheta,itime)     = state_real(3)
-!                        vel3_Fts_real(iradius,itheta,itime)     = state_real(4)
-!                        pressure_Fts_real(iradius,itheta,itime) = state_real(5)
-!
-!                        density_Fts_imag(iradius,itheta,itime)  = state_imag(1)
-!                        vel1_Fts_imag(iradius,itheta,itime)     = state_imag(2)
-!                        vel2_Fts_imag(iradius,itheta,itime)     = state_imag(3)
-!                        vel3_Fts_imag(iradius,itheta,itime)     = state_imag(4)
-!                        pressure_Fts_imag(iradius,itheta,itime) = state_imag(5)
-!
-!                    end if ! .not. spatio-temporal average
-!                end do !itheta
-!            end do !itime
-!
-!
-!        end do !iradius
-!
-!
-!    end subroutine apply_nonreflecting_condition
-!    !********************************************************************************
-
-
-
-end module bc_state_outlet_giles_quasi3d_unsteady_HB
+end module bc_state_inlet_giles_quasi3d_unsteady_HB

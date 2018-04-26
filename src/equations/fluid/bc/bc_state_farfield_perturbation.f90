@@ -270,13 +270,12 @@ contains
 
 
         ! Compute boundary state
-        density_bc  = (c_bc*c_bc/(entropy_bc*gam))**(ONE/(gam-ONE))
-        mom1_bc     = (u_bc_norm + u_bc_tang)*density_bc
-        mom2_bc     = (v_bc_norm + v_bc_tang)*density_bc
-        mom3_bc     = (w_bc_norm + w_bc_tang)*density_bc
-
-        p_bc   = (density_bc**gam)*entropy_bc
-        energy_bc = (p_bc/(gam - ONE)) + HALF*(mom1_bc*mom1_bc + mom2_bc*mom2_bc + mom3_bc*mom3_bc)/density_bc
+        density_bc = (c_bc*c_bc/(entropy_bc*gam))**(ONE/(gam-ONE))
+        mom1_bc    = (u_bc_norm + u_bc_tang)*density_bc
+        mom2_bc    = (v_bc_norm + v_bc_tang)*density_bc
+        mom3_bc    = (w_bc_norm + w_bc_tang)*density_bc
+        p_bc       = (density_bc**gam)*entropy_bc
+        energy_bc  = (p_bc/(gam - ONE)) + HALF*(mom1_bc*mom1_bc + mom2_bc*mom2_bc + mom3_bc*mom3_bc)/density_bc
 
 
 
@@ -371,18 +370,18 @@ contains
         !    dpressure(igq) = HALF*amp*sin(omega*worker%time())
         !end do
         ddensity  = (ONE/(TWO*c_avg*c_avg))*amp*cos(omega*worker%time())
-        dvel3     = (ONE/(TWO*density_avg*c_avg))*amp*cos(omega*worker%time())
-        dpressure = HALF*amp*cos(omega*worker%time())
+        !dvel3     = (ONE/(TWO*density_avg*c_avg))*amp*cos(omega*worker%time())
+        !dpressure = HALF*amp*cos(omega*worker%time())
 
         dmom1 = ddensity*dvel1
         dmom2 = ddensity*dvel2
         dmom3 = ddensity*dvel3
         denergy = dpressure/(gam-ONE) + HALF*(dmom1*dmom1 + dmom2*dmom2 + dmom3*dmom3)/ddensity
 
-        print*, density_bc(:)%x_ad_
-        print*, mom1_bc(:)%x_ad_
-        print*, mom3_bc(:)%x_ad_
-        print*, p_bc(:)%x_ad_
+!        print*, density_bc(:)%x_ad_
+!        print*, mom1_bc(:)%x_ad_
+!        print*, mom3_bc(:)%x_ad_
+!        print*, p_bc(:)%x_ad_
 
         density_bc = density_bc + ddensity
         mom1_bc    = mom1_bc    + dmom1

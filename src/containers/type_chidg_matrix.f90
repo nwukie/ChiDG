@@ -371,6 +371,76 @@ contains
         end do ! idom
 
 
+
+        !
+        ! Loop through Harmonic Balance coupling and look for parallel multiply
+        !
+        do idom = 1,size(self%dom)
+
+            if (allocated(self%dom(idom)%hb_blks)) then
+                do ielem = 1,size(self%dom(idom)%hb_blks,1)
+                    do itime = 1,size(self%dom(idom)%hb_blks,2)
+                        do imat = 1,self%dom(idom)%hb_blks(ielem,itime)%size()
+                        
+                            matrix_proc = IRANK
+                            vector_proc = self%dom(idom)%hb_blks(ielem,itime)%parent_proc(imat)
+
+                            local_multiply    = ( matrix_proc == vector_proc )
+                            parallel_multiply = ( matrix_proc /= vector_proc )
+
+                            if ( parallel_multiply ) then
+                                !
+                                ! Get information about element we need to multiply with
+                                !
+                                dparent_g   = self%dom(idom)%hb_blks(ielem,itime)%dparent_g(imat)
+                                eparent_g   = self%dom(idom)%hb_blks(ielem,itime)%eparent_g(imat)
+                                parent_proc = self%dom(idom)%hb_blks(ielem,itime)%parent_proc(imat)
+
+
+                                !
+                                ! Loop through chidg_vector%recv to find match
+                                !
+                                match_found = .false.
+                                do icomm = 1,size(x%recv%comm)
+                                    comm_proc = x%recv%comm(icomm)%proc
+                                    if ( comm_proc == parent_proc ) then
+                                        do idom_recv = 1,size(x%recv%comm(icomm)%dom)
+                                            recv_domain = x%recv%comm(icomm)%dom(idom_recv)%vecs(1)%dparent_g()
+                                            if ( recv_domain == dparent_g ) then
+                                                do ielem_recv = 1,size(x%recv%comm(icomm)%dom(idom_recv)%vecs)
+
+                                                    ! Get recv element indices
+                                                    recv_elem = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%eparent_g()
+
+                                                    ! If they match the domain_matrix, set the recv indices so chidg_mv can compute m-v product
+                                                    if ( recv_elem == eparent_g )  then
+                                                        call self%dom(idom)%hb_blks(ielem,itime)%set_recv_comm(imat,icomm)
+                                                        call self%dom(idom)%hb_blks(ielem,itime)%set_recv_domain(imat,idom_recv)
+                                                        call self%dom(idom)%hb_blks(ielem,itime)%set_recv_element(imat,ielem_recv)
+                                                        match_found = .true.
+                                                        exit
+                                                    end if
+
+                                                end do !ielem_recv
+                                            end if ! recv_domain == dparent
+                                            if (match_found) exit
+                                        end do !idom_recv
+                                    end if
+                                    if (match_found) exit
+                                end do ! icomm
+
+                                if (.not. match_found) call chidg_signal(FATAL,"chidg_matrix%init_recv: no matching recv element found in vector")
+
+                            end if
+
+                        end do !imat
+                    end do !itime
+                end do !ielem
+            end if
+        end do ! idom
+
+
+
         ! Set recv initialization to true
         self%recv_initialized = .true.
 

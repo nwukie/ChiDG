@@ -781,6 +781,15 @@ contains
                         A3_imag = (c_bar_r - vel3_bar_r)*s_imag/((c_bar_r - vel2_bar_r*lambda)*((ONE-s_real)**TWO + s_imag*s_imag))
                         c3_real(iradius,itheta,itime) = c3_real(iradius,itheta,itime) + A3_real*a3
                         c3_imag(iradius,itheta,itime) = c3_imag(iradius,itheta,itime) + A3_imag*a3
+
+                        A4_denom    = ((c_bar_r - vel2_bar_r)**TWO)*((s_real*s_real-s_imag*s_imag)**TWO + FOUR*s_real*s_real*s_imag*s_imag) 
+                        A4_real_num = TWO*vel3_bar_r*lambda*(c_bar_r - vel3_bar_r)*(s_real*s_real - s_imag*s_imag)
+                        A4_imag_num = -TWO*vel3_bar_r*lambda*(c_bar_r - vel3_bar_r)*TWO*s_real*s_imag
+                        A4_real = A4_real_num/A4_denom
+                        A4_imag = A4_imag_num/A4_denom
+                        c4_real(iradius,itheta,itime) = c4_real(iradius,itheta,itime) + A4_real*a3
+                        c4_imag(iradius,itheta,itime) = c4_imag(iradius,itheta,itime) + A4_imag*a3
+
                     end if
 
                 end do !itime

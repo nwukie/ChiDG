@@ -1,7 +1,7 @@
 module bc_giles_HB_base
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL,    &
+    use mod_constants,          only: ZERO, ONE, TWO, FOUR, HALF, ME, CYLINDRICAL,    &
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, PI
     use mod_fluid,              only: Rgas, cp, gam
     use mod_interpolation,      only: interpolate_linear, interpolate_linear_ad
@@ -645,11 +645,14 @@ contains
 
         type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, T_avg,       &
                        density_bar_r, vel1_bar_r, vel2_bar_r, vel3_bar_r, pressure_bar_r, c_bar_r,  &
-                       A3_real, A3_imag, A4_real, A4_imag, beta, s_real, s_imag, s_arg, lambda, vmag
+                       A3_real, A3_imag, A4_real, A4_imag, A4_denom, A4_real_num, A4_imag_num,      &
+                       beta, s_real, s_imag, s_arg, lambda, vmag
 
-        real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag
-        real(rk)                                    :: theta_offset, omega
+        real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag, pitch
+        real(rk)                                    :: theta_offset, omega, lm
         integer(ik)                                 :: iradius, igq, ierr, itheta, ntheta, itime, ntime
+
+        pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
 
         ! Get spatio-temporal average at radial stations
         density_bar  = density_real(:,1,1)
@@ -711,55 +714,69 @@ contains
                 c3_real(iradius,itheta,1) = -(ONE/(c_bar_r + vel3_bar_r))*(vel2_bar_r*c5_real(iradius,itheta,1) - beta*c5_imag(iradius,itheta,1))
                 c3_imag(iradius,itheta,1) = -(ONE/(c_bar_r + vel3_bar_r))*(vel2_bar_r*c5_imag(iradius,itheta,1) + beta*c5_real(iradius,itheta,1))
 
-                c4_real(iradius,itheta,1) = (ONE/((c_bar_r+vel3_bar_r)**TWO))*( (vel2_bar_r*vel2_bar_r - beta*beta)*c5_real(iradius,itheta,1) - TWO*beta*c5_imag(iradius,itheta,1))
-                c4_imag(iradius,itheta,1) = (ONE/((c_bar_r+vel3_bar_r)**TWO))*( (vel2_bar_r*vel2_bar_r - beta*beta)*c5_imag(iradius,itheta,1) + TWO*beta*c5_real(iradius,itheta,1))
+                c4_real(iradius,itheta,1) = (ONE/((c_bar_r+vel3_bar_r)**TWO))*((vel2_bar_r*vel2_bar_r - beta*beta)*c5_real(iradius,itheta,1) - TWO*beta*c5_imag(iradius,itheta,1))
+                c4_imag(iradius,itheta,1) = (ONE/((c_bar_r+vel3_bar_r)**TWO))*((vel2_bar_r*vel2_bar_r - beta*beta)*c5_imag(iradius,itheta,1) + TWO*beta*c5_real(iradius,itheta,1))
 
             end do !itheta
         end do !iradius
 
 
-!        ! Handle unsteady nonreflecting condition (:,:,2:)
-!        print*, 'WARNING! HARDCODED ACCESS TO FIRST FREQUENCY ONLY!!!'
-!        do iradius = 1,size(self%r)
-!            ! Get average parts
-!            density_bar_r  = density_bar(iradius)
-!            vel1_bar_r     = vel1_bar(iradius)
-!            vel2_bar_r     = vel2_bar(iradius)
-!            vel3_bar_r     = vel3_bar(iradius)
-!            pressure_bar_r = pressure_bar(iradius)
-!            c_bar_r        = sqrt(gam*pressure_bar_r/density_bar_r)
-!
-!
-!            ! starting with 2 here because the first mode is treated with 1D characteristics
-!            do itheta = 1,ntheta
-!                do itime = 2,ntime
-!
-!                    omega = worker%time_manager%freqs(1)
-!                    lambda = real(itheta-1,rk)*c_bar_r/omega
-!                    s_arg = ONE - (c_bar_r*c_bar_r - vel3_bar_r*vel3_bar_r)*lambda*lambda/((c_bar_r - vel2_bar_r*lambda)**TWO)
-!
-!                    if (s_arg >= ZERO) then
-!                        s_real = sqrt(s_arg)
-!                        s_imag = ZERO*s_arg
-!                    else
-!                        s_real = ZERO*s_arg
-!                        s_imag = sqrt(-s_arg) ! minus because we have already factored out sqrt(-1) = i into the formula below
-!                    end if
-!
-!                    A3_real = TWO*vel3_bar_r*lambda*(ONE + s_real)/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
-!                    A3_imag = -TWO*vel3_bar_r*lambda*s_imag/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
-!
-!                    A4_real = (ONE - s_real*s_real - s_imag*s_imag)/((ONE+s_real)**TWO + s_imag*s_imag)
-!                    A4_imag = -TWO*s_imag/((ONE+s_real)**TWO + s_imag*s_imag)
-!
-!                    c5_real(iradius,itheta,itime) = (A3_real*c3_real(iradius,itheta,itime) - A3_imag*c3_imag(iradius,itheta,itime))  &   ! A3*c3 (real)
-!                                                  + (A4_real*c4_real(iradius,itheta,itime) - A4_imag*c4_imag(iradius,itheta,itime))      ! A4*c4 (real)
-!                    c5_imag(iradius,itheta,itime) = (A3_imag*c3_real(iradius,itheta,itime) + A3_real*c3_imag(iradius,itheta,itime))  &   ! A3*c3 (imag)
-!                                                      + (A4_imag*c4_real(iradius,itheta,itime) + A4_real*c4_imag(iradius,itheta,itime))      ! A4*c4 (imag)
-!
-!                end do !itime
-!            end do !itheta
-!        end do !iradius
+        ! Handle unsteady nonreflecting condition (:,:,2:)
+        print*, 'WARNING! HARDCODED ACCESS TO FIRST FREQUENCY ONLY!!!'
+        print*, 'WARNING! CHECK DEFINITION OF lm PITCH!'
+        do iradius = 1,size(self%r)
+            ! Get average parts
+            density_bar_r  = density_bar(iradius)
+            vel1_bar_r     = vel1_bar(iradius)
+            vel2_bar_r     = vel2_bar(iradius)
+            vel3_bar_r     = vel3_bar(iradius)
+            pressure_bar_r = pressure_bar(iradius)
+            c_bar_r        = sqrt(gam*pressure_bar_r/density_bar_r)
+
+
+            ! starting with 2 here because the first mode is treated with 1D characteristics
+            do itheta = 1,ntheta
+                do itime = 2,ntime
+
+                    omega = worker%time_manager%freqs(1)
+                    lm = TWO*PI*real(itheta-1,rk)/pitch(1)
+                    lambda = lm*c_bar_r/omega
+                    s_arg = ONE - (c_bar_r*c_bar_r - vel3_bar_r*vel3_bar_r)*lambda*lambda/((c_bar_r - vel2_bar_r*lambda)**TWO)
+
+                    if (s_arg >= ZERO) then
+                        s_real = sqrt(s_arg)
+                        s_imag = ZERO*s_arg
+                    else
+                        s_real = ZERO*s_arg
+                        s_imag = sqrt(-s_arg) ! minus because we have already factored out sqrt(-1) = i into the formula below
+                    end if
+
+                    A3_real = (c_bar_r - vel3_bar_r)*lambda*(ONE + s_real)/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
+                    A3_imag = (c_bar_r - vel3_bar_r)*lambda*s_imag/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
+
+                    A4_denom = (c_bar_r - vel2_bar_r*lambda)*(((ONE+s_real)**TWO - s_imag*s_imag)**TWO + FOUR*s_imag*s_imag*((ONE+s_real)**TWO))
+                    A4_real_num = ((c_bar_r - vel3_bar_r)**TWO)*lambda*lambda*((ONE+s_real)**TWO - s_imag*s_imag)
+                    A4_imag_num = ((c_bar_r - vel3_bar_r)**TWO)*lambda*lambda*TWO*s_imag*(ONE+s_real)
+                    A4_real = A4_real_num/A4_denom
+                    A4_imag = A4_imag_num/A4_denom
+
+                    c1_real(iradius,itheta,itime) = ZERO
+                    c1_imag(iradius,itheta,itime) = ZERO
+
+                    c2_real(iradius,itheta,itime) = ZERO
+                    c2_imag(iradius,itheta,itime) = ZERO
+
+                    c3_real(iradius,itheta,itime) = A3_real*c5_real(iradius,itheta,itime) + A3_imag*c5_imag(iradius,itheta,itime)
+                    c3_imag(iradius,itheta,itime) = A3_real*c5_imag(iradius,itheta,itime) - A3_imag*c5_real(iradius,itheta,itime)
+                    
+                    c4_real(iradius,itheta,itime) = A4_real*c5_real(iradius,itheta,itime) + A4_imag*c5_imag(iradius,itheta,itime)
+                    c4_imag(iradius,itheta,itime) = A4_real*c5_imag(iradius,itheta,itime) - A4_imag*c5_real(iradius,itheta,itime)
+
+                end do !itime
+            end do !itheta
+        end do !iradius
+
+        c1_real(:,2,2) = 1._rk
 
 
         ! Compute 1-4 characteristics from extrapolation: difference in radius-local mean and boundary average
@@ -803,8 +820,6 @@ contains
         n1 = n1/nmag
         n2 = n2/nmag
         n3 = n3/nmag
-
-
 
 
         ! Override spatio-temporal mean according to specified total conditions
@@ -882,7 +897,7 @@ contains
 
         type(point_t),  allocatable                 :: coords(:)
         real(rk),       allocatable, dimension(:)   :: p_user, r, pitch
-        real(rk)                                    :: theta_offset, omega
+        real(rk)                                    :: theta_offset, omega, lm
         integer(ik)                                 :: iradius, igq, ierr, itheta, ntheta, itime, ntime
 
         ! Get spatio-temporal average at radial stations
@@ -950,6 +965,7 @@ contains
 
         ! Handle unsteady nonreflecting condition (:,:,2:)
         print*, 'WARNING! HARDCODED ACCESS TO FIRST FREQUENCY ONLY!!!'
+        print*, 'WARNING! CHECK DEFINITION OF lm PITCH!'
         do iradius = 1,size(self%r)
             ! Get average parts
             density_bar_r  = density_bar(iradius)
@@ -965,7 +981,8 @@ contains
                 do itime = 2,ntime
 
                     omega = worker%time_manager%freqs(1)
-                    lambda = real(itheta-1,rk)*c_bar_r/omega
+                    lm = TWO*PI*real(itheta-1,rk)/pitch(1)
+                    lambda = lm*c_bar_r/omega
                     s_arg = ONE - (c_bar_r*c_bar_r - vel3_bar_r*vel3_bar_r)*lambda*lambda/((c_bar_r - vel2_bar_r*lambda)**TWO)
 
                     if (s_arg >= ZERO) then
@@ -1061,29 +1078,29 @@ contains
                                             c3_hat_real,       c3_hat_imag,         &
                                             c4_hat_real,       c4_hat_imag,         &
                                             c5_hat_real,       c5_hat_imag)
-        class(giles_HB_base_t),  intent(inout)   :: self
-        type(chidg_worker_t),                       intent(inout)   :: worker
-        type(mpi_comm),                             intent(in)      :: bc_comm
-        type(AD_D),                                 intent(in)      :: density_Fts_real(:,:,:)
-        type(AD_D),                                 intent(in)      :: density_Fts_imag(:,:,:)
-        type(AD_D),                                 intent(in)      :: vel1_Fts_real(:,:,:)
-        type(AD_D),                                 intent(in)      :: vel1_Fts_imag(:,:,:)
-        type(AD_D),                                 intent(in)      :: vel2_Fts_real(:,:,:)
-        type(AD_D),                                 intent(in)      :: vel2_Fts_imag(:,:,:)
-        type(AD_D),                                 intent(in)      :: vel3_Fts_real(:,:,:)
-        type(AD_D),                                 intent(in)      :: vel3_Fts_imag(:,:,:)
-        type(AD_D),                                 intent(in)      :: pressure_Fts_real(:,:,:)
-        type(AD_D),                                 intent(in)      :: pressure_Fts_imag(:,:,:)
-        type(AD_D),     allocatable,                intent(inout)   :: c1_hat_real(:,:,:)
-        type(AD_D),     allocatable,                intent(inout)   :: c1_hat_imag(:,:,:)
-        type(AD_D),     allocatable,                intent(inout)   :: c2_hat_real(:,:,:)
-        type(AD_D),     allocatable,                intent(inout)   :: c2_hat_imag(:,:,:)
-        type(AD_D),     allocatable,                intent(inout)   :: c3_hat_real(:,:,:)
-        type(AD_D),     allocatable,                intent(inout)   :: c3_hat_imag(:,:,:)
-        type(AD_D),     allocatable,                intent(inout)   :: c4_hat_real(:,:,:)
-        type(AD_D),     allocatable,                intent(inout)   :: c4_hat_imag(:,:,:)
-        type(AD_D),     allocatable,                intent(inout)   :: c5_hat_real(:,:,:)
-        type(AD_D),     allocatable,                intent(inout)   :: c5_hat_imag(:,:,:)
+        class(giles_HB_base_t),         intent(inout)   :: self
+        type(chidg_worker_t),           intent(inout)   :: worker
+        type(mpi_comm),                 intent(in)      :: bc_comm
+        type(AD_D),                     intent(in)      :: density_Fts_real(:,:,:)
+        type(AD_D),                     intent(in)      :: density_Fts_imag(:,:,:)
+        type(AD_D),                     intent(in)      :: vel1_Fts_real(:,:,:)
+        type(AD_D),                     intent(in)      :: vel1_Fts_imag(:,:,:)
+        type(AD_D),                     intent(in)      :: vel2_Fts_real(:,:,:)
+        type(AD_D),                     intent(in)      :: vel2_Fts_imag(:,:,:)
+        type(AD_D),                     intent(in)      :: vel3_Fts_real(:,:,:)
+        type(AD_D),                     intent(in)      :: vel3_Fts_imag(:,:,:)
+        type(AD_D),                     intent(in)      :: pressure_Fts_real(:,:,:)
+        type(AD_D),                     intent(in)      :: pressure_Fts_imag(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: c1_hat_real(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: c1_hat_imag(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: c2_hat_real(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: c2_hat_imag(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: c3_hat_real(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: c3_hat_imag(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: c4_hat_real(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: c4_hat_imag(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: c5_hat_real(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: c5_hat_imag(:,:,:)
 
         type(AD_D), allocatable,    dimension(:)    ::                                          &
             density, mom1, mom2, mom3, energy, vel1, vel2, vel3, pressure,                      &

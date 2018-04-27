@@ -82,6 +82,13 @@ contains
         call self%bcproperties%add('Pitch',               'Required')
         call self%bcproperties%add('Spatial Periodicity', 'Required')
 
+        ! Set default values
+        call self%set_fcn_option('Total Pressure',    'val', 110000._rk)
+        call self%set_fcn_option('Total Temperature', 'val', 300._rk)
+        call self%set_fcn_option('Normal-1', 'val', 1._rk)
+        call self%set_fcn_option('Normal-2', 'val', 0._rk)
+        call self%set_fcn_option('Normal-3', 'val', 0._rk)
+
     end subroutine init
     !********************************************************************************
 

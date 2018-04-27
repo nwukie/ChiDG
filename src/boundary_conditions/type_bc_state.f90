@@ -521,6 +521,9 @@ contains
         integer(ik) :: idomain_g_coupled, idomain_l_coupled, ielement_g_coupled, ielement_l_coupled, &
                        iface_coupled, proc_coupled, send_size_a, send_size_b, send_size_c, send_size_d
 
+        integer(ik) :: etype, nnodes, nterms_c, nfields, ntime, pelem_ID, interpolation_level,    &
+                       coordinate_system, element_location(5), element_data(8), spacedim, inode
+
         real(rk),       allocatable :: interp_coords_def(:,:)
         real(rk),       allocatable :: areas(:)
         real(rk)                    :: total_area
@@ -528,15 +531,7 @@ contains
 
         character(:),   allocatable :: coord_system
         real(rk),       allocatable :: nodes(:,:), nodes_def(:,:), nodes_vel(:,:), nodes_disp(:,:)
-        integer(ik),    allocatable :: recv_procs(:), connectivity(:)
-        integer(ik)                 :: irecv, etype, nnodes, nterms_c, nfields,  &
-                                       ntime, pelem_ID, interpolation_level,        &
-                                       coordinate_system,    & 
-                                       recv_size_a, recv_size_b, recv_size_c,       &
-                                       face_location(5), element_location(5),       &
-                                       element_data(8), spacedim, inode
-
-
+        integer(ik),    allocatable :: connectivity(:)
 
 
 
@@ -592,7 +587,6 @@ contains
                                                                                                              areas,         &
                                                                                                              interp_coords_def)
 
-
                     end do ! face_ID_couple
                 end do ! patch_ID_couple
 
@@ -635,7 +629,6 @@ contains
                         call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID), 1, MPI_INTEGER, iproc, bc_comm, ierr)
                         call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID), 1, MPI_INTEGER, iproc, bc_comm, ierr)
                         call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID),      1, MPI_INTEGER, iproc, bc_comm, ierr)
-
 
                         ! Broadcast auxiliary data
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns,      1, MPI_INTEGER, iproc, bc_comm, ierr)
@@ -695,19 +688,19 @@ contains
                     allocate(areas(ngq), interp_coords_def(ngq,3), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
-                    call MPI_BCast(areas,           ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    call MPI_BCast(areas,                  ngq, MPI_REAL8, iproc, bc_COMM, ierr)
                     call MPI_BCast(interp_coords_def(:,1), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
                     call MPI_BCast(interp_coords_def(:,2), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
                     call MPI_BCast(interp_coords_def(:,3), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
 
                     ! Receive information to construct mesh%parallel_element entry
                     ! element_location = [idomain_g, idomain_l, ielement_g, ielement_l, iproc]
-                    call mpi_bcast(element_location, 5, mpi_integer4, recv_procs(iproc), bc_comm, ierr)
+                    call mpi_bcast(element_location, 5, mpi_integer4, iproc, bc_comm, ierr)
                     idomain_g  = element_location(1)
                     ielement_g = element_location(3)
 
                     ! element_data = [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level]
-                    call mpi_bcast(element_data, 8, mpi_integer4, recv_procs(iproc), bc_comm, ierr)
+                    call mpi_bcast(element_data, 8, mpi_integer4, iproc, bc_comm, ierr)
                     etype               = element_data(1)
                     spacedim            = element_data(2)
                     coordinate_system   = element_data(3)
@@ -717,6 +710,7 @@ contains
                     ntime               = element_data(7)
                     interpolation_level = element_data(8)
                     nnodes = (etype+1)*(etype+1)*(etype+1)
+
                     
                     ! Allocate buffers and receive: nodes, displacements, and velocities. 
                     ! These quantities are located at the element support nodes, not interpolation
@@ -728,9 +722,9 @@ contains
                              connectivity(nnodes  ), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
-                    call mpi_bcast(nodes,     nnodes*3, mpi_real8, recv_procs(iproc), bc_comm, ierr)
-                    call mpi_bcast(nodes_def, nnodes*3, mpi_real8, recv_procs(iproc), bc_comm, ierr)
-                    call mpi_bcast(nodes_vel, nnodes*3, mpi_real8, recv_procs(iproc), bc_comm, ierr)
+                    call mpi_bcast(nodes,     nnodes*3, mpi_real8, iproc, bc_comm, ierr)
+                    call mpi_bcast(nodes_def, nnodes*3, mpi_real8, iproc, bc_comm, ierr)
+                    call mpi_bcast(nodes_vel, nnodes*3, mpi_real8, iproc, bc_comm, ierr)
 
                     ! Compute node displacements
                     nodes_disp = nodes_def - nodes

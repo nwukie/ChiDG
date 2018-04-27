@@ -852,6 +852,7 @@ contains
                                  (donor%ielement_g == fcn_info%seed%ielement_g) .and. &
                                  (itime            == fcn_info%seed%itime) )
 
+
             if ( differentiate_me ) then
                 ! Loop through the terms in qdiff, seed appropriate derivatives to ONE
                 do iterm = 1,size(qdiff)

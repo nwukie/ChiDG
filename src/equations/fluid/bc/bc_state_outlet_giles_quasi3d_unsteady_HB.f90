@@ -185,6 +185,7 @@ contains
                                  vel3_grid,       &
                                  pressure_grid)
 
+
         ! Compute Fourier decomposition of temporal data at points
         ! on the spatial transform grid.
         !   : U_Ft(nradius,ntheta,ntime)
@@ -408,7 +409,6 @@ contains
         call worker%store_bc_state('Momentum-2', mom2_bc,    'value')
         call worker%store_bc_state('Momentum-3', mom3_bc,    'value')
         call worker%store_bc_state('Energy'    , energy_bc,  'value')
-
 
 
     end subroutine compute_bc_state

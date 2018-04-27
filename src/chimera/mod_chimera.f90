@@ -1084,25 +1084,23 @@ contains
         ! Sanity check on donors and set donor_element location
         !
         if (donors_pelem_ID%size() == 0) then
-            donor_element%idomain_g  = 0
-            donor_element%idomain_l  = 0
-            donor_element%ielement_g = 0
-            donor_element%ielement_l = 0
-            donor_element%iproc      = NO_PROC
+            donor_element = element_info_t(0, 0, 0, NO_PROC, NO_ID, 0, 0, 0, 0)
             donor_found = .false.
 
 
         elseif (donors_pelem_ID%size() == 1) then
             pelem_ID = donors_pelem_ID%at(1)   ! donor index from candidates
-            donor_element%idomain_g  = mesh%parallel_element(pelem_ID)%idomain_g
-            donor_element%idomain_l  = mesh%parallel_element(pelem_ID)%idomain_l
-            donor_element%ielement_g = mesh%parallel_element(pelem_ID)%ielement_g
-            donor_element%ielement_l = mesh%parallel_element(pelem_ID)%ielement_l
-            donor_element%iproc      = mesh%parallel_element(pelem_ID)%iproc
-            donor_element%eqn_ID     = mesh%parallel_element(pelem_ID)%eqn_ID
-            donor_element%neqns      = mesh%parallel_element(pelem_ID)%neqns
-            donor_element%nterms_s   = mesh%parallel_element(pelem_ID)%nterms_s
-            donor_element%nterms_c   = mesh%parallel_element(pelem_ID)%nterms_c
+            donor_element = element_info_t(mesh%parallel_element(pelem_ID)%idomain_g,   &
+                                           mesh%parallel_element(pelem_ID)%idomain_l,   &
+                                           mesh%parallel_element(pelem_ID)%ielement_g,  &
+                                           mesh%parallel_element(pelem_ID)%ielement_l,  &
+                                           mesh%parallel_element(pelem_ID)%iproc,       &
+                                           pelem_ID,                                    &
+                                           mesh%parallel_element(pelem_ID)%eqn_ID,      &
+                                           mesh%parallel_element(pelem_ID)%neqns,       &
+                                           mesh%parallel_element(pelem_ID)%nterms_s,    &
+                                           mesh%parallel_element(pelem_ID)%nterms_c)
+
 
             xi   = donors_xi%at(1)
             eta  = donors_eta%at(1)
@@ -1121,7 +1119,6 @@ contains
             allocate(donor_vols(donors_pelem_ID%size()))
             
             do idonor = 1,donors_pelem_ID%size()
-                !donor_vols(idonor) = mesh%domain(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%vol
                 pelem_ID = donors_pelem_ID%at(idonor)
                 donor_vols(idonor) = mesh%parallel_element(pelem_ID)%vol
             end do 
@@ -1132,17 +1129,16 @@ contains
             !
             donor_index = minloc(donor_vols,1)
             pelem_ID = donors_pelem_ID%at(donor_index)   ! donor index from candidates with minimum volume
-
-            donor_element%idomain_g  = mesh%parallel_element(pelem_ID)%idomain_g
-            donor_element%idomain_l  = mesh%parallel_element(pelem_ID)%idomain_l
-            donor_element%ielement_g = mesh%parallel_element(pelem_ID)%ielement_g
-            donor_element%ielement_l = mesh%parallel_element(pelem_ID)%ielement_l
-            donor_element%iproc      = mesh%parallel_element(pelem_ID)%iproc
-            donor_element%pelem_ID   = pelem_ID
-            donor_element%eqn_ID     = mesh%parallel_element(pelem_ID)%eqn_ID
-            donor_element%neqns      = mesh%parallel_element(pelem_ID)%neqns
-            donor_element%nterms_s   = mesh%parallel_element(pelem_ID)%nterms_s
-            donor_element%nterms_c   = mesh%parallel_element(pelem_ID)%nterms_c
+            donor_element = element_info_t(mesh%parallel_element(pelem_ID)%idomain_g,   &
+                                           mesh%parallel_element(pelem_ID)%idomain_l,   &
+                                           mesh%parallel_element(pelem_ID)%ielement_g,  &
+                                           mesh%parallel_element(pelem_ID)%ielement_l,  &
+                                           mesh%parallel_element(pelem_ID)%iproc,       &
+                                           pelem_ID,                                    &
+                                           mesh%parallel_element(pelem_ID)%eqn_ID,      &
+                                           mesh%parallel_element(pelem_ID)%neqns,       &
+                                           mesh%parallel_element(pelem_ID)%nterms_s,    &
+                                           mesh%parallel_element(pelem_ID)%nterms_c)
 
             !
             ! Set donor coordinate and volume if present

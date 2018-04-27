@@ -1,13 +1,14 @@
 module type_bc_state
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
+    use mod_constants,          only: CARTESIAN, CYLINDRICAL, NO_ID
 
     use type_bcproperty_set,    only: bcproperty_set_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_mesh,              only: mesh_t
     use type_bc_patch,          only: bc_patch_t
-    use mpi_f08,                only: mpi_comm, mpi_integer, mpi_real8
+    use mpi_f08,                only: mpi_comm, mpi_integer, mpi_real8, mpi_integer4
     implicit none
 
 
@@ -518,11 +519,24 @@ contains
                        ielem, neqns, nterms_s, ngq, ibc
 
         integer(ik) :: idomain_g_coupled, idomain_l_coupled, ielement_g_coupled, ielement_l_coupled, &
-                       iface_coupled, proc_coupled
+                       iface_coupled, proc_coupled, send_size_a, send_size_b, send_size_c, send_size_d
 
         real(rk),       allocatable :: interp_coords_def(:,:)
         real(rk),       allocatable :: areas(:)
         real(rk)                    :: total_area
+
+
+        character(:),   allocatable :: coord_system
+        real(rk),       allocatable :: nodes(:,:), nodes_def(:,:), nodes_vel(:,:), nodes_disp(:,:)
+        integer(ik),    allocatable :: recv_procs(:), connectivity(:)
+        integer(ik)                 :: irecv, etype, nnodes, nterms_c, nfields,  &
+                                       ntime, pelem_ID, interpolation_level,        &
+                                       coordinate_system,    & 
+                                       recv_size_a, recv_size_b, recv_size_c,       &
+                                       face_location(5), element_location(5),       &
+                                       element_data(8), spacedim, inode
+
+
 
 
 
@@ -530,6 +544,7 @@ contains
         ! For each face, initialize coupling with all faces on the current processor.
         !
         do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+            mesh%bc_patch_group(group_ID)%patch(patch_ID)%spatial_coupling  = 'Global'
             mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling = 'Global'
             do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
@@ -598,10 +613,7 @@ contains
         do iproc = 0,bc_NRANK-1
 
 
-
-            !
             ! Send local elements out
-            !
             if (iproc == bc_IRANK) then
 
 
@@ -616,26 +628,38 @@ contains
                         idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
                         ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
                         iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
-                        
+
                         ! Broadcast element for coupling
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g(),         1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(),         1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID), 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID), 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID),      1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g(),         1, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(),         1, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID), 1, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID), 1, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID),      1, MPI_INTEGER, iproc, bc_comm, ierr)
 
 
                         ! Broadcast auxiliary data
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns,      1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s,   1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns,      1, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s,   1, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area, 1, MPI_INTEGER, iproc, bc_comm, ierr)
 
                         ngq = size(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def,1)
-                        call MPI_Bcast(ngq,                                                                          1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas,          ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(ngq,                                                                          1, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas,          ngq, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1),      ngq, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2),      ngq, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3),      ngq, MPI_INTEGER, iproc, bc_comm, ierr)
+
+                        ! Send information to construct mesh%parallel_element entry
+                        send_size_a = size(mesh%domain(idomain_l)%elems(ielement_l)%connectivity)
+                        send_size_b = size(mesh%domain(idomain_l)%elems(ielement_l)%node_coords)
+                        send_size_c = size(mesh%domain(idomain_l)%elems(ielement_l)%node_coords_def)
+                        send_size_d = size(mesh%domain(idomain_l)%elems(ielement_l)%node_coords_vel)
+                
+                        call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%element_location,             5, mpi_integer4, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%element_data,                 8, mpi_integer4, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%node_coords,        send_size_b, mpi_real8,    iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%node_coords_def,    send_size_c, mpi_real8,    iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%node_coords_vel,    send_size_d, mpi_real8,    iproc, bc_comm, ierr)
 
                     end do ! face_ID
                 end do ! patch_ID
@@ -648,15 +672,10 @@ contains
             !
             else
 
-
                 call MPI_Bcast(proc_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
                 call MPI_Bcast(nbc_elements, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
 
-
-
-                !
                 ! For the face (patch_ID,face_ID) add each element from the sending proc
-                !
                 do ielem = 1,nbc_elements
 
                     ! Receive coupled element
@@ -666,23 +685,94 @@ contains
                     call MPI_BCast(ielement_l_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
                     call MPI_BCast(iface_coupled,      1, MPI_INTEGER, iproc, bc_COMM, ierr)
 
-
                     ! Receive auxiliary data
                     call MPI_BCast(neqns,     1, MPI_INTEGER, iproc, bc_COMM, ierr)
                     call MPI_BCast(nterms_s,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
                     call MPI_BCast(total_area,1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
 
                     call MPI_BCast(ngq, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
                     if (allocated(areas) ) deallocate(areas, interp_coords_def)
                     allocate(areas(ngq), interp_coords_def(ngq,3), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
-
                     call MPI_BCast(areas,           ngq, MPI_REAL8, iproc, bc_COMM, ierr)
                     call MPI_BCast(interp_coords_def(:,1), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
                     call MPI_BCast(interp_coords_def(:,2), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
                     call MPI_BCast(interp_coords_def(:,3), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+
+                    ! Receive information to construct mesh%parallel_element entry
+                    ! element_location = [idomain_g, idomain_l, ielement_g, ielement_l, iproc]
+                    call mpi_bcast(element_location, 5, mpi_integer4, recv_procs(iproc), bc_comm, ierr)
+                    idomain_g  = element_location(1)
+                    ielement_g = element_location(3)
+
+                    ! element_data = [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level]
+                    call mpi_bcast(element_data, 8, mpi_integer4, recv_procs(iproc), bc_comm, ierr)
+                    etype               = element_data(1)
+                    spacedim            = element_data(2)
+                    coordinate_system   = element_data(3)
+                    nfields             = element_data(4)
+                    nterms_s            = element_data(5)
+                    nterms_c            = element_data(6)
+                    ntime               = element_data(7)
+                    interpolation_level = element_data(8)
+                    nnodes = (etype+1)*(etype+1)*(etype+1)
+                    
+                    ! Allocate buffers and receive: nodes, displacements, and velocities. 
+                    ! These quantities are located at the element support nodes, not interpolation
+                    ! nodes.
+                    if (allocated(nodes)) deallocate(nodes, nodes_def, nodes_vel, connectivity)
+                    allocate(nodes(       nnodes,3), &
+                             nodes_def(   nnodes,3), &
+                             nodes_vel(   nnodes,3), &
+                             connectivity(nnodes  ), stat=ierr)
+                    if (ierr /= 0) call AllocationError
+
+                    call mpi_bcast(nodes,     nnodes*3, mpi_real8, recv_procs(iproc), bc_comm, ierr)
+                    call mpi_bcast(nodes_def, nnodes*3, mpi_real8, recv_procs(iproc), bc_comm, ierr)
+                    call mpi_bcast(nodes_vel, nnodes*3, mpi_real8, recv_procs(iproc), bc_comm, ierr)
+
+                    ! Compute node displacements
+                    nodes_disp = nodes_def - nodes
+
+                    ! Build local connectivity
+                    !   : we construct the parallel element using just a local ordering
+                    !   : so connectivity starts at 1 and goes to the number of nodes in 
+                    !   : the element, nnodes.
+                    !   :
+                    !   :   connectivity = [1, 2, 3, 4, 5, 6, 7, 8 ...]
+                    !   :
+                    !   : We assume here that the displacements and velocities are ordered
+                    !   : appropriately.
+                    do inode = 1,nnodes
+                        connectivity(inode) = inode
+                    end do
+
+                    ! Check for existing parallel element. If one does not
+                    ! exist, get an identifier for a new parallel element.
+                    pelem_ID = mesh%find_parallel_element(idomain_g,ielement_g)
+                    if (pelem_ID == NO_ID) pelem_ID = mesh%new_parallel_element()
+
+                    ! Initialize element geometry
+                    select case(coordinate_system)
+                        case(CARTESIAN)
+                            coord_system = 'Cartesian'
+                        case(CYLINDRICAL)
+                            coord_system = 'Cylindrical'
+                        case default
+                            call chidg_signal(FATAL,"element%comm_recv: invalid coordinate system.")
+                    end select
+
+                    ! Construct/initialize/reinitialize parallel element
+                    if (.not. mesh%parallel_element(pelem_ID)%geom_initialized) then
+                        call mesh%parallel_element(pelem_ID)%init_geom(nodes,connectivity,etype,element_location,trim(coord_system))
+                    end if
+
+                    call mesh%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime)
+                    call mesh%parallel_element(pelem_ID)%set_displacements_velocities(nodes_disp,nodes_vel)
+                    call mesh%parallel_element(pelem_ID)%update_interpolations_ale()
+
+
 
 
                     !

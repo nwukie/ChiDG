@@ -776,7 +776,7 @@ contains
             end do !itheta
         end do !iradius
 
-        c1_real(:,2,2) = 1._rk
+        !c1_real(:,2,2) = 1._rk
 
 
         ! Compute 1-4 characteristics from extrapolation: difference in radius-local mean and boundary average

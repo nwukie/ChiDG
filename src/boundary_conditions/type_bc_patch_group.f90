@@ -31,9 +31,7 @@ module type_bc_patch_group
     type, public :: bc_patch_group_t
 
         character(:),       allocatable :: name
-
         type(bc_patch_t),   allocatable :: patch(:)
-
         integer(ik)                     :: group_ID
 
     contains

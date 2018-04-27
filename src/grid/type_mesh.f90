@@ -1076,6 +1076,67 @@ contains
         end do !idom
 
 
+!        do group_ID = 1,self%nbc_patch_groups()
+!            do patch_ID = 1,self%bc_patch_group(group_ID)%npatches()
+!                if (self%bc_patch_group(group_ID)%patch(patch_ID)%spatial_coupling = 'Global') then
+!
+!                    ! Send each element in the patch to each other processor in bc_comm
+!                    call MPI_Comm_Size(bc_comm, bc_NRANK, ierr)
+!                    call MPI_Comm_Rank(bc_comm, bc_IRANK, ierr)
+!
+!                    do iproc = 0,
+!
+!                end if !global spatial coupling
+!            end do !patch_ID
+!        end do !group_ID
+
+
+!        !
+!        ! Send coupled bc elements
+!        !
+!        do idom = 1,self%ndomains()
+!            ! For each element that needs sent
+!            do isend = 1,self%domain(idom)%chimera%nsend()
+!                ! For each processor the current element gets sent to
+!                do isend_proc = 1,self%domain(idom)%chimera%send(isend)%nsend_procs()
+!
+!                    ! Get the processor rank we are sending to
+!                    iproc = self%domain(idom)%chimera%send(isend)%send_procs%at(isend_proc)
+!
+!                    ! If receiver is off-processor, send reference and physical nodes/velocities
+!                    if (iproc /= IRANK) then
+!
+!                        idomain_l  = self%domain(idom)%chimera%send(isend)%idomain_l
+!                        ielement_l = self%domain(idom)%chimera%send(isend)%ielement_l
+!
+!                        send_size_a = size(self%domain(idomain_l)%elems(ielement_l)%connectivity)
+!                        send_size_b = size(self%domain(idomain_l)%elems(ielement_l)%node_coords)
+!                        send_size_c = size(self%domain(idomain_l)%elems(ielement_l)%node_coords_def)
+!                        send_size_d = size(self%domain(idomain_l)%elems(ielement_l)%node_coords_vel)
+!                
+!                        ! First send location of donor
+!                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,             5, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
+!                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_data,                 8, mpi_integer4, iproc, 0, ChiDG_COMM, request(2), ierr)
+!                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords,        send_size_b, mpi_real8,    iproc, 0, ChiDG_COMM, request(3), ierr)
+!                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_def,    send_size_c, mpi_real8,    iproc, 0, ChiDG_COMM, request(4), ierr)
+!                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_vel,    send_size_d, mpi_real8,    iproc, 0, ChiDG_COMM, request(5), ierr)
+!
+!
+!                        call self%comm_requests%push_back(request(1))
+!                        call self%comm_requests%push_back(request(2))
+!                        call self%comm_requests%push_back(request(3))
+!                        call self%comm_requests%push_back(request(4))
+!                        call self%comm_requests%push_back(request(5))
+!
+!                    end if 
+!
+!                end do !isend_procs
+!            end do !isend
+!        end do !idom
+
+
+
+
 
     end subroutine comm_send
     !*********************************************************************************

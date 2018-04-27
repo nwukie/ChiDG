@@ -1109,7 +1109,7 @@ contains
             zeta = donors_zeta%at(1)
             donor_coordinate = [xi,eta,zeta]
             donor_found = .true.
-            if (present(donor_volume)) donor_volume = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%vol
+            if (present(donor_volume)) donor_volume = mesh%parallel_element(pelem_ID)%vol
 
 
 
@@ -1152,7 +1152,6 @@ contains
             zeta = donors_zeta%at(donor_index)
             donor_coordinate = [xi,eta,zeta]
             donor_found = .true.
-            !if (present(donor_volume)) donor_volume = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%vol
             if (present(donor_volume)) donor_volume = mesh%parallel_element(pelem_ID)%vol
 
 

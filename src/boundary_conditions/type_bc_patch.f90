@@ -57,6 +57,7 @@ module type_bc_patch
         
         ! For each face in the patch, a list of elements it is coupled with
         type(bc_element_coupling_t), allocatable    :: coupling(:)
+        character(:),                allocatable    :: spatial_coupling     ! 'Local' or 'Global'
         character(:),                allocatable    :: temporal_coupling    ! 'Local' or 'Global'
 
     contains
@@ -121,6 +122,7 @@ contains
         self%idomain_g_        = idomain_g
         self%idomain_l_        = idomain_l
         self%connectivity      = bc_connectivity
+        self%spatial_coupling  = 'Local' ! Default, can be overwritten
         self%temporal_coupling = 'Local' ! Default, can be overwritten
 
     end subroutine init

@@ -649,7 +649,7 @@ contains
                        beta, s_real, s_imag, s_arg, lambda, vmag
 
         real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag, pitch
-        real(rk)                                    :: theta_offset, omega, lm
+        real(rk)                                    :: theta_offset, omega, lm, a3, a4
         integer(ik)                                 :: iradius, igq, ierr, itheta, ntheta, itime, ntime
 
         pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
@@ -751,12 +751,12 @@ contains
                         s_imag = sqrt(-s_arg) ! minus because we have already factored out sqrt(-1) = i into the formula below
                     end if
 
-                    A3_real = (c_bar_r - vel3_bar_r)*lambda*(ONE + s_real)/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
-                    A3_imag = (c_bar_r - vel3_bar_r)*lambda*s_imag/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
+                    A3_real =  (c_bar_r - vel3_bar_r)*lambda*(ONE + s_real)/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
+                    A3_imag = -(c_bar_r - vel3_bar_r)*lambda*s_imag/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
 
                     A4_denom = (c_bar_r - vel2_bar_r*lambda)*(((ONE+s_real)**TWO - s_imag*s_imag)**TWO + FOUR*s_imag*s_imag*((ONE+s_real)**TWO))
-                    A4_real_num = ((c_bar_r - vel3_bar_r)**TWO)*lambda*lambda*((ONE+s_real)**TWO - s_imag*s_imag)
-                    A4_imag_num = ((c_bar_r - vel3_bar_r)**TWO)*lambda*lambda*TWO*s_imag*(ONE+s_real)
+                    A4_real_num =  ((c_bar_r - vel3_bar_r)**TWO)*lambda*lambda*((ONE+s_real)**TWO - s_imag*s_imag)
+                    A4_imag_num = -((c_bar_r - vel3_bar_r)**TWO)*lambda*lambda*TWO*s_imag*(ONE+s_real)
                     A4_real = A4_real_num/A4_denom
                     A4_imag = A4_imag_num/A4_denom
 
@@ -766,11 +766,22 @@ contains
                     c2_real(iradius,itheta,itime) = ZERO
                     c2_imag(iradius,itheta,itime) = ZERO
 
-                    c3_real(iradius,itheta,itime) = A3_real*c5_real(iradius,itheta,itime) + A3_imag*c5_imag(iradius,itheta,itime)
-                    c3_imag(iradius,itheta,itime) = A3_real*c5_imag(iradius,itheta,itime) - A3_imag*c5_real(iradius,itheta,itime)
+                    c3_real(iradius,itheta,itime) = A3_real*c5_real(iradius,itheta,itime) - A3_imag*c5_imag(iradius,itheta,itime)
+                    c3_imag(iradius,itheta,itime) = A3_real*c5_imag(iradius,itheta,itime) + A3_imag*c5_real(iradius,itheta,itime)
                     
-                    c4_real(iradius,itheta,itime) = A4_real*c5_real(iradius,itheta,itime) + A4_imag*c5_imag(iradius,itheta,itime)
-                    c4_imag(iradius,itheta,itime) = A4_real*c5_imag(iradius,itheta,itime) - A4_imag*c5_real(iradius,itheta,itime)
+                    c4_real(iradius,itheta,itime) = A4_real*c5_real(iradius,itheta,itime) - A4_imag*c5_imag(iradius,itheta,itime)
+                    c4_imag(iradius,itheta,itime) = A4_real*c5_imag(iradius,itheta,itime) + A4_imag*c5_real(iradius,itheta,itime)
+
+                    ! Add incoming amplitude
+                    if (itheta == 2 .and. itime == 2) then
+                        a3 = 0.
+                        a4 = 0.
+
+                        A3_real = (c_bar_r - vel3_bar_r)*(ONE - s_real)/((c_bar_r - vel2_bar_r*lambda)*((ONE-s_real)**TWO + s_imag*s_imag))
+                        A3_imag = (c_bar_r - vel3_bar_r)*s_imag/((c_bar_r - vel2_bar_r*lambda)*((ONE-s_real)**TWO + s_imag*s_imag))
+                        c3_real(iradius,itheta,itime) = c3_real(iradius,itheta,itime) + A3_real*a3
+                        c3_imag(iradius,itheta,itime) = c3_imag(iradius,itheta,itime) + A3_imag*a3
+                    end if
 
                 end do !itime
             end do !itheta

@@ -927,8 +927,8 @@ contains
         vel3_bar     = vel3_real(:,1,1)
         pressure_bar = pressure_real(:,1,1)
 
-        ntheta = size(c5_real,2)
-        ntime  = size(c5_real,3)
+        ntheta = size(density_real,2)
+        ntime  = size(density_real,3)
 
 
 !        ! Compute Fourier decomposition at set of radial stations: 

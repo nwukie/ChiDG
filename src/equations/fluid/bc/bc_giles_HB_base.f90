@@ -649,7 +649,7 @@ contains
                        beta, s_real, s_imag, s_arg, lambda, vmag
 
         real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag, pitch
-        real(rk)                                    :: theta_offset, omega, lm, a3, a4
+        real(rk)                                    :: theta_offset, omega, lm, a1, a2, a3, a4
         integer(ik)                                 :: iradius, igq, ierr, itheta, ntheta, itime, ntime
 
         pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
@@ -754,7 +754,8 @@ contains
                     A3_real =  (c_bar_r - vel3_bar_r)*lambda*(ONE + s_real)/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
                     A3_imag = -(c_bar_r - vel3_bar_r)*lambda*s_imag/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
 
-                    A4_denom = (c_bar_r - vel2_bar_r*lambda)*(((ONE+s_real)**TWO - s_imag*s_imag)**TWO + FOUR*s_imag*s_imag*((ONE+s_real)**TWO))
+                    !A4_denom = (c_bar_r - vel2_bar_r*lambda)*(((ONE+s_real)**TWO - s_imag*s_imag)**TWO + FOUR*s_imag*s_imag*((ONE+s_real)**TWO))
+                    A4_denom = ((c_bar_r - vel2_bar_r*lambda)**TWO)*(((ONE+s_real)**TWO - s_imag*s_imag)**TWO + FOUR*s_imag*s_imag*((ONE+s_real)**TWO))
                     A4_real_num =  ((c_bar_r - vel3_bar_r)**TWO)*lambda*lambda*((ONE+s_real)**TWO - s_imag*s_imag)
                     A4_imag_num = -((c_bar_r - vel3_bar_r)**TWO)*lambda*lambda*TWO*s_imag*(ONE+s_real)
                     A4_real = A4_real_num/A4_denom
@@ -777,14 +778,15 @@ contains
                         a3 = 0.
                         a4 = 0.
 
-                        A3_real = (c_bar_r - vel3_bar_r)*(ONE - s_real)/((c_bar_r - vel2_bar_r*lambda)*((ONE-s_real)**TWO + s_imag*s_imag))
-                        A3_imag = (c_bar_r - vel3_bar_r)*s_imag/((c_bar_r - vel2_bar_r*lambda)*((ONE-s_real)**TWO + s_imag*s_imag))
+                        A3_real = c_bar_r*(vel3_bar_r - c_bar_r)*(vel3_bar_r*s_real - c_bar_r)/((c_bar_r-vel2_bar_r*lambda)*((vel3_bar_r*s_real-c_bar_r)**TWO + vel3_bar_r*vel3_bar_r*s_imag*s_imag))
+                        A3_imag = -vel3_bar_r*c_bar_r*s_imag*(vel3_bar_r-c_bar_r)/((c_bar_r-vel2_bar_r*lambda)*((vel3_bar_r*s_real-c_bar_r)**TWO + vel3_bar_r*vel3_bar_r*s_imag*s_imag))
                         c3_real(iradius,itheta,itime) = c3_real(iradius,itheta,itime) + A3_real*a3
                         c3_imag(iradius,itheta,itime) = c3_imag(iradius,itheta,itime) + A3_imag*a3
 
-                        A4_denom    = ((c_bar_r - vel2_bar_r)**TWO)*((s_real*s_real-s_imag*s_imag)**TWO + FOUR*s_real*s_real*s_imag*s_imag) 
-                        A4_real_num = TWO*vel3_bar_r*lambda*(c_bar_r - vel3_bar_r)*(s_real*s_real - s_imag*s_imag)
-                        A4_imag_num = -TWO*vel3_bar_r*lambda*(c_bar_r - vel3_bar_r)*TWO*s_real*s_imag
+                        A4_denom    = ((c_bar_r - vel2_bar_r*lambda)**TWO)*( (vel3_bar_r*(s_real*s_real-s_imag*s_imag) - s_real*(c_bar_r - vel3_bar_r) - c_bar_r)**TWO + &
+                                                                             (TWO*vel3_bar_r*s_real*s_imag - s_imag*(c_bar_r-vel3_bar_r))**TWO )
+                        A4_real_num = TWO*lambda*vel3_bar_r*c_bar_r*(c_bar_r-vel3_bar_r) * (vel3_bar_r*(s_real*s_real-s_imag*s_imag) - s_real*(c_bar_r - vel3_bar_r) - c_bar_r)
+                        A4_imag_num = TWO*lambda*vel3_bar_r*c_bar_r*(c_bar_r-vel3_bar_r) * (-(TWO*vel3_bar_r*s_real*s_imag - s_imag*(c_bar_r-vel3_bar_r)))
                         A4_real = A4_real_num/A4_denom
                         A4_imag = A4_imag_num/A4_denom
                         c4_real(iradius,itheta,itime) = c4_real(iradius,itheta,itime) + A4_real*a3

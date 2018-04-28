@@ -910,12 +910,12 @@ contains
 
         type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, T_avg,       &
                        density_bar_r, vel1_bar_r, vel2_bar_r, vel3_bar_r, pressure_bar_r, c_bar_r,  &
-                       beta, s_real, s_imag, s_arg, kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, vmag,   &
+                       beta, s_real, s_imag, s_arg, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, vmag,   &
                        a1_real, a2_real, a3_real, a4_real, a5_real, &
                        a1_imag, a2_imag, a3_imag, a4_imag, a5_imag, pyra
 
         real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag, pitch
-        real(rk)                                    :: theta_offset, omega, lm, a1, a2, a3, a4
+        real(rk)                                    :: theta_offset, omega, kz
         integer(ik)                                 :: iradius, igq, ierr, itheta, ntheta, itime, ntime
 
         pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
@@ -929,63 +929,6 @@ contains
 
         ntheta = size(density_real,2)
         ntime  = size(density_real,3)
-
-
-!        ! Compute Fourier decomposition at set of radial stations: 
-!        call self%primitive_to_characteristics(worker,bc_COMM,                  &
-!                                               density_real,  density_imag,     &
-!                                               vel1_real,     vel1_imag,        &
-!                                               vel2_real,     vel2_imag,        &
-!                                               vel3_real,     vel3_imag,        &
-!                                               pressure_real, pressure_imag,    &
-!                                               c1_real,       c1_imag,          &
-!                                               c2_real,       c2_imag,          &
-!                                               c3_real,       c3_imag,          &
-!                                               c4_real,       c4_imag,          &
-!                                               c5_real,       c5_imag)
-!
-!        ! Handle temporal average(steady) nonreflecting condition (:,:,1)
-!        do iradius = 1,size(self%r)
-!            ! Get average parts
-!            density_bar_r  = density_bar(iradius)
-!            vel1_bar_r     = vel1_bar(iradius)
-!            vel2_bar_r     = vel2_bar(iradius)
-!            vel3_bar_r     = vel3_bar(iradius)
-!            pressure_bar_r = pressure_bar(iradius)
-!            c_bar_r        = sqrt(gam*pressure_bar_r/density_bar_r)
-!
-!            ! starting with 2 here because the first mode is treated with 1D characteristics
-!            do itheta = 2,ntheta
-!                ! Account for sign(mode) in the calculation of beta. The second half of the
-!                ! modes are negative frequencies.
-!                if (itheta <= (ntheta-1)/2 + 1) then
-!                    beta = sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
-!                else if (itheta > (ntheta-1)/2 + 1) then
-!                    beta = -sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
-!                end if
-!
-!                ! The imaginary part of beta has already been accounted for in
-!                ! the expressions for A2 and A3
-!                A3_real = -TWO*vel3_bar_r*vel2_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
-!                A3_imag = -TWO*beta*vel3_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
-!
-!                A4_real = (beta*beta - vel2_bar_r*vel2_bar_r)/(beta*beta + vel2_bar_r*vel2_bar_r)
-!                A4_imag = -TWO*beta*vel2_bar_r/(beta*beta + vel2_bar_r*vel2_bar_r)
-!
-!                c1_real(iradius,itheta,1) = ZERO
-!                c1_imag(iradius,itheta,1) = ZERO
-!
-!                c2_real(iradius,itheta,1) = ZERO
-!                c2_imag(iradius,itheta,1) = ZERO
-!
-!                c3_real(iradius,itheta,1) = -(ONE/(c_bar_r + vel3_bar_r))*(vel2_bar_r*c5_real(iradius,itheta,1) - beta*c5_imag(iradius,itheta,1))
-!                c3_imag(iradius,itheta,1) = -(ONE/(c_bar_r + vel3_bar_r))*(vel2_bar_r*c5_imag(iradius,itheta,1) + beta*c5_real(iradius,itheta,1))
-!
-!                c4_real(iradius,itheta,1) = (ONE/((c_bar_r+vel3_bar_r)**TWO))*((vel2_bar_r*vel2_bar_r - beta*beta)*c5_real(iradius,itheta,1) - TWO*beta*c5_imag(iradius,itheta,1))
-!                c4_imag(iradius,itheta,1) = (ONE/((c_bar_r+vel3_bar_r)**TWO))*((vel2_bar_r*vel2_bar_r - beta*beta)*c5_imag(iradius,itheta,1) + TWO*beta*c5_real(iradius,itheta,1))
-!
-!            end do !itheta
-!        end do !iradius
 
 
         ! Project
@@ -1049,7 +992,8 @@ contains
 
                     ! User-specified amplitudes for incoming waves
                     if (itheta == 2 .and. itime == 2) then
-                        a3_real = 0.0001
+                        a1_real = 0.0001
+                        a3_real = ZERO
                     end if
 
                     ! Reset perturbation values
@@ -1065,6 +1009,7 @@ contains
                     pressure_imag(iradius,itheta,itime) = ZERO
 
                     ! Accumulate from absorbing amplitudes
+                    density_real(iradius,itheta,itime) = density_bar_r*a1_real
                     vel3_real(iradius,itheta,itime) = -c_bar_r*kz*a3_real
                     vel2_real(iradius,itheta,itime) =  c_bar_r*k1*a3_real
 
@@ -1192,8 +1137,8 @@ contains
 
 
         ! Handle temporal average(steady) nonreflecting condition (:,:,1)
-        ntheta = size(c5_hat_real,2)
-        ntime  = size(c5_hat_real,3)
+        ntheta = size(density_real,2)
+        ntime  = size(density_real,3)
 
 
         ! Project

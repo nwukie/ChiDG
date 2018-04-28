@@ -927,6 +927,9 @@ contains
         vel3_bar     = vel3_real(:,1,1)
         pressure_bar = pressure_real(:,1,1)
 
+        ntheta = size(c5_real,2)
+        ntime  = size(c5_real,3)
+
 
 !        ! Compute Fourier decomposition at set of radial stations: 
 !        call self%primitive_to_characteristics(worker,bc_COMM,                  &
@@ -942,8 +945,6 @@ contains
 !                                               c5_real,       c5_imag)
 !
 !        ! Handle temporal average(steady) nonreflecting condition (:,:,1)
-!        ntheta = size(c5_real,2)
-!        ntime  = size(c5_real,3)
 !        do iradius = 1,size(self%r)
 !            ! Get average parts
 !            density_bar_r  = density_bar(iradius)
@@ -1003,6 +1004,7 @@ contains
             do itheta = 1,ntheta
                 do itime = 1,ntime
 
+                    
                     ! Space-time average handled at the bottom
                     if (itime == 1 .and. itheta == 1) cycle
 
@@ -1066,7 +1068,6 @@ contains
                     ! Accumulate from absorbing amplitudes
                     vel3_real(iradius,itheta,itime) = -c_bar_r*kz*a3_real
                     vel2_real(iradius,itheta,itime) =  c_bar_r*k1*a3_real
-
 
                 end do !itime
             end do !itheta

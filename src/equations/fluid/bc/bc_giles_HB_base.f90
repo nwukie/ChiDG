@@ -599,7 +599,272 @@ contains
 
 
 
-    !>
+!    !>  GILES' FORMULATION
+!    !!
+!    !!
+!    !!
+!    !!
+!    !--------------------------------------------------------------------------------
+!    subroutine compute_absorbing_inlet(self,worker,bc_comm, &
+!                                       density_real,    &
+!                                       density_imag,    &
+!                                       vel1_real,       &
+!                                       vel1_imag,       &
+!                                       vel2_real,       &
+!                                       vel2_imag,       &
+!                                       vel3_real,       &
+!                                       vel3_imag,       &
+!                                       pressure_real,   &
+!                                       pressure_imag)
+!        class(giles_HB_base_t),  intent(inout)   :: self
+!        type(chidg_worker_t),    intent(inout)   :: worker
+!        type(mpi_comm),          intent(in)      :: bc_comm
+!        type(AD_D),              intent(inout)   :: density_real(:,:,:)
+!        type(AD_D),              intent(inout)   :: density_imag(:,:,:)
+!        type(AD_D),              intent(inout)   :: vel1_real(:,:,:)
+!        type(AD_D),              intent(inout)   :: vel1_imag(:,:,:)
+!        type(AD_D),              intent(inout)   :: vel2_real(:,:,:)
+!        type(AD_D),              intent(inout)   :: vel2_imag(:,:,:)
+!        type(AD_D),              intent(inout)   :: vel3_real(:,:,:)
+!        type(AD_D),              intent(inout)   :: vel3_imag(:,:,:)
+!        type(AD_D),              intent(inout)   :: pressure_real(:,:,:)
+!        type(AD_D),              intent(inout)   :: pressure_imag(:,:,:)
+!
+!
+!        ! Storage at quadrature nodes
+!        type(AD_D), allocatable, dimension(:)   ::                                      &
+!            c1,    c2,    c3,    c4,    c5,                                             &
+!            c1_3d, c2_3d, c3_3d, c4_3d, c5_3d,                                          &
+!            c1_1d, c2_1d, c3_1d, c4_1d, c5_1d,                                          &
+!            c_bar, ddensity, dvel1, dvel2, dvel3, dpressure, expect_zero,               &
+!            density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar
+!
+!        type(AD_D), allocatable, dimension(:,:,:) ::        &
+!            c1_real, c2_real, c3_real, c4_real, c5_real,    &
+!            c1_imag, c2_imag, c3_imag, c4_imag, c5_imag
+!
+!        type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, T_avg,       &
+!                       density_bar_r, vel1_bar_r, vel2_bar_r, vel3_bar_r, pressure_bar_r, c_bar_r,  &
+!                       A3_real, A3_imag, A4_real, A4_imag, A4_denom, A4_real_num, A4_imag_num,      &
+!                       beta, s_real, s_imag, s_arg, lambda, vmag
+!
+!        real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag, pitch
+!        real(rk)                                    :: theta_offset, omega, lm, a1, a2, a3, a4
+!        integer(ik)                                 :: iradius, igq, ierr, itheta, ntheta, itime, ntime
+!
+!        pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
+!
+!        ! Get spatio-temporal average at radial stations
+!        density_bar  = density_real(:,1,1)
+!        vel1_bar     = vel1_real(:,1,1)
+!        vel2_bar     = vel2_real(:,1,1)
+!        vel3_bar     = vel3_real(:,1,1)
+!        pressure_bar = pressure_real(:,1,1)
+!
+!
+!        ! Compute Fourier decomposition at set of radial stations: 
+!        call self%primitive_to_characteristics(worker,bc_COMM,                  &
+!                                               density_real,  density_imag,     &
+!                                               vel1_real,     vel1_imag,        &
+!                                               vel2_real,     vel2_imag,        &
+!                                               vel3_real,     vel3_imag,        &
+!                                               pressure_real, pressure_imag,    &
+!                                               c1_real,       c1_imag,          &
+!                                               c2_real,       c2_imag,          &
+!                                               c3_real,       c3_imag,          &
+!                                               c4_real,       c4_imag,          &
+!                                               c5_real,       c5_imag)
+!
+!        ! Handle temporal average(steady) nonreflecting condition (:,:,1)
+!        ntheta = size(c5_real,2)
+!        ntime  = size(c5_real,3)
+!        do iradius = 1,size(self%r)
+!            ! Get average parts
+!            density_bar_r  = density_bar(iradius)
+!            vel1_bar_r     = vel1_bar(iradius)
+!            vel2_bar_r     = vel2_bar(iradius)
+!            vel3_bar_r     = vel3_bar(iradius)
+!            pressure_bar_r = pressure_bar(iradius)
+!            c_bar_r        = sqrt(gam*pressure_bar_r/density_bar_r)
+!
+!            ! starting with 2 here because the first mode is treated with 1D characteristics
+!            do itheta = 2,ntheta
+!                ! Account for sign(mode) in the calculation of beta. The second half of the
+!                ! modes are negative frequencies.
+!                if (itheta <= (ntheta-1)/2 + 1) then
+!                    beta = sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
+!                else if (itheta > (ntheta-1)/2 + 1) then
+!                    beta = -sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
+!                end if
+!
+!                ! The imaginary part of beta has already been accounted for in
+!                ! the expressions for A2 and A3
+!                A3_real = -TWO*vel3_bar_r*vel2_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
+!                A3_imag = -TWO*beta*vel3_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
+!
+!                A4_real = (beta*beta - vel2_bar_r*vel2_bar_r)/(beta*beta + vel2_bar_r*vel2_bar_r)
+!                A4_imag = -TWO*beta*vel2_bar_r/(beta*beta + vel2_bar_r*vel2_bar_r)
+!
+!                c1_real(iradius,itheta,1) = ZERO
+!                c1_imag(iradius,itheta,1) = ZERO
+!
+!                c2_real(iradius,itheta,1) = ZERO
+!                c2_imag(iradius,itheta,1) = ZERO
+!
+!                c3_real(iradius,itheta,1) = -(ONE/(c_bar_r + vel3_bar_r))*(vel2_bar_r*c5_real(iradius,itheta,1) - beta*c5_imag(iradius,itheta,1))
+!                c3_imag(iradius,itheta,1) = -(ONE/(c_bar_r + vel3_bar_r))*(vel2_bar_r*c5_imag(iradius,itheta,1) + beta*c5_real(iradius,itheta,1))
+!
+!                c4_real(iradius,itheta,1) = (ONE/((c_bar_r+vel3_bar_r)**TWO))*((vel2_bar_r*vel2_bar_r - beta*beta)*c5_real(iradius,itheta,1) - TWO*beta*c5_imag(iradius,itheta,1))
+!                c4_imag(iradius,itheta,1) = (ONE/((c_bar_r+vel3_bar_r)**TWO))*((vel2_bar_r*vel2_bar_r - beta*beta)*c5_imag(iradius,itheta,1) + TWO*beta*c5_real(iradius,itheta,1))
+!
+!            end do !itheta
+!        end do !iradius
+!
+!
+!        ! Handle unsteady nonreflecting condition (:,:,2:)
+!        print*, 'WARNING! HARDCODED ACCESS TO FIRST FREQUENCY ONLY!!!'
+!        print*, 'WARNING! CHECK DEFINITION OF lm PITCH!'
+!        do iradius = 1,size(self%r)
+!            ! Get average parts
+!            density_bar_r  = density_bar(iradius)
+!            vel1_bar_r     = vel1_bar(iradius)
+!            vel2_bar_r     = vel2_bar(iradius)
+!            vel3_bar_r     = vel3_bar(iradius)
+!            pressure_bar_r = pressure_bar(iradius)
+!            c_bar_r        = sqrt(gam*pressure_bar_r/density_bar_r)
+!
+!
+!            ! starting with 2 here because the first mode is treated with 1D characteristics
+!            do itheta = 1,ntheta
+!                do itime = 2,ntime
+!
+!                    omega = worker%time_manager%freqs(1)
+!                    lm = TWO*PI*real(itheta-1,rk)/pitch(1)
+!                    lambda = lm*c_bar_r/omega
+!                    s_arg = ONE - (c_bar_r*c_bar_r - vel3_bar_r*vel3_bar_r)*lambda*lambda/((c_bar_r - vel2_bar_r*lambda)**TWO)
+!
+!                    if (s_arg >= ZERO) then
+!                        s_real = sqrt(s_arg)
+!                        s_imag = ZERO*s_arg
+!                    else
+!                        s_real = ZERO*s_arg
+!                        s_imag = sqrt(-s_arg) ! minus because we have already factored out sqrt(-1) = i into the formula below
+!                    end if
+!
+!                    A3_real =  (c_bar_r - vel3_bar_r)*lambda*(ONE + s_real)/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
+!                    A3_imag = -(c_bar_r - vel3_bar_r)*lambda*s_imag/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
+!
+!                    !A4_denom = (c_bar_r - vel2_bar_r*lambda)*(((ONE+s_real)**TWO - s_imag*s_imag)**TWO + FOUR*s_imag*s_imag*((ONE+s_real)**TWO))
+!                    A4_denom = ((c_bar_r - vel2_bar_r*lambda)**TWO)*(((ONE+s_real)**TWO - s_imag*s_imag)**TWO + FOUR*s_imag*s_imag*((ONE+s_real)**TWO))
+!                    A4_real_num =  ((c_bar_r - vel3_bar_r)**TWO)*lambda*lambda*((ONE+s_real)**TWO - s_imag*s_imag)
+!                    A4_imag_num = -((c_bar_r - vel3_bar_r)**TWO)*lambda*lambda*TWO*s_imag*(ONE+s_real)
+!                    A4_real = A4_real_num/A4_denom
+!                    A4_imag = A4_imag_num/A4_denom
+!
+!                    c1_real(iradius,itheta,itime) = ZERO
+!                    c1_imag(iradius,itheta,itime) = ZERO
+!
+!                    c2_real(iradius,itheta,itime) = ZERO
+!                    c2_imag(iradius,itheta,itime) = ZERO
+!
+!                    c3_real(iradius,itheta,itime) = A3_real*c5_real(iradius,itheta,itime) - A3_imag*c5_imag(iradius,itheta,itime)
+!                    c3_imag(iradius,itheta,itime) = A3_real*c5_imag(iradius,itheta,itime) + A3_imag*c5_real(iradius,itheta,itime)
+!                    
+!                    c4_real(iradius,itheta,itime) = A4_real*c5_real(iradius,itheta,itime) - A4_imag*c5_imag(iradius,itheta,itime)
+!                    c4_imag(iradius,itheta,itime) = A4_real*c5_imag(iradius,itheta,itime) + A4_imag*c5_real(iradius,itheta,itime)
+!
+!                    ! Add incoming amplitude
+!                    if (itheta == 2 .and. itime == 2) then
+!                        a3 = 0.
+!                        a4 = 0.
+!
+!                        A3_real = c_bar_r*(vel3_bar_r - c_bar_r)*(vel3_bar_r*s_real - c_bar_r)/((c_bar_r-vel2_bar_r*lambda)*((vel3_bar_r*s_real-c_bar_r)**TWO + vel3_bar_r*vel3_bar_r*s_imag*s_imag))
+!                        A3_imag = -vel3_bar_r*c_bar_r*s_imag*(vel3_bar_r-c_bar_r)/((c_bar_r-vel2_bar_r*lambda)*((vel3_bar_r*s_real-c_bar_r)**TWO + vel3_bar_r*vel3_bar_r*s_imag*s_imag))
+!                        c3_real(iradius,itheta,itime) = c3_real(iradius,itheta,itime) + A3_real*a3
+!                        c3_imag(iradius,itheta,itime) = c3_imag(iradius,itheta,itime) + A3_imag*a3
+!
+!                        A4_denom    = ((c_bar_r - vel2_bar_r*lambda)**TWO)*( (vel3_bar_r*(s_real*s_real-s_imag*s_imag) - s_real*(c_bar_r - vel3_bar_r) - c_bar_r)**TWO + &
+!                                                                             (TWO*vel3_bar_r*s_real*s_imag - s_imag*(c_bar_r-vel3_bar_r))**TWO )
+!                        A4_real_num = TWO*lambda*vel3_bar_r*c_bar_r*(c_bar_r-vel3_bar_r) * (vel3_bar_r*(s_real*s_real-s_imag*s_imag) - s_real*(c_bar_r - vel3_bar_r) - c_bar_r)
+!                        A4_imag_num = TWO*lambda*vel3_bar_r*c_bar_r*(c_bar_r-vel3_bar_r) * (-(TWO*vel3_bar_r*s_real*s_imag - s_imag*(c_bar_r-vel3_bar_r)))
+!                        A4_real = A4_real_num/A4_denom
+!                        A4_imag = A4_imag_num/A4_denom
+!                        c4_real(iradius,itheta,itime) = c4_real(iradius,itheta,itime) + A4_real*a3
+!                        c4_imag(iradius,itheta,itime) = c4_imag(iradius,itheta,itime) + A4_imag*a3
+!
+!                    end if
+!
+!                end do !itime
+!            end do !itheta
+!        end do !iradius
+!
+!        !c1_real(:,2,2) = 1._rk
+!
+!
+!        ! Compute 1-4 characteristics from extrapolation: difference in radius-local mean and boundary average
+!        call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar, &
+!                                                          density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
+!        c_avg = sqrt(gam*pressure_avg/density_avg)
+!
+!
+!        ! Convert back to primitive variable perturbations
+!        call characteristics_to_primitive(self,worker,bc_comm,          &
+!                                          c1_real,       c1_imag,       &
+!                                          c2_real,       c2_imag,       &
+!                                          c3_real,       c3_imag,       &
+!                                          c4_real,       c4_imag,       &
+!                                          c5_real,       c5_imag,       &
+!                                          density_real,  density_imag,  &
+!                                          vel1_real,     vel1_imag,     &
+!                                          vel2_real,     vel2_imag,     &
+!                                          vel3_real,     vel3_imag,     &
+!                                          pressure_real, pressure_imag)
+!
+!
+!
+!
+!
+!        ! Get boundary condition Total Temperature, Total Pressure, and normal vector
+!        PT   = self%bcproperties%compute('Total Pressure',   worker%time(),worker%coords())
+!        TT   = self%bcproperties%compute('Total Temperature',worker%time(),worker%coords())
+!
+!        ! Get user-input normal vector and normalize
+!        n1 = self%bcproperties%compute('Normal-1', worker%time(), worker%coords())
+!        n2 = self%bcproperties%compute('Normal-2', worker%time(), worker%coords())
+!        n3 = self%bcproperties%compute('Normal-3', worker%time(), worker%coords())
+!
+!        !   Explicit allocation to handle GCC bug:
+!        !       GCC/GFortran Bugzilla Bug 52162 
+!        allocate(nmag(size(n1)), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!        nmag = sqrt(n1*n1 + n2*n2 + n3*n3)
+!        n1 = n1/nmag
+!        n2 = n2/nmag
+!        n3 = n3/nmag
+!
+!
+!        ! Override spatio-temporal mean according to specified total conditions
+!        T_avg = TT(1)*(pressure_avg/PT(1))**((gam-ONE)/gam)
+!        density_avg = pressure_avg/(T_avg*Rgas)
+!        vmag = sqrt(TWO*cp*(TT(1)-T_avg))
+!        vel1_avg = n1(1)*vmag
+!        vel2_avg = n2(1)*vmag
+!        vel3_avg = n3(1)*vmag
+!
+!        density_real(:,1,1)  = density_avg
+!        vel1_real(:,1,1)     = vel1_avg
+!        vel2_real(:,1,1)     = vel2_avg
+!        vel3_real(:,1,1)     = vel3_avg
+!        pressure_real(:,1,1) = pressure_avg
+!
+!
+!
+!    end subroutine compute_absorbing_inlet
+!    !********************************************************************************
+
+
+    !>  DANIEL'S FORMULATION
     !!
     !!
     !!
@@ -645,8 +910,9 @@ contains
 
         type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, T_avg,       &
                        density_bar_r, vel1_bar_r, vel2_bar_r, vel3_bar_r, pressure_bar_r, c_bar_r,  &
-                       A3_real, A3_imag, A4_real, A4_imag, A4_denom, A4_real_num, A4_imag_num,      &
-                       beta, s_real, s_imag, s_arg, lambda, vmag
+                       beta, s_real, s_imag, s_arg, kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, vmag,   &
+                       a1_real, a2_real, a3_real, a4_real, a5_real, &
+                       a1_imag, a2_imag, a3_imag, a4_imag, a5_imag, pyra
 
         real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag, pitch
         real(rk)                                    :: theta_offset, omega, lm, a1, a2, a3, a4
@@ -662,66 +928,66 @@ contains
         pressure_bar = pressure_real(:,1,1)
 
 
-        ! Compute Fourier decomposition at set of radial stations: 
-        call self%primitive_to_characteristics(worker,bc_COMM,                  &
-                                               density_real,  density_imag,     &
-                                               vel1_real,     vel1_imag,        &
-                                               vel2_real,     vel2_imag,        &
-                                               vel3_real,     vel3_imag,        &
-                                               pressure_real, pressure_imag,    &
-                                               c1_real,       c1_imag,          &
-                                               c2_real,       c2_imag,          &
-                                               c3_real,       c3_imag,          &
-                                               c4_real,       c4_imag,          &
-                                               c5_real,       c5_imag)
+!        ! Compute Fourier decomposition at set of radial stations: 
+!        call self%primitive_to_characteristics(worker,bc_COMM,                  &
+!                                               density_real,  density_imag,     &
+!                                               vel1_real,     vel1_imag,        &
+!                                               vel2_real,     vel2_imag,        &
+!                                               vel3_real,     vel3_imag,        &
+!                                               pressure_real, pressure_imag,    &
+!                                               c1_real,       c1_imag,          &
+!                                               c2_real,       c2_imag,          &
+!                                               c3_real,       c3_imag,          &
+!                                               c4_real,       c4_imag,          &
+!                                               c5_real,       c5_imag)
+!
+!        ! Handle temporal average(steady) nonreflecting condition (:,:,1)
+!        ntheta = size(c5_real,2)
+!        ntime  = size(c5_real,3)
+!        do iradius = 1,size(self%r)
+!            ! Get average parts
+!            density_bar_r  = density_bar(iradius)
+!            vel1_bar_r     = vel1_bar(iradius)
+!            vel2_bar_r     = vel2_bar(iradius)
+!            vel3_bar_r     = vel3_bar(iradius)
+!            pressure_bar_r = pressure_bar(iradius)
+!            c_bar_r        = sqrt(gam*pressure_bar_r/density_bar_r)
+!
+!            ! starting with 2 here because the first mode is treated with 1D characteristics
+!            do itheta = 2,ntheta
+!                ! Account for sign(mode) in the calculation of beta. The second half of the
+!                ! modes are negative frequencies.
+!                if (itheta <= (ntheta-1)/2 + 1) then
+!                    beta = sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
+!                else if (itheta > (ntheta-1)/2 + 1) then
+!                    beta = -sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
+!                end if
+!
+!                ! The imaginary part of beta has already been accounted for in
+!                ! the expressions for A2 and A3
+!                A3_real = -TWO*vel3_bar_r*vel2_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
+!                A3_imag = -TWO*beta*vel3_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
+!
+!                A4_real = (beta*beta - vel2_bar_r*vel2_bar_r)/(beta*beta + vel2_bar_r*vel2_bar_r)
+!                A4_imag = -TWO*beta*vel2_bar_r/(beta*beta + vel2_bar_r*vel2_bar_r)
+!
+!                c1_real(iradius,itheta,1) = ZERO
+!                c1_imag(iradius,itheta,1) = ZERO
+!
+!                c2_real(iradius,itheta,1) = ZERO
+!                c2_imag(iradius,itheta,1) = ZERO
+!
+!                c3_real(iradius,itheta,1) = -(ONE/(c_bar_r + vel3_bar_r))*(vel2_bar_r*c5_real(iradius,itheta,1) - beta*c5_imag(iradius,itheta,1))
+!                c3_imag(iradius,itheta,1) = -(ONE/(c_bar_r + vel3_bar_r))*(vel2_bar_r*c5_imag(iradius,itheta,1) + beta*c5_real(iradius,itheta,1))
+!
+!                c4_real(iradius,itheta,1) = (ONE/((c_bar_r+vel3_bar_r)**TWO))*((vel2_bar_r*vel2_bar_r - beta*beta)*c5_real(iradius,itheta,1) - TWO*beta*c5_imag(iradius,itheta,1))
+!                c4_imag(iradius,itheta,1) = (ONE/((c_bar_r+vel3_bar_r)**TWO))*((vel2_bar_r*vel2_bar_r - beta*beta)*c5_imag(iradius,itheta,1) + TWO*beta*c5_real(iradius,itheta,1))
+!
+!            end do !itheta
+!        end do !iradius
 
-        ! Handle temporal average(steady) nonreflecting condition (:,:,1)
-        ntheta = size(c5_real,2)
-        ntime  = size(c5_real,3)
-        do iradius = 1,size(self%r)
-            ! Get average parts
-            density_bar_r  = density_bar(iradius)
-            vel1_bar_r     = vel1_bar(iradius)
-            vel2_bar_r     = vel2_bar(iradius)
-            vel3_bar_r     = vel3_bar(iradius)
-            pressure_bar_r = pressure_bar(iradius)
-            c_bar_r        = sqrt(gam*pressure_bar_r/density_bar_r)
 
-            ! starting with 2 here because the first mode is treated with 1D characteristics
-            do itheta = 2,ntheta
-                ! Account for sign(mode) in the calculation of beta. The second half of the
-                ! modes are negative frequencies.
-                if (itheta <= (ntheta-1)/2 + 1) then
-                    beta = sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
-                else if (itheta > (ntheta-1)/2 + 1) then
-                    beta = -sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
-                end if
-
-                ! The imaginary part of beta has already been accounted for in
-                ! the expressions for A2 and A3
-                A3_real = -TWO*vel3_bar_r*vel2_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
-                A3_imag = -TWO*beta*vel3_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
-
-                A4_real = (beta*beta - vel2_bar_r*vel2_bar_r)/(beta*beta + vel2_bar_r*vel2_bar_r)
-                A4_imag = -TWO*beta*vel2_bar_r/(beta*beta + vel2_bar_r*vel2_bar_r)
-
-                c1_real(iradius,itheta,1) = ZERO
-                c1_imag(iradius,itheta,1) = ZERO
-
-                c2_real(iradius,itheta,1) = ZERO
-                c2_imag(iradius,itheta,1) = ZERO
-
-                c3_real(iradius,itheta,1) = -(ONE/(c_bar_r + vel3_bar_r))*(vel2_bar_r*c5_real(iradius,itheta,1) - beta*c5_imag(iradius,itheta,1))
-                c3_imag(iradius,itheta,1) = -(ONE/(c_bar_r + vel3_bar_r))*(vel2_bar_r*c5_imag(iradius,itheta,1) + beta*c5_real(iradius,itheta,1))
-
-                c4_real(iradius,itheta,1) = (ONE/((c_bar_r+vel3_bar_r)**TWO))*((vel2_bar_r*vel2_bar_r - beta*beta)*c5_real(iradius,itheta,1) - TWO*beta*c5_imag(iradius,itheta,1))
-                c4_imag(iradius,itheta,1) = (ONE/((c_bar_r+vel3_bar_r)**TWO))*((vel2_bar_r*vel2_bar_r - beta*beta)*c5_imag(iradius,itheta,1) + TWO*beta*c5_real(iradius,itheta,1))
-
-            end do !itheta
-        end do !iradius
-
-
-        ! Handle unsteady nonreflecting condition (:,:,2:)
+        ! Project
         print*, 'WARNING! HARDCODED ACCESS TO FIRST FREQUENCY ONLY!!!'
         print*, 'WARNING! CHECK DEFINITION OF lm PITCH!'
         do iradius = 1,size(self%r)
@@ -733,94 +999,84 @@ contains
             pressure_bar_r = pressure_bar(iradius)
             c_bar_r        = sqrt(gam*pressure_bar_r/density_bar_r)
 
-
             ! starting with 2 here because the first mode is treated with 1D characteristics
             do itheta = 1,ntheta
-                do itime = 2,ntime
+                do itime = 1,ntime
+
+                    ! Space-time average handled at the bottom
+                    if (itime == 1 .and. itheta == 1) cycle
 
                     omega = worker%time_manager%freqs(1)
                     lm = TWO*PI*real(itheta-1,rk)/pitch(1)
-                    lambda = lm*c_bar_r/omega
-                    s_arg = ONE - (c_bar_r*c_bar_r - vel3_bar_r*vel3_bar_r)*lambda*lambda/((c_bar_r - vel2_bar_r*lambda)**TWO)
+                    kz = lm*c_bar_r/omega
+                    pyra = (omega - kz*vel2_bar_r)**TWO - kz*kz*(c_bar_r**TWO - vel3_bar_r**TWO)
 
-                    if (s_arg >= ZERO) then
-                        s_real = sqrt(s_arg)
-                        s_imag = ZERO*s_arg
+                    ! Compute k1,k2,k3
+                    k1 = (omega - kz*vel2_bar_r)/vel3_bar_r
+                    k2 = (omega - kz*vel2_bar_r)/vel3_bar_r
+                    k3 = (omega - kz*vel2_bar_r)/vel3_bar_r
+
+                    if (pyra >= ZERO) then
+                        k4_real = (-vel3_bar_r*(omega - kz*vel2_bar_r) + c_bar_r*sqrt(pyra))/(c_bar_r**TWO - vel3_bar_r**TWO)
+                        k4_imag = ZERO*k4_real
+                        k5_real = (-vel3_bar_r*(omega - kz*vel2_bar_r) - c_bar_r*sqrt(pyra))/(c_bar_r**TWO - vel3_bar_r**TWO)
+                        k5_imag = ZERO*k4_real
                     else
-                        s_real = ZERO*s_arg
-                        s_imag = sqrt(-s_arg) ! minus because we have already factored out sqrt(-1) = i into the formula below
+                        k4_real = (-vel3_bar_r*(omega - kz*vel2_bar_r))/(c_bar_r**TWO - vel3_bar_r**TWO)
+                        k4_imag = c_bar_r*sqrt(pyra)/(c_bar_r**TWO - vel3_bar_r**TWO)
+                        k5_real = (-vel3_bar_r*(omega - kz*vel2_bar_r))/(c_bar_r**TWO - vel3_bar_r**TWO)
+                        k5_imag = -c_bar_r*sqrt(pyra)/(c_bar_r**TWO - vel3_bar_r**TWO)
                     end if
 
-                    A3_real =  (c_bar_r - vel3_bar_r)*lambda*(ONE + s_real)/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
-                    A3_imag = -(c_bar_r - vel3_bar_r)*lambda*s_imag/((c_bar_r-vel2_bar_r*lambda)*((ONE+s_real)**TWO + s_imag*s_imag))
 
-                    !A4_denom = (c_bar_r - vel2_bar_r*lambda)*(((ONE+s_real)**TWO - s_imag*s_imag)**TWO + FOUR*s_imag*s_imag*((ONE+s_real)**TWO))
-                    A4_denom = ((c_bar_r - vel2_bar_r*lambda)**TWO)*(((ONE+s_real)**TWO - s_imag*s_imag)**TWO + FOUR*s_imag*s_imag*((ONE+s_real)**TWO))
-                    A4_real_num =  ((c_bar_r - vel3_bar_r)**TWO)*lambda*lambda*((ONE+s_real)**TWO - s_imag*s_imag)
-                    A4_imag_num = -((c_bar_r - vel3_bar_r)**TWO)*lambda*lambda*TWO*s_imag*(ONE+s_real)
-                    A4_real = A4_real_num/A4_denom
-                    A4_imag = A4_imag_num/A4_denom
-
-                    c1_real(iradius,itheta,itime) = ZERO
-                    c1_imag(iradius,itheta,itime) = ZERO
-
-                    c2_real(iradius,itheta,itime) = ZERO
-                    c2_imag(iradius,itheta,itime) = ZERO
-
-                    c3_real(iradius,itheta,itime) = A3_real*c5_real(iradius,itheta,itime) - A3_imag*c5_imag(iradius,itheta,itime)
-                    c3_imag(iradius,itheta,itime) = A3_real*c5_imag(iradius,itheta,itime) + A3_imag*c5_real(iradius,itheta,itime)
+                    a1_real = (ONE/density_bar_r)*density_real(iradius,itheta,itime)  -  (ONE/(density_bar_r*c_bar_r*c_bar_r))*pressure_real(iradius,itheta,itime)
+                    a1_imag = (ONE/density_bar_r)*density_imag(iradius,itheta,itime)  -  (ONE/(density_bar_r*c_bar_r*c_bar_r))*pressure_imag(iradius,itheta,itime)
                     
-                    c4_real(iradius,itheta,itime) = A4_real*c5_real(iradius,itheta,itime) - A4_imag*c5_imag(iradius,itheta,itime)
-                    c4_imag(iradius,itheta,itime) = A4_real*c5_imag(iradius,itheta,itime) + A4_imag*c5_real(iradius,itheta,itime)
+                    a2_real = (ONE/c_bar_r)*vel1_bar_r
+                    a2_imag = (ONE/c_bar_r)*vel1_bar_r
 
-                    ! Add incoming amplitude
+                    a3_real = (-kz/(c_bar_r*(k1*k1 + kz*kz)))*vel3_real(iradius,itheta,itime)  +  (k1/(c_bar_r*(k1*k1+kz*kz)))*vel2_real(iradius,itheta,itime) - (kz/(density_bar_r*c_bar_r*vel3_bar_r*(k1*k1+kz*kz)))*pressure_real(iradius,itheta,itime)
+                    a3_imag = (-kz/(c_bar_r*(k1*k1 + kz*kz)))*vel3_imag(iradius,itheta,itime)  +  (k1/(c_bar_r*(k1*k1+kz*kz)))*vel2_imag(iradius,itheta,itime) - (kz/(density_bar_r*c_bar_r*vel3_bar_r*(k1*k1+kz*kz)))*pressure_imag(iradius,itheta,itime)
+
+                    ! Default, incoming waves set to zero
+                    a1_real = ZERO
+                    a1_imag = ZERO
+                    a2_real = ZERO
+                    a2_imag = ZERO
+                    a3_real = ZERO
+                    a3_imag = ZERO
+
+                    ! User-specified amplitudes for incoming waves
                     if (itheta == 2 .and. itime == 2) then
-                        a3 = 0.
-                        a4 = 0.
-
-                        A3_real = c_bar_r*(vel3_bar_r - c_bar_r)*(vel3_bar_r*s_real - c_bar_r)/((c_bar_r-vel2_bar_r*lambda)*((vel3_bar_r*s_real-c_bar_r)**TWO + vel3_bar_r*vel3_bar_r*s_imag*s_imag))
-                        A3_imag = -vel3_bar_r*c_bar_r*s_imag*(vel3_bar_r-c_bar_r)/((c_bar_r-vel2_bar_r*lambda)*((vel3_bar_r*s_real-c_bar_r)**TWO + vel3_bar_r*vel3_bar_r*s_imag*s_imag))
-                        c3_real(iradius,itheta,itime) = c3_real(iradius,itheta,itime) + A3_real*a3
-                        c3_imag(iradius,itheta,itime) = c3_imag(iradius,itheta,itime) + A3_imag*a3
-
-                        A4_denom    = ((c_bar_r - vel2_bar_r*lambda)**TWO)*( (vel3_bar_r*(s_real*s_real-s_imag*s_imag) - s_real*(c_bar_r - vel3_bar_r) - c_bar_r)**TWO + &
-                                                                             (TWO*vel3_bar_r*s_real*s_imag - s_imag*(c_bar_r-vel3_bar_r))**TWO )
-                        A4_real_num = TWO*lambda*vel3_bar_r*c_bar_r*(c_bar_r-vel3_bar_r) * (vel3_bar_r*(s_real*s_real-s_imag*s_imag) - s_real*(c_bar_r - vel3_bar_r) - c_bar_r)
-                        A4_imag_num = TWO*lambda*vel3_bar_r*c_bar_r*(c_bar_r-vel3_bar_r) * (-(TWO*vel3_bar_r*s_real*s_imag - s_imag*(c_bar_r-vel3_bar_r)))
-                        A4_real = A4_real_num/A4_denom
-                        A4_imag = A4_imag_num/A4_denom
-                        c4_real(iradius,itheta,itime) = c4_real(iradius,itheta,itime) + A4_real*a3
-                        c4_imag(iradius,itheta,itime) = c4_imag(iradius,itheta,itime) + A4_imag*a3
-
+                        a3_real = 1.
                     end if
+
+                    ! Reset perturbation values
+                    density_real(iradius,itheta,itime) = ZERO
+                    density_imag(iradius,itheta,itime) = ZERO
+                    vel1_real(iradius,itheta,itime) = ZERO
+                    vel1_imag(iradius,itheta,itime) = ZERO
+                    vel2_real(iradius,itheta,itime) = ZERO
+                    vel2_imag(iradius,itheta,itime) = ZERO
+                    vel3_real(iradius,itheta,itime) = ZERO
+                    vel3_imag(iradius,itheta,itime) = ZERO
+                    pressure_real(iradius,itheta,itime) = ZERO
+                    pressure_imag(iradius,itheta,itime) = ZERO
+
+                    ! Accumulate from absorbing amplitudes
+                    vel3_real(iradius,itheta,itime) = -c_bar_r*kz*a3_real
+                    vel2_real(iradius,itheta,itime) =  c_bar_r*k1*a3_real
+
 
                 end do !itime
             end do !itheta
         end do !iradius
-
-        !c1_real(:,2,2) = 1._rk
 
 
         ! Compute 1-4 characteristics from extrapolation: difference in radius-local mean and boundary average
         call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar, &
                                                           density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
         c_avg = sqrt(gam*pressure_avg/density_avg)
-
-
-        ! Convert back to primitive variable perturbations
-        call characteristics_to_primitive(self,worker,bc_comm,          &
-                                          c1_real,       c1_imag,       &
-                                          c2_real,       c2_imag,       &
-                                          c3_real,       c3_imag,       &
-                                          c4_real,       c4_imag,       &
-                                          c5_real,       c5_imag,       &
-                                          density_real,  density_imag,  &
-                                          vel1_real,     vel1_imag,     &
-                                          vel2_real,     vel2_imag,     &
-                                          vel3_real,     vel3_imag,     &
-                                          pressure_real, pressure_imag)
-
-
 
 
 
@@ -862,8 +1118,6 @@ contains
 
     end subroutine compute_absorbing_inlet
     !********************************************************************************
-
-
 
 
 

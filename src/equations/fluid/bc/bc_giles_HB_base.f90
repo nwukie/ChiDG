@@ -997,21 +997,21 @@ contains
                     end if
 
                     ! Reset perturbation values
-                    density_real(iradius,itheta,itime) = ZERO
-                    density_imag(iradius,itheta,itime) = ZERO
-                    vel1_real(iradius,itheta,itime) = ZERO
-                    vel1_imag(iradius,itheta,itime) = ZERO
-                    vel2_real(iradius,itheta,itime) = ZERO
-                    vel2_imag(iradius,itheta,itime) = ZERO
-                    vel3_real(iradius,itheta,itime) = ZERO
-                    vel3_imag(iradius,itheta,itime) = ZERO
-                    pressure_real(iradius,itheta,itime) = ZERO
-                    pressure_imag(iradius,itheta,itime) = ZERO
+                    !density_real(iradius,itheta,itime) = ZERO
+                    !density_imag(iradius,itheta,itime) = ZERO
+                    !vel1_real(iradius,itheta,itime) = ZERO
+                    !vel1_imag(iradius,itheta,itime) = ZERO
+                    !vel2_real(iradius,itheta,itime) = ZERO
+                    !vel2_imag(iradius,itheta,itime) = ZERO
+                    !vel3_real(iradius,itheta,itime) = ZERO
+                    !vel3_imag(iradius,itheta,itime) = ZERO
+                    !pressure_real(iradius,itheta,itime) = ZERO
+                    !pressure_imag(iradius,itheta,itime) = ZERO
 
                     ! Accumulate from absorbing amplitudes
                     density_real(iradius,itheta,itime) = density_bar_r*a1_real
-                    vel3_real(iradius,itheta,itime) = -c_bar_r*kz*a3_real
-                    vel2_real(iradius,itheta,itime) =  c_bar_r*k1*a3_real
+                    vel3_real(iradius,itheta,itime)    = -c_bar_r*kz*a3_real
+                    vel2_real(iradius,itheta,itime)    =  c_bar_r*k1*a3_real
 
                 end do !itime
             end do !itheta
@@ -1193,17 +1193,18 @@ contains
                     a3_imag = (-kz/(c_bar_r*(k1*k1 + kz*kz)))*vel3_imag(iradius,itheta,itime)  +  (k1/(c_bar_r*(k1*k1+kz*kz)))*vel2_imag(iradius,itheta,itime) - (kz/(density_bar_r*c_bar_r*vel3_bar_r*(k1*k1+kz*kz)))*pressure_imag(iradius,itheta,itime)
 
 
-                    ! Reset perturbation values
-                    density_real(iradius,itheta,itime) = ZERO
-                    density_imag(iradius,itheta,itime) = ZERO
-                    vel1_real(iradius,itheta,itime) = ZERO
-                    vel1_imag(iradius,itheta,itime) = ZERO
-                    vel2_real(iradius,itheta,itime) = ZERO
-                    vel2_imag(iradius,itheta,itime) = ZERO
-                    vel3_real(iradius,itheta,itime) = ZERO
-                    vel3_imag(iradius,itheta,itime) = ZERO
-                    pressure_real(iradius,itheta,itime) = ZERO
-                    pressure_imag(iradius,itheta,itime) = ZERO
+                    !! Reset perturbation values
+                    !density_real(iradius,itheta,itime) = ZERO
+                    !density_imag(iradius,itheta,itime) = ZERO
+                    !vel1_real(iradius,itheta,itime) = ZERO
+                    !vel1_imag(iradius,itheta,itime) = ZERO
+                    !vel2_real(iradius,itheta,itime) = ZERO
+                    !vel2_imag(iradius,itheta,itime) = ZERO
+                    !vel3_real(iradius,itheta,itime) = ZERO
+                    !vel3_imag(iradius,itheta,itime) = ZERO
+                    !pressure_real(iradius,itheta,itime) = ZERO
+                    !pressure_imag(iradius,itheta,itime) = ZERO
+
 
                     ! Accumulate from absorbing amplitudes
                     density_real(iradius,itheta,itime) = density_bar_r*a1_real

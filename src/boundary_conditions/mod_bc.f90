@@ -49,9 +49,8 @@ module mod_bc
     use bc_state_outlet_constant_pressure,          only: outlet_constant_pressure_t
     use bc_state_outlet_auxiliary_equations,        only: outlet_auxiliary_equations_t
     use bc_state_outlet_neumann_pressure_fd,        only: outlet_neumann_pressure_fd_t
-    use bc_state_outlet_neumann_pressure_fd_test,   only: outlet_neumann_pressure_fd_test_t
     use bc_state_outlet_neumann_pressure_localdg,   only: outlet_neumann_pressure_localdg_t
-    use bc_state_outlet_neumann_pressure_localdg_test,   only: outlet_neumann_pressure_localdg_test_t
+    use bc_state_outlet_neumann_pressure_localdg_new,   only: outlet_neumann_pressure_localdg_new_t
     use bc_state_outlet_neumann_pressure_globaldg,  only: outlet_neumann_pressure_globaldg_t
     use bc_state_outlet_neumann_LODI_localdg,       only: outlet_neumann_LODI_localdg_t
     !use bc_state_outlet_point_pressure,         only: outlet_point_pressure_t
@@ -163,9 +162,8 @@ contains
         type(outlet_constant_pressure_t)        :: OUTLET_CONSTANT_PRESSURE
         type(outlet_auxiliary_equations_t)      :: OUTLET_AUXILIARY_EQUATIONS
         type(outlet_neumann_pressure_fd_t)      :: OUTLET_NEUMANN_PRESSURE_FD
-        type(outlet_neumann_pressure_fd_test_t) :: OUTLET_NEUMANN_PRESSURE_FD_TEST
         type(outlet_neumann_pressure_localdg_t) :: OUTLET_NEUMANN_PRESSURE_LOCALDG
-        type(outlet_neumann_pressure_localdg_test_t) :: OUTLET_NEUMANN_PRESSURE_LOCALDG_TEST
+        type(outlet_neumann_pressure_localdg_new_t) :: OUTLET_NEUMANN_PRESSURE_LOCALDG_NEW
         type(outlet_neumann_pressure_globaldg_t):: OUTLET_NEUMANN_PRESSURE_GLOBALDG
         type(outlet_neumann_LODI_localdg_t)     :: OUTLET_NEUMANN_LODI_LOCALDG
         !type(outlet_point_pressure_t)           :: OUTLET_POINT_PRESSURE
@@ -250,9 +248,8 @@ contains
             call registered_bcs%push_back(OUTLET_CONSTANT_PRESSURE)
             call registered_bcs%push_back(OUTLET_AUXILIARY_EQUATIONS)
             call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_FD)
-            call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_FD_TEST)
             call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_LOCALDG)
-            call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_LOCALDG_TEST)
+            call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_LOCALDG_NEW)
             call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_GLOBALDG)
             call registered_bcs%push_back(OUTLET_NEUMANN_LODI_LOCALDG)
             call registered_bcs%push_back(OUTLET_STEADY_1DCHAR)

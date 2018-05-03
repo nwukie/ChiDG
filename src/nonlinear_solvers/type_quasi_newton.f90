@@ -112,30 +112,14 @@ contains
             do while ( absolute_convergence .and. relative_convergence )
                 niter = niter + 1
 
-
-                !
                 ! Store the value of the current inner iteration solution (k) 
                 ! for the solution update (n+1), q_(n+1)_k
-                !
                 qold = q
 
 
                 !
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
-                !if (present(solver_controller)) then
-                !    if ( niter <= 2)  then
-                !        residual_ratio = ONE
-                !    else
-                !        residual_ratio = resid/resid_prev
-                !    end if
-
-                !    call system%assemble( data,             &
-                !                          timing=timing,    &
-                !                          differentiate=solver_controller%update_lhs(niter,residual_ratio) )
-                !else
-                !    call system%assemble(data,timing=timing,differentiate=.true.)
-                !end if
                 if ( niter <= 2)  then
                     residual_ratio = ONE
                 else
@@ -187,25 +171,30 @@ contains
                     if (self%cflmax > 0. .and. cfln(icfl) > self%cflmax) cfln(icfl) = self%cflmax
                 end do
 
-                !if (IRANK == GLOBAL_MASTER) then
-                !    call add_to_line("  CFL: ")
-                !    do icfl = 1,size(cfln)
-                !        call add_to_line(cfln(icfl))
-                !    end do
-                !    call send_line()
-                !end if
-
 
                 ! Print diagnostics, check tolerance.
                 call write_line('|R| = ', resid, io_proc=GLOBAL_MASTER, silence=(verbosity<4))
                 if ( resid < self%tol ) then
+                    call self%timer%stop()
+                    call self%residual_norm%push_back(resid)
+                    call self%residual_time%push_back(timing)
+                    call self%matrix_iterations%push_back(0)
+                    call self%matrix_time%push_back(0._rk)
+                    call self%total_time%push_back(self%timer%elapsed())
+                    call self%newton_iterations%push_back(niter)
+                    call write_line(niter, resid, cfln(1), 0, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
+                    exit
+                end if
+
+                ! Compute and store first residual norm 
+                if (niter == 1) then
                     call self%residual_norm%push_back(resid)
                     call self%residual_time%push_back(timing)
                     call self%matrix_iterations%push_back(0)
                     call self%matrix_time%push_back(0._rk)
                     call write_line(niter, resid, cfln(1), 0, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
-                    exit
                 end if
+
 
                 user_msg = "quasi_newton%solve: NaN residual norm. Check initial solution and operator objects."
                 if ( ieee_is_nan(resid) ) then
@@ -307,6 +296,18 @@ contains
                 end if
 
 
+
+                ! Compute new cfl
+                if (allocated(cfln)) deallocate(cfln)
+                allocate(cfln(size(rnorm)), stat=ierr)
+                if (ierr /= 0) call AllocationError
+                where (rnorm /= 0.)
+                    cfln = self%cfl0*(rnorm0/fn)
+                else where
+                    cfln = 0.1
+                end where
+
+
                 ! Accept new solution, clear working storage, iterate
                 q = qn
                 call dq%clear()
@@ -319,7 +320,7 @@ contains
 
 
                 ! Print iteration information
-                call write_line(niter, fn, cfln(1), linear_solver%niter, controller%lhs_updated, controller%preconditioner_updated, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
+                call write_line(niter+1, fn, cfln(1), linear_solver%niter, controller%lhs_updated, controller%preconditioner_updated, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
 
                 call MPI_Barrier(ChiDG_COMM,ierr)

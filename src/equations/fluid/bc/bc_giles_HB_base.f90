@@ -315,181 +315,6 @@ contains
     !********************************************************************************
 
 
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   4/12/2018
-!    !!
-!    !------------------------------------------------------------------------------------
-!    subroutine compute_temporal_dft(self,worker,bc_comm,                    &
-!                                    density_Ft_real,  density_Ft_imag,      &
-!                                    vel1_Ft_real,     vel1_Ft_imag,         &
-!                                    vel2_Ft_real,     vel2_Ft_imag,         &
-!                                    vel3_Ft_real,     vel3_Ft_imag,         &
-!                                    pressure_Ft_real, pressure_Ft_imag)
-!        class(giles_HB_base_t),  intent(inout)   :: self
-!        type(chidg_worker_t),                       intent(inout)   :: worker
-!        type(mpi_comm),                             intent(in)      :: bc_comm
-!        type(AD_D),     allocatable,                intent(inout)   :: density_Ft_real(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: density_Ft_imag(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: vel1_Ft_real(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: vel1_Ft_imag(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: vel2_Ft_real(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: vel2_Ft_imag(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: vel3_Ft_real(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: vel3_Ft_imag(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: pressure_Ft_real(:,:,:)
-!        type(AD_D),     allocatable,                intent(inout)   :: pressure_Ft_imag(:,:,:)
-!
-!
-!        type(AD_D), allocatable,    dimension(:)    ::                                          &
-!            density_real_tmp, vel1_real_tmp, vel2_real_tmp, vel3_real_tmp, pressure_real_tmp,   &
-!            density_imag_tmp, vel1_imag_tmp, vel2_imag_tmp, vel3_imag_tmp, pressure_imag_tmp
-!
-!
-!        type(AD_D), allocatable, dimension(:,:)     ::  &
-!            density, mom1, mom2, mom3, energy, vel1, vel2, vel3, pressure
-!
-!        type(AD_D)  :: density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar
-!
-!        integer(ik) :: nradius, ntheta, iradius, itheta, imode, itime, ntime, ierr
-!
-!
-!
-!        ! Define Fourier space discretization to determine
-!        ! number of theta-samples are being taken
-!        ntheta  = size(self%theta,2)
-!        nradius = size(self%r)
-!        ntime   = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%ntime
-!
-!        ! Allocate storage for discrete time instances
-!        allocate(density( ntheta,ntime),  &
-!                 mom1(    ntheta,ntime),  &
-!                 mom2(    ntheta,ntime),  &
-!                 mom3(    ntheta,ntime),  &
-!                 vel1(    ntheta,ntime),  &
-!                 vel2(    ntheta,ntime),  &
-!                 vel3(    ntheta,ntime),  &
-!                 energy(  ntheta,ntime),  &
-!                 pressure(ntheta,ntime), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!        
-!        ! Allocate storage for temporal dft
-!        allocate(density_Ft_real( nradius,ntheta,ntime), density_Ft_imag( nradius,ntheta,ntime),  &
-!                 vel1_Ft_real(    nradius,ntheta,ntime), vel1_Ft_imag(    nradius,ntheta,ntime),  &
-!                 vel2_Ft_real(    nradius,ntheta,ntime), vel2_Ft_imag(    nradius,ntheta,ntime),  &
-!                 vel3_Ft_real(    nradius,ntheta,ntime), vel3_Ft_imag(    nradius,ntheta,ntime),  &
-!                 pressure_Ft_real(nradius,ntheta,ntime), pressure_Ft_imag(nradius,ntheta,ntime), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!        ! Perform Fourier decomposition at each radial station.
-!        do iradius = 1,nradius
-!            do itime = 1,ntime
-!                ! Interpolate solution to physical_nodes at current radial station: [ntheta]
-!                density(:,itime) = worker%interpolate_field_general('Density',    donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
-!                mom1(:,itime)    = worker%interpolate_field_general('Momentum-1', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
-!                mom2(:,itime)    = worker%interpolate_field_general('Momentum-2', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
-!                mom3(:,itime)    = worker%interpolate_field_general('Momentum-3', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
-!                energy(:,itime)  = worker%interpolate_field_general('Energy',     donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
-!
-!                if (worker%coordinate_system() == 'Cylindrical') then
-!                    mom2(:,itime) = mom2(:,itime)/self%r(iradius)  ! convert to tangential momentum
-!                end if
-!            end do
-!
-!            ! Compute velocities and pressure at each time
-!            vel1 = mom1/density
-!            vel2 = mom2/density
-!            vel3 = mom3/density
-!            pressure = (gam-ONE)*(energy - HALF*( mom1*mom1 + mom2*mom2 + mom3*mom3 )/density )
-!
-!
-!            ! Temporal dft at each theta location
-!            do itheta = 1,ntheta
-!                call dft(density(itheta,:),  ZERO*density(itheta,:),  density_real_tmp,  density_imag_tmp )
-!                call dft(vel1(itheta,:),     ZERO*vel1(itheta,:),     vel1_real_tmp,     vel1_imag_tmp    )
-!                call dft(vel2(itheta,:),     ZERO*vel2(itheta,:),     vel2_real_tmp,     vel2_imag_tmp    )
-!                call dft(vel3(itheta,:),     ZERO*vel3(itheta,:),     vel3_real_tmp,     vel3_imag_tmp    )
-!                call dft(pressure(itheta,:), ZERO*pressure(itheta,:), pressure_real_tmp, pressure_imag_tmp)
-!
-!                density_Ft_real( iradius,itheta,:) = density_real_tmp
-!                density_Ft_imag( iradius,itheta,:) = density_imag_tmp
-!                vel1_Ft_real(    iradius,itheta,:) = vel1_real_tmp
-!                vel1_Ft_imag(    iradius,itheta,:) = vel1_imag_tmp
-!                vel2_Ft_real(    iradius,itheta,:) = vel2_real_tmp
-!                vel2_Ft_imag(    iradius,itheta,:) = vel2_imag_tmp
-!                vel3_Ft_real(    iradius,itheta,:) = vel3_real_tmp
-!                vel3_Ft_imag(    iradius,itheta,:) = vel3_imag_tmp
-!                pressure_Ft_real(iradius,itheta,:) = pressure_real_tmp
-!                pressure_Ft_imag(iradius,itheta,:) = pressure_imag_tmp
-!
-!            end do !itheta
-!
-!        end do !iradius
-!
-!    end subroutine compute_temporal_dft
-!    !********************************************************************************
-
-!    !>
-!    !!
-!    !!
-!    !!
-!    !!
-!    !!
-!    !---------------------------------------------------------------------------
-!    subroutine compute_temporal_idft(self,worker,bc_comm,   &
-!                                     density
-!
-!        ! Inverse DFT of temporal Fourier modes to give primitive variables
-!        ! at quarature nodes for the current time instance.
-!        density_bc_tmp  = [ZERO*density_Fts_real_gq(1,1,1)]
-!        vel1_bc_tmp     = [ZERO*density_Fts_real_gq(1,1,1)]
-!        vel2_bc_tmp     = [ZERO*density_Fts_real_gq(1,1,1)]
-!        vel3_bc_tmp     = [ZERO*density_Fts_real_gq(1,1,1)]
-!        pressure_bc_tmp = [ZERO*density_Fts_real_gq(1,1,1)]
-!        do igq = 1,size(coords)
-!            ! **** WARNING: probably want ipdft_eval here ****
-!            call idft_eval(density_t_real(igq,:),   &
-!                           density_t_imag(igq,:),   &
-!                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-!                           density_bc_tmp,          &
-!                           expect_zero)
-!
-!            call idft_eval(vel1_t_real(igq,:),      &
-!                           vel1_t_imag(igq,:),      &
-!                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-!                           vel1_bc_tmp,        &
-!                           expect_zero)
-!
-!            call idft_eval(vel2_t_real(igq,:),      &
-!                           vel2_t_imag(igq,:),      &
-!                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-!                           vel2_bc_tmp,        &
-!                           expect_zero)
-!
-!            call idft_eval(vel3_t_real(igq,:),      &
-!                           vel3_t_imag(igq,:),      &
-!                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-!                           vel3_bc_tmp,        &
-!                           expect_zero)
-!
-!            call idft_eval(pressure_t_real(igq,:),  &
-!                           pressure_t_imag(igq,:),  &
-!                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-!                           pressure_bc_tmp,    &
-!                           expect_zero)
-!
-!            ! Accumulate contribution from unsteady modes
-!            density_bc(igq)  = density_bc(igq)  + density_bc_tmp(1)
-!            vel1_bc(igq)     = vel1_bc(igq)     + vel1_bc_tmp(1)
-!            vel2_bc(igq)     = vel2_bc(igq)     + vel2_bc_tmp(1)
-!            vel3_bc(igq)     = vel3_bc(igq)     + vel3_bc_tmp(1)
-!            pressure_bc(igq) = pressure_bc(igq) + pressure_bc_tmp(1)
-!        end do
-!        
-!    end subroutine compute_temporal_idft
-
-
 
     !>
     !!
@@ -641,7 +466,9 @@ contains
 
         type(AD_D), allocatable, dimension(:,:,:) ::        &
             a1_real, a2_real, a3_real, a4_real, a5_real,    &
-            a1_imag, a2_imag, a3_imag, a4_imag, a5_imag
+            a1_imag, a2_imag, a3_imag, a4_imag, a5_imag,    &
+            density_real_acc, vel1_real_acc, vel2_real_acc, vel3_real_acc, pressure_real_acc,   &
+            density_imag_acc, vel1_imag_acc, vel2_imag_acc, vel3_imag_acc, pressure_imag_acc
 
         type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, T_avg, vmag
 
@@ -670,6 +497,34 @@ contains
                                           a4_real,       a4_imag,       &
                                           a5_real,       a5_imag)
 
+
+        ! Get acoustic part of the solution
+        density_real_acc  = ZERO*density_real
+        density_imag_acc  = ZERO*density_real
+        vel1_real_acc     = ZERO*density_real
+        vel1_imag_acc     = ZERO*density_real
+        vel2_real_acc     = ZERO*density_real
+        vel2_imag_acc     = ZERO*density_real
+        vel3_real_acc     = ZERO*density_real
+        vel3_imag_acc     = ZERO*density_real
+        pressure_real_acc = ZERO*density_real
+        pressure_imag_acc = ZERO*density_real
+        call self%eigenmodes_to_primitive(worker,bc_comm,                       &
+                                          ZERO*a1_real,     ZERO*a1_imag,       &
+                                          ZERO*a2_real,     ZERO*a2_imag,       &
+                                          ZERO*a3_real,     ZERO*a3_imag,       &
+                                          a4_real,          a4_imag,            &
+                                          a5_real,          a5_imag,            &
+                                          density_real_acc, density_imag_acc,   &
+                                          vel1_real_acc,    vel1_imag_acc,      &
+                                          vel2_real_acc,    vel2_imag_acc,      &
+                                          vel3_real_acc,    vel3_imag_acc,      &
+                                          pressure_real_acc,pressure_imag_acc)
+
+
+
+
+
         ! Zero out incoming amplitudes
         a1_real(:,:,:) = ZERO
         a1_imag(:,:,:) = ZERO
@@ -681,7 +536,9 @@ contains
         a5_imag(:,:,:) = ZERO
 
         ! User-specified amplitude
-        !a1_real(:,2,2) = 0.001_rk
+        !a1_real(:,2,2)  = 0.001_rk  !entropy
+        !a3_real(:,2,2)  = 0.001_rk  !vorticity
+        !a5_real(:,27,2) = 0.001_rk  !downstream pressure
 
         call self%eigenmodes_to_primitive(worker,bc_comm,               &
                                           a1_real,      a1_imag,        &
@@ -741,6 +598,243 @@ contains
 
     end subroutine compute_absorbing_inlet
     !********************************************************************************
+
+
+
+
+!    !>  DANIEL'S FORMULATION
+!    !!
+!    !!
+!    !!
+!    !!
+!    !--------------------------------------------------------------------------------
+!    subroutine compute_absorbing_inlet(self,worker,bc_comm, &
+!                                       density_real,    &
+!                                       density_imag,    &
+!                                       vel1_real,       &
+!                                       vel1_imag,       &
+!                                       vel2_real,       &
+!                                       vel2_imag,       &
+!                                       vel3_real,       &
+!                                       vel3_imag,       &
+!                                       pressure_real,   &
+!                                       pressure_imag)
+!        class(giles_HB_base_t),  intent(inout)   :: self
+!        type(chidg_worker_t),    intent(inout)   :: worker
+!        type(mpi_comm),          intent(in)      :: bc_comm
+!        type(AD_D),              intent(inout)   :: density_real(:,:,:)
+!        type(AD_D),              intent(inout)   :: density_imag(:,:,:)
+!        type(AD_D),              intent(inout)   :: vel1_real(:,:,:)
+!        type(AD_D),              intent(inout)   :: vel1_imag(:,:,:)
+!        type(AD_D),              intent(inout)   :: vel2_real(:,:,:)
+!        type(AD_D),              intent(inout)   :: vel2_imag(:,:,:)
+!        type(AD_D),              intent(inout)   :: vel3_real(:,:,:)
+!        type(AD_D),              intent(inout)   :: vel3_imag(:,:,:)
+!        type(AD_D),              intent(inout)   :: pressure_real(:,:,:)
+!        type(AD_D),              intent(inout)   :: pressure_imag(:,:,:)
+!
+!
+!        ! Storage at quadrature nodes
+!        type(AD_D), allocatable, dimension(:)   ::          &
+!            density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar
+!
+!        type(AD_D), allocatable, dimension(:,:,:) ::        &
+!            a1_real, a2_real, a3_real, a4_real, a5_real,    &
+!            a1_imag, a2_imag, a3_imag, a4_imag, a5_imag
+!
+!        type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, T_avg, vmag
+!
+!        real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag, pitch
+!        integer(ik) :: ierr
+!
+!        pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
+!
+!        ! Get spatio-temporal average at radial stations
+!        density_bar  = density_real(:,1,1)
+!        vel1_bar     = vel1_real(:,1,1)
+!        vel2_bar     = vel2_real(:,1,1)
+!        vel3_bar     = vel3_real(:,1,1)
+!        pressure_bar = pressure_real(:,1,1)
+!
+!        ! Project to eigenmodes
+!        call self%primitive_to_eigenmodes(worker,bc_comm,               &
+!                                          density_real,  density_imag,  &
+!                                          vel1_real,     vel1_imag,     &
+!                                          vel2_real,     vel2_imag,     &
+!                                          vel3_real,     vel3_imag,     &
+!                                          pressure_real, pressure_imag, &
+!                                          a1_real,       a1_imag,       &
+!                                          a2_real,       a2_imag,       &
+!                                          a3_real,       a3_imag,       &
+!                                          a4_real,       a4_imag,       &
+!                                          a5_real,       a5_imag)
+!
+!        ! Zero out incoming amplitudes
+!        a1_real(:,:,:) = ZERO
+!        a1_imag(:,:,:) = ZERO
+!        a2_real(:,:,:) = ZERO
+!        a2_imag(:,:,:) = ZERO
+!        a3_real(:,:,:) = ZERO
+!        a3_imag(:,:,:) = ZERO
+!        a5_real(:,:,:) = ZERO
+!        a5_imag(:,:,:) = ZERO
+!
+!        ! User-specified amplitude
+!        !a1_real(:,2,2) = 0.001_rk
+!
+!        call self%eigenmodes_to_primitive(worker,bc_comm,               &
+!                                          a1_real,      a1_imag,        &
+!                                          a2_real,      a2_imag,        &
+!                                          a3_real,      a3_imag,        &
+!                                          a4_real,      a4_imag,        &
+!                                          a5_real,      a5_imag,        &
+!                                          density_real, density_imag,   &
+!                                          vel1_real,    vel1_imag,      &
+!                                          vel2_real,    vel2_imag,      &
+!                                          vel3_real,    vel3_imag,      &
+!                                          pressure_real,pressure_imag)
+!
+!
+!        ! Compute 1-4 characteristics from extrapolation: difference in radius-local mean and boundary average
+!        call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar, &
+!                                                          density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
+!        c_avg = sqrt(gam*pressure_avg/density_avg)
+!
+!
+!
+!        ! Get boundary condition Total Temperature, Total Pressure, and normal vector
+!        PT   = self%bcproperties%compute('Total Pressure',   worker%time(),worker%coords())
+!        TT   = self%bcproperties%compute('Total Temperature',worker%time(),worker%coords())
+!
+!        ! Get user-input normal vector and normalize
+!        n1 = self%bcproperties%compute('Normal-1', worker%time(), worker%coords())
+!        n2 = self%bcproperties%compute('Normal-2', worker%time(), worker%coords())
+!        n3 = self%bcproperties%compute('Normal-3', worker%time(), worker%coords())
+!
+!        !   Explicit allocation to handle GCC bug:
+!        !       GCC/GFortran Bugzilla Bug 52162 
+!        allocate(nmag(size(n1)), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!        nmag = sqrt(n1*n1 + n2*n2 + n3*n3)
+!        n1 = n1/nmag
+!        n2 = n2/nmag
+!        n3 = n3/nmag
+!
+!
+!        ! Override spatio-temporal mean according to specified total conditions
+!        T_avg = TT(1)*(pressure_avg/PT(1))**((gam-ONE)/gam)
+!        density_avg = pressure_avg/(T_avg*Rgas)
+!        vmag = sqrt(TWO*cp*(TT(1)-T_avg))
+!        vel1_avg = n1(1)*vmag
+!        vel2_avg = n2(1)*vmag
+!        vel3_avg = n3(1)*vmag
+!
+!        density_real(:,1,1)  = density_avg
+!        vel1_real(:,1,1)     = vel1_avg
+!        vel2_real(:,1,1)     = vel2_avg
+!        vel3_real(:,1,1)     = vel3_avg
+!        pressure_real(:,1,1) = pressure_avg
+!
+!
+!
+!    end subroutine compute_absorbing_inlet
+!    !********************************************************************************
+!
+!
+!
+!
+!
+!    !> DANIEL'S FORMULATION
+!    !!
+!    !!
+!    !!
+!    !!
+!    !--------------------------------------------------------------------------------
+!    subroutine compute_absorbing_outlet(self,worker,bc_comm, &
+!                                        density_real,    &
+!                                        density_imag,    &
+!                                        vel1_real,       &
+!                                        vel1_imag,       &
+!                                        vel2_real,       &
+!                                        vel2_imag,       &
+!                                        vel3_real,       &
+!                                        vel3_imag,       &
+!                                        pressure_real,   &
+!                                        pressure_imag)
+!        class(giles_HB_base_t),     intent(inout)   :: self
+!        type(chidg_worker_t),       intent(inout)   :: worker
+!        type(mpi_comm),             intent(in)      :: bc_comm
+!        type(AD_D),                 intent(inout)   :: density_real(:,:,:)
+!        type(AD_D),                 intent(inout)   :: density_imag(:,:,:)
+!        type(AD_D),                 intent(inout)   :: vel1_real(:,:,:)
+!        type(AD_D),                 intent(inout)   :: vel1_imag(:,:,:)
+!        type(AD_D),                 intent(inout)   :: vel2_real(:,:,:)
+!        type(AD_D),                 intent(inout)   :: vel2_imag(:,:,:)
+!        type(AD_D),                 intent(inout)   :: vel3_real(:,:,:)
+!        type(AD_D),                 intent(inout)   :: vel3_imag(:,:,:)
+!        type(AD_D),                 intent(inout)   :: pressure_real(:,:,:)
+!        type(AD_D),                 intent(inout)   :: pressure_imag(:,:,:)
+!
+!        type(AD_D), allocatable, dimension(:,:,:) ::        &
+!            a1_real, a2_real, a3_real, a4_real, a5_real,    &
+!            a1_imag, a2_imag, a3_imag, a4_imag, a5_imag
+!
+!        real(rk),       allocatable, dimension(:)   :: p_user, pitch
+!
+!        ! Retrieve target average pressure
+!        p_user = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
+!        pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
+!
+!        ! Project to eigenmodes
+!        call self%primitive_to_eigenmodes(worker,bc_comm,               &
+!                                          density_real,  density_imag,  &
+!                                          vel1_real,     vel1_imag,     &
+!                                          vel2_real,     vel2_imag,     &
+!                                          vel3_real,     vel3_imag,     &
+!                                          pressure_real, pressure_imag, &
+!                                          a1_real,       a1_imag,       &
+!                                          a2_real,       a2_imag,       &
+!                                          a3_real,       a3_imag,       &
+!                                          a4_real,       a4_imag,       &
+!                                          a5_real,       a5_imag)
+!
+!        ! Zero out incoming amplitudes
+!        a5_real(:,:,:) = ZERO
+!        a5_imag(:,:,:) = ZERO
+!
+!        ! Convert back to primitive variables
+!        call self%eigenmodes_to_primitive(worker,bc_comm,               &
+!                                          a1_real,      a1_imag,        &
+!                                          a2_real,      a2_imag,        &
+!                                          a3_real,      a3_imag,        &
+!                                          a4_real,      a4_imag,        &
+!                                          a5_real,      a5_imag,        &
+!                                          density_real, density_imag,   &
+!                                          vel1_real,    vel1_imag,      &
+!                                          vel2_real,    vel2_imag,      &
+!                                          vel3_real,    vel3_imag,      &
+!                                          pressure_real,pressure_imag)
+!
+!        pressure_real(:,1,1) = p_user(1)
+!
+!    end subroutine compute_absorbing_outlet
+!    !********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

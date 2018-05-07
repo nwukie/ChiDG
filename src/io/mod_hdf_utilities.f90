@@ -310,8 +310,8 @@ contains
         if (HDF_is_open .and. (HDF_nfiles_open==0)) then
             call h5close_f(ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"close_hdf: h5close_f did not execute successfully.")
-        else if (HDF_is_open .and. (HDF_nfiles_open/=0)) then
-            call chidg_signal(FATAL,"close_hdf: tried to close HDF file files are still open.")
+!        else if (HDF_is_open .and. (HDF_nfiles_open/=0)) then
+!            call chidg_signal(FATAL,"close_hdf: tried to close HDF but files are still open.")
         end if
 
         HDF_is_open = .false.

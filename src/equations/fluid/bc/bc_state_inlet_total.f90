@@ -187,16 +187,16 @@ contains
         w_m = mom3_m/density_m
 
 
-        ! Radial equilibrium START
-        ! Compute normal vector
-        K0      = 150._rk
-        u_axial = 125._rk
-        alpha = atan2(K0/r,u_axial)
-        
-        n1 = ZERO
-        n2 = sin(alpha)
-        n3 = cos(alpha)
-        ! Radial equilibrium END
+!        ! Radial equilibrium START
+!        ! Compute normal vector
+!        K0      = 150._rk
+!        u_axial = 125._rk
+!        alpha = atan2(K0/r,u_axial)
+!        
+!        n1 = ZERO
+!        n2 = sin(alpha)
+!        n3 = cos(alpha)
+!        ! Radial equilibrium END
 
         ! Compute velocity magnitude squared from interior state
         vmag2_m = (u_m*u_m) + (v_m*v_m) + (w_m*w_m)

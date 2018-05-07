@@ -813,7 +813,6 @@ contains
         p_modes(:) = zero_face(1)
         if (size(p_modes) /= nterms_s) call chidg_signal(FATAL,'outlet_neumann_pressure_localdg: converge_p Error 1.')
 
-
         resid = huge(1._rk)
         tol = 1.e-3_rk
         R_modes = self%compute_local_residual(worker,bc_comm,p_modes,p_avg)

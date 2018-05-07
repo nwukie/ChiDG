@@ -103,7 +103,6 @@ contains
 
 
 
-        grid_velocity = worker%get_grid_velocity_face('face interior')
 
         !
         ! Interpolate interior solution to quadrature nodes
@@ -155,9 +154,11 @@ contains
         energy_bc  = density_m
 
 
+
         !
         ! Set relative velocity to zero: ie set fluid velocity equal to grid/wall velocity.
         !
+        grid_velocity = worker%get_grid_velocity_face('face interior')
         mom1_bc = density_m*grid_velocity(:,1)
         mom2_bc = density_m*grid_velocity(:,2)
         mom3_bc = density_m*grid_velocity(:,3)
@@ -175,7 +176,6 @@ contains
         ! Energy subtract change in kinetic energy
         !
         energy_bc = energy_m - HALF*density_m*(u_m*u_m  +  v_m*v_m  +  w_m*w_m)
-
 
 
         if (worker%coordinate_system() == 'Cylindrical') then

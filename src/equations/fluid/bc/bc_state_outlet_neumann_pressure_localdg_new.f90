@@ -110,10 +110,13 @@ contains
         type(mpi_comm),                                 intent(in)      :: bc_comm
         type(AD_D),                                     intent(in)      :: p_avg
 
-        real(rk),   allocatable, dimension(:,:) :: lhs, inv_lhs, grad1, grad2, grad3, valtrans, grad1_trans, grad2_trans, grad3_trans
+        real(rk),   allocatable, dimension(:,:) :: &
+            lhs, inv_lhs, grad1, grad2, grad3, val, val1, val2, val3, &
+            valtrans, grad1_trans, grad2_trans, grad3_trans, invmass, &
+            temp1, temp2, temp3, face_mass1,face_mass2,face_mass3, br2_face
         real(rk),   allocatable, dimension(:)   :: weights, jinv, n1, n2, n3
         integer(ik) :: idomain_l, ielement_l, iface, nterms_s, group_ID, &
-                       patch_ID, face_ID, ierr, iterm
+                       patch_ID, face_ID, ierr, iterm, iface_local
 
 
         ! Get location on domain
@@ -134,38 +137,137 @@ contains
             if (ierr /= 0) call AllocationError
             lhs = ZERO
 
-            do iface = 1,NFACES
+            do iface_local = 1,NFACES
 
-                ! Get valtrans
-                valtrans = transpose(worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface)) 
+                ! If not boundary
+                if (iface_local /= iface) then
 
-                ! Get grad
-                grad1 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%grad1
-                grad2 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%grad2
-                grad3 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%grad3
+                    ! Get mass
+                    invmass = worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass
 
-                ! Get normal 
-                n1 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
-                n2 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
-                n3 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+                    ! Get valtrans
+                    val      = worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%basis_s%interpolator_face('Value',iface_local)
+                    valtrans = transpose(worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%basis_s%interpolator_face('Value',iface_local)) 
+                    br2_face = worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%br2_face
 
-                ! Get weights
-                weights = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface)
+                    ! Get grad
+                    grad1 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%grad1
+                    grad2 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%grad2
+                    grad3 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%grad3
 
-                ! Premultiply by normal, jacobian, weights. (jacobian is in the normal)
-                do iterm = 1,size(grad1,2)
-                    grad1(:,iterm) = grad1(:,iterm)*n1*weights
-                    grad2(:,iterm) = grad2(:,iterm)*n2*weights
-                    grad3(:,iterm) = grad3(:,iterm)*n3*weights
-                end do
+                    ! Get normal 
+                    n1 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%norm(:,1)
+                    n2 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%norm(:,2)
+                    n3 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%norm(:,3)
+
+                    ! Get weights
+                    weights = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface_local)
+
+                    ! Premultiply by normal, jacobian, weights. (jacobian is in the normal)
+                    do iterm = 1,size(grad1,2)
+                        grad1(:,iterm) = grad1(:,iterm)*n1*weights
+                        grad2(:,iterm) = grad2(:,iterm)*n2*weights
+                        grad3(:,iterm) = grad3(:,iterm)*n3*weights
+                    end do
 
 
-                ! Contribute to linearization
-                lhs = lhs + matmul(valtrans,grad1)
-                lhs = lhs + matmul(valtrans,grad2)
-                lhs = lhs + matmul(valtrans,grad3)
+                    ! Contribution from primary boundary integral: int(psi grad(sigma) dot n)dA
+                    lhs = lhs + matmul(valtrans,grad1)
+                    lhs = lhs + matmul(valtrans,grad2)
+                    lhs = lhs + matmul(valtrans,grad3)
+
+
+                    ! Contributions from lifting operators to boundary
+                    val1 = ZERO*val
+                    val2 = ZERO*val
+                    val3 = ZERO*val
+                    do iterm = 1,size(val,2)
+                        val1(:,iterm) = val(:,iterm)*n1*weights
+                        val2(:,iterm) = val(:,iterm)*n2*weights
+                        val3(:,iterm) = val(:,iterm)*n3*weights
+                    end do
+
+                    ! Contribute to linearization
+                    face_mass1 = matmul(valtrans,val1)
+                    face_mass2 = matmul(valtrans,val2)
+                    face_mass3 = matmul(valtrans,val3)
+
+                    temp1 = matmul(face_mass1,invmass)
+                    temp2 = matmul(face_mass2,invmass)
+                    temp3 = matmul(face_mass3,invmass)
+
+                    ! Contribution from lift boundary integral: int(psi r dot n)dA
+                    lhs = lhs + matmul(temp1,-face_mass1)
+                    lhs = lhs + matmul(temp2,-face_mass2)
+                    lhs = lhs + matmul(temp3,-face_mass3)
+                end if
+
+
+                ! If not boundary
+                if (iface_local /= iface) then
+
+                    ! Get val
+                    val      = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value')
+                    valtrans = transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value')) 
+                    ! Get weights(element)
+                    weights = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_element()
+                    jinv    = worker%mesh%domain(idomain_l)%elems(ielement_l)%jinv
+                    ! Get grad_trans(element)
+                    grad1_trans = transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%grad1)
+                    grad2_trans = transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%grad2)
+                    grad3_trans = transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%grad3)
+
+                    ! Contributions from lifting operators to boundary
+                    do iterm = 1,size(val,2)
+                        val(:,iterm) = val(:,iterm)*jinv*weights
+                    end do
+                    
+                    ! mat 1
+                    temp1 = matmul(grad1_trans,val)
+                    temp2 = matmul(grad2_trans,val)
+                    temp3 = matmul(grad3_trans,val)
+
+                    temp1 = matmul(temp1,invmass)
+                    temp2 = matmul(temp2,invmass)
+                    temp3 = matmul(temp3,invmass)
+
+
+                    ! Get valtrans
+                    val      = worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%basis_s%interpolator_face('Value',iface_local)
+                    valtrans = transpose(worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%basis_s%interpolator_face('Value',iface_local)) 
+                    ! Get normal 
+                    n1 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%norm(:,1)
+                    n2 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%norm(:,2)
+                    n3 = worker%mesh%domain(idomain_l)%faces(ielement_l,iface_local)%norm(:,3)
+                    ! Get weights
+                    weights = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface_local)
+
+                    ! Contributions from lifting operators to volume
+                    val1 = ZERO*val
+                    val2 = ZERO*val
+                    val3 = ZERO*val
+                    do iterm = 1,size(val,2)
+                        val1(:,iterm) = val(:,iterm)*n1*weights
+                        val2(:,iterm) = val(:,iterm)*n2*weights
+                        val3(:,iterm) = val(:,iterm)*n3*weights
+                    end do
+
+                    ! Contribute to linearization
+                    face_mass1 = matmul(valtrans,val1)
+                    face_mass2 = matmul(valtrans,val2)
+                    face_mass3 = matmul(valtrans,val3)
+
+                    ! Contribution from lift volume integral: int(grad(psi) dot r)dV
+                    lhs = lhs - matmul(temp1,-face_mass1)
+                    lhs = lhs - matmul(temp2,-face_mass2)
+                    lhs = lhs - matmul(temp3,-face_mass3)
+                end if
+
+
+
 
             end do
+
 
 
             ! Get grad
@@ -184,18 +286,17 @@ contains
 
             ! Premultiply by jacobian, weights. (jacobian is in the normal)
             do iterm = 1,size(grad1,2)
-                grad1(:,iterm) = grad1(:,iterm)*weights*jinv
-                grad2(:,iterm) = grad2(:,iterm)*weights*jinv
-                grad3(:,iterm) = grad3(:,iterm)*weights*jinv
+                grad1(:,iterm) = grad1(:,iterm)*jinv*weights
+                grad2(:,iterm) = grad2(:,iterm)*jinv*weights
+                grad3(:,iterm) = grad3(:,iterm)*jinv*weights
             end do
 
-            ! Contribute to linearization
-            lhs = lhs + matmul(grad1_trans,grad1)
-            lhs = lhs + matmul(grad2_trans,grad2)
-            lhs = lhs + matmul(grad3_trans,grad3)
+            ! Contribution from primary volume integral: int(grad(psi) dot grad(sigma))dV
+            lhs = lhs - matmul(grad1_trans,grad1)
+            lhs = lhs - matmul(grad2_trans,grad2)
+            lhs = lhs - matmul(grad3_trans,grad3)
 
             ! Invert jacobian
-            print*, lhs
             inv_lhs = inv(lhs)
                     
             ! Store and register initialized
@@ -889,11 +990,11 @@ contains
     !!
     !------------------------------------------------------------------------------
     subroutine converge_local_problem(self,worker,bc_comm,p_modes,p_avg)
-        class(outlet_neumann_pressure_localdg_new_t),    intent(inout)               :: self
-        type(chidg_worker_t),                       intent(inout)               :: worker
-        type(mpi_comm),                             intent(in)                  :: bc_comm
-        type(AD_D),                                 intent(inout), allocatable  :: p_modes(:)
-        type(AD_D),                                 intent(in)                  :: p_avg
+        class(outlet_neumann_pressure_localdg_new_t),   intent(inout)               :: self
+        type(chidg_worker_t),                           intent(inout)               :: worker
+        type(mpi_comm),                                 intent(in)                  :: bc_comm
+        type(AD_D),                                     intent(inout), allocatable  :: p_modes(:)
+        type(AD_D),                                     intent(in)                  :: p_avg
 
         type(AD_D), allocatable, dimension(:)   ::  &
             R_modes, zero_face, R_modes_i, R_modes_p, p_modes_perturb, dp, tmp
@@ -903,17 +1004,13 @@ contains
         real(rk)    :: tol, resid
         integer(ik) :: nterms_s, idomain_l, ielement_l, ierr
 
-
-
         ! Get element location
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
 
-
         ! Initialize emptry array with derivatives allocated
         zero_face = worker%get_field('Density','value','face interior')
         zero_face = ZERO
-
 
         ! Initialize p_modes storage with derivatives
         nterms_s = worker%mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
@@ -948,99 +1045,6 @@ contains
 
     end subroutine converge_local_problem
     !******************************************************************************
-
-
-
-
-
-
-
-
-!    !>  Explicit convergence
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   3/13/2018
-!    !!
-!    !------------------------------------------------------------------------------
-!    subroutine converge_local_problem(self,worker,bc_comm,p_modes)
-!        class(outlet_neumann_pressure_localdg_new_t),    intent(inout)               :: self
-!        type(chidg_worker_t),                       intent(inout)               :: worker
-!        type(mpi_comm),                             intent(in)                  :: bc_comm
-!        type(AD_D),                                 intent(inout), allocatable  :: p_modes(:)
-!
-!        type(AD_D), allocatable, dimension(:)   ::  &
-!            R_modes, zero_face
-!
-!        type(AD_D)  :: p_avg
-!
-!        real(rk)    :: tol, dtau, resid
-!        integer(ik) :: nterms_s, idomain_l, ielement_l, ierr
-!
-!
-!
-!        ! Get element location
-!        idomain_l  = worker%element_info%idomain_l 
-!        ielement_l = worker%element_info%ielement_l 
-!
-!
-!        ! Compute global DeltaP for the boundary face
-!        call self%compute_averages(worker,bc_comm,p_avg)
-!
-!
-!        ! Initialize emptry array with derivatives allocated
-!        zero_face = worker%get_field('Density','value','face interior')
-!        zero_face = ZERO
-!
-!
-!
-!
-!
-!        ! Initialize p_modes storage with derivatives
-!        nterms_s = worker%mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
-!        allocate(p_modes(nterms_s), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!        p_modes(:) = zero_face(1)
-!        if (size(p_modes) /= nterms_s) call chidg_signal(FATAL,'outlet_neumann_pressure_localdg_new: converge_p Error 1.')
-!
-!
-!        
-!        associate( invmass => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass )
-!
-!        resid = huge(1._rk)
-!        tol = 1.e-1_rk
-!        dtau = 1.e-4_rk
-!        do while (resid > tol)
-!
-!
-!            R_modes = self%compute_local_residual(worker,bc_comm,p_modes,p_avg)
-!
-!
-!            p_modes = p_modes + dtau*matmul(invmass,R_modes)
-!
-!            resid = norm2(R_modes(:)%x_ad_)
-!
-!
-!            if (resid > 1.e10_rk) call chidg_signal(FATAL,"outlet_neumann_pressure_localdg_new: element-local problem diverged.")
-!            print*, 'mode1: ', p_modes(1)%x_ad_
-!            print*, 'Residual: ', resid
-!
-!        end do
-!
-!        end associate
-!
-!
-!    end subroutine converge_local_problem
-!    !******************************************************************************
-
-
-
-
-
-
-
-
-
-
 
 
 

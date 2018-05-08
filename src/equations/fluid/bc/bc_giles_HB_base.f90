@@ -67,6 +67,7 @@ module bc_giles_HB_base
         procedure   :: characteristics_to_primitive
         procedure   :: primitive_to_eigenmodes
         procedure   :: eigenmodes_to_primitive
+        procedure   :: compute_eigenvalues
         procedure   :: compute_boundary_average
         procedure   :: analyze_bc_geometry
         procedure   :: initialize_fourier_discretization
@@ -602,241 +603,6 @@ contains
 
 
 
-!    !>  DANIEL'S FORMULATION
-!    !!
-!    !!
-!    !!
-!    !!
-!    !--------------------------------------------------------------------------------
-!    subroutine compute_absorbing_inlet(self,worker,bc_comm, &
-!                                       density_real,    &
-!                                       density_imag,    &
-!                                       vel1_real,       &
-!                                       vel1_imag,       &
-!                                       vel2_real,       &
-!                                       vel2_imag,       &
-!                                       vel3_real,       &
-!                                       vel3_imag,       &
-!                                       pressure_real,   &
-!                                       pressure_imag)
-!        class(giles_HB_base_t),  intent(inout)   :: self
-!        type(chidg_worker_t),    intent(inout)   :: worker
-!        type(mpi_comm),          intent(in)      :: bc_comm
-!        type(AD_D),              intent(inout)   :: density_real(:,:,:)
-!        type(AD_D),              intent(inout)   :: density_imag(:,:,:)
-!        type(AD_D),              intent(inout)   :: vel1_real(:,:,:)
-!        type(AD_D),              intent(inout)   :: vel1_imag(:,:,:)
-!        type(AD_D),              intent(inout)   :: vel2_real(:,:,:)
-!        type(AD_D),              intent(inout)   :: vel2_imag(:,:,:)
-!        type(AD_D),              intent(inout)   :: vel3_real(:,:,:)
-!        type(AD_D),              intent(inout)   :: vel3_imag(:,:,:)
-!        type(AD_D),              intent(inout)   :: pressure_real(:,:,:)
-!        type(AD_D),              intent(inout)   :: pressure_imag(:,:,:)
-!
-!
-!        ! Storage at quadrature nodes
-!        type(AD_D), allocatable, dimension(:)   ::          &
-!            density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar
-!
-!        type(AD_D), allocatable, dimension(:,:,:) ::        &
-!            a1_real, a2_real, a3_real, a4_real, a5_real,    &
-!            a1_imag, a2_imag, a3_imag, a4_imag, a5_imag
-!
-!        type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, T_avg, vmag
-!
-!        real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag, pitch
-!        integer(ik) :: ierr
-!
-!        pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
-!
-!        ! Get spatio-temporal average at radial stations
-!        density_bar  = density_real(:,1,1)
-!        vel1_bar     = vel1_real(:,1,1)
-!        vel2_bar     = vel2_real(:,1,1)
-!        vel3_bar     = vel3_real(:,1,1)
-!        pressure_bar = pressure_real(:,1,1)
-!
-!        ! Project to eigenmodes
-!        call self%primitive_to_eigenmodes(worker,bc_comm,               &
-!                                          density_real,  density_imag,  &
-!                                          vel1_real,     vel1_imag,     &
-!                                          vel2_real,     vel2_imag,     &
-!                                          vel3_real,     vel3_imag,     &
-!                                          pressure_real, pressure_imag, &
-!                                          a1_real,       a1_imag,       &
-!                                          a2_real,       a2_imag,       &
-!                                          a3_real,       a3_imag,       &
-!                                          a4_real,       a4_imag,       &
-!                                          a5_real,       a5_imag)
-!
-!        ! Zero out incoming amplitudes
-!        a1_real(:,:,:) = ZERO
-!        a1_imag(:,:,:) = ZERO
-!        a2_real(:,:,:) = ZERO
-!        a2_imag(:,:,:) = ZERO
-!        a3_real(:,:,:) = ZERO
-!        a3_imag(:,:,:) = ZERO
-!        a5_real(:,:,:) = ZERO
-!        a5_imag(:,:,:) = ZERO
-!
-!        ! User-specified amplitude
-!        !a1_real(:,2,2) = 0.001_rk
-!
-!        call self%eigenmodes_to_primitive(worker,bc_comm,               &
-!                                          a1_real,      a1_imag,        &
-!                                          a2_real,      a2_imag,        &
-!                                          a3_real,      a3_imag,        &
-!                                          a4_real,      a4_imag,        &
-!                                          a5_real,      a5_imag,        &
-!                                          density_real, density_imag,   &
-!                                          vel1_real,    vel1_imag,      &
-!                                          vel2_real,    vel2_imag,      &
-!                                          vel3_real,    vel3_imag,      &
-!                                          pressure_real,pressure_imag)
-!
-!
-!        ! Compute 1-4 characteristics from extrapolation: difference in radius-local mean and boundary average
-!        call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar, &
-!                                                          density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
-!        c_avg = sqrt(gam*pressure_avg/density_avg)
-!
-!
-!
-!        ! Get boundary condition Total Temperature, Total Pressure, and normal vector
-!        PT   = self%bcproperties%compute('Total Pressure',   worker%time(),worker%coords())
-!        TT   = self%bcproperties%compute('Total Temperature',worker%time(),worker%coords())
-!
-!        ! Get user-input normal vector and normalize
-!        n1 = self%bcproperties%compute('Normal-1', worker%time(), worker%coords())
-!        n2 = self%bcproperties%compute('Normal-2', worker%time(), worker%coords())
-!        n3 = self%bcproperties%compute('Normal-3', worker%time(), worker%coords())
-!
-!        !   Explicit allocation to handle GCC bug:
-!        !       GCC/GFortran Bugzilla Bug 52162 
-!        allocate(nmag(size(n1)), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!        nmag = sqrt(n1*n1 + n2*n2 + n3*n3)
-!        n1 = n1/nmag
-!        n2 = n2/nmag
-!        n3 = n3/nmag
-!
-!
-!        ! Override spatio-temporal mean according to specified total conditions
-!        T_avg = TT(1)*(pressure_avg/PT(1))**((gam-ONE)/gam)
-!        density_avg = pressure_avg/(T_avg*Rgas)
-!        vmag = sqrt(TWO*cp*(TT(1)-T_avg))
-!        vel1_avg = n1(1)*vmag
-!        vel2_avg = n2(1)*vmag
-!        vel3_avg = n3(1)*vmag
-!
-!        density_real(:,1,1)  = density_avg
-!        vel1_real(:,1,1)     = vel1_avg
-!        vel2_real(:,1,1)     = vel2_avg
-!        vel3_real(:,1,1)     = vel3_avg
-!        pressure_real(:,1,1) = pressure_avg
-!
-!
-!
-!    end subroutine compute_absorbing_inlet
-!    !********************************************************************************
-!
-!
-!
-!
-!
-!    !> DANIEL'S FORMULATION
-!    !!
-!    !!
-!    !!
-!    !!
-!    !--------------------------------------------------------------------------------
-!    subroutine compute_absorbing_outlet(self,worker,bc_comm, &
-!                                        density_real,    &
-!                                        density_imag,    &
-!                                        vel1_real,       &
-!                                        vel1_imag,       &
-!                                        vel2_real,       &
-!                                        vel2_imag,       &
-!                                        vel3_real,       &
-!                                        vel3_imag,       &
-!                                        pressure_real,   &
-!                                        pressure_imag)
-!        class(giles_HB_base_t),     intent(inout)   :: self
-!        type(chidg_worker_t),       intent(inout)   :: worker
-!        type(mpi_comm),             intent(in)      :: bc_comm
-!        type(AD_D),                 intent(inout)   :: density_real(:,:,:)
-!        type(AD_D),                 intent(inout)   :: density_imag(:,:,:)
-!        type(AD_D),                 intent(inout)   :: vel1_real(:,:,:)
-!        type(AD_D),                 intent(inout)   :: vel1_imag(:,:,:)
-!        type(AD_D),                 intent(inout)   :: vel2_real(:,:,:)
-!        type(AD_D),                 intent(inout)   :: vel2_imag(:,:,:)
-!        type(AD_D),                 intent(inout)   :: vel3_real(:,:,:)
-!        type(AD_D),                 intent(inout)   :: vel3_imag(:,:,:)
-!        type(AD_D),                 intent(inout)   :: pressure_real(:,:,:)
-!        type(AD_D),                 intent(inout)   :: pressure_imag(:,:,:)
-!
-!        type(AD_D), allocatable, dimension(:,:,:) ::        &
-!            a1_real, a2_real, a3_real, a4_real, a5_real,    &
-!            a1_imag, a2_imag, a3_imag, a4_imag, a5_imag
-!
-!        real(rk),       allocatable, dimension(:)   :: p_user, pitch
-!
-!        ! Retrieve target average pressure
-!        p_user = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
-!        pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
-!
-!        ! Project to eigenmodes
-!        call self%primitive_to_eigenmodes(worker,bc_comm,               &
-!                                          density_real,  density_imag,  &
-!                                          vel1_real,     vel1_imag,     &
-!                                          vel2_real,     vel2_imag,     &
-!                                          vel3_real,     vel3_imag,     &
-!                                          pressure_real, pressure_imag, &
-!                                          a1_real,       a1_imag,       &
-!                                          a2_real,       a2_imag,       &
-!                                          a3_real,       a3_imag,       &
-!                                          a4_real,       a4_imag,       &
-!                                          a5_real,       a5_imag)
-!
-!        ! Zero out incoming amplitudes
-!        a5_real(:,:,:) = ZERO
-!        a5_imag(:,:,:) = ZERO
-!
-!        ! Convert back to primitive variables
-!        call self%eigenmodes_to_primitive(worker,bc_comm,               &
-!                                          a1_real,      a1_imag,        &
-!                                          a2_real,      a2_imag,        &
-!                                          a3_real,      a3_imag,        &
-!                                          a4_real,      a4_imag,        &
-!                                          a5_real,      a5_imag,        &
-!                                          density_real, density_imag,   &
-!                                          vel1_real,    vel1_imag,      &
-!                                          vel2_real,    vel2_imag,      &
-!                                          vel3_real,    vel3_imag,      &
-!                                          pressure_real,pressure_imag)
-!
-!        pressure_real(:,1,1) = p_user(1)
-!
-!    end subroutine compute_absorbing_outlet
-!    !********************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -962,8 +728,10 @@ contains
         type(AD_D), allocatable,    intent(inout)   :: a5_imag(:,:,:)
 
 
-        type(AD_D)  :: k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, vmag, vg4, vg5, ktmp_real, ktmp_imag,   &
-                       density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, pyra, c_real, c_imag, denom
+        type(AD_D)  :: k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, &
+                       density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, c_real, c_imag, denom
+
+        !type(AD_D)  :: vg4, vg5, ktmp_real, ktmp_imag, pyra, 
 
         real(rk),       allocatable, dimension(:)   :: pitch, unorm3
         real(rk)                                    :: theta_offset, omega, kz, lm
@@ -1021,61 +789,63 @@ contains
                         lm = -real(ntheta-itheta+1,rk) ! negative frequencies
                     end if
 
-                    kz = TWO*PI*lm/pitch(1)
-                    pyra = (omega - kz*vel2_bar)**TWO - kz*kz*(c_bar**TWO - vel3_bar**TWO)
-
-                    ! Compute k1,k2,k3
-                    k1 = (omega - kz*vel2_bar)/vel3_bar
-                    k2 = (omega - kz*vel2_bar)/vel3_bar
-                    k3 = (omega - kz*vel2_bar)/vel3_bar
-
-                    if (pyra >= ZERO) then
-                        k4_real = (-vel3_bar*(omega - kz*vel2_bar) + c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
-                        k4_imag = ZERO*k4_real
-                        k5_real = (-vel3_bar*(omega - kz*vel2_bar) - c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
-                        k5_imag = ZERO*k4_real
-                        vg4 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar - (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
-                        vg5 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar + (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
-                    else
-                        k4_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
-                        k4_imag =  c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
-                        k5_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
-                        k5_imag = -c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
-                        if (k4_imag > ZERO) then
-                            vg4 = ZERO*k4_real
-                            vg5 = ZERO*k5_real
-                            vg4 = ONE
-                            vg5 = -ONE
-                        else if (k5_imag > ZERO) then
-                            vg4 = ZERO*k4_real
-                            vg5 = ZERO*k5_real
-                            vg4 = -ONE
-                            vg5 = ONE
-                        end if
-                    end if
-
-                    unorm3 = worker%unit_normal(3)
-                    if (unorm3(1) < ZERO) then
-                        if (vg5 < ZERO) then
-                            ktmp_real = k5_real
-                            ktmp_imag = k5_imag
-
-                            k5_real = k4_real
-                            k5_imag = k4_imag
-                            k4_real = ktmp_real
-                            k4_imag = ktmp_imag
-                        end if
-                    else if (unorm3(1) > ZERO) then
-                        if (vg5 > ZERO) then
-                            ktmp_real = k5_real
-                            ktmp_imag = k5_imag
-
-                            k5_real = k4_real
-                            k5_imag = k4_imag
-                            k4_real = ktmp_real
-                            k4_imag = ktmp_imag
-                        end if
-                    end if
+                    call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
+                                                  kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
+!                    kz = TWO*PI*lm/pitch(1)
+!                    pyra = (omega - kz*vel2_bar)**TWO - kz*kz*(c_bar**TWO - vel3_bar**TWO)
+!
+!                    ! Compute k1,k2,k3
+!                    k1 = (omega - kz*vel2_bar)/vel3_bar
+!                    k2 = (omega - kz*vel2_bar)/vel3_bar
+!                    k3 = (omega - kz*vel2_bar)/vel3_bar
+!
+!                    if (pyra >= ZERO) then
+!                        k4_real = (-vel3_bar*(omega - kz*vel2_bar) + c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
+!                        k4_imag = ZERO*k4_real
+!                        k5_real = (-vel3_bar*(omega - kz*vel2_bar) - c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
+!                        k5_imag = ZERO*k4_real
+!                        vg4 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar - (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
+!                        vg5 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar + (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
+!                    else
+!                        k4_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
+!                        k4_imag =  c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
+!                        k5_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
+!                        k5_imag = -c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
+!                        if (k4_imag > ZERO) then
+!                            vg4 = ZERO*k4_real
+!                            vg5 = ZERO*k5_real
+!                            vg4 = ONE
+!                            vg5 = -ONE
+!                        else if (k5_imag > ZERO) then
+!                            vg4 = ZERO*k4_real
+!                            vg5 = ZERO*k5_real
+!                            vg4 = -ONE
+!                            vg5 = ONE
+!                        end if
+!                    end if
+!
+!                    unorm3 = worker%unit_normal(3)
+!                    if (unorm3(1) < ZERO) then
+!                        if (vg5 < ZERO) then
+!                            ktmp_real = k5_real
+!                            ktmp_imag = k5_imag
+!
+!                            k5_real = k4_real
+!                            k5_imag = k4_imag
+!                            k4_real = ktmp_real
+!                            k4_imag = ktmp_imag
+!                        end if
+!                    else if (unorm3(1) > ZERO) then
+!                        if (vg5 > ZERO) then
+!                            ktmp_real = k5_real
+!                            ktmp_imag = k5_imag
+!
+!                            k5_real = k4_real
+!                            k5_imag = k4_imag
+!                            k4_real = ktmp_real
+!                            k4_imag = ktmp_imag
+!                        end if
+!                    end if
 
 
 
@@ -1217,8 +987,10 @@ contains
         type(AD_D),                 intent(inout)   :: pressure_imag(:,:,:)
 
 
-        type(AD_D)  :: k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, ktmp_real, ktmp_imag, vg4, vg5,  &
-                       density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, pyra, denom, c_real, c_imag
+        type(AD_D)  :: k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, &
+                       density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar,  denom, c_real, c_imag
+        
+        !type(AD_D)  :: ktmp_real, ktmp_imag, vg4, vg5, pyra
 
         real(rk),       allocatable, dimension(:)   :: pitch, unorm3
         real(rk)                                    :: theta_offset, omega, kz, lm
@@ -1264,61 +1036,63 @@ contains
                         lm = -real(ntheta-itheta+1,rk) ! negative frequencies
                     end if
 
-                    kz = TWO*PI*lm/pitch(1)
-                    pyra = (omega - kz*vel2_bar)**TWO - kz*kz*(c_bar**TWO - vel3_bar**TWO)
-
-                    ! Compute k1,k2,k3
-                    k1 = (omega - kz*vel2_bar)/vel3_bar
-                    k2 = (omega - kz*vel2_bar)/vel3_bar
-                    k3 = (omega - kz*vel2_bar)/vel3_bar
-
-                    if (pyra >= ZERO) then
-                        k4_real = (-vel3_bar*(omega - kz*vel2_bar) + c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
-                        k4_imag = ZERO*k4_real
-                        k5_real = (-vel3_bar*(omega - kz*vel2_bar) - c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
-                        k5_imag = ZERO*k4_real
-                        vg4 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar - (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
-                        vg5 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar + (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
-                    else
-                        k4_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
-                        k4_imag =  c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
-                        k5_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
-                        k5_imag = -c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
-                        if (k4_imag > ZERO) then
-                            vg4 = ZERO*k4_real
-                            vg5 = ZERO*k5_real
-                            vg4 = ONE
-                            vg5 = -ONE
-                        else if (k5_imag > ZERO) then
-                            vg4 = ZERO*k4_real
-                            vg5 = ZERO*k5_real
-                            vg4 = -ONE
-                            vg5 = ONE
-                        end if
-                    end if
-
-                    unorm3 = worker%unit_normal(3)
-                    if (unorm3(1) < ZERO) then
-                        if (vg5 < ZERO) then
-                            ktmp_real = k5_real
-                            ktmp_imag = k5_imag
-
-                            k5_real = k4_real
-                            k5_imag = k4_imag
-                            k4_real = ktmp_real
-                            k4_imag = ktmp_imag
-                        end if
-                    else if (unorm3(1) > ZERO) then
-                        if (vg5 > ZERO) then
-                            ktmp_real = k5_real
-                            ktmp_imag = k5_imag
-
-                            k5_real = k4_real
-                            k5_imag = k4_imag
-                            k4_real = ktmp_real
-                            k4_imag = ktmp_imag
-                        end if
-                    end if
+                    call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
+                                                  kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
+!                    kz = TWO*PI*lm/pitch(1)
+!                    pyra = (omega - kz*vel2_bar)**TWO - kz*kz*(c_bar**TWO - vel3_bar**TWO)
+!
+!                    ! Compute k1,k2,k3
+!                    k1 = (omega - kz*vel2_bar)/vel3_bar
+!                    k2 = (omega - kz*vel2_bar)/vel3_bar
+!                    k3 = (omega - kz*vel2_bar)/vel3_bar
+!
+!                    if (pyra >= ZERO) then
+!                        k4_real = (-vel3_bar*(omega - kz*vel2_bar) + c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
+!                        k4_imag = ZERO*k4_real
+!                        k5_real = (-vel3_bar*(omega - kz*vel2_bar) - c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
+!                        k5_imag = ZERO*k4_real
+!                        vg4 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar - (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
+!                        vg5 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar + (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
+!                    else
+!                        k4_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
+!                        k4_imag =  c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
+!                        k5_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
+!                        k5_imag = -c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
+!                        if (k4_imag > ZERO) then
+!                            vg4 = ZERO*k4_real
+!                            vg5 = ZERO*k5_real
+!                            vg4 = ONE
+!                            vg5 = -ONE
+!                        else if (k5_imag > ZERO) then
+!                            vg4 = ZERO*k4_real
+!                            vg5 = ZERO*k5_real
+!                            vg4 = -ONE
+!                            vg5 = ONE
+!                        end if
+!                    end if
+!
+!                    unorm3 = worker%unit_normal(3)
+!                    if (unorm3(1) < ZERO) then
+!                        if (vg5 < ZERO) then
+!                            ktmp_real = k5_real
+!                            ktmp_imag = k5_imag
+!
+!                            k5_real = k4_real
+!                            k5_imag = k4_imag
+!                            k4_real = ktmp_real
+!                            k4_imag = ktmp_imag
+!                        end if
+!                    else if (unorm3(1) > ZERO) then
+!                        if (vg5 > ZERO) then
+!                            ktmp_real = k5_real
+!                            ktmp_imag = k5_imag
+!
+!                            k5_real = k4_real
+!                            k5_imag = k4_imag
+!                            k4_real = ktmp_real
+!                            k4_imag = ktmp_imag
+!                        end if
+!                    end if
 
                     ! First zero fields
                     density_real(iradius,itheta,itime)  = ZERO
@@ -1439,6 +1213,95 @@ contains
     
 
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   5/8/2018
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine compute_eigenvalues(self, worker, lm, omega, vel1_bar, vel2_bar, vel3_bar, c_bar, &
+                                   kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
+        class(giles_HB_base_t), intent(inout)   :: self
+        type(chidg_worker_t),   intent(inout)   :: worker
+        real(rk),               intent(in)      :: lm
+        real(rk),               intent(in)      :: omega
+        type(AD_D),             intent(in)      :: vel1_bar
+        type(AD_D),             intent(in)      :: vel2_bar
+        type(AD_D),             intent(in)      :: vel3_bar
+        type(AD_D),             intent(in)      :: c_bar
+        real(rk),               intent(inout)   :: kz
+        type(AD_D),             intent(inout)   :: k1
+        type(AD_D),             intent(inout)   :: k2
+        type(AD_D),             intent(inout)   :: k3
+        type(AD_D),             intent(inout)   :: k4_real
+        type(AD_D),             intent(inout)   :: k4_imag
+        type(AD_D),             intent(inout)   :: k5_real
+        type(AD_D),             intent(inout)   :: k5_imag
+
+        real(rk),   allocatable, dimension(:)   :: pitch, unorm3
+        type(AD_D)  :: pyra, vg4, vg5, ktmp_real, ktmp_imag
+
+        pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
+
+        kz = TWO*PI*lm/pitch(1)
+        pyra = (omega - kz*vel2_bar)**TWO - kz*kz*(c_bar**TWO - vel3_bar**TWO)
+
+        ! Compute k1,k2,k3
+        k1 = (omega - kz*vel2_bar)/vel3_bar
+        k2 = (omega - kz*vel2_bar)/vel3_bar
+        k3 = (omega - kz*vel2_bar)/vel3_bar
+
+        if (pyra >= ZERO) then
+            k4_real = (-vel3_bar*(omega - kz*vel2_bar) + c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
+            k4_imag = ZERO*k4_real
+            k5_real = (-vel3_bar*(omega - kz*vel2_bar) - c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
+            k5_imag = ZERO*k4_real
+            vg4 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar - (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
+            vg5 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar + (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
+        else
+            k4_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
+            k4_imag =  c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
+            k5_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
+            k5_imag = -c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
+            if (k4_imag > ZERO) then
+                vg4 = ZERO*k4_real
+                vg5 = ZERO*k5_real
+                vg4 = ONE
+                vg5 = -ONE
+            else if (k5_imag > ZERO) then
+                vg4 = ZERO*k4_real
+                vg5 = ZERO*k5_real
+                vg4 = -ONE
+                vg5 = ONE
+            end if
+        end if
+
+        unorm3 = worker%unit_normal(3)
+        if (unorm3(1) < ZERO) then
+            if (vg5 < ZERO) then
+                ktmp_real = k5_real
+                ktmp_imag = k5_imag
+
+                k5_real = k4_real
+                k5_imag = k4_imag
+                k4_real = ktmp_real
+                k4_imag = ktmp_imag
+            end if
+        else if (unorm3(1) > ZERO) then
+            if (vg5 > ZERO) then
+                ktmp_real = k5_real
+                ktmp_imag = k5_imag
+
+                k5_real = k4_real
+                k5_imag = k4_imag
+                k4_real = ktmp_real
+                k4_imag = ktmp_imag
+            end if
+        end if
+
+    end subroutine compute_eigenvalues
+    !********************************************************************************
 
 
 

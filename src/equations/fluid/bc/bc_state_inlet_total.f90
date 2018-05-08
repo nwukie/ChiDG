@@ -191,7 +191,8 @@ contains
 !        ! Compute normal vector
 !        K0      = 150._rk
 !        u_axial = 125._rk
-!        alpha = atan2(K0/r,u_axial)
+!        !alpha = atan2(K0/r,u_axial)
+!        alpha = atan2(K0/u_axial,r)
 !        
 !        n1 = ZERO
 !        n2 = sin(alpha)

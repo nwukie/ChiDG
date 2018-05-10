@@ -78,8 +78,16 @@ contains
         n = size(inreal)
         do imode = 1,n
             do itheta = 1,n
-                freq  = change*TWO*PI*real(imode-1,rk)
+                !freq  = change*TWO*PI*real(imode-1,rk)
+
+                if (imode <= ((size(inreal)-1)/2 + 1)) then
+                    freq = change*TWO*PI*real(imode-1,rk)  ! positive frequencies
+                else
+                    freq = -change*TWO*PI*real(size(inreal)-imode+1,rk) ! negative frequencies
+                end if
                 theta = real(itheta-1,rk) / real(n,rk)
+
+
                 outreal(imode) = outreal(imode)  +  inreal(itheta)*cos(freq*theta)  +  inimag(itheta)*sin(freq*theta)
                 outimag(imode) = outimag(imode)  -  inreal(itheta)*sin(freq*theta)  +  inimag(itheta)*cos(freq*theta)
             end do !itheta

@@ -6,7 +6,7 @@ module bc_giles_HB_base
     use mod_fluid,              only: Rgas, cp, gam
     use mod_interpolation,      only: interpolate_linear, interpolate_linear_ad
     use mod_gridspace,          only: linspace
-    use mod_dft,                only: dft, idft_eval
+    use mod_dft,                only: dft
     use mod_chimera,            only: find_gq_donor, find_gq_donor_parallel
 
     use type_point,             only: point_t
@@ -223,7 +223,7 @@ contains
         vel1 = mom1/density
         vel2 = mom2/density
         vel3 = mom3/density
-        pressure = (gam-ONE)*(energy - HALF*( mom1*mom1 + mom2*mom2 + mom3*mom3 )/density )
+        pressure = (gam-ONE)*(energy - HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/density)
 
     end subroutine get_q_interior
     !************************************************************************************
@@ -386,11 +386,11 @@ contains
             do itime = 1,ntime
 
                 ! DFT in space
-                call dft(density_Ft_real( iradius,:,itime), density_Ft_imag( iradius,:,itime), density_real_tmp,  density_imag_tmp )
-                call dft(vel1_Ft_real(    iradius,:,itime), vel1_Ft_imag(    iradius,:,itime), vel1_real_tmp,     vel1_imag_tmp    )
-                call dft(vel2_Ft_real(    iradius,:,itime), vel2_Ft_imag(    iradius,:,itime), vel2_real_tmp,     vel2_imag_tmp    )
-                call dft(vel3_Ft_real(    iradius,:,itime), vel3_Ft_imag(    iradius,:,itime), vel3_real_tmp,     vel3_imag_tmp    )
-                call dft(pressure_Ft_real(iradius,:,itime), pressure_Ft_imag(iradius,:,itime), pressure_real_tmp, pressure_imag_tmp)
+                call dft(density_Ft_real( iradius,:,itime), density_Ft_imag( iradius,:,itime), density_real_tmp,  density_imag_tmp,  negate=.true.)
+                call dft(vel1_Ft_real(    iradius,:,itime), vel1_Ft_imag(    iradius,:,itime), vel1_real_tmp,     vel1_imag_tmp,     negate=.true.)
+                call dft(vel2_Ft_real(    iradius,:,itime), vel2_Ft_imag(    iradius,:,itime), vel2_real_tmp,     vel2_imag_tmp,     negate=.true.)
+                call dft(vel3_Ft_real(    iradius,:,itime), vel3_Ft_imag(    iradius,:,itime), vel3_real_tmp,     vel3_imag_tmp,     negate=.true.)
+                call dft(pressure_Ft_real(iradius,:,itime), pressure_Ft_imag(iradius,:,itime), pressure_real_tmp, pressure_imag_tmp, negate=.true.)
 
                 ! Adjust Fourier coefficients so their phase is relative to self%theta_ref
                 ! instead of the minimum theta of the transform.
@@ -778,9 +778,9 @@ contains
                     if (itime == 1) then
                         omega = ZERO
                     else if (itime == 2) then
-                        omega = -worker%time_manager%freqs(1)
-                    else if (itime == 3) then
                         omega = worker%time_manager%freqs(1)
+                    else if (itime == 3) then
+                        omega = -worker%time_manager%freqs(1)
                     end if
 
                     if (itheta <= ((ntheta-1)/2 + 1)) then
@@ -789,63 +789,9 @@ contains
                         lm = -real(ntheta-itheta+1,rk) ! negative frequencies
                     end if
 
+                    ! Compute wavenumbers
                     call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
                                                   kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
-!                    kz = TWO*PI*lm/pitch(1)
-!                    pyra = (omega - kz*vel2_bar)**TWO - kz*kz*(c_bar**TWO - vel3_bar**TWO)
-!
-!                    ! Compute k1,k2,k3
-!                    k1 = (omega - kz*vel2_bar)/vel3_bar
-!                    k2 = (omega - kz*vel2_bar)/vel3_bar
-!                    k3 = (omega - kz*vel2_bar)/vel3_bar
-!
-!                    if (pyra >= ZERO) then
-!                        k4_real = (-vel3_bar*(omega - kz*vel2_bar) + c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
-!                        k4_imag = ZERO*k4_real
-!                        k5_real = (-vel3_bar*(omega - kz*vel2_bar) - c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
-!                        k5_imag = ZERO*k4_real
-!                        vg4 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar - (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
-!                        vg5 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar + (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
-!                    else
-!                        k4_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
-!                        k4_imag =  c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
-!                        k5_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
-!                        k5_imag = -c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
-!                        if (k4_imag > ZERO) then
-!                            vg4 = ZERO*k4_real
-!                            vg5 = ZERO*k5_real
-!                            vg4 = ONE
-!                            vg5 = -ONE
-!                        else if (k5_imag > ZERO) then
-!                            vg4 = ZERO*k4_real
-!                            vg5 = ZERO*k5_real
-!                            vg4 = -ONE
-!                            vg5 = ONE
-!                        end if
-!                    end if
-!
-!                    unorm3 = worker%unit_normal(3)
-!                    if (unorm3(1) < ZERO) then
-!                        if (vg5 < ZERO) then
-!                            ktmp_real = k5_real
-!                            ktmp_imag = k5_imag
-!
-!                            k5_real = k4_real
-!                            k5_imag = k4_imag
-!                            k4_real = ktmp_real
-!                            k4_imag = ktmp_imag
-!                        end if
-!                    else if (unorm3(1) > ZERO) then
-!                        if (vg5 > ZERO) then
-!                            ktmp_real = k5_real
-!                            ktmp_imag = k5_imag
-!
-!                            k5_real = k4_real
-!                            k5_imag = k4_imag
-!                            k4_real = ktmp_real
-!                            k4_imag = ktmp_imag
-!                        end if
-!                    end if
 
 
 
@@ -1025,9 +971,9 @@ contains
                     if (itime == 1) then
                         omega = ZERO
                     else if (itime == 2) then
-                        omega = -worker%time_manager%freqs(1)
-                    else if (itime == 3) then
                         omega = worker%time_manager%freqs(1)
+                    else if (itime == 3) then
+                        omega = -worker%time_manager%freqs(1)
                     end if
 
                     if (itheta <= ((ntheta-1)/2 + 1)) then
@@ -1036,63 +982,9 @@ contains
                         lm = -real(ntheta-itheta+1,rk) ! negative frequencies
                     end if
 
+                    ! Compute wavenumbers
                     call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
                                                   kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
-!                    kz = TWO*PI*lm/pitch(1)
-!                    pyra = (omega - kz*vel2_bar)**TWO - kz*kz*(c_bar**TWO - vel3_bar**TWO)
-!
-!                    ! Compute k1,k2,k3
-!                    k1 = (omega - kz*vel2_bar)/vel3_bar
-!                    k2 = (omega - kz*vel2_bar)/vel3_bar
-!                    k3 = (omega - kz*vel2_bar)/vel3_bar
-!
-!                    if (pyra >= ZERO) then
-!                        k4_real = (-vel3_bar*(omega - kz*vel2_bar) + c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
-!                        k4_imag = ZERO*k4_real
-!                        k5_real = (-vel3_bar*(omega - kz*vel2_bar) - c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
-!                        k5_imag = ZERO*k4_real
-!                        vg4 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar - (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
-!                        vg5 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar + (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
-!                    else
-!                        k4_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
-!                        k4_imag =  c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
-!                        k5_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
-!                        k5_imag = -c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
-!                        if (k4_imag > ZERO) then
-!                            vg4 = ZERO*k4_real
-!                            vg5 = ZERO*k5_real
-!                            vg4 = ONE
-!                            vg5 = -ONE
-!                        else if (k5_imag > ZERO) then
-!                            vg4 = ZERO*k4_real
-!                            vg5 = ZERO*k5_real
-!                            vg4 = -ONE
-!                            vg5 = ONE
-!                        end if
-!                    end if
-!
-!                    unorm3 = worker%unit_normal(3)
-!                    if (unorm3(1) < ZERO) then
-!                        if (vg5 < ZERO) then
-!                            ktmp_real = k5_real
-!                            ktmp_imag = k5_imag
-!
-!                            k5_real = k4_real
-!                            k5_imag = k4_imag
-!                            k4_real = ktmp_real
-!                            k4_imag = ktmp_imag
-!                        end if
-!                    else if (unorm3(1) > ZERO) then
-!                        if (vg5 > ZERO) then
-!                            ktmp_real = k5_real
-!                            ktmp_imag = k5_imag
-!
-!                            k5_real = k4_real
-!                            k5_imag = k4_imag
-!                            k4_real = ktmp_real
-!                            k4_imag = ktmp_imag
-!                        end if
-!                    end if
 
                     ! First zero fields
                     density_real(iradius,itheta,itime)  = ZERO
@@ -1267,13 +1159,13 @@ contains
             if (k4_imag > ZERO) then
                 vg4 = ZERO*k4_real
                 vg5 = ZERO*k5_real
-                vg4 = ONE
-                vg5 = -ONE
-            else if (k5_imag > ZERO) then
-                vg4 = ZERO*k4_real
-                vg5 = ZERO*k5_real
                 vg4 = -ONE
                 vg5 = ONE
+            else 
+                vg4 = ZERO*k4_real
+                vg5 = ZERO*k5_real
+                vg4 = ONE
+                vg5 = -ONE
             end if
         end if
 

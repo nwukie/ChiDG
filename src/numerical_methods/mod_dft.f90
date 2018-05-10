@@ -49,13 +49,14 @@ contains
     !!  @param[inout]   outimag     imag part of DFT
     !!
     !-----------------------------------------------------------------
-    subroutine dft(inreal,inimag,outreal,outimag)
-        type(AD_D), intent(in)                 :: inreal(:)
-        type(AD_D), intent(in)                 :: inimag(:)
-        type(AD_D), intent(inout), allocatable :: outreal(:)
-        type(AD_D), intent(inout), allocatable :: outimag(:)
+    subroutine dft(inreal,inimag,outreal,outimag,negate)
+        type(AD_D), intent(in)                  :: inreal(:)
+        type(AD_D), intent(in)                  :: inimag(:)
+        type(AD_D), intent(inout), allocatable  :: outreal(:)
+        type(AD_D), intent(inout), allocatable  :: outimag(:)
+        logical,    intent(in), optional        :: negate
 
-        real(rk)    :: theta, freq
+        real(rk)    :: theta, freq, change
         integer     :: n, imode, itheta
 
         ! Check odd-count input
@@ -68,11 +69,16 @@ contains
         outreal = ZERO
         outimag = ZERO
 
+        change = ONE
+        if (present(negate)) then
+            if (negate) change = -ONE
+        end if
+
         ! Loop over output modes
         n = size(inreal)
         do imode = 1,n
             do itheta = 1,n
-                freq  = TWO*PI*real(imode-1,rk)
+                freq  = change*TWO*PI*real(imode-1,rk)
                 theta = real(itheta-1,rk) / real(n,rk)
                 outreal(imode) = outreal(imode)  +  inreal(itheta)*cos(freq*theta)  +  inimag(itheta)*sin(freq*theta)
                 outimag(imode) = outimag(imode)  -  inreal(itheta)*sin(freq*theta)  +  inimag(itheta)*cos(freq*theta)
@@ -231,14 +237,15 @@ contains
     !!  value for theta would be T=0.7/2.5
     !!
     !---------------------------------------------------------------------------
-    subroutine idft_eval(inreal,inimag,theta,outreal,outimag) 
-        type(AD_D),     intent(in)      :: inreal(:)
-        type(AD_D),     intent(in)      :: inimag(:)
-        real(rk),       intent(in)      :: theta(:)
-        type(AD_D),     intent(inout)   :: outreal(:)
-        type(AD_D),     intent(inout)   :: outimag(:)
+    subroutine idft_eval(inreal,inimag,theta,outreal,outimag,negate)
+        type(AD_D),     intent(in)           :: inreal(:)
+        type(AD_D),     intent(in)           :: inimag(:)
+        real(rk),       intent(in)           :: theta(:)
+        type(AD_D),     intent(inout)        :: outreal(:)
+        type(AD_D),     intent(inout)        :: outimag(:)
+        logical,        intent(in), optional :: negate
 
-        real(rk)    :: freq
+        real(rk)    :: freq, change
         integer     :: itheta, imode, ierr
 
         ! Allocate and initialize derivatives
@@ -247,12 +254,17 @@ contains
         outreal = ZERO
         outimag = ZERO
 
+        change = ONE
+        if (present(negate)) then
+            if (negate) change = -ONE
+        end if
+
         do itheta = 1,size(theta)
             do imode = 1,size(inreal)
                 if (imode <= ((size(inreal)-1)/2 + 1)) then
-                    freq = TWO*PI*real(imode-1,rk)  ! positive frequencies
+                    freq = change*TWO*PI*real(imode-1,rk)  ! positive frequencies
                 else
-                    freq = -TWO*PI*real(size(inreal)-imode+1,rk) ! negative frequencies
+                    freq = -change*TWO*PI*real(size(inreal)-imode+1,rk) ! negative frequencies
                 end if
                 outreal(itheta) = outreal(itheta) + inreal(imode)*cos(freq*theta(itheta)) - inimag(imode)*sin(freq*theta(itheta))
                 outimag(itheta) = outimag(itheta) + inreal(imode)*sin(freq*theta(itheta)) + inimag(imode)*cos(freq*theta(itheta))

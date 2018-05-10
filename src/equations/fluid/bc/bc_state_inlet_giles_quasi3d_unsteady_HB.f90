@@ -6,7 +6,7 @@ module bc_state_inlet_giles_quasi3d_unsteady_HB
     use mod_fluid,              only: gam
     use mod_interpolation,      only: interpolate_linear, interpolate_linear_ad
     use mod_gridspace,          only: linspace
-    use mod_dft,                only: dft, idft_eval
+    use mod_dft,                only: idft_eval
     use mod_chimera,            only: find_gq_donor, find_gq_donor_parallel
 
     use type_point,             only: point_t
@@ -310,31 +310,31 @@ contains
                                density_Fts_imag_gq(igq,:,itime),    &
                                [theta_offset]/pitch(1),             &
                                density_t_real(igq:igq,itime),       &
-                               density_t_imag(igq:igq,itime))
+                               density_t_imag(igq:igq,itime),negate=.true.)
 
                 call idft_eval(vel1_Fts_real_gq(igq,:,itime),   &
                                vel1_Fts_imag_gq(igq,:,itime),   &
                                [theta_offset]/pitch(1),         &
                                vel1_t_real(igq:igq,itime),      &
-                               vel1_t_imag(igq:igq,itime))
+                               vel1_t_imag(igq:igq,itime),negate=.true.)
 
                 call idft_eval(vel2_Fts_real_gq(igq,:,itime),   &
                                vel2_Fts_imag_gq(igq,:,itime),   &
                                [theta_offset]/pitch(1),         &
                                vel2_t_real(igq:igq,itime),      &
-                               vel2_t_imag(igq:igq,itime))
+                               vel2_t_imag(igq:igq,itime),negate=.true.)
 
                 call idft_eval(vel3_Fts_real_gq(igq,:,itime),   &
                                vel3_Fts_imag_gq(igq,:,itime),   &
                                [theta_offset]/pitch(1),         &
                                vel3_t_real(igq:igq,itime),      &
-                               vel3_t_imag(igq:igq,itime))
+                               vel3_t_imag(igq:igq,itime),negate=.true.)
 
                 call idft_eval(pressure_Fts_real_gq(igq,:,itime),   &
                                pressure_Fts_imag_gq(igq,:,itime),   &
                                [theta_offset]/pitch(1),             &
                                pressure_t_real(igq:igq,itime),      &
-                               pressure_t_imag(igq:igq,itime))
+                               pressure_t_imag(igq:igq,itime),negate=.true.)
             end do !itime
         end do !igq
 
@@ -400,7 +400,7 @@ contains
         mom1_bc    = density_bc*vel1_bc
         mom2_bc    = density_bc*vel2_bc
         mom3_bc    = density_bc*vel3_bc
-        energy_bc  = pressure_bc/(gam - ONE)  + (density_bc*HALF)*(vel1_bc*vel1_bc + vel2_bc*vel2_bc + vel3_bc*vel3_bc)
+        energy_bc  = pressure_bc/(gam - ONE)  + HALF*(mom1_bc*mom1_bc + mom2_bc*mom2_bc + mom3_bc*mom3_bc)/density_bc
 
 
         !

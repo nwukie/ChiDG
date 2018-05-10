@@ -731,8 +731,6 @@ contains
         type(AD_D)  :: k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, &
                        density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, c_real, c_imag, denom
 
-        !type(AD_D)  :: vg4, vg5, ktmp_real, ktmp_imag, pyra, 
-
         real(rk),       allocatable, dimension(:)   :: pitch, unorm3
         real(rk)                                    :: theta_offset, omega, kz, lm
         integer(ik)                                 :: iradius, igq, ierr, itheta, ntheta, itime, ntime, nr
@@ -936,8 +934,6 @@ contains
         type(AD_D)  :: k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, &
                        density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar,  denom, c_real, c_imag
         
-        !type(AD_D)  :: ktmp_real, ktmp_imag, vg4, vg5, pyra
-
         real(rk),       allocatable, dimension(:)   :: pitch, unorm3
         real(rk)                                    :: theta_offset, omega, kz, lm
         integer(ik)                                 :: iradius, igq, ierr, itheta, ntheta, itime, ntime, nr

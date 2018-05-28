@@ -773,19 +773,9 @@ contains
                     
                     else
 
-                    if (itime == 1) then
-                        omega = ZERO
-                    else if (itime == 2) then
-                        omega = worker%time_manager%freqs(1)
-                    else if (itime == 3) then
-                        omega = -worker%time_manager%freqs(1)
-                    end if
-
-                    if (itheta <= ((ntheta-1)/2 + 1)) then
-                        lm = real(itheta-1,rk)  ! positive frequencies
-                    else
-                        lm = -real(ntheta-itheta+1,rk) ! negative frequencies
-                    end if
+                    ! Get temporal/spatial frequencies
+                    omega = get_omega(worker,itime)
+                    lm    = get_lm(itheta,ntheta)
 
                     ! Compute wavenumbers
                     call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
@@ -964,19 +954,9 @@ contains
                     
                     else
 
-                    if (itime == 1) then
-                        omega = ZERO
-                    else if (itime == 2) then
-                        omega = worker%time_manager%freqs(1)
-                    else if (itime == 3) then
-                        omega = -worker%time_manager%freqs(1)
-                    end if
-
-                    if (itheta <= ((ntheta-1)/2 + 1)) then
-                        lm = real(itheta-1,rk)  ! positive frequencies
-                    else
-                        lm = -real(ntheta-itheta+1,rk) ! negative frequencies
-                    end if
+                    ! Get temporal/spatial frequencies
+                    omega = get_omega(worker,itime)
+                    lm    = get_lm(itheta,ntheta)
 
                     ! Compute wavenumbers
                     call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
@@ -1128,7 +1108,11 @@ contains
         type(AD_D),             intent(inout)   :: k5_imag
 
         real(rk),   allocatable, dimension(:)   :: pitch, unorm3
-        type(AD_D)  :: pyra, vg4, vg5, ktmp_real, ktmp_imag
+        type(AD_D)  :: pyra, ktmp_real, ktmp_imag
+
+        complex(rk) :: omega_c, pyra_c, k4_c, k5_c
+        real(rk)    :: vel2_bar_r, vel3_bar_r, c_bar_r
+
 
         pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
 
@@ -1145,48 +1129,49 @@ contains
             k4_imag = ZERO*k4_real
             k5_real = (-vel3_bar*(omega - kz*vel2_bar) - c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
             k5_imag = ZERO*k4_real
-            vg4 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar - (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
-            vg5 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar + (c_bar*(omega-kz*vel2_bar))/sqrt(pyra))
+
+            ! test direction of propagation by perturbing omega
+            vel3_bar_r = vel3_bar%x_ad_
+            vel2_bar_r = vel2_bar%x_ad_
+            c_bar_r = c_bar%x_ad_
+            omega_c = cmplx(omega,-0.00001_rk)
+            pyra_c = (omega_c - kz*vel2_bar_r)**TWO - kz*kz*(c_bar_r**TWO - vel3_bar_r**TWO)
+            k4_c = (-vel3_bar_r*(omega_c - kz*vel2_bar_r) + c_bar_r*sqrt(pyra_c))/(c_bar_r**TWO - vel3_bar_r**TWO)
+            k5_c = (-vel3_bar_r*(omega_c - kz*vel2_bar_r) - c_bar_r*sqrt(pyra_c))/(c_bar_r**TWO - vel3_bar_r**TWO)
+
+            if (imagpart(k4_c) < ZERO) then
+                k4_imag = -0.0000001_rk
+            else
+                k4_imag = 0.0000001_rk
+            end if
+
+            if (imagpart(k5_c) < ZERO) then
+                k5_imag = -0.0000001_rk
+            else
+                k5_imag = 0.0000001_rk
+            end if
+
+
         else
             k4_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
             k4_imag =  c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
             k5_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
             k5_imag = -c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
-            if (k4_imag > ZERO) then
-                vg4 = ZERO*k4_real
-                vg5 = ZERO*k5_real
-                vg4 = -ONE
-                vg5 = ONE
-            else 
-                vg4 = ZERO*k4_real
-                vg5 = ZERO*k5_real
-                vg4 = ONE
-                vg5 = -ONE
-            end if
         end if
 
         unorm3 = worker%unit_normal(3)
-        if (unorm3(1) < ZERO) then
-            if (vg5 < ZERO) then
-                ktmp_real = k5_real
-                ktmp_imag = k5_imag
+        if (k4_imag*unorm3(1) < ZERO) then
+            ! Do nothing
+        else if (k5_imag*unorm3(1) < ZERO) then
+            ktmp_real = k5_real
+            ktmp_imag = k5_imag
 
-                k5_real = k4_real
-                k5_imag = k4_imag
-                k4_real = ktmp_real
-                k4_imag = ktmp_imag
-            end if
-        else if (unorm3(1) > ZERO) then
-            if (vg5 > ZERO) then
-                ktmp_real = k5_real
-                ktmp_imag = k5_imag
-
-                k5_real = k4_real
-                k5_imag = k4_imag
-                k4_real = ktmp_real
-                k4_imag = ktmp_imag
-            end if
+            k5_real = k4_real
+            k5_imag = k4_imag
+            k4_real = ktmp_real
+            k4_imag = ktmp_imag
         end if
+
 
     end subroutine compute_eigenvalues
     !********************************************************************************
@@ -1765,7 +1750,51 @@ contains
 
 
 
+    !>  Return the correct temporal frequency for the time index.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   5/28/2018
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_omega(worker,itime) result(omega)
+        type(chidg_worker_t),   intent(in)  :: worker
+        integer(ik),            intent(in)  :: itime
 
+        real(rk) :: omega
+
+        if (itime == 1) then
+            omega = ZERO
+        else if (itime == 2) then
+            omega = worker%time_manager%freqs(1)
+        else if (itime == 3) then
+            omega = -worker%time_manager%freqs(1)
+        end if
+
+    end function get_omega
+    !**************************************************************************************
+
+
+    !>  Return the correct spatial frequency for the space index.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   5/28/2018
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_lm(itheta,ntheta) result(lm)
+        integer(ik),    intent(in)  :: itheta
+        integer(ik),    intent(in)  :: ntheta
+
+        real(rk) :: lm
+
+        if (itheta <= ((ntheta-1)/2 + 1)) then
+            lm = real(itheta-1,rk)  ! positive frequencies
+        else
+            lm = -real(ntheta-itheta+1,rk) ! negative frequencies
+        end if
+
+    end function get_lm
+    !**************************************************************************************
+    
 
 
 

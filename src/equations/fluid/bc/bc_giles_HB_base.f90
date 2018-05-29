@@ -447,30 +447,55 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------
-    subroutine compute_absorbing_inlet(self,worker,bc_comm, &
-                                       density_real,    &
-                                       density_imag,    &
-                                       vel1_real,       &
-                                       vel1_imag,       &
-                                       vel2_real,       &
-                                       vel2_imag,       &
-                                       vel3_real,       &
-                                       vel3_imag,       &
-                                       pressure_real,   &
-                                       pressure_imag)
+    subroutine compute_absorbing_inlet(self,worker,bc_comm,                     &
+                                       density_real_m,    density_imag_m,       &
+                                       vel1_real_m,       vel1_imag_m,          &
+                                       vel2_real_m,       vel2_imag_m,          &
+                                       vel3_real_m,       vel3_imag_m,          &
+                                       pressure_real_m,   pressure_imag_m,      &
+                                       density_real_p,    density_imag_p,       &
+                                       vel1_real_p,       vel1_imag_p,          &
+                                       vel2_real_p,       vel2_imag_p,          &
+                                       vel3_real_p,       vel3_imag_p,          &
+                                       pressure_real_p,   pressure_imag_p,      &
+                                       density_real_abs,  density_imag_abs,     &
+                                       vel1_real_abs,     vel1_imag_abs,        &
+                                       vel2_real_abs,     vel2_imag_abs,        &
+                                       vel3_real_abs,     vel3_imag_abs,        &
+                                       pressure_real_abs, pressure_imag_abs)
         class(giles_HB_base_t),  intent(inout)   :: self
         type(chidg_worker_t),    intent(inout)   :: worker
         type(mpi_comm),          intent(in)      :: bc_comm
-        type(AD_D),              intent(inout)   :: density_real(:,:,:)
-        type(AD_D),              intent(inout)   :: density_imag(:,:,:)
-        type(AD_D),              intent(inout)   :: vel1_real(:,:,:)
-        type(AD_D),              intent(inout)   :: vel1_imag(:,:,:)
-        type(AD_D),              intent(inout)   :: vel2_real(:,:,:)
-        type(AD_D),              intent(inout)   :: vel2_imag(:,:,:)
-        type(AD_D),              intent(inout)   :: vel3_real(:,:,:)
-        type(AD_D),              intent(inout)   :: vel3_imag(:,:,:)
-        type(AD_D),              intent(inout)   :: pressure_real(:,:,:)
-        type(AD_D),              intent(inout)   :: pressure_imag(:,:,:)
+        type(AD_D),              intent(inout)   :: density_real_m(:,:,:)
+        type(AD_D),              intent(inout)   :: density_imag_m(:,:,:)
+        type(AD_D),              intent(inout)   :: vel1_real_m(:,:,:)
+        type(AD_D),              intent(inout)   :: vel1_imag_m(:,:,:)
+        type(AD_D),              intent(inout)   :: vel2_real_m(:,:,:)
+        type(AD_D),              intent(inout)   :: vel2_imag_m(:,:,:)
+        type(AD_D),              intent(inout)   :: vel3_real_m(:,:,:)
+        type(AD_D),              intent(inout)   :: vel3_imag_m(:,:,:)
+        type(AD_D),              intent(inout)   :: pressure_real_m(:,:,:)
+        type(AD_D),              intent(inout)   :: pressure_imag_m(:,:,:)
+        type(AD_D),              intent(inout)   :: density_real_p(:,:,:)
+        type(AD_D),              intent(inout)   :: density_imag_p(:,:,:)
+        type(AD_D),              intent(inout)   :: vel1_real_p(:,:,:)
+        type(AD_D),              intent(inout)   :: vel1_imag_p(:,:,:)
+        type(AD_D),              intent(inout)   :: vel2_real_p(:,:,:)
+        type(AD_D),              intent(inout)   :: vel2_imag_p(:,:,:)
+        type(AD_D),              intent(inout)   :: vel3_real_p(:,:,:)
+        type(AD_D),              intent(inout)   :: vel3_imag_p(:,:,:)
+        type(AD_D),              intent(inout)   :: pressure_real_p(:,:,:)
+        type(AD_D),              intent(inout)   :: pressure_imag_p(:,:,:)
+        type(AD_D),              intent(inout), allocatable   :: density_real_abs(:,:,:)
+        type(AD_D),              intent(inout), allocatable   :: density_imag_abs(:,:,:)
+        type(AD_D),              intent(inout), allocatable   :: vel1_real_abs(:,:,:)
+        type(AD_D),              intent(inout), allocatable   :: vel1_imag_abs(:,:,:)
+        type(AD_D),              intent(inout), allocatable   :: vel2_real_abs(:,:,:)
+        type(AD_D),              intent(inout), allocatable   :: vel2_imag_abs(:,:,:)
+        type(AD_D),              intent(inout), allocatable   :: vel3_real_abs(:,:,:)
+        type(AD_D),              intent(inout), allocatable   :: vel3_imag_abs(:,:,:)
+        type(AD_D),              intent(inout), allocatable   :: pressure_real_abs(:,:,:)
+        type(AD_D),              intent(inout), allocatable   :: pressure_imag_abs(:,:,:)
 
 
         ! Storage at quadrature nodes
@@ -479,7 +504,11 @@ contains
 
         type(AD_D), allocatable, dimension(:,:,:) ::        &
             a1_real, a2_real, a3_real, a4_real, a5_real,    &
-            a1_imag, a2_imag, a3_imag, a4_imag, a5_imag
+            a1_imag, a2_imag, a3_imag, a4_imag, a5_imag,    &
+            a1_real_m, a2_real_m, a3_real_m, a4_real_m, a5_real_m,  &
+            a1_imag_m, a2_imag_m, a3_imag_m, a4_imag_m, a5_imag_m,  &
+            a1_real_p, a2_real_p, a3_real_p, a4_real_p, a5_real_p,  &
+            a1_imag_p, a2_imag_p, a3_imag_p, a4_imag_p, a5_imag_p
 !            a1_real_test, a2_real_test, a3_real_test, a4_real_test, a5_real_test,    &
 !            a1_imag_test, a2_imag_test, a3_imag_test, a4_imag_test, a5_imag_test,    &
 !            density_real_test, vel1_real_test, vel2_real_test, vel3_real_test, pressure_real_test,    &
@@ -493,11 +522,11 @@ contains
         pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
 
         ! Get spatio-temporal average at radial stations
-        density_bar  = density_real(:,1,1)
-        vel1_bar     = vel1_real(:,1,1)
-        vel2_bar     = vel2_real(:,1,1)
-        vel3_bar     = vel3_real(:,1,1)
-        pressure_bar = pressure_real(:,1,1)
+        density_bar  = density_real_p(:,1,1)
+        vel1_bar     = vel1_real_p(:,1,1)
+        vel2_bar     = vel2_real_p(:,1,1)
+        vel3_bar     = vel3_real_p(:,1,1)
+        pressure_bar = pressure_real_p(:,1,1)
 
 
 !        allocate(a1_real_test(1,3,3), a1_imag_test(1,3,3), &
@@ -684,49 +713,90 @@ contains
 
 
         ! Project to eigenmodes
-        call self%primitive_to_eigenmodes(worker,bc_comm,               &
-                                          density_real,  density_imag,  &
-                                          vel1_real,     vel1_imag,     &
-                                          vel2_real,     vel2_imag,     &
-                                          vel3_real,     vel3_imag,     &
-                                          pressure_real, pressure_imag, &
-                                          a1_real,       a1_imag,       &
-                                          a2_real,       a2_imag,       &
-                                          a3_real,       a3_imag,       &
-                                          a4_real,       a4_imag,       &
-                                          a5_real,       a5_imag)
+        call self%primitive_to_eigenmodes(worker,bc_comm,                   &
+                                          density_real_m,  density_imag_m,  &
+                                          vel1_real_m,     vel1_imag_m,     &
+                                          vel2_real_m,     vel2_imag_m,     &
+                                          vel3_real_m,     vel3_imag_m,     &
+                                          pressure_real_m, pressure_imag_m, &
+                                          a1_real_m,       a1_imag_m,       &
+                                          a2_real_m,       a2_imag_m,       &
+                                          a3_real_m,       a3_imag_m,       &
+                                          a4_real_m,       a4_imag_m,       &
+                                          a5_real_m,       a5_imag_m)
+
+        call self%primitive_to_eigenmodes(worker,bc_comm,                   &
+                                          density_real_p,  density_imag_p,  &
+                                          vel1_real_p,     vel1_imag_p,     &
+                                          vel2_real_p,     vel2_imag_p,     &
+                                          vel3_real_p,     vel3_imag_p,     &
+                                          pressure_real_p, pressure_imag_p, &
+                                          a1_real_p,       a1_imag_p,       &
+                                          a2_real_p,       a2_imag_p,       &
+                                          a3_real_p,       a3_imag_p,       &
+                                          a4_real_p,       a4_imag_p,       &
+                                          a5_real_p,       a5_imag_p)
 
 
 
 
-        ! Zero out incoming amplitudes
-        a1_real(:,:,:) = ZERO
-        a1_imag(:,:,:) = ZERO
-        a2_real(:,:,:) = ZERO
-        a2_imag(:,:,:) = ZERO
-        a3_real(:,:,:) = ZERO
-        a3_imag(:,:,:) = ZERO
-        a5_real(:,:,:) = ZERO
-        a5_imag(:,:,:) = ZERO
+!        ! Zero out incoming amplitudes
+!        a1_real(:,:,:) = ZERO
+!        a1_imag(:,:,:) = ZERO
+!        a2_real(:,:,:) = ZERO
+!        a2_imag(:,:,:) = ZERO
+!        a3_real(:,:,:) = ZERO
+!        a3_imag(:,:,:) = ZERO
+!        a5_real(:,:,:) = ZERO
+!        a5_imag(:,:,:) = ZERO
+!
+!        ! User-specified amplitude
+!        a1_real(:,2,2)  = 0.001_rk  !entropy
+!        a1_real(:,27,3) = 0.001_rk  !entropy
+!
+!        !a3_real(:,2,2)  = 0.001_rk  !vorticity
+!        !a5_real(:,27,2) = 0.001_rk  !downstream pressure
 
-        ! User-specified amplitude
-        a1_real(:,2,2)  = 0.001_rk  !entropy
-        a1_real(:,27,3) = 0.001_rk  !entropy
 
-        !a3_real(:,2,2)  = 0.001_rk  !vorticity
-        !a5_real(:,27,2) = 0.001_rk  !downstream pressure
+        ! Incoming perturbations from exterior state
+        a1_real = a1_real_p
+        a1_imag = a1_imag_p
+        a2_real = a2_real_p
+        a2_imag = a2_imag_p
+        a3_real = a3_real_p
+        a3_imag = a3_imag_p
+        a5_real = a5_real_p
+        a5_imag = a5_imag_p
 
-        call self%eigenmodes_to_primitive(worker,bc_comm,               &
-                                          a1_real,      a1_imag,        &
-                                          a2_real,      a2_imag,        &
-                                          a3_real,      a3_imag,        &
-                                          a4_real,      a4_imag,        &
-                                          a5_real,      a5_imag,        &
-                                          density_real, density_imag,   &
-                                          vel1_real,    vel1_imag,      &
-                                          vel2_real,    vel2_imag,      &
-                                          vel3_real,    vel3_imag,      &
-                                          pressure_real,pressure_imag)
+        ! Outgoing perturbations from interior state
+        a4_real = a4_real_m
+        a4_imag = a4_imag_m
+
+
+        ! To initialize average
+        density_real_abs  = density_real_p
+        density_imag_abs  = density_imag_p
+        vel1_real_abs     = vel1_real_p
+        vel1_imag_abs     = vel1_imag_p
+        vel2_real_abs     = vel2_real_p
+        vel2_imag_abs     = vel2_imag_p
+        vel3_real_abs     = vel3_real_p
+        vel3_imag_abs     = vel3_imag_p
+        pressure_real_abs = pressure_real_p
+        pressure_imag_abs = pressure_imag_p
+
+
+        call self%eigenmodes_to_primitive(worker,bc_comm,                       &
+                                          a1_real,           a1_imag,           &
+                                          a2_real,           a2_imag,           &
+                                          a3_real,           a3_imag,           &
+                                          a4_real,           a4_imag,           &
+                                          a5_real,           a5_imag,           &
+                                          density_real_abs,  density_imag_abs,  &
+                                          vel1_real_abs,     vel1_imag_abs,     &
+                                          vel2_real_abs,     vel2_imag_abs,     &
+                                          vel3_real_abs,     vel3_imag_abs,     &
+                                          pressure_real_abs, pressure_imag_abs)
 
 
         ! Compute 1-4 characteristics from extrapolation: difference in radius-local mean and boundary average
@@ -764,11 +834,11 @@ contains
         vel2_avg = n2(1)*vmag
         vel3_avg = n3(1)*vmag
 
-        density_real(:,1,1)  = density_avg
-        vel1_real(:,1,1)     = vel1_avg
-        vel2_real(:,1,1)     = vel2_avg
-        vel3_real(:,1,1)     = vel3_avg
-        pressure_real(:,1,1) = pressure_avg
+        density_real_abs(:,1,1)  = density_avg
+        vel1_real_abs(:,1,1)     = vel1_avg
+        vel2_real_abs(:,1,1)     = vel2_avg
+        vel3_real_abs(:,1,1)     = vel3_avg
+        pressure_real_abs(:,1,1) = pressure_avg
 
 
 

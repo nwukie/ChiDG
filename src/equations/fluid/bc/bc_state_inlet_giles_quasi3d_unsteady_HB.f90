@@ -47,6 +47,8 @@ module bc_state_inlet_giles_quasi3d_unsteady_HB
         procedure   :: init                 ! Set-up bc state with options/name etc.
         procedure   :: compute_bc_state     ! boundary condition function implementation
 
+        procedure   :: get_q_exterior
+
     end type inlet_giles_quasi3d_unsteady_HB_t
     !*********************************************************************************
 
@@ -126,13 +128,20 @@ contains
 
 
         type(AD_D), allocatable, dimension(:,:,:) ::                                            &
-            density_Ft_real, vel1_Ft_real, vel2_Ft_real, vel3_Ft_real, pressure_Ft_real,        &
-            density_Ft_imag, vel1_Ft_imag, vel2_Ft_imag, vel3_Ft_imag, pressure_Ft_imag,        &
-            density_Fts_real, vel1_Fts_real, vel2_Fts_real, vel3_Fts_real, pressure_Fts_real,   &
-            density_Fts_imag, vel1_Fts_imag, vel2_Fts_imag, vel3_Fts_imag, pressure_Fts_imag,   &
+            density_Ft_real_m, vel1_Ft_real_m, vel2_Ft_real_m, vel3_Ft_real_m, pressure_Ft_real_m,        &
+            density_Ft_imag_m, vel1_Ft_imag_m, vel2_Ft_imag_m, vel3_Ft_imag_m, pressure_Ft_imag_m,        &
+            density_Fts_real_m, vel1_Fts_real_m, vel2_Fts_real_m, vel3_Fts_real_m, pressure_Fts_real_m,   &
+            density_Fts_imag_m, vel1_Fts_imag_m, vel2_Fts_imag_m, vel3_Fts_imag_m, pressure_Fts_imag_m,   &
+            density_Ft_real_p, vel1_Ft_real_p, vel2_Ft_real_p, vel3_Ft_real_p, pressure_Ft_real_p,        &
+            density_Ft_imag_p, vel1_Ft_imag_p, vel2_Ft_imag_p, vel3_Ft_imag_p, pressure_Ft_imag_p,        &
+            density_Fts_real_p, vel1_Fts_real_p, vel2_Fts_real_p, vel3_Fts_real_p, pressure_Fts_real_p,   &
+            density_Fts_imag_p, vel1_Fts_imag_p, vel2_Fts_imag_p, vel3_Fts_imag_p, pressure_Fts_imag_p,   &
+            density_Fts_real_abs, vel1_Fts_real_abs, vel2_Fts_real_abs, vel3_Fts_real_abs, pressure_Fts_real_abs,   &
+            density_Fts_imag_abs, vel1_Fts_imag_abs, vel2_Fts_imag_abs, vel3_Fts_imag_abs, pressure_Fts_imag_abs,   &
             density_Fts_real_gq, vel1_Fts_real_gq, vel2_Fts_real_gq, vel3_Fts_real_gq, pressure_Fts_real_gq,   &
             density_Fts_imag_gq, vel1_Fts_imag_gq, vel2_Fts_imag_gq, vel3_Fts_imag_gq, pressure_Fts_imag_gq,    &
-            density_grid, vel1_grid, vel2_grid, vel3_grid, pressure_grid
+            density_grid_m, vel1_grid_m, vel2_grid_m, vel3_grid_m, pressure_grid_m, &
+            density_grid_p, vel1_grid_p, vel2_grid_p, vel3_grid_p, pressure_grid_p
 
 
         real(rk),       allocatable, dimension(:)   :: r, pitch
@@ -191,95 +200,138 @@ contains
 
         ! Get primitive variables at (radius,theta,time) grid.
         call self%get_q_interior(worker,bc_comm,  &
-                                 density_grid,    &
-                                 vel1_grid,       &
-                                 vel2_grid,       &
-                                 vel3_grid,       &
-                                 pressure_grid)
+                                 density_grid_m,    &
+                                 vel1_grid_m,       &
+                                 vel2_grid_m,       &
+                                 vel3_grid_m,       &
+                                 pressure_grid_m)
+
+        ! Get primitive variables at (radius,theta,time) grid.
+        call self%get_q_exterior(worker,bc_comm,  &
+                                 density_grid_p,    &
+                                 vel1_grid_p,       &
+                                 vel2_grid_p,       &
+                                 vel3_grid_p,       &
+                                 pressure_grid_p)
 
         ! Compute Fourier decomposition of temporal data at points
         ! on the spatial transform grid.
         !   : U_Ft(nradius,ntheta,ntime)
-        call self%compute_temporal_dft(worker,bc_comm,                      &
-                                       density_grid,                        &
-                                       vel1_grid,                           &
-                                       vel2_grid,                           &
-                                       vel3_grid,                           &
-                                       pressure_grid,                       &
-                                       density_Ft_real,  density_Ft_imag,   &
-                                       vel1_Ft_real,     vel1_Ft_imag,      &
-                                       vel2_Ft_real,     vel2_Ft_imag,      &
-                                       vel3_Ft_real,     vel3_Ft_imag,      &
-                                       pressure_Ft_real, pressure_Ft_imag)
+        call self%compute_temporal_dft(worker,bc_comm,                          &
+                                       density_grid_m,                          &
+                                       vel1_grid_m,                             &
+                                       vel2_grid_m,                             &
+                                       vel3_grid_m,                             &
+                                       pressure_grid_m,                         &
+                                       density_Ft_real_m,  density_Ft_imag_m,   &
+                                       vel1_Ft_real_m,     vel1_Ft_imag_m,      &
+                                       vel2_Ft_real_m,     vel2_Ft_imag_m,      &
+                                       vel3_Ft_real_m,     vel3_Ft_imag_m,      &
+                                       pressure_Ft_real_m, pressure_Ft_imag_m)
+
+        ! Compute Fourier decomposition of temporal data at points
+        ! on the spatial transform grid.
+        !   : U_Ft(nradius,ntheta,ntime)
+        call self%compute_temporal_dft(worker,bc_comm,                          &
+                                       density_grid_p,                          &
+                                       vel1_grid_p,                             &
+                                       vel2_grid_p,                             &
+                                       vel3_grid_p,                             &
+                                       pressure_grid_p,                         &
+                                       density_Ft_real_p,  density_Ft_imag_p,   &
+                                       vel1_Ft_real_p,     vel1_Ft_imag_p,      &
+                                       vel2_Ft_real_p,     vel2_Ft_imag_p,      &
+                                       vel3_Ft_real_p,     vel3_Ft_imag_p,      &
+                                       pressure_Ft_real_p, pressure_Ft_imag_p)
+
 
         ! Compute Fourier decomposition in theta at set of radial 
         ! stations for each temporal mode:
         !   : U_Fts(nradius,ntheta,ntime)
-        call self%compute_spatial_dft(worker,bc_comm,                         &
-                                      density_Ft_real,   density_Ft_imag,     &
-                                      vel1_Ft_real,      vel1_Ft_imag,        &
-                                      vel2_Ft_real,      vel2_Ft_imag,        &
-                                      vel3_Ft_real,      vel3_Ft_imag,        &
-                                      pressure_Ft_real,  pressure_Ft_imag,    &
-                                      density_Fts_real,  density_Fts_imag,    &
-                                      vel1_Fts_real,     vel1_Fts_imag,       &
-                                      vel2_Fts_real,     vel2_Fts_imag,       &
-                                      vel3_Fts_real,     vel3_Fts_imag,       &
-                                      pressure_Fts_real, pressure_Fts_imag)
+        call self%compute_spatial_dft(worker,bc_comm,                               &
+                                      density_Ft_real_m,   density_Ft_imag_m,       &
+                                      vel1_Ft_real_m,      vel1_Ft_imag_m,          &
+                                      vel2_Ft_real_m,      vel2_Ft_imag_m,          &
+                                      vel3_Ft_real_m,      vel3_Ft_imag_m,          &
+                                      pressure_Ft_real_m,  pressure_Ft_imag_m,      &
+                                      density_Fts_real_m,  density_Fts_imag_m,      &
+                                      vel1_Fts_real_m,     vel1_Fts_imag_m,         &
+                                      vel2_Fts_real_m,     vel2_Fts_imag_m,         &
+                                      vel3_Fts_real_m,     vel3_Fts_imag_m,         &
+                                      pressure_Fts_real_m, pressure_Fts_imag_m)
 
+        ! Compute Fourier decomposition in theta at set of radial 
+        ! stations for each temporal mode:
+        !   : U_Fts(nradius,ntheta,ntime)
+        call self%compute_spatial_dft(worker,bc_comm,                               &
+                                      density_Ft_real_p,   density_Ft_imag_p,       &
+                                      vel1_Ft_real_p,      vel1_Ft_imag_p,          &
+                                      vel2_Ft_real_p,      vel2_Ft_imag_p,          &
+                                      vel3_Ft_real_p,      vel3_Ft_imag_p,          &
+                                      pressure_Ft_real_p,  pressure_Ft_imag_p,      &
+                                      density_Fts_real_p,  density_Fts_imag_p,      &
+                                      vel1_Fts_real_p,     vel1_Fts_imag_p,         &
+                                      vel2_Fts_real_p,     vel2_Fts_imag_p,         &
+                                      vel3_Fts_real_p,     vel3_Fts_imag_p,         &
+                                      pressure_Fts_real_p, pressure_Fts_imag_p)
 
-        call self%compute_absorbing_inlet(worker,bc_comm,       &
-                                          density_Fts_real,     &
-                                          density_Fts_imag,     &
-                                          vel1_Fts_real,        &
-                                          vel1_Fts_imag,        &
-                                          vel2_Fts_real,        &
-                                          vel2_Fts_imag,        &
-                                          vel3_Fts_real,        &
-                                          vel3_Fts_imag,        &
-                                          pressure_Fts_real,    &
-                                          pressure_Fts_imag)
+        call self%compute_absorbing_inlet(worker,bc_comm,                               &
+                                          density_Fts_real_m,    density_Fts_imag_m,    &
+                                          vel1_Fts_real_m,       vel1_Fts_imag_m,       &
+                                          vel2_Fts_real_m,       vel2_Fts_imag_m,       &
+                                          vel3_Fts_real_m,       vel3_Fts_imag_m,       &
+                                          pressure_Fts_real_m,   pressure_Fts_imag_m,   &
+                                          density_Fts_real_p,    density_Fts_imag_p,    &
+                                          vel1_Fts_real_p,       vel1_Fts_imag_p,       &
+                                          vel2_Fts_real_p,       vel2_Fts_imag_p,       &
+                                          vel3_Fts_real_p,       vel3_Fts_imag_p,       &
+                                          pressure_Fts_real_p,   pressure_Fts_imag_p,   &
+                                          density_Fts_real_abs,  density_Fts_imag_abs,  &
+                                          vel1_Fts_real_abs,     vel1_Fts_imag_abs,     &
+                                          vel2_Fts_real_abs,     vel2_Fts_imag_abs,     &
+                                          vel3_Fts_real_abs,     vel3_Fts_imag_abs,     &
+                                          pressure_Fts_real_abs, pressure_Fts_imag_abs)
 
 
 
         ! Interpolate spatio-temporal Fourier coefficients to quadrature nodes
         ! linear interpolation between radial coordinates.
         coords = worker%coords()
-        allocate(density_Fts_real_gq( size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 density_Fts_imag_gq( size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 vel1_Fts_real_gq(    size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 vel1_Fts_imag_gq(    size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 vel2_Fts_real_gq(    size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 vel2_Fts_imag_gq(    size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 vel3_Fts_real_gq(    size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 vel3_Fts_imag_gq(    size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 pressure_Fts_real_gq(size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 pressure_Fts_imag_gq(size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
+        allocate(density_Fts_real_gq( size(coords),size(density_Fts_real_abs,2),size(density_Fts_real_abs,3)), &
+                 density_Fts_imag_gq( size(coords),size(density_Fts_real_abs,2),size(density_Fts_real_abs,3)), &
+                 vel1_Fts_real_gq(    size(coords),size(density_Fts_real_abs,2),size(density_Fts_real_abs,3)), &
+                 vel1_Fts_imag_gq(    size(coords),size(density_Fts_real_abs,2),size(density_Fts_real_abs,3)), &
+                 vel2_Fts_real_gq(    size(coords),size(density_Fts_real_abs,2),size(density_Fts_real_abs,3)), &
+                 vel2_Fts_imag_gq(    size(coords),size(density_Fts_real_abs,2),size(density_Fts_real_abs,3)), &
+                 vel3_Fts_real_gq(    size(coords),size(density_Fts_real_abs,2),size(density_Fts_real_abs,3)), &
+                 vel3_Fts_imag_gq(    size(coords),size(density_Fts_real_abs,2),size(density_Fts_real_abs,3)), &
+                 pressure_Fts_real_gq(size(coords),size(density_Fts_real_abs,2),size(density_Fts_real_abs,3)), &
+                 pressure_Fts_imag_gq(size(coords),size(density_Fts_real_abs,2),size(density_Fts_real_abs,3)), &
                  stat=ierr)
         if (ierr /= 0) call AllocationError
-        density_Fts_real_gq  = ZERO*density_Fts_real(1,1,1)
-        density_Fts_imag_gq  = ZERO*density_Fts_real(1,1,1)
-        vel1_Fts_real_gq     = ZERO*density_Fts_real(1,1,1)
-        vel1_Fts_imag_gq     = ZERO*density_Fts_real(1,1,1)
-        vel2_Fts_real_gq     = ZERO*density_Fts_real(1,1,1)
-        vel2_Fts_imag_gq     = ZERO*density_Fts_real(1,1,1)
-        vel3_Fts_real_gq     = ZERO*density_Fts_real(1,1,1)
-        vel3_Fts_imag_gq     = ZERO*density_Fts_real(1,1,1)
-        pressure_Fts_real_gq = ZERO*density_Fts_real(1,1,1)
-        pressure_Fts_imag_gq = ZERO*density_Fts_real(1,1,1)
+        density_Fts_real_gq  = ZERO*density_Fts_real_abs(1,1,1)
+        density_Fts_imag_gq  = ZERO*density_Fts_real_abs(1,1,1)
+        vel1_Fts_real_gq     = ZERO*density_Fts_real_abs(1,1,1)
+        vel1_Fts_imag_gq     = ZERO*density_Fts_real_abs(1,1,1)
+        vel2_Fts_real_gq     = ZERO*density_Fts_real_abs(1,1,1)
+        vel2_Fts_imag_gq     = ZERO*density_Fts_real_abs(1,1,1)
+        vel3_Fts_real_gq     = ZERO*density_Fts_real_abs(1,1,1)
+        vel3_Fts_imag_gq     = ZERO*density_Fts_real_abs(1,1,1)
+        pressure_Fts_real_gq = ZERO*density_Fts_real_abs(1,1,1)
+        pressure_Fts_imag_gq = ZERO*density_Fts_real_abs(1,1,1)
         do igq = 1,size(coords)
-            do itheta = 1,size(density_Fts_real,2)
-                do itime = 1,size(density_Fts_real,3)
-                    density_Fts_real_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_Fts_real(:,itheta,itime), coords(igq)%c1_)
-                    density_Fts_imag_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_Fts_imag(:,itheta,itime), coords(igq)%c1_)
-                    vel1_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_Fts_real(:,itheta,itime),    coords(igq)%c1_)
-                    vel1_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_Fts_imag(:,itheta,itime),    coords(igq)%c1_)
-                    vel2_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_Fts_real(:,itheta,itime),    coords(igq)%c1_)
-                    vel2_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_Fts_imag(:,itheta,itime),    coords(igq)%c1_)
-                    vel3_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_Fts_real(:,itheta,itime),    coords(igq)%c1_)
-                    vel3_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_Fts_imag(:,itheta,itime),    coords(igq)%c1_)
-                    pressure_Fts_real_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_Fts_real(:,itheta,itime),coords(igq)%c1_)
-                    pressure_Fts_imag_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_Fts_imag(:,itheta,itime),coords(igq)%c1_)
+            do itheta = 1,size(density_Fts_real_abs,2)
+                do itime = 1,size(density_Fts_real_abs,3)
+                    density_Fts_real_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_Fts_real_abs(:,itheta,itime), coords(igq)%c1_)
+                    density_Fts_imag_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_Fts_imag_abs(:,itheta,itime), coords(igq)%c1_)
+                    vel1_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_Fts_real_abs(:,itheta,itime),    coords(igq)%c1_)
+                    vel1_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_Fts_imag_abs(:,itheta,itime),    coords(igq)%c1_)
+                    vel2_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_Fts_real_abs(:,itheta,itime),    coords(igq)%c1_)
+                    vel2_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_Fts_imag_abs(:,itheta,itime),    coords(igq)%c1_)
+                    vel3_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_Fts_real_abs(:,itheta,itime),    coords(igq)%c1_)
+                    vel3_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_Fts_imag_abs(:,itheta,itime),    coords(igq)%c1_)
+                    pressure_Fts_real_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_Fts_real_abs(:,itheta,itime),coords(igq)%c1_)
+                    pressure_Fts_imag_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_Fts_imag_abs(:,itheta,itime),coords(igq)%c1_)
                 end do !itime
             end do !itheta
         end do !igq
@@ -338,6 +390,7 @@ contains
             end do !itime
         end do !igq
 
+
         density_bc  = ZERO*density_Fts_real_gq(:,1,1)
         vel1_bc     = ZERO*density_Fts_real_gq(:,1,1)
         vel2_bc     = ZERO*density_Fts_real_gq(:,1,1)
@@ -355,40 +408,35 @@ contains
             ! **** WARNING: probably want ipdft_eval here ****
             call idft_eval(density_t_real(igq,:),   &
                            density_t_imag(igq,:),   &
-                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           [real(worker%itime,rk)/real(worker%time_manager%ntime,rk)],    &
+                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            density_bc_tmp,          &
                            expect_zero)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(vel1_t_real(igq,:),      &
                            vel1_t_imag(igq,:),      &
-                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           [real(worker%itime,rk)/real(worker%time_manager%ntime,rk)],    &
+                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            vel1_bc_tmp,        &
                            expect_zero)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(vel2_t_real(igq,:),      &
                            vel2_t_imag(igq,:),      &
-                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           [real(worker%itime,rk)/real(worker%time_manager%ntime,rk)],    &
+                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            vel2_bc_tmp,        &
                            expect_zero)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(vel3_t_real(igq,:),      &
                            vel3_t_imag(igq,:),      &
-                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           [real(worker%itime,rk)/real(worker%time_manager%ntime,rk)],    &
+                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            vel3_bc_tmp,        &
                            expect_zero)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(pressure_t_real(igq,:),  &
                            pressure_t_imag(igq,:),  &
-                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           [real(worker%itime,rk)/real(worker%time_manager%ntime,rk)],    &
+                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            pressure_bc_tmp,    &
                            expect_zero)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
@@ -435,6 +483,99 @@ contains
 
     end subroutine compute_bc_state
     !*********************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/25/2018
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine get_q_exterior(self,worker,bc_comm,    &
+                              density,                &
+                              vel1,                   &
+                              vel2,                   &
+                              vel3,                   &
+                              pressure)
+        class(inlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        type(chidg_worker_t),           intent(inout)   :: worker
+        type(mpi_comm),                 intent(in)      :: bc_comm
+        type(AD_D),     allocatable,    intent(inout)   :: density(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: vel1(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: vel2(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: vel3(:,:,:)
+        type(AD_D),     allocatable,    intent(inout)   :: pressure(:,:,:)
+
+        type(AD_D), allocatable, dimension(:,:,:) ::  &
+            mom1, mom2, mom3, energy
+
+        integer(ik) :: iradius, itime, nradius, ntheta, ntime, ierr
+
+
+        ! Define Fourier space discretization to determine
+        ! number of theta-samples are being taken
+        nradius = size(self%r)
+        ntheta  = size(self%theta,2)
+        ntime   = worker%time_manager%ntime
+
+        ! Allocate storage for discrete time instances
+        allocate(density( nradius,ntheta,ntime),  &
+                 mom1(    nradius,ntheta,ntime),  &
+                 mom2(    nradius,ntheta,ntime),  &
+                 mom3(    nradius,ntheta,ntime),  &
+                 vel1(    nradius,ntheta,ntime),  &
+                 vel2(    nradius,ntheta,ntime),  &
+                 vel3(    nradius,ntheta,ntime),  &
+                 energy(  nradius,ntheta,ntime),  &
+                 pressure(nradius,ntheta,ntime), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        ! Perform Fourier decomposition at each radial station.
+        do iradius = 1,nradius
+            do itime = 1,ntime
+                ! Interpolate solution to physical_nodes at current radial station: [ntheta]
+                density(iradius,:,itime) = worker%interpolate_field_general('Density',    donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
+                mom1(iradius,:,itime)    = worker%interpolate_field_general('Momentum-1', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
+                mom2(iradius,:,itime)    = worker%interpolate_field_general('Momentum-2', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
+                mom3(iradius,:,itime)    = worker%interpolate_field_general('Momentum-3', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
+                energy(iradius,:,itime)  = worker%interpolate_field_general('Energy',     donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
+
+                if (worker%coordinate_system() == 'Cylindrical') then
+                    mom2(iradius,:,itime) = mom2(iradius,:,itime)/self%r(iradius)  ! convert to tangential momentum
+                end if
+            end do
+        end do
+
+        ! Compute velocities and pressure at each time
+        vel1 = mom1/density
+        vel2 = mom2/density
+        vel3 = mom3/density
+        pressure = (gam-ONE)*(energy - HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/density)
+
+
+        density  = 1.2_rk
+        vel1     = ZERO
+        vel2     = ZERO
+        vel3     = 150._rk
+        do itime = 1,ntime
+            pressure(:,:,itime) = 100000._rk + 10._rk*sin(TWO*PI*self%theta + worker%time_manager%freqs(1)*worker%time_manager%times(itime))
+        end do
+
+
+
+    end subroutine get_q_exterior
+    !************************************************************************************
+
+
+
+
+
+
+
+
+
 
 
 

@@ -344,41 +344,35 @@ contains
             ! **** WARNING: probably want ipdft_eval here ****
             call idft_eval(density_t_real(igq,:),   &
                            density_t_imag(igq,:),   &
-                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           [real(worker%itime,rk)/real(worker%time_manager%ntime,rk)],    &
+                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            density_bc_tmp,          &
                            expect_zero)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
-
             call idft_eval(vel1_t_real(igq,:),      &
                            vel1_t_imag(igq,:),      &
-                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           [real(worker%itime,rk)/real(worker%time_manager%ntime,rk)],    &
+                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            vel1_bc_tmp,        &
                            expect_zero)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(vel2_t_real(igq,:),      &
                            vel2_t_imag(igq,:),      &
-                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           [real(worker%itime,rk)/real(worker%time_manager%ntime,rk)],    &
+                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            vel2_bc_tmp,        &
                            expect_zero)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(vel3_t_real(igq,:),      &
                            vel3_t_imag(igq,:),      &
-                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           [real(worker%itime,rk)/real(worker%time_manager%ntime,rk)],    &
+                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            vel3_bc_tmp,        &
                            expect_zero)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(pressure_t_real(igq,:),  &
                            pressure_t_imag(igq,:),  &
-                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           [real(worker%itime,rk)/real(worker%time_manager%ntime,rk)],    &
+                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            pressure_bc_tmp,    &
                            expect_zero)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'

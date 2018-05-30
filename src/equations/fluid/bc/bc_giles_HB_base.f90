@@ -701,7 +701,7 @@ contains
 !        print*, a3_imag_test(1,:,:)%x_ad_
 !        print*, a4_imag_test(1,:,:)%x_ad_
 !        print*, a5_imag_test(1,:,:)%x_ad_
-!
+
 
 
 
@@ -799,46 +799,46 @@ contains
                                           pressure_real_abs, pressure_imag_abs)
 
 
-        ! Compute 1-4 characteristics from extrapolation: difference in radius-local mean and boundary average
-        call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar, &
-                                                          density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
-        c_avg = sqrt(gam*pressure_avg/density_avg)
-
-
-
-        ! Get boundary condition Total Temperature, Total Pressure, and normal vector
-        PT   = self%bcproperties%compute('Total Pressure',   worker%time(),worker%coords())
-        TT   = self%bcproperties%compute('Total Temperature',worker%time(),worker%coords())
-
-        ! Get user-input normal vector and normalize
-        n1 = self%bcproperties%compute('Normal-1', worker%time(), worker%coords())
-        n2 = self%bcproperties%compute('Normal-2', worker%time(), worker%coords())
-        n3 = self%bcproperties%compute('Normal-3', worker%time(), worker%coords())
-
-        !   Explicit allocation to handle GCC bug:
-        !       GCC/GFortran Bugzilla Bug 52162 
-        allocate(nmag(size(n1)), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        nmag = sqrt(n1*n1 + n2*n2 + n3*n3)
-        n1 = n1/nmag
-        n2 = n2/nmag
-        n3 = n3/nmag
-
-
-        ! Override spatio-temporal mean according to specified total conditions
-        T_avg = TT(1)*(pressure_avg/PT(1))**((gam-ONE)/gam)
-        density_avg = pressure_avg/(T_avg*Rgas)
-        vmag = sqrt(TWO*cp*(TT(1)-T_avg))
-        vel1_avg = n1(1)*vmag
-        vel2_avg = n2(1)*vmag
-        vel3_avg = n3(1)*vmag
-
-        density_real_abs(:,1,1)  = density_avg
-        vel1_real_abs(:,1,1)     = vel1_avg
-        vel2_real_abs(:,1,1)     = vel2_avg
-        vel3_real_abs(:,1,1)     = vel3_avg
-        pressure_real_abs(:,1,1) = pressure_avg
+!        ! Compute 1-4 characteristics from extrapolation: difference in radius-local mean and boundary average
+!        call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar, &
+!                                                          density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
+!        c_avg = sqrt(gam*pressure_avg/density_avg)
+!
+!
+!
+!        ! Get boundary condition Total Temperature, Total Pressure, and normal vector
+!        PT   = self%bcproperties%compute('Total Pressure',   worker%time(),worker%coords())
+!        TT   = self%bcproperties%compute('Total Temperature',worker%time(),worker%coords())
+!
+!        ! Get user-input normal vector and normalize
+!        n1 = self%bcproperties%compute('Normal-1', worker%time(), worker%coords())
+!        n2 = self%bcproperties%compute('Normal-2', worker%time(), worker%coords())
+!        n3 = self%bcproperties%compute('Normal-3', worker%time(), worker%coords())
+!
+!        !   Explicit allocation to handle GCC bug:
+!        !       GCC/GFortran Bugzilla Bug 52162 
+!        allocate(nmag(size(n1)), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!        nmag = sqrt(n1*n1 + n2*n2 + n3*n3)
+!        n1 = n1/nmag
+!        n2 = n2/nmag
+!        n3 = n3/nmag
+!
+!
+!        ! Override spatio-temporal mean according to specified total conditions
+!        T_avg = TT(1)*(pressure_avg/PT(1))**((gam-ONE)/gam)
+!        density_avg = pressure_avg/(T_avg*Rgas)
+!        vmag = sqrt(TWO*cp*(TT(1)-T_avg))
+!        vel1_avg = n1(1)*vmag
+!        vel2_avg = n2(1)*vmag
+!        vel3_avg = n3(1)*vmag
+!
+!        density_real_abs(:,1,1)  = density_avg
+!        vel1_real_abs(:,1,1)     = vel1_avg
+!        vel2_real_abs(:,1,1)     = vel2_avg
+!        vel3_real_abs(:,1,1)     = vel3_avg
+!        pressure_real_abs(:,1,1) = pressure_avg
 
 
 

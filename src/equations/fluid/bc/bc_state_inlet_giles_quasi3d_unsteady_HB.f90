@@ -3,7 +3,7 @@ module bc_state_inlet_giles_quasi3d_unsteady_HB
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL,    &
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, PI
-    use mod_fluid,              only: gam
+    use mod_fluid,              only: gam, Rgas, cp
     use mod_interpolation,      only: interpolate_linear, interpolate_linear_ad
     use mod_gridspace,          only: linspace
     use mod_dft,                only: idft_eval
@@ -126,6 +126,11 @@ contains
             density_t_real, vel1_t_real, vel2_t_real, vel3_t_real, pressure_t_real, &
             density_t_imag, vel1_t_imag, vel2_t_imag, vel3_t_imag, pressure_t_imag
 
+        type(AD_D), allocatable, dimension(:)   ::          &
+            density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar
+
+        type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, T_avg, vmag
+
 
         type(AD_D), allocatable, dimension(:,:,:) ::                                            &
             density_Ft_real_m, vel1_Ft_real_m, vel2_Ft_real_m, vel3_Ft_real_m, pressure_Ft_real_m,        &
@@ -148,6 +153,7 @@ contains
         real(rk)                                    :: theta_offset
         type(point_t),  allocatable                 :: coords(:)
         integer                                     :: i, ngq, ivec, imode, itheta, itime, iradius, nmodes, ierr, igq
+        real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag
 
 
         ! Get back pressure from function.
@@ -206,13 +212,6 @@ contains
                                  vel3_grid_m,       &
                                  pressure_grid_m)
 
-        ! Get primitive variables at (radius,theta,time) grid.
-        call self%get_q_exterior(worker,bc_comm,  &
-                                 density_grid_p,    &
-                                 vel1_grid_p,       &
-                                 vel2_grid_p,       &
-                                 vel3_grid_p,       &
-                                 pressure_grid_p)
 
         ! Compute Fourier decomposition of temporal data at points
         ! on the spatial transform grid.
@@ -228,6 +227,95 @@ contains
                                        vel2_Ft_real_m,     vel2_Ft_imag_m,      &
                                        vel3_Ft_real_m,     vel3_Ft_imag_m,      &
                                        pressure_Ft_real_m, pressure_Ft_imag_m)
+
+        ! Compute Fourier decomposition in theta at set of radial 
+        ! stations for each temporal mode:
+        !   : U_Fts(nradius,ntheta,ntime)
+        call self%compute_spatial_dft(worker,bc_comm,                               &
+                                      density_Ft_real_m,   density_Ft_imag_m,       &
+                                      vel1_Ft_real_m,      vel1_Ft_imag_m,          &
+                                      vel2_Ft_real_m,      vel2_Ft_imag_m,          &
+                                      vel3_Ft_real_m,      vel3_Ft_imag_m,          &
+                                      pressure_Ft_real_m,  pressure_Ft_imag_m,      &
+                                      density_Fts_real_m,  density_Fts_imag_m,      &
+                                      vel1_Fts_real_m,     vel1_Fts_imag_m,         &
+                                      vel2_Fts_real_m,     vel2_Fts_imag_m,         &
+                                      vel3_Fts_real_m,     vel3_Fts_imag_m,         &
+                                      pressure_Fts_real_m, pressure_Fts_imag_m)
+
+
+
+
+        ! Get spatio-temporal average at radial stations
+        density_bar  = density_Fts_real_m(:,1,1)
+        vel1_bar     = vel1_Fts_real_m(:,1,1)
+        vel2_bar     = vel2_Fts_real_m(:,1,1)
+        vel3_bar     = vel3_Fts_real_m(:,1,1)
+        pressure_bar = pressure_Fts_real_m(:,1,1)
+
+
+        ! Compute spatio-temporal average over entire surface
+        call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar, &
+                                                          density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
+        c_avg = sqrt(gam*pressure_avg/density_avg)
+
+
+
+        ! Get boundary condition Total Temperature, Total Pressure, and normal vector
+        PT   = self%bcproperties%compute('Total Pressure',   worker%time(),worker%coords())
+        TT   = self%bcproperties%compute('Total Temperature',worker%time(),worker%coords())
+
+        ! Get user-input normal vector and normalize
+        n1 = self%bcproperties%compute('Normal-1', worker%time(), worker%coords())
+        n2 = self%bcproperties%compute('Normal-2', worker%time(), worker%coords())
+        n3 = self%bcproperties%compute('Normal-3', worker%time(), worker%coords())
+
+        !   Explicit allocation to handle GCC bug:
+        !       GCC/GFortran Bugzilla Bug 52162 
+        allocate(nmag(size(n1)), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        nmag = sqrt(n1*n1 + n2*n2 + n3*n3)
+        n1 = n1/nmag
+        n2 = n2/nmag
+        n3 = n3/nmag
+
+
+        ! Override spatio-temporal mean according to specified total conditions
+        T_avg = TT(1)*(pressure_avg/PT(1))**((gam-ONE)/gam)
+        density_avg = pressure_avg/(T_avg*Rgas)
+        vmag = sqrt(TWO*cp*(TT(1)-T_avg))
+        vel1_avg = n1(1)*vmag
+        vel2_avg = n2(1)*vmag
+        vel3_avg = n3(1)*vmag
+
+!        density_real_abs(:,1,1)  = density_avg
+!        vel1_real_abs(:,1,1)     = vel1_avg
+!        vel2_real_abs(:,1,1)     = vel2_avg
+!        vel3_real_abs(:,1,1)     = vel3_avg
+!        pressure_real_abs(:,1,1) = pressure_avg
+
+
+
+
+
+
+        ! Get exterior perturbation
+        call self%get_q_exterior(worker,bc_comm,  &
+                                 density_grid_p,    &
+                                 vel1_grid_p,       &
+                                 vel2_grid_p,       &
+                                 vel3_grid_p,       &
+                                 pressure_grid_p)
+
+
+        ! Add space-time average
+        density_grid_p  = density_grid_p  + density_avg
+        vel1_grid_p     = vel1_grid_p     + vel1_avg
+        vel2_grid_p     = vel2_grid_p     + vel2_avg
+        vel3_grid_p     = vel3_grid_p     + vel3_avg
+        pressure_grid_p = pressure_grid_p + pressure_avg
+
 
         ! Compute Fourier decomposition of temporal data at points
         ! on the spatial transform grid.
@@ -245,20 +333,6 @@ contains
                                        pressure_Ft_real_p, pressure_Ft_imag_p)
 
 
-        ! Compute Fourier decomposition in theta at set of radial 
-        ! stations for each temporal mode:
-        !   : U_Fts(nradius,ntheta,ntime)
-        call self%compute_spatial_dft(worker,bc_comm,                               &
-                                      density_Ft_real_m,   density_Ft_imag_m,       &
-                                      vel1_Ft_real_m,      vel1_Ft_imag_m,          &
-                                      vel2_Ft_real_m,      vel2_Ft_imag_m,          &
-                                      vel3_Ft_real_m,      vel3_Ft_imag_m,          &
-                                      pressure_Ft_real_m,  pressure_Ft_imag_m,      &
-                                      density_Fts_real_m,  density_Fts_imag_m,      &
-                                      vel1_Fts_real_m,     vel1_Fts_imag_m,         &
-                                      vel2_Fts_real_m,     vel2_Fts_imag_m,         &
-                                      vel3_Fts_real_m,     vel3_Fts_imag_m,         &
-                                      pressure_Fts_real_m, pressure_Fts_imag_m)
 
         ! Compute Fourier decomposition in theta at set of radial 
         ! stations for each temporal mode:
@@ -275,6 +349,11 @@ contains
                                       vel3_Fts_real_p,     vel3_Fts_imag_p,         &
                                       pressure_Fts_real_p, pressure_Fts_imag_p)
 
+
+
+
+
+        ! Compute q_abs
         call self%compute_absorbing_inlet(worker,bc_comm,                               &
                                           density_Fts_real_m,    density_Fts_imag_m,    &
                                           vel1_Fts_real_m,       vel1_Fts_imag_m,       &
@@ -555,12 +634,15 @@ contains
         pressure = (gam-ONE)*(energy - HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/density)
 
 
-        density  = 1.2_rk
+        density  = ZERO
         vel1     = ZERO
         vel2     = ZERO
-        vel3     = 150._rk
+        vel3     = ZERO
+        pressure = ZERO
+
         do itime = 1,ntime
-            pressure(:,:,itime) = 100000._rk + 10._rk*sin(TWO*PI*self%theta + worker%time_manager%freqs(1)*worker%time_manager%times(itime))
+            density(:,:,itime) = 0.001_rk*sin(-TWO*PI*self%theta + worker%time_manager%freqs(1)*worker%time_manager%times(itime))
+            !pressure(:,:,itime) = 100000._rk + 10._rk*sin(TWO*PI*self%theta + worker%time_manager%freqs(1)*worker%time_manager%times(itime))
         end do
 
 

@@ -346,35 +346,35 @@ contains
                            density_t_imag(igq,:),   &
                            [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            density_bc_tmp,          &
-                           expect_zero)
+                           expect_zero,symmetric=.true.)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(vel1_t_real(igq,:),      &
                            vel1_t_imag(igq,:),      &
                            [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            vel1_bc_tmp,        &
-                           expect_zero)
+                           expect_zero,symmetric=.true.)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(vel2_t_real(igq,:),      &
                            vel2_t_imag(igq,:),      &
                            [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            vel2_bc_tmp,        &
-                           expect_zero)
+                           expect_zero,symmetric=.true.)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(vel3_t_real(igq,:),      &
                            vel3_t_imag(igq,:),      &
                            [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            vel3_bc_tmp,        &
-                           expect_zero)
+                           expect_zero,symmetric=.true.)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(pressure_t_real(igq,:),  &
                            pressure_t_imag(igq,:),  &
                            [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            pressure_bc_tmp,    &
-                           expect_zero)
+                           expect_zero,symmetric=.true.)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             ! Accumulate contribution from unsteady modes

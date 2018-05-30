@@ -241,16 +241,18 @@ contains
     !!  value for theta would be T=0.7/2.5
     !!
     !---------------------------------------------------------------------------
-    subroutine idft_eval(inreal,inimag,theta,outreal,outimag,negate)
+    subroutine idft_eval(inreal,inimag,theta,outreal,outimag,negate,symmetric)
         type(AD_D),     intent(in)           :: inreal(:)
         type(AD_D),     intent(in)           :: inimag(:)
         real(rk),       intent(in)           :: theta(:)
         type(AD_D),     intent(inout)        :: outreal(:)
         type(AD_D),     intent(inout)        :: outimag(:)
         logical,        intent(in), optional :: negate
+        logical,        intent(in), optional :: symmetric
 
         real(rk)    :: freq, change
         integer     :: itheta, imode, ierr
+        logical     :: compute_symmetric
 
         ! Allocate and initialize derivatives
         outreal(:) = inreal(1)
@@ -263,17 +265,43 @@ contains
             if (negate) change = -ONE
         end if
 
-        do itheta = 1,size(theta)
-            do imode = 1,size(inreal)
-                if (imode <= ((size(inreal)-1)/2 + 1)) then
-                    freq = change*TWO*PI*real(imode-1,rk)  ! positive frequencies
-                else
-                    freq = -change*TWO*PI*real(size(inreal)-imode+1,rk) ! negative frequencies
-                end if
-                outreal(itheta) = outreal(itheta) + inreal(imode)*cos(freq*theta(itheta)) - inimag(imode)*sin(freq*theta(itheta))
-                outimag(itheta) = outimag(itheta) + inreal(imode)*sin(freq*theta(itheta)) + inimag(imode)*cos(freq*theta(itheta))
-            end do
-        end do 
+        compute_symmetric = .false.
+        if (present(symmetric)) then
+            if (symmetric) then
+                compute_symmetric = .true.
+            end if
+        end if
+
+
+        if (compute_symmetric) then
+            do itheta = 1,size(theta)
+                do imode = 1,size(inreal)
+                    if (imode <= ((size(inreal)-1)/2 + 1)) then
+                        freq = change*TWO*PI*real(imode-1,rk)  ! positive frequencies
+                        if (imode > 1) then
+                            outreal(itheta) = outreal(itheta) + TWO*(inreal(imode)*cos(freq*theta(itheta)) - inimag(imode)*sin(freq*theta(itheta)))
+                        else
+                            outreal(itheta) = outreal(itheta) + inreal(imode)*cos(freq*theta(itheta)) - inimag(imode)*sin(freq*theta(itheta))
+                        end if
+                        outimag(itheta) = ZERO
+                    end if
+                end do
+            end do 
+        else
+            do itheta = 1,size(theta)
+                do imode = 1,size(inreal)
+                    if (imode <= ((size(inreal)-1)/2 + 1)) then
+                        freq = change*TWO*PI*real(imode-1,rk)  ! positive frequencies
+                    else
+                        freq = -change*TWO*PI*real(size(inreal)-imode+1,rk) ! negative frequencies
+                    end if
+                    outreal(itheta) = outreal(itheta) + inreal(imode)*cos(freq*theta(itheta)) - inimag(imode)*sin(freq*theta(itheta))
+                    outimag(itheta) = outimag(itheta) + inreal(imode)*sin(freq*theta(itheta)) + inimag(imode)*cos(freq*theta(itheta))
+                end do
+            end do 
+
+        end if
+
 
     end subroutine idft_eval
     !******************************************************************

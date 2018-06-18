@@ -270,7 +270,6 @@ contains
                                       c_hat_real_p,          c_hat_imag_p)
 
 
-
         ! Compute absorbing state using 2D eigenmode decomposition.
         !   q_abs = f(q_m,q_p)
         call self%compute_absorbing_outlet(worker,bc_comm,                                  &
@@ -293,7 +292,6 @@ contains
                                            pressure_hat_real_abs, pressure_hat_imag_abs)
 
 
-
         ! q_abs(r_gq) = I(q_abs(r_aux))
         call self%interpolate_raux_to_rgq(worker,bc_comm,                               &
                                           density_hat_real_abs,  density_hat_imag_abs,  &
@@ -306,7 +304,6 @@ contains
                                           vel2_hat_real_gq,      vel2_hat_imag_gq,      &
                                           vel3_hat_real_gq,      vel3_hat_imag_gq,      &
                                           pressure_hat_real_gq,  pressure_hat_imag_gq)
-
 
 
         ! Reconstruct primitive variables at quadrature nodes from absorbing Fourier modes
@@ -323,6 +320,7 @@ contains
                                           vel2_check_real_gq,       vel2_check_imag_gq,     &
                                           vel3_check_real_gq,       vel3_check_imag_gq,     &
                                           pressure_check_real_gq,   pressure_check_imag_gq)
+
 
         ! q(rgq,theta,t) = IDFT(q_check)[omega]
         call self%compute_temporal_idft_gq(worker,bc_comm,                                      &

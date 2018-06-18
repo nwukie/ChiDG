@@ -46,6 +46,7 @@ module bc_state_outlet_giles_quasi3d_unsteady_HB
 
         procedure   :: init                 ! Set-up bc state with options/name etc.
         procedure   :: compute_bc_state     ! boundary condition function implementation
+        procedure   :: get_q_exterior
 
     end type outlet_giles_quasi3d_unsteady_HB_t
     !*********************************************************************************
@@ -101,30 +102,31 @@ contains
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::                                                      &
             density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, pressure_bc, vel1_bc, vel2_bc, vel3_bc,   &
-            density_bc_tmp, vel1_bc_tmp, vel2_bc_tmp, vel3_bc_tmp, pressure_bc_tmp,                     &
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,                  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,                  &
-            grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m, expect_zero
+            grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m
 
         type(AD_D), allocatable, dimension(:,:) ::                                  &
-            density_t_real, vel1_t_real, vel2_t_real, vel3_t_real, pressure_t_real, &
-            density_t_imag, vel1_t_imag, vel2_t_imag, vel3_t_imag, pressure_t_imag
+            density_check_real_gq, vel1_check_real_gq, vel2_check_real_gq, vel3_check_real_gq, pressure_check_real_gq, &
+            density_check_imag_gq, vel1_check_imag_gq, vel2_check_imag_gq, vel3_check_imag_gq, pressure_check_imag_gq
 
-
-        type(AD_D), allocatable, dimension(:,:,:) ::                                            &
-            density_Ft_real, vel1_Ft_real, vel2_Ft_real, vel3_Ft_real, pressure_Ft_real, c_Ft_real,       &
-            density_Ft_imag, vel1_Ft_imag, vel2_Ft_imag, vel3_Ft_imag, pressure_Ft_imag, c_Ft_imag,       &
-            density_Fts_real, vel1_Fts_real, vel2_Fts_real, vel3_Fts_real, pressure_Fts_real, c_Fts_real,  &
-            density_Fts_imag, vel1_Fts_imag, vel2_Fts_imag, vel3_Fts_imag, pressure_Fts_imag, c_Fts_imag,  &
-            density_Fts_real_gq, vel1_Fts_real_gq, vel2_Fts_real_gq, vel3_Fts_real_gq, pressure_Fts_real_gq,   &
-            density_Fts_imag_gq, vel1_Fts_imag_gq, vel2_Fts_imag_gq, vel3_Fts_imag_gq, pressure_Fts_imag_gq,    &
-            density_grid, vel1_grid, vel2_grid, vel3_grid, pressure_grid, c_grid
-
+        type(AD_D), allocatable, dimension(:,:,:) ::                                                                                &
+            density_check_real_m, vel1_check_real_m, vel2_check_real_m, vel3_check_real_m, pressure_check_real_m, c_check_real_m,   &
+            density_check_imag_m, vel1_check_imag_m, vel2_check_imag_m, vel3_check_imag_m, pressure_check_imag_m, c_check_imag_m,   &
+            density_hat_real_m, vel1_hat_real_m, vel2_hat_real_m, vel3_hat_real_m, pressure_hat_real_m, c_hat_real_m,               &
+            density_hat_imag_m, vel1_hat_imag_m, vel2_hat_imag_m, vel3_hat_imag_m, pressure_hat_imag_m, c_hat_imag_m,               &
+            density_check_real_p, vel1_check_real_p, vel2_check_real_p, vel3_check_real_p, pressure_check_real_p, c_check_real_p,   &
+            density_check_imag_p, vel1_check_imag_p, vel2_check_imag_p, vel3_check_imag_p, pressure_check_imag_p, c_check_imag_p,   &
+            density_hat_real_p, vel1_hat_real_p, vel2_hat_real_p, vel3_hat_real_p, pressure_hat_real_p, c_hat_real_p,               &
+            density_hat_imag_p, vel1_hat_imag_p, vel2_hat_imag_p, vel3_hat_imag_p, pressure_hat_imag_p, c_hat_imag_p,               &
+            density_hat_real_abs, vel1_hat_real_abs, vel2_hat_real_abs, vel3_hat_real_abs, pressure_hat_real_abs,                   &
+            density_hat_imag_abs, vel1_hat_imag_abs, vel2_hat_imag_abs, vel3_hat_imag_abs, pressure_hat_imag_abs,                   &
+            density_hat_real_gq, vel1_hat_real_gq, vel2_hat_real_gq, vel3_hat_real_gq, pressure_hat_real_gq,    &
+            density_hat_imag_gq, vel1_hat_imag_gq, vel2_hat_imag_gq, vel3_hat_imag_gq, pressure_hat_imag_gq,    &
+            density_grid_m, vel1_grid_m, vel2_grid_m, vel3_grid_m, pressure_grid_m, c_grid_m,                   &
+            density_grid_p, vel1_grid_p, vel2_grid_p, vel3_grid_p, pressure_grid_p, c_grid_p
 
         real(rk),       allocatable, dimension(:)   :: p_user, r, pitch
-        real(rk)                                    :: theta_offset
-        type(point_t),  allocatable                 :: coords(:)
-        integer                                     :: i, ngq, ivec, imode, itheta, itime, iradius, nmodes, ierr, igq
 
 
         ! Get back pressure from function.
@@ -178,221 +180,158 @@ contains
 
         ! Get primitive variables at (radius,theta,time) grid.
         call self%get_q_interior(worker,bc_comm,  &
-                                 density_grid,    &
-                                 vel1_grid,       &
-                                 vel2_grid,       &
-                                 vel3_grid,       &
-                                 pressure_grid)
-        c_grid = sqrt(1.4*pressure_grid/density_grid)
+                                 density_grid_m,    &
+                                 vel1_grid_m,       &
+                                 vel2_grid_m,       &
+                                 vel3_grid_m,       &
+                                 pressure_grid_m)
+        c_grid_m = sqrt(gam*pressure_grid_m/density_grid_m)
 
 
         ! Compute Fourier decomposition of temporal data at points
         ! on the spatial transform grid.
-        !   : U_Ft(nradius,ntheta,ntime)
-        call self%compute_temporal_dft(worker,bc_comm,                      &
-                                       density_grid,                        &
-                                       vel1_grid,                           &
-                                       vel2_grid,                           &
-                                       vel3_grid,                           &
-                                       pressure_grid,                       &
-                                       c_grid,                              &
-                                       density_Ft_real,  density_Ft_imag,   &
-                                       vel1_Ft_real,     vel1_Ft_imag,      &
-                                       vel2_Ft_real,     vel2_Ft_imag,      &
-                                       vel3_Ft_real,     vel3_Ft_imag,      &
-                                       pressure_Ft_real, pressure_Ft_imag,  &
-                                       c_Ft_real,        c_Ft_imag)
+        !   q_check(r,theta,omega) = DFT(q)[time]
+        call self%compute_temporal_dft(worker,bc_comm,                                  &
+                                       density_grid_m,                                  &
+                                       vel1_grid_m,                                     &
+                                       vel2_grid_m,                                     &
+                                       vel3_grid_m,                                     &
+                                       pressure_grid_m,                                 &
+                                       c_grid_m,                                        &
+                                       density_check_real_m,  density_check_imag_m,     &
+                                       vel1_check_real_m,     vel1_check_imag_m,        &
+                                       vel2_check_real_m,     vel2_check_imag_m,        &
+                                       vel3_check_real_m,     vel3_check_imag_m,        &
+                                       pressure_check_real_m, pressure_check_imag_m,    &
+                                       c_check_real_m,        c_check_imag_m)
 
 
         ! Compute Fourier decomposition in theta at set of radial 
         ! stations for each temporal mode:
-        !   : U_Fts(nradius,ntheta,ntime)
-        call self%compute_spatial_dft(worker,bc_comm,                         &
-                                      density_Ft_real,   density_Ft_imag,     &
-                                      vel1_Ft_real,      vel1_Ft_imag,        &
-                                      vel2_Ft_real,      vel2_Ft_imag,        &
-                                      vel3_Ft_real,      vel3_Ft_imag,        &
-                                      pressure_Ft_real,  pressure_Ft_imag,    &
-                                      c_Ft_real,         c_Ft_imag,           &
-                                      density_Fts_real,  density_Fts_imag,    &
-                                      vel1_Fts_real,     vel1_Fts_imag,       &
-                                      vel2_Fts_real,     vel2_Fts_imag,       &
-                                      vel3_Fts_real,     vel3_Fts_imag,       &
-                                      pressure_Fts_real, pressure_Fts_imag,   &
-                                      c_Fts_real,        c_Fts_imag)
+        !   q_hat(r,m,omega) = DFT(q_check)[theta]
+        call self%compute_spatial_dft(worker,bc_comm,                               &
+                                      density_check_real_m,  density_check_imag_m,  &
+                                      vel1_check_real_m,     vel1_check_imag_m,     &
+                                      vel2_check_real_m,     vel2_check_imag_m,     &
+                                      vel3_check_real_m,     vel3_check_imag_m,     &
+                                      pressure_check_real_m, pressure_check_imag_m, &
+                                      c_check_real_m,        c_check_imag_m,        &
+                                      density_hat_real_m,    density_hat_imag_m,    &
+                                      vel1_hat_real_m,       vel1_hat_imag_m,       &
+                                      vel2_hat_real_m,       vel2_hat_imag_m,       &
+                                      vel3_hat_real_m,       vel3_hat_imag_m,       &
+                                      pressure_hat_real_m,   pressure_hat_imag_m,   &
+                                      c_hat_real_m,          c_hat_imag_m)
 
 
-        call self%compute_absorbing_outlet(worker,bc_comm,       &
-                                           density_Fts_real,     &
-                                           density_Fts_imag,     &
-                                           vel1_Fts_real,        &
-                                           vel1_Fts_imag,        &
-                                           vel2_Fts_real,        &
-                                           vel2_Fts_imag,        &
-                                           vel3_Fts_real,        &
-                                           vel3_Fts_imag,        &
-                                           pressure_Fts_real,    &
-                                           pressure_Fts_imag,    &
-                                           c_Fts_real,           &
-                                           c_Fts_imag)
+        ! Get primitive variables at (radius,theta,time) grid.
+        call self%get_q_exterior(worker,bc_comm,  &
+                                 density_grid_p,    &
+                                 vel1_grid_p,       &
+                                 vel2_grid_p,       &
+                                 vel3_grid_p,       &
+                                 pressure_grid_p)
+        c_grid_p = sqrt(gam*pressure_grid_p/density_grid_p)
+
+
+        ! Compute Fourier decomposition of temporal data at points
+        ! on the spatial transform grid.
+        !   q_check(r,theta,omega) = DFT(q)[time]
+        call self%compute_temporal_dft(worker,bc_comm,                                  &
+                                       density_grid_p,                                  &
+                                       vel1_grid_p,                                     &
+                                       vel2_grid_p,                                     &
+                                       vel3_grid_p,                                     &
+                                       pressure_grid_p,                                 &
+                                       c_grid_p,                                        &
+                                       density_check_real_p,  density_check_imag_p,     &
+                                       vel1_check_real_p,     vel1_check_imag_p,        &
+                                       vel2_check_real_p,     vel2_check_imag_p,        &
+                                       vel3_check_real_p,     vel3_check_imag_p,        &
+                                       pressure_check_real_p, pressure_check_imag_p,    &
+                                       c_check_real_p,        c_check_imag_p)
+
+
+        ! Compute Fourier decomposition in theta at set of radial 
+        ! stations for each temporal mode:
+        !   q_hat(r,m,omega) = DFT(q_check)[theta]
+        call self%compute_spatial_dft(worker,bc_comm,                               &
+                                      density_check_real_p,  density_check_imag_p,  &
+                                      vel1_check_real_p,     vel1_check_imag_p,     &
+                                      vel2_check_real_p,     vel2_check_imag_p,     &
+                                      vel3_check_real_p,     vel3_check_imag_p,     &
+                                      pressure_check_real_p, pressure_check_imag_p, &
+                                      c_check_real_p,        c_check_imag_p,        &
+                                      density_hat_real_p,    density_hat_imag_p,    &
+                                      vel1_hat_real_p,       vel1_hat_imag_p,       &
+                                      vel2_hat_real_p,       vel2_hat_imag_p,       &
+                                      vel3_hat_real_p,       vel3_hat_imag_p,       &
+                                      pressure_hat_real_p,   pressure_hat_imag_p,   &
+                                      c_hat_real_p,          c_hat_imag_p)
 
 
 
-        ! Interpolate spatio-temporal Fourier coefficients to quadrature nodes
-        ! linear interpolation between radial coordinates.
-        !allocate(density_Fts_real(nradius,ntheta,ntime), density_Fts_imag(nradius,ntheta,ntime),   &
-        coords = worker%coords()
-        allocate(density_Fts_real_gq( size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 density_Fts_imag_gq( size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 vel1_Fts_real_gq(    size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 vel1_Fts_imag_gq(    size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 vel2_Fts_real_gq(    size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 vel2_Fts_imag_gq(    size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 vel3_Fts_real_gq(    size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 vel3_Fts_imag_gq(    size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 pressure_Fts_real_gq(size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 pressure_Fts_imag_gq(size(coords),size(density_Fts_real,2),size(density_Fts_real,3)), &
-                 stat=ierr)
-        if (ierr /= 0) call AllocationError
-        density_Fts_real_gq  = ZERO*density_Fts_real(1,1,1)
-        density_Fts_imag_gq  = ZERO*density_Fts_real(1,1,1)
-        vel1_Fts_real_gq     = ZERO*density_Fts_real(1,1,1)
-        vel1_Fts_imag_gq     = ZERO*density_Fts_real(1,1,1)
-        vel2_Fts_real_gq     = ZERO*density_Fts_real(1,1,1)
-        vel2_Fts_imag_gq     = ZERO*density_Fts_real(1,1,1)
-        vel3_Fts_real_gq     = ZERO*density_Fts_real(1,1,1)
-        vel3_Fts_imag_gq     = ZERO*density_Fts_real(1,1,1)
-        pressure_Fts_real_gq = ZERO*density_Fts_real(1,1,1)
-        pressure_Fts_imag_gq = ZERO*density_Fts_real(1,1,1)
-        do igq = 1,size(coords)
-            do itheta = 1,size(density_Fts_real,2)
-                do itime = 1,size(density_Fts_real,3)
-                    density_Fts_real_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_Fts_real(:,itheta,itime), coords(igq)%c1_)
-                    density_Fts_imag_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_Fts_imag(:,itheta,itime), coords(igq)%c1_)
-                    vel1_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_Fts_real(:,itheta,itime),    coords(igq)%c1_)
-                    vel1_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_Fts_imag(:,itheta,itime),    coords(igq)%c1_)
-                    vel2_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_Fts_real(:,itheta,itime),    coords(igq)%c1_)
-                    vel2_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_Fts_imag(:,itheta,itime),    coords(igq)%c1_)
-                    vel3_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_Fts_real(:,itheta,itime),    coords(igq)%c1_)
-                    vel3_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_Fts_imag(:,itheta,itime),    coords(igq)%c1_)
-                    pressure_Fts_real_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_Fts_real(:,itheta,itime),coords(igq)%c1_)
-                    pressure_Fts_imag_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_Fts_imag(:,itheta,itime),coords(igq)%c1_)
-                end do !itime
-            end do !itheta
-        end do !igq
+        ! Compute absorbing state using 2D eigenmode decomposition.
+        !   q_abs = f(q_m,q_p)
+        call self%compute_absorbing_outlet(worker,bc_comm,                                  &
+                                           density_hat_real_m,    density_hat_imag_m,       &
+                                           vel1_hat_real_m,       vel1_hat_imag_m,          &
+                                           vel2_hat_real_m,       vel2_hat_imag_m,          &
+                                           vel3_hat_real_m,       vel3_hat_imag_m,          &
+                                           pressure_hat_real_m,   pressure_hat_imag_m,      &
+                                           c_hat_real_m,          c_hat_imag_m,             &
+                                           density_hat_real_p,    density_hat_imag_p,       &
+                                           vel1_hat_real_p,       vel1_hat_imag_p,          &
+                                           vel2_hat_real_p,       vel2_hat_imag_p,          &
+                                           vel3_hat_real_p,       vel3_hat_imag_p,          &
+                                           pressure_hat_real_p,   pressure_hat_imag_p,      &
+                                           c_hat_real_p,          c_hat_imag_p,             &
+                                           density_hat_real_abs,  density_hat_imag_abs,     &
+                                           vel1_hat_real_abs,     vel1_hat_imag_abs,        &
+                                           vel2_hat_real_abs,     vel2_hat_imag_abs,        &
+                                           vel3_hat_real_abs,     vel3_hat_imag_abs,        &
+                                           pressure_hat_real_abs, pressure_hat_imag_abs)
+
+
+
+        ! q_abs(r_gq) = I(q_abs(r_aux))
+        call self%interpolate_raux_to_rgq(worker,bc_comm,                               &
+                                          density_hat_real_abs,  density_hat_imag_abs,  &
+                                          vel1_hat_real_abs,     vel1_hat_imag_abs,     &
+                                          vel2_hat_real_abs,     vel2_hat_imag_abs,     &
+                                          vel3_hat_real_abs,     vel3_hat_imag_abs,     &
+                                          pressure_hat_real_abs, pressure_hat_imag_abs, &
+                                          density_hat_real_gq,   density_hat_imag_gq,   &
+                                          vel1_hat_real_gq,      vel1_hat_imag_gq,      &
+                                          vel2_hat_real_gq,      vel2_hat_imag_gq,      &
+                                          vel3_hat_real_gq,      vel3_hat_imag_gq,      &
+                                          pressure_hat_real_gq,  pressure_hat_imag_gq)
+
 
 
         ! Reconstruct primitive variables at quadrature nodes from absorbing Fourier modes
         ! via inverse transform.
+        !   q_check(rgq,theta,omega) = IDFT(q_hat)[m]
+        call self%compute_spatial_idft_gq(worker,bc_comm,                                   &
+                                          density_hat_real_gq,      density_hat_imag_gq,    & 
+                                          vel1_hat_real_gq,         vel1_hat_imag_gq,       &
+                                          vel2_hat_real_gq,         vel2_hat_imag_gq,       &
+                                          vel3_hat_real_gq,         vel3_hat_imag_gq,       &
+                                          pressure_hat_real_gq,     pressure_hat_imag_gq,   &
+                                          density_check_real_gq,    density_check_imag_gq,  &
+                                          vel1_check_real_gq,       vel1_check_imag_gq,     &
+                                          vel2_check_real_gq,       vel2_check_imag_gq,     &
+                                          vel3_check_real_gq,       vel3_check_imag_gq,     &
+                                          pressure_check_real_gq,   pressure_check_imag_gq)
 
-        ! Inverse DFT of spatio-temporal Fourier modes to give temporal Fourier
-        ! modes at quadrature nodes.
-        expect_zero = [AD_D(1)]
-        density_t_real  = ZERO*density_Fts_real_gq(:,1,:)
-        vel1_t_real     = ZERO*density_Fts_real_gq(:,1,:)
-        vel2_t_real     = ZERO*density_Fts_real_gq(:,1,:)
-        vel3_t_real     = ZERO*density_Fts_real_gq(:,1,:)
-        pressure_t_real = ZERO*density_Fts_real_gq(:,1,:)
-        density_t_imag  = ZERO*density_Fts_real_gq(:,1,:)
-        vel1_t_imag     = ZERO*density_Fts_real_gq(:,1,:)
-        vel2_t_imag     = ZERO*density_Fts_real_gq(:,1,:)
-        vel3_t_imag     = ZERO*density_Fts_real_gq(:,1,:)
-        pressure_t_imag = ZERO*density_Fts_real_gq(:,1,:)
-        do igq = 1,size(coords)
-            do itime = 1,size(density_Fts_real_gq,3)
-                !theta_offset = coords(igq)%c2_ - self%theta_ref
-                theta_offset = coords(igq)%c2_ - self%theta(1,1)
-                ! **** WARNING: probably want ipdft_eval here ****
-                call idft_eval(density_Fts_real_gq(igq,:,itime),    &
-                               density_Fts_imag_gq(igq,:,itime),    &
-                               [theta_offset]/pitch(1),             &
-                               density_t_real(igq:igq,itime),       &
-                               density_t_imag(igq:igq,itime),negate=.true.)
-
-                call idft_eval(vel1_Fts_real_gq(igq,:,itime),   &
-                               vel1_Fts_imag_gq(igq,:,itime),   &
-                               [theta_offset]/pitch(1),         &
-                               vel1_t_real(igq:igq,itime),      &
-                               vel1_t_imag(igq:igq,itime),negate=.true.)
-
-                call idft_eval(vel2_Fts_real_gq(igq,:,itime),   &
-                               vel2_Fts_imag_gq(igq,:,itime),   &
-                               [theta_offset]/pitch(1),         &
-                               vel2_t_real(igq:igq,itime),      &
-                               vel2_t_imag(igq:igq,itime),negate=.true.)
-
-                call idft_eval(vel3_Fts_real_gq(igq,:,itime),   &
-                               vel3_Fts_imag_gq(igq,:,itime),   &
-                               [theta_offset]/pitch(1),         &
-                               vel3_t_real(igq:igq,itime),      &
-                               vel3_t_imag(igq:igq,itime),negate=.true.)
-
-                call idft_eval(pressure_Fts_real_gq(igq,:,itime),   &
-                               pressure_Fts_imag_gq(igq,:,itime),   &
-                               [theta_offset]/pitch(1),             &
-                               pressure_t_real(igq:igq,itime),      &
-                               pressure_t_imag(igq:igq,itime),negate=.true.)
-            end do !itime
-        end do !igq
-
-        density_bc  = ZERO*density_Fts_real_gq(:,1,1)
-        vel1_bc     = ZERO*density_Fts_real_gq(:,1,1)
-        vel2_bc     = ZERO*density_Fts_real_gq(:,1,1)
-        vel3_bc     = ZERO*density_Fts_real_gq(:,1,1)
-        pressure_bc = ZERO*density_Fts_real_gq(:,1,1)
-
-        ! Inverse DFT of temporal Fourier modes to give primitive variables
-        ! at quarature nodes for the current time instance.
-        density_bc_tmp  = [ZERO*density_Fts_real_gq(1,1,1)]
-        vel1_bc_tmp     = [ZERO*density_Fts_real_gq(1,1,1)]
-        vel2_bc_tmp     = [ZERO*density_Fts_real_gq(1,1,1)]
-        vel3_bc_tmp     = [ZERO*density_Fts_real_gq(1,1,1)]
-        pressure_bc_tmp = [ZERO*density_Fts_real_gq(1,1,1)]
-        do igq = 1,size(coords)
-            ! **** WARNING: probably want ipdft_eval here ****
-            call idft_eval(density_t_real(igq,:),   &
-                           density_t_imag(igq,:),   &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           density_bc_tmp,          &
-                           expect_zero,symmetric=.true.)
-            if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
-
-            call idft_eval(vel1_t_real(igq,:),      &
-                           vel1_t_imag(igq,:),      &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           vel1_bc_tmp,        &
-                           expect_zero,symmetric=.true.)
-            if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
-
-            call idft_eval(vel2_t_real(igq,:),      &
-                           vel2_t_imag(igq,:),      &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           vel2_bc_tmp,        &
-                           expect_zero,symmetric=.true.)
-            if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
-
-            call idft_eval(vel3_t_real(igq,:),      &
-                           vel3_t_imag(igq,:),      &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           vel3_bc_tmp,        &
-                           expect_zero,symmetric=.true.)
-            if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
-
-            call idft_eval(pressure_t_real(igq,:),  &
-                           pressure_t_imag(igq,:),  &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           pressure_bc_tmp,    &
-                           expect_zero,symmetric=.true.)
-            if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
-
-            ! Accumulate contribution from unsteady modes
-            density_bc(igq)  = density_bc(igq)  + density_bc_tmp(1)
-            vel1_bc(igq)     = vel1_bc(igq)     + vel1_bc_tmp(1)
-            vel2_bc(igq)     = vel2_bc(igq)     + vel2_bc_tmp(1)
-            vel3_bc(igq)     = vel3_bc(igq)     + vel3_bc_tmp(1)
-            pressure_bc(igq) = pressure_bc(igq) + pressure_bc_tmp(1)
-        end do
-
+        ! q(rgq,theta,t) = IDFT(q_check)[omega]
+        call self%compute_temporal_idft_gq(worker,bc_comm,                                      &
+                                           density_check_real_gq,    density_check_imag_gq,     & 
+                                           vel1_check_real_gq,       vel1_check_imag_gq,        &
+                                           vel2_check_real_gq,       vel2_check_imag_gq,        &
+                                           vel3_check_real_gq,       vel3_check_imag_gq,        &
+                                           pressure_check_real_gq,   pressure_check_imag_gq,    &
+                                           density_bc, vel1_bc, vel2_bc, vel3_bc, pressure_bc)
 
 
         !
@@ -426,6 +365,83 @@ contains
 
     end subroutine compute_bc_state
     !*********************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   6/18/2018
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine get_q_exterior(self,worker,bc_comm, density, vel1, vel2, vel3, pressure)
+        class(outlet_giles_quasi3d_unsteady_HB_t),  intent(inout)   :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
+        type(mpi_comm),                             intent(in)      :: bc_comm
+        type(AD_D),     allocatable,                intent(inout)   :: density(:,:,:)
+        type(AD_D),     allocatable,                intent(inout)   :: vel1(:,:,:)
+        type(AD_D),     allocatable,                intent(inout)   :: vel2(:,:,:)
+        type(AD_D),     allocatable,                intent(inout)   :: vel3(:,:,:)
+        type(AD_D),     allocatable,                intent(inout)   :: pressure(:,:,:)
+
+        type(AD_D), allocatable, dimension(:,:,:) ::  &
+            mom1, mom2, mom3, energy
+
+        real(rk),   allocatable, dimension(:)   :: p_user
+
+        integer(ik) :: iradius, itime, nradius, ntheta, ntime, ierr
+
+
+        ! Define Fourier space discretization to determine
+        ! number of theta-samples are being taken
+        nradius = size(self%r)
+        ntheta  = size(self%theta,2)
+        ntime   = worker%time_manager%ntime
+
+        ! Allocate storage for discrete time instances
+        allocate(density( nradius,ntheta,ntime),  &
+                 mom1(    nradius,ntheta,ntime),  &
+                 mom2(    nradius,ntheta,ntime),  &
+                 mom3(    nradius,ntheta,ntime),  &
+                 vel1(    nradius,ntheta,ntime),  &
+                 vel2(    nradius,ntheta,ntime),  &
+                 vel3(    nradius,ntheta,ntime),  &
+                 energy(  nradius,ntheta,ntime),  &
+                 pressure(nradius,ntheta,ntime), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        ! Perform Fourier decomposition at each radial station.
+        do iradius = 1,nradius
+            do itime = 1,ntime
+                ! Interpolate solution to physical_nodes at current radial station: [ntheta]
+                density(iradius,:,itime) = worker%interpolate_field_general('Density',    donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
+                mom1(iradius,:,itime)    = worker%interpolate_field_general('Momentum-1', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
+                mom2(iradius,:,itime)    = worker%interpolate_field_general('Momentum-2', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
+                mom3(iradius,:,itime)    = worker%interpolate_field_general('Momentum-3', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
+                energy(iradius,:,itime)  = worker%interpolate_field_general('Energy',     donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
+
+                if (worker%coordinate_system() == 'Cylindrical') then
+                    mom2(iradius,:,itime) = mom2(iradius,:,itime)/self%r(iradius)  ! convert to tangential momentum
+                end if
+            end do
+        end do
+
+        ! Compute velocities and pressure at each time
+        density  = density
+        vel1     = mom1/density
+        vel2     = mom2/density
+        vel3     = mom3/density
+
+        ! Pressure from user
+        pressure = (gam-ONE)*(energy - HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/density)
+        p_user = self%bcproperties%compute('Average Pressure',worker%time(),[point_t(ZERO,ZERO,ZERO)])
+        pressure = p_user(1)
+
+    end subroutine get_q_exterior
+    !************************************************************************************
 
 
 

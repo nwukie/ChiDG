@@ -26,7 +26,7 @@ module type_time_manager
         ! Unsteady time parameter
         real(rk)                :: t            ! Current time
         real(rk),   allocatable :: times(:)     ! List of times: times(ntime)
-        real(rk),   allocatable :: freqs(:)     ! List of frequencies: freqs(ntime)
+        real(rk),   allocatable :: freqs(:)     ! List of frequencies: freqs(nfreq)
         real(rk)                :: dt           ! Time interval
 
         integer(ik)             :: itime  = 1   ! Current time index

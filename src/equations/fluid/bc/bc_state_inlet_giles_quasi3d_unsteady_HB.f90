@@ -117,6 +117,7 @@ contains
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::                                                      &
             density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, pressure_bc, vel1_bc, vel2_bc, vel3_bc,   &
+            density_p, pressure_p, vel1_p, vel2_p, vel3_p,   &
             density_bc_tmp, vel1_bc_tmp, vel2_bc_tmp, vel3_bc_tmp, pressure_bc_tmp,                     &
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,                  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,                  &
@@ -133,20 +134,20 @@ contains
 
 
         type(AD_D), allocatable, dimension(:,:,:) ::                                            &
-            density_Ft_real_m, vel1_Ft_real_m, vel2_Ft_real_m, vel3_Ft_real_m, pressure_Ft_real_m,        &
-            density_Ft_imag_m, vel1_Ft_imag_m, vel2_Ft_imag_m, vel3_Ft_imag_m, pressure_Ft_imag_m,        &
-            density_Fts_real_m, vel1_Fts_real_m, vel2_Fts_real_m, vel3_Fts_real_m, pressure_Fts_real_m,   &
-            density_Fts_imag_m, vel1_Fts_imag_m, vel2_Fts_imag_m, vel3_Fts_imag_m, pressure_Fts_imag_m,   &
-            density_Ft_real_p, vel1_Ft_real_p, vel2_Ft_real_p, vel3_Ft_real_p, pressure_Ft_real_p,        &
-            density_Ft_imag_p, vel1_Ft_imag_p, vel2_Ft_imag_p, vel3_Ft_imag_p, pressure_Ft_imag_p,        &
-            density_Fts_real_p, vel1_Fts_real_p, vel2_Fts_real_p, vel3_Fts_real_p, pressure_Fts_real_p,   &
-            density_Fts_imag_p, vel1_Fts_imag_p, vel2_Fts_imag_p, vel3_Fts_imag_p, pressure_Fts_imag_p,   &
+            density_Ft_real_m, vel1_Ft_real_m, vel2_Ft_real_m, vel3_Ft_real_m, pressure_Ft_real_m, c_Ft_real_m,        &
+            density_Ft_imag_m, vel1_Ft_imag_m, vel2_Ft_imag_m, vel3_Ft_imag_m, pressure_Ft_imag_m, c_Ft_imag_m,       &
+            density_Fts_real_m, vel1_Fts_real_m, vel2_Fts_real_m, vel3_Fts_real_m, pressure_Fts_real_m, c_Fts_real_m,    &
+            density_Fts_imag_m, vel1_Fts_imag_m, vel2_Fts_imag_m, vel3_Fts_imag_m, pressure_Fts_imag_m, c_Fts_imag_m,   &
+            density_Ft_real_p, vel1_Ft_real_p, vel2_Ft_real_p, vel3_Ft_real_p, pressure_Ft_real_p, c_Ft_real_p,        &
+            density_Ft_imag_p, vel1_Ft_imag_p, vel2_Ft_imag_p, vel3_Ft_imag_p, pressure_Ft_imag_p, c_Ft_imag_p,       &
+            density_Fts_real_p, vel1_Fts_real_p, vel2_Fts_real_p, vel3_Fts_real_p, pressure_Fts_real_p, c_Fts_real_p,   &
+            density_Fts_imag_p, vel1_Fts_imag_p, vel2_Fts_imag_p, vel3_Fts_imag_p, pressure_Fts_imag_p, c_Fts_imag_p,  &
             density_Fts_real_abs, vel1_Fts_real_abs, vel2_Fts_real_abs, vel3_Fts_real_abs, pressure_Fts_real_abs,   &
             density_Fts_imag_abs, vel1_Fts_imag_abs, vel2_Fts_imag_abs, vel3_Fts_imag_abs, pressure_Fts_imag_abs,   &
             density_Fts_real_gq, vel1_Fts_real_gq, vel2_Fts_real_gq, vel3_Fts_real_gq, pressure_Fts_real_gq,   &
             density_Fts_imag_gq, vel1_Fts_imag_gq, vel2_Fts_imag_gq, vel3_Fts_imag_gq, pressure_Fts_imag_gq,    &
-            density_grid_m, vel1_grid_m, vel2_grid_m, vel3_grid_m, pressure_grid_m, &
-            density_grid_p, vel1_grid_p, vel2_grid_p, vel3_grid_p, pressure_grid_p
+            density_grid_m, vel1_grid_m, vel2_grid_m, vel3_grid_m, pressure_grid_m, c_grid_m, &
+            density_grid_p, vel1_grid_p, vel2_grid_p, vel3_grid_p, pressure_grid_p, c_grid_p
 
 
         real(rk),       allocatable, dimension(:)   :: r, pitch
@@ -211,7 +212,7 @@ contains
                                  vel2_grid_m,       &
                                  vel3_grid_m,       &
                                  pressure_grid_m)
-
+        c_grid_m = sqrt(gam*pressure_grid_m/density_grid_m)
 
         ! Compute Fourier decomposition of temporal data at points
         ! on the spatial transform grid.
@@ -222,11 +223,13 @@ contains
                                        vel2_grid_m,                             &
                                        vel3_grid_m,                             &
                                        pressure_grid_m,                         &
+                                       c_grid_m,                                &
                                        density_Ft_real_m,  density_Ft_imag_m,   &
                                        vel1_Ft_real_m,     vel1_Ft_imag_m,      &
                                        vel2_Ft_real_m,     vel2_Ft_imag_m,      &
                                        vel3_Ft_real_m,     vel3_Ft_imag_m,      &
-                                       pressure_Ft_real_m, pressure_Ft_imag_m)
+                                       pressure_Ft_real_m, pressure_Ft_imag_m,  &
+                                       c_Ft_real_m,        c_Ft_imag_m)
 
         ! Compute Fourier decomposition in theta at set of radial 
         ! stations for each temporal mode:
@@ -237,11 +240,13 @@ contains
                                       vel2_Ft_real_m,      vel2_Ft_imag_m,          &
                                       vel3_Ft_real_m,      vel3_Ft_imag_m,          &
                                       pressure_Ft_real_m,  pressure_Ft_imag_m,      &
+                                      c_Ft_real_m,         c_Ft_imag_m,             &
                                       density_Fts_real_m,  density_Fts_imag_m,      &
                                       vel1_Fts_real_m,     vel1_Fts_imag_m,         &
                                       vel2_Fts_real_m,     vel2_Fts_imag_m,         &
                                       vel3_Fts_real_m,     vel3_Fts_imag_m,         &
-                                      pressure_Fts_real_m, pressure_Fts_imag_m)
+                                      pressure_Fts_real_m, pressure_Fts_imag_m,     &
+                                      c_Fts_real_m,        c_Fts_imag_m)
 
 
 
@@ -252,12 +257,13 @@ contains
         vel2_bar     = vel2_Fts_real_m(:,1,1)
         vel3_bar     = vel3_Fts_real_m(:,1,1)
         pressure_bar = pressure_Fts_real_m(:,1,1)
+        c_bar        = c_Fts_real_m(:,1,1)
 
 
         ! Compute spatio-temporal average over entire surface
-        call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar, &
-                                                          density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
-        c_avg = sqrt(gam*pressure_avg/density_avg)
+        call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar,c_bar, &
+                                                          density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg,c_avg)
+        !c_avg = sqrt(gam*pressure_avg/density_avg)
 
 
 
@@ -301,7 +307,7 @@ contains
 
 
         ! Get exterior perturbation
-        call self%get_q_exterior(worker,bc_comm,  &
+        call self%get_q_exterior(worker,bc_comm,    &
                                  density_grid_p,    &
                                  vel1_grid_p,       &
                                  vel2_grid_p,       &
@@ -315,6 +321,7 @@ contains
         vel2_grid_p     = vel2_grid_p     + vel2_avg
         vel3_grid_p     = vel3_grid_p     + vel3_avg
         pressure_grid_p = pressure_grid_p + pressure_avg
+        c_grid_p = sqrt(gam*pressure_grid_p/density_grid_p)
 
 
         ! Compute Fourier decomposition of temporal data at points
@@ -326,11 +333,13 @@ contains
                                        vel2_grid_p,                             &
                                        vel3_grid_p,                             &
                                        pressure_grid_p,                         &
+                                       c_grid_p,                                &
                                        density_Ft_real_p,  density_Ft_imag_p,   &
                                        vel1_Ft_real_p,     vel1_Ft_imag_p,      &
                                        vel2_Ft_real_p,     vel2_Ft_imag_p,      &
                                        vel3_Ft_real_p,     vel3_Ft_imag_p,      &
-                                       pressure_Ft_real_p, pressure_Ft_imag_p)
+                                       pressure_Ft_real_p, pressure_Ft_imag_p,  &
+                                       c_Ft_real_p,        c_Ft_imag_p)
 
 
 
@@ -343,11 +352,13 @@ contains
                                       vel2_Ft_real_p,      vel2_Ft_imag_p,          &
                                       vel3_Ft_real_p,      vel3_Ft_imag_p,          &
                                       pressure_Ft_real_p,  pressure_Ft_imag_p,      &
+                                      c_Ft_real_p,         c_Ft_imag_p,             &
                                       density_Fts_real_p,  density_Fts_imag_p,      &
                                       vel1_Fts_real_p,     vel1_Fts_imag_p,         &
                                       vel2_Fts_real_p,     vel2_Fts_imag_p,         &
                                       vel3_Fts_real_p,     vel3_Fts_imag_p,         &
-                                      pressure_Fts_real_p, pressure_Fts_imag_p)
+                                      pressure_Fts_real_p, pressure_Fts_imag_p,     &
+                                      c_Fts_real_p,        c_Fts_imag_p)
 
 
 
@@ -360,11 +371,13 @@ contains
                                           vel2_Fts_real_m,       vel2_Fts_imag_m,       &
                                           vel3_Fts_real_m,       vel3_Fts_imag_m,       &
                                           pressure_Fts_real_m,   pressure_Fts_imag_m,   &
+                                          c_Fts_real_m,          c_Fts_imag_m,          &
                                           density_Fts_real_p,    density_Fts_imag_p,    &
                                           vel1_Fts_real_p,       vel1_Fts_imag_p,       &
                                           vel2_Fts_real_p,       vel2_Fts_imag_p,       &
                                           vel3_Fts_real_p,       vel3_Fts_imag_p,       &
                                           pressure_Fts_real_p,   pressure_Fts_imag_p,   &
+                                          c_Fts_real_p,          c_Fts_imag_p,          &
                                           density_Fts_real_abs,  density_Fts_imag_abs,  &
                                           vel1_Fts_real_abs,     vel1_Fts_imag_abs,     &
                                           vel2_Fts_real_abs,     vel2_Fts_imag_abs,     &
@@ -414,6 +427,15 @@ contains
                 end do !itime
             end do !itheta
         end do !igq
+
+
+
+        ! Zero space-time avg
+        density_Fts_real_gq(:,1,1) = ZERO
+        vel1_Fts_real_gq(:,1,1) = ZERO
+        vel2_Fts_real_gq(:,1,1) = ZERO
+        vel3_Fts_real_gq(:,1,1) = ZERO
+        pressure_Fts_real_gq(:,1,1) = ZERO
 
 
         ! Reconstruct primitive variables at quadrature nodes from absorbing Fourier modes
@@ -470,11 +492,23 @@ contains
         end do !igq
 
 
+        ! Allocate storage for boundary state
+        density_p  = ZERO*density_Fts_real_gq(:,1,1)
+        vel1_p     = ZERO*density_Fts_real_gq(:,1,1)
+        vel2_p     = ZERO*density_Fts_real_gq(:,1,1)
+        vel3_p     = ZERO*density_Fts_real_gq(:,1,1)
+        pressure_p = ZERO*density_Fts_real_gq(:,1,1)
         density_bc  = ZERO*density_Fts_real_gq(:,1,1)
         vel1_bc     = ZERO*density_Fts_real_gq(:,1,1)
         vel2_bc     = ZERO*density_Fts_real_gq(:,1,1)
         vel3_bc     = ZERO*density_Fts_real_gq(:,1,1)
         pressure_bc = ZERO*density_Fts_real_gq(:,1,1)
+        mom1_bc     = ZERO*density_Fts_real_gq(:,1,1)
+        mom2_bc     = ZERO*density_Fts_real_gq(:,1,1)
+        mom3_bc     = ZERO*density_Fts_real_gq(:,1,1)
+        energy_bc   = ZERO*density_Fts_real_gq(:,1,1)
+
+
 
         ! Inverse DFT of temporal Fourier modes to give primitive variables
         ! at quarature nodes for the current time instance.
@@ -521,11 +555,11 @@ contains
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             ! Accumulate contribution from unsteady modes
-            density_bc(igq)  = density_bc(igq)  + density_bc_tmp(1)
-            vel1_bc(igq)     = vel1_bc(igq)     + vel1_bc_tmp(1)
-            vel2_bc(igq)     = vel2_bc(igq)     + vel2_bc_tmp(1)
-            vel3_bc(igq)     = vel3_bc(igq)     + vel3_bc_tmp(1)
-            pressure_bc(igq) = pressure_bc(igq) + pressure_bc_tmp(1)
+            density_p(igq)  = density_p(igq)  + density_bc_tmp(1)
+            vel1_p(igq)     = vel1_p(igq)     + vel1_bc_tmp(1)
+            vel2_p(igq)     = vel2_p(igq)     + vel2_bc_tmp(1)
+            vel3_p(igq)     = vel3_p(igq)     + vel3_bc_tmp(1)
+            pressure_p(igq) = pressure_p(igq) + pressure_bc_tmp(1)
         end do
 
 
@@ -533,11 +567,29 @@ contains
         !
         ! Form conserved variables
         !
-        density_bc = density_bc
-        mom1_bc    = density_bc*vel1_bc
-        mom2_bc    = density_bc*vel2_bc
-        mom3_bc    = density_bc*vel3_bc
-        energy_bc  = pressure_bc/(gam - ONE)  + HALF*(mom1_bc*mom1_bc + mom2_bc*mom2_bc + mom3_bc*mom3_bc)/density_bc
+        !density_bc = density_bc
+        !mom1_bc    = density_bc*vel1_bc
+        !mom2_bc    = density_bc*vel2_bc
+        !mom3_bc    = density_bc*vel3_bc
+        !energy_bc  = pressure_bc/(gam - ONE)  + HALF*(mom1_bc*mom1_bc + mom2_bc*mom2_bc + mom3_bc*mom3_bc)/density_bc
+
+        density_bc(:) = density_avg
+        mom1_bc(:)    = density_avg*vel1_avg
+        mom2_bc(:)    = density_avg*vel2_avg
+        mom3_bc(:)    = density_avg*vel3_avg
+        energy_bc(:)  = pressure_avg/(gam - ONE)  + HALF*density_avg*(vel1_avg*vel1_avg + vel2_avg*vel2_avg + vel3_avg*vel3_avg)
+        do igq = 1,size(density_bc)
+            density_bc(igq) = density_bc(igq) + (density_p(igq))
+            mom1_bc(igq)    = mom1_bc(igq)    + (density_p(igq)*vel1_avg + density_avg*vel1_p(igq))
+            mom2_bc(igq)    = mom2_bc(igq)    + (density_p(igq)*vel2_avg + density_avg*vel2_p(igq))
+            mom3_bc(igq)    = mom3_bc(igq)    + (density_p(igq)*vel3_avg + density_avg*vel3_p(igq))
+            energy_bc(igq)  = energy_bc(igq)  + &
+                         HALF*(vel1_avg*vel1_avg + vel2_avg*vel2_avg + vel3_avg*vel3_avg)*density_p(igq) + &
+                         density_avg*vel1_avg*vel1_p(igq) + &
+                         density_avg*vel2_avg*vel2_p(igq) + &
+                         density_avg*vel3_avg*vel3_p(igq) + &
+                         (ONE/(gam-ONE))*pressure_p(igq)
+        end do
 
 
         !

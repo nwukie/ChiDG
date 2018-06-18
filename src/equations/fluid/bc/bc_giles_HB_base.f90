@@ -42,7 +42,9 @@ module bc_giles_HB_base
     type, public, abstract, extends(bc_state_t) :: giles_HB_base_t
 
         integer(ik) :: nr = 10
-        integer(ik) :: nfourier_space = 14
+        !integer(ik) :: nfourier_space = 14
+        !integer(ik) :: nfourier_space = 20
+        integer(ik) :: nfourier_space = 8
 
         real(rk),   allocatable :: r(:)
         real(rk),   allocatable :: theta(:,:)   ! (nr,ntheta)
@@ -225,6 +227,7 @@ contains
         vel3 = mom3/density
         pressure = (gam-ONE)*(energy - HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/density)
 
+
     end subroutine get_q_interior
     !************************************************************************************
 
@@ -240,12 +243,13 @@ contains
     !!
     !------------------------------------------------------------------------------------
     subroutine compute_temporal_dft(self,worker,bc_comm,                    &
-                                    density_grid, vel1_grid, vel2_grid, vel3_grid, pressure_grid, &
+                                    density_grid, vel1_grid, vel2_grid, vel3_grid, pressure_grid, c_grid, &
                                     density_Ft_real,  density_Ft_imag,      &
                                     vel1_Ft_real,     vel1_Ft_imag,         &
                                     vel2_Ft_real,     vel2_Ft_imag,         &
                                     vel3_Ft_real,     vel3_Ft_imag,         &
-                                    pressure_Ft_real, pressure_Ft_imag)
+                                    pressure_Ft_real, pressure_Ft_imag,     &
+                                    c_Ft_real,        c_Ft_imag)
         class(giles_HB_base_t),  intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
@@ -254,6 +258,7 @@ contains
         type(AD_D),     allocatable,                intent(inout)   :: vel2_grid(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: vel3_grid(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: pressure_grid(:,:,:)
+        type(AD_D),     allocatable,                intent(inout)   :: c_grid(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: density_Ft_real(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: density_Ft_imag(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: vel1_Ft_real(:,:,:)
@@ -264,11 +269,13 @@ contains
         type(AD_D),     allocatable,                intent(inout)   :: vel3_Ft_imag(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: pressure_Ft_real(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: pressure_Ft_imag(:,:,:)
+        type(AD_D),     allocatable,                intent(inout)   :: c_Ft_real(:,:,:)
+        type(AD_D),     allocatable,                intent(inout)   :: c_Ft_imag(:,:,:)
 
 
         type(AD_D), allocatable,    dimension(:)    ::                                          &
-            density_real_tmp, vel1_real_tmp, vel2_real_tmp, vel3_real_tmp, pressure_real_tmp,   &
-            density_imag_tmp, vel1_imag_tmp, vel2_imag_tmp, vel3_imag_tmp, pressure_imag_tmp
+            density_real_tmp, vel1_real_tmp, vel2_real_tmp, vel3_real_tmp, pressure_real_tmp, c_real_tmp,   &
+            density_imag_tmp, vel1_imag_tmp, vel2_imag_tmp, vel3_imag_tmp, pressure_imag_tmp, c_imag_tmp
 
         type(AD_D)  :: density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar
 
@@ -286,7 +293,8 @@ contains
                  vel1_Ft_real(    nradius,ntheta,ntime), vel1_Ft_imag(    nradius,ntheta,ntime),  &
                  vel2_Ft_real(    nradius,ntheta,ntime), vel2_Ft_imag(    nradius,ntheta,ntime),  &
                  vel3_Ft_real(    nradius,ntheta,ntime), vel3_Ft_imag(    nradius,ntheta,ntime),  &
-                 pressure_Ft_real(nradius,ntheta,ntime), pressure_Ft_imag(nradius,ntheta,ntime), stat=ierr)
+                 pressure_Ft_real(nradius,ntheta,ntime), pressure_Ft_imag(nradius,ntheta,ntime),  &
+                 c_Ft_real(       nradius,ntheta,ntime), c_Ft_imag(       nradius,ntheta,ntime), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ! Perform Fourier decomposition at each radial station.
@@ -297,6 +305,7 @@ contains
                 call dft(vel2_grid(iradius,itheta,:),     ZERO*vel2_grid(iradius,itheta,:),     vel2_real_tmp,     vel2_imag_tmp    )
                 call dft(vel3_grid(iradius,itheta,:),     ZERO*vel3_grid(iradius,itheta,:),     vel3_real_tmp,     vel3_imag_tmp    )
                 call dft(pressure_grid(iradius,itheta,:), ZERO*pressure_grid(iradius,itheta,:), pressure_real_tmp, pressure_imag_tmp)
+                call dft(c_grid(iradius,itheta,:),        ZERO*c_grid(iradius,itheta,:),        c_real_tmp,        c_imag_tmp       )
 
                 density_Ft_real( iradius,itheta,:) = density_real_tmp
                 density_Ft_imag( iradius,itheta,:) = density_imag_tmp
@@ -308,6 +317,8 @@ contains
                 vel3_Ft_imag(    iradius,itheta,:) = vel3_imag_tmp
                 pressure_Ft_real(iradius,itheta,:) = pressure_real_tmp
                 pressure_Ft_imag(iradius,itheta,:) = pressure_imag_tmp
+                c_Ft_real(       iradius,itheta,:) = c_real_tmp
+                c_Ft_imag(       iradius,itheta,:) = c_imag_tmp
 
             end do !itheta
         end do !iradius
@@ -329,11 +340,13 @@ contains
                                    vel2_Ft_real,     vel2_Ft_imag,        &
                                    vel3_Ft_real,     vel3_Ft_imag,        &
                                    pressure_Ft_real, pressure_Ft_imag,    &
+                                   c_Ft_real,        c_Ft_imag,           &
                                    density_Fts_real,  density_Fts_imag,   &
                                    vel1_Fts_real,     vel1_Fts_imag,      &
                                    vel2_Fts_real,     vel2_Fts_imag,      &
                                    vel3_Fts_real,     vel3_Fts_imag,      &
-                                   pressure_Fts_real, pressure_Fts_imag)
+                                   pressure_Fts_real, pressure_Fts_imag,  &
+                                   c_Fts_real,        c_Fts_imag)
         class(giles_HB_base_t),  intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
@@ -347,6 +360,8 @@ contains
         type(AD_D),     allocatable,                intent(inout)   :: vel3_Ft_imag(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: pressure_Ft_real(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: pressure_Ft_imag(:,:,:)
+        type(AD_D),     allocatable,                intent(inout)   :: c_Ft_real(:,:,:)
+        type(AD_D),     allocatable,                intent(inout)   :: c_Ft_imag(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: density_Fts_real(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: density_Fts_imag(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: vel1_Fts_real(:,:,:)
@@ -357,10 +372,12 @@ contains
         type(AD_D),     allocatable,                intent(inout)   :: vel3_Fts_imag(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: pressure_Fts_real(:,:,:)
         type(AD_D),     allocatable,                intent(inout)   :: pressure_Fts_imag(:,:,:)
+        type(AD_D),     allocatable,                intent(inout)   :: c_Fts_real(:,:,:)
+        type(AD_D),     allocatable,                intent(inout)   :: c_Fts_imag(:,:,:)
 
         type(AD_D), allocatable,    dimension(:)    ::                                          &
-            density_real_tmp, vel1_real_tmp, vel2_real_tmp, vel3_real_tmp, pressure_real_tmp,   &
-            density_imag_tmp, vel1_imag_tmp, vel2_imag_tmp, vel3_imag_tmp, pressure_imag_tmp
+            density_real_tmp, vel1_real_tmp, vel2_real_tmp, vel3_real_tmp, pressure_real_tmp, c_real_tmp, &
+            density_imag_tmp, vel1_imag_tmp, vel2_imag_tmp, vel3_imag_tmp, pressure_imag_tmp, c_imag_tmp
 
         integer(ik)             :: nradius, ntheta, iradius, itheta, imode, itime, ntime, ierr
         real(rk)                :: shift_r, shift_i
@@ -378,7 +395,8 @@ contains
                  vel1_Fts_real(    nradius,ntheta,ntime), vel1_Fts_imag(    nradius,ntheta,ntime),  &
                  vel2_Fts_real(    nradius,ntheta,ntime), vel2_Fts_imag(    nradius,ntheta,ntime),  &
                  vel3_Fts_real(    nradius,ntheta,ntime), vel3_Fts_imag(    nradius,ntheta,ntime),  &
-                 pressure_Fts_real(nradius,ntheta,ntime), pressure_Fts_imag(nradius,ntheta,ntime), stat=ierr)
+                 pressure_Fts_real(nradius,ntheta,ntime), pressure_Fts_imag(nradius,ntheta,ntime),  &
+                 c_Fts_real(       nradius,ntheta,ntime), c_Fts_imag(       nradius,ntheta,ntime), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ! Perform Fourier decomposition at each radial station.
@@ -391,6 +409,7 @@ contains
                 call dft(vel2_Ft_real(    iradius,:,itime), vel2_Ft_imag(    iradius,:,itime), vel2_real_tmp,     vel2_imag_tmp,     negate=.true.)
                 call dft(vel3_Ft_real(    iradius,:,itime), vel3_Ft_imag(    iradius,:,itime), vel3_real_tmp,     vel3_imag_tmp,     negate=.true.)
                 call dft(pressure_Ft_real(iradius,:,itime), pressure_Ft_imag(iradius,:,itime), pressure_real_tmp, pressure_imag_tmp, negate=.true.)
+                call dft(c_Ft_real(       iradius,:,itime), c_Ft_imag(       iradius,:,itime), c_real_tmp,        c_imag_tmp,        negate=.true.)
 
                 ! Adjust Fourier coefficients so their phase is relative to self%theta_ref
                 ! instead of the minimum theta of the transform.
@@ -420,12 +439,14 @@ contains
                     vel2_Fts_real(    iradius,imode,itime) = vel2_real_tmp(imode)    
                     vel3_Fts_real(    iradius,imode,itime) = vel3_real_tmp(imode)    
                     pressure_Fts_real(iradius,imode,itime) = pressure_real_tmp(imode)
+                    c_Fts_real(       iradius,imode,itime) = c_real_tmp(imode)
 
                     density_Fts_imag( iradius,imode,itime) = density_imag_tmp(imode) 
                     vel1_Fts_imag(    iradius,imode,itime) = vel1_imag_tmp(imode)    
                     vel2_Fts_imag(    iradius,imode,itime) = vel2_imag_tmp(imode)    
                     vel3_Fts_imag(    iradius,imode,itime) = vel3_imag_tmp(imode)    
                     pressure_Fts_imag(iradius,imode,itime) = pressure_imag_tmp(imode)
+                    c_Fts_imag(       iradius,imode,itime) = c_imag_tmp(imode)
                 end do !imode
 
             end do !itime
@@ -453,11 +474,13 @@ contains
                                        vel2_real_m,       vel2_imag_m,          &
                                        vel3_real_m,       vel3_imag_m,          &
                                        pressure_real_m,   pressure_imag_m,      &
+                                       c_real_m,          c_imag_m,             &
                                        density_real_p,    density_imag_p,       &
                                        vel1_real_p,       vel1_imag_p,          &
                                        vel2_real_p,       vel2_imag_p,          &
                                        vel3_real_p,       vel3_imag_p,          &
                                        pressure_real_p,   pressure_imag_p,      &
+                                       c_real_p,          c_imag_p,             &
                                        density_real_abs,  density_imag_abs,     &
                                        vel1_real_abs,     vel1_imag_abs,        &
                                        vel2_real_abs,     vel2_imag_abs,        &
@@ -476,6 +499,8 @@ contains
         type(AD_D),              intent(inout)   :: vel3_imag_m(:,:,:)
         type(AD_D),              intent(inout)   :: pressure_real_m(:,:,:)
         type(AD_D),              intent(inout)   :: pressure_imag_m(:,:,:)
+        type(AD_D),              intent(inout)   :: c_real_m(:,:,:)
+        type(AD_D),              intent(inout)   :: c_imag_m(:,:,:)
         type(AD_D),              intent(inout)   :: density_real_p(:,:,:)
         type(AD_D),              intent(inout)   :: density_imag_p(:,:,:)
         type(AD_D),              intent(inout)   :: vel1_real_p(:,:,:)
@@ -486,6 +511,8 @@ contains
         type(AD_D),              intent(inout)   :: vel3_imag_p(:,:,:)
         type(AD_D),              intent(inout)   :: pressure_real_p(:,:,:)
         type(AD_D),              intent(inout)   :: pressure_imag_p(:,:,:)
+        type(AD_D),              intent(inout)   :: c_real_p(:,:,:)
+        type(AD_D),              intent(inout)   :: c_imag_p(:,:,:)
         type(AD_D),              intent(inout), allocatable   :: density_real_abs(:,:,:)
         type(AD_D),              intent(inout), allocatable   :: density_imag_abs(:,:,:)
         type(AD_D),              intent(inout), allocatable   :: vel1_real_abs(:,:,:)
@@ -517,7 +544,7 @@ contains
         type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, T_avg, vmag
 
         real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag, pitch
-        integer(ik) :: ierr
+        integer(ik) :: ierr, itheta
 
         pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
 
@@ -527,6 +554,7 @@ contains
         vel2_bar     = vel2_real_p(:,1,1)
         vel3_bar     = vel3_real_p(:,1,1)
         pressure_bar = pressure_real_p(:,1,1)
+        c_bar        = c_real_p(:,1,1)
 
 
 !        allocate(a1_real_test(1,3,3), a1_imag_test(1,3,3), &
@@ -714,6 +742,12 @@ contains
 
         ! Project to eigenmodes
         call self%primitive_to_eigenmodes(worker,bc_comm,                   &
+                                          density_real_p(:,1,1), &
+                                          vel1_real_p(:,1,1), &
+                                          vel2_real_p(:,1,1), &
+                                          vel3_real_p(:,1,1), &
+                                          pressure_real_p(:,1,1), &
+                                          c_real_p(:,1,1), &
                                           density_real_m,  density_imag_m,  &
                                           vel1_real_m,     vel1_imag_m,     &
                                           vel2_real_m,     vel2_imag_m,     &
@@ -725,7 +759,42 @@ contains
                                           a4_real_m,       a4_imag_m,       &
                                           a5_real_m,       a5_imag_m)
 
+
+!        print*, 'a3_real_m:'
+!        do itheta = 1,size(a3_real_m,2)
+!            print*, a3_real_m(1,itheta,1)%x_ad_, a3_real_m(1,itheta,2)%x_ad_
+!        end do
+!        print*, 'a3_imag_m:'
+!        do itheta = 1,size(a3_imag_m,2)
+!            print*, a3_imag_m(1,itheta,1)%x_ad_, a3_imag_m(1,itheta,2)%x_ad_
+!        end do
+!
+!        print*, 'a4_real_m:'
+!        do itheta = 1,size(a4_real_m,2)
+!            print*, a4_real_m(1,itheta,1)%x_ad_, a4_real_m(1,itheta,2)%x_ad_
+!        end do
+!        print*, 'a4_imag_m:'
+!        do itheta = 1,size(a4_imag_m,2)
+!            print*, a4_imag_m(1,itheta,1)%x_ad_, a4_imag_m(1,itheta,2)%x_ad_
+!        end do
+!
+!        print*, 'a5_real_m:'
+!        do itheta = 1,size(a5_real_m,2)
+!            print*, a5_real_m(1,itheta,1)%x_ad_, a5_real_m(1,itheta,2)%x_ad_
+!        end do
+!        print*, 'a5_imag_m:'
+!        do itheta = 1,size(a5_imag_m,2)
+!            print*, a5_imag_m(1,itheta,1)%x_ad_, a5_imag_m(1,itheta,2)%x_ad_
+!        end do
+
+
         call self%primitive_to_eigenmodes(worker,bc_comm,                   &
+                                          density_real_p(:,1,1), &
+                                          vel1_real_p(:,1,1), &
+                                          vel2_real_p(:,1,1), &
+                                          vel3_real_p(:,1,1), &
+                                          pressure_real_p(:,1,1), &
+                                          c_real_p(:,1,1), &
                                           density_real_p,  density_imag_p,  &
                                           vel1_real_p,     vel1_imag_p,     &
                                           vel2_real_p,     vel2_imag_p,     &
@@ -737,6 +806,32 @@ contains
                                           a4_real_p,       a4_imag_p,       &
                                           a5_real_p,       a5_imag_p)
 
+!        print*, 'a3_real_p:'
+!        do itheta = 1,size(a3_real_p,2)
+!            print*, a3_real_p(1,itheta,1)%x_ad_, a3_real_p(1,itheta,2)%x_ad_
+!        end do
+!        print*, 'a3_imag_p:'
+!        do itheta = 1,size(a3_imag_p,2)
+!            print*, a3_imag_p(1,itheta,1)%x_ad_, a3_imag_p(1,itheta,2)%x_ad_
+!        end do
+!
+!        print*, 'a4_real_p:'
+!        do itheta = 1,size(a4_real_p,2)
+!            print*, a4_real_p(1,itheta,1)%x_ad_, a4_real_p(1,itheta,2)%x_ad_
+!        end do
+!        print*, 'a4_imag_p:'
+!        do itheta = 1,size(a4_imag_p,2)
+!            print*, a4_imag_p(1,itheta,1)%x_ad_, a4_imag_p(1,itheta,2)%x_ad_
+!        end do
+!
+!        print*, 'a5_real_p:'
+!        do itheta = 1,size(a5_real_p,2)
+!            print*, a5_real_p(1,itheta,1)%x_ad_, a5_real_p(1,itheta,2)%x_ad_
+!        end do
+!        print*, 'a5_imag_p:'
+!        do itheta = 1,size(a5_imag_p,2)
+!            print*, a5_imag_p(1,itheta,1)%x_ad_, a5_imag_p(1,itheta,2)%x_ad_
+!        end do
 
 
 
@@ -768,6 +863,25 @@ contains
         a5_real = a5_real_p
         a5_imag = a5_imag_p
 
+
+        ! Zero out incoming amplitudes
+        a1_real(:,:,:) = ZERO
+        a1_imag(:,:,:) = ZERO
+        a2_real(:,:,:) = ZERO
+        a2_imag(:,:,:) = ZERO
+        a3_real(:,:,:) = ZERO
+        a3_imag(:,:,:) = ZERO
+        a5_real(:,:,:) = ZERO
+        a5_imag(:,:,:) = ZERO
+
+
+!        a1_real(:,2,2) = 0.001_rk   ! entropy
+!        a3_real(:,2,2) = 0.001_rk   ! vorticity
+        a5_real(:,2,2) = 0.001_rk   ! downstream pressure
+
+
+
+
         ! Outgoing perturbations from interior state
         a4_real = a4_real_m
         a4_imag = a4_imag_m
@@ -787,6 +901,12 @@ contains
 
 
         call self%eigenmodes_to_primitive(worker,bc_comm,                       &
+                                          density_real_p(:,1,1), &
+                                          vel1_real_p(:,1,1), &
+                                          vel2_real_p(:,1,1), &
+                                          vel3_real_p(:,1,1), &
+                                          pressure_real_p(:,1,1), &
+                                          c_real_p(:,1,1), &
                                           a1_real,           a1_imag,           &
                                           a2_real,           a2_imag,           &
                                           a3_real,           a3_imag,           &
@@ -867,7 +987,9 @@ contains
                                         vel3_real,       &
                                         vel3_imag,       &
                                         pressure_real,   &
-                                        pressure_imag)
+                                        pressure_imag,   &
+                                        c_real,          &
+                                        c_imag)
         class(giles_HB_base_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(mpi_comm),             intent(in)      :: bc_comm
@@ -881,6 +1003,8 @@ contains
         type(AD_D),                 intent(inout)   :: vel3_imag(:,:,:)
         type(AD_D),                 intent(inout)   :: pressure_real(:,:,:)
         type(AD_D),                 intent(inout)   :: pressure_imag(:,:,:)
+        type(AD_D),                 intent(inout)   :: c_real(:,:,:)
+        type(AD_D),                 intent(inout)   :: c_imag(:,:,:)
 
         type(AD_D), allocatable, dimension(:,:,:) ::        &
             a1_real, a2_real, a3_real, a4_real, a5_real,    &
@@ -894,6 +1018,12 @@ contains
 
         ! Project to eigenmodes
         call self%primitive_to_eigenmodes(worker,bc_comm,               &
+                                          density_real(:,1,1), &
+                                          vel1_real(:,1,1), &
+                                          vel2_real(:,1,1), &
+                                          vel3_real(:,1,1), &
+                                          pressure_real(:,1,1), &
+                                          c_real(:,1,1), &
                                           density_real,  density_imag,  &
                                           vel1_real,     vel1_imag,     &
                                           vel2_real,     vel2_imag,     &
@@ -911,6 +1041,12 @@ contains
 
         ! Convert back to primitive variables
         call self%eigenmodes_to_primitive(worker,bc_comm,               &
+                                          density_real(:,1,1), &
+                                          vel1_real(:,1,1), &
+                                          vel2_real(:,1,1), &
+                                          vel3_real(:,1,1), &
+                                          pressure_real(:,1,1), &
+                                          c_real(:,1,1), &
                                           a1_real,      a1_imag,        &
                                           a2_real,      a2_imag,        &
                                           a3_real,      a3_imag,        &
@@ -938,6 +1074,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine primitive_to_eigenmodes(self,worker,bc_comm,           &
+                                       density_bar_r, vel1_bar_r, vel2_bar_r, vel3_bar_r, pressure_bar_r, c_bar_r, &
                                        density_real,  density_imag,   &
                                        vel1_real,     vel1_imag,      &
                                        vel2_real,     vel2_imag,      &
@@ -951,6 +1088,12 @@ contains
         class(giles_HB_base_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(mpi_comm),             intent(in)      :: bc_comm
+        type(AD_D),                 intent(in)      :: density_bar_r(:)
+        type(AD_D),                 intent(in)      :: vel1_bar_r(:)
+        type(AD_D),                 intent(in)      :: vel2_bar_r(:)
+        type(AD_D),                 intent(in)      :: vel3_bar_r(:)
+        type(AD_D),                 intent(in)      :: pressure_bar_r(:)
+        type(AD_D),                 intent(in)      :: c_bar_r(:)
         type(AD_D),                 intent(inout)   :: density_real(:,:,:)
         type(AD_D),                 intent(inout)   :: density_imag(:,:,:)
         type(AD_D),                 intent(inout)   :: vel1_real(:,:,:)
@@ -973,8 +1116,8 @@ contains
         type(AD_D), allocatable,    intent(inout)   :: a5_imag(:,:,:)
 
         type(AD_D)  :: k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, &
-                       density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, &
-                       c_bar, c_real, c_imag, denom, Tinv_real(5,5), Tinv_imag(5,5)
+                       density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, &
+                       c_real, c_imag, denom, Tinv_real(5,5), Tinv_imag(5,5)
 
         real(rk),       allocatable, dimension(:)   :: pitch, unorm3
         real(rk)                                    :: theta_offset, omega, kz, lm
@@ -998,16 +1141,22 @@ contains
         a5_imag = ZERO*density_real
 
         ! Project
-        print*, 'WARNING! HARDCODED ACCESS TO FIRST FREQUENCY ONLY!!!'
         print*, 'WARNING! CHECK DEFINITION OF lm PITCH!'
         do iradius = 1,nr
+            !! Get radius-local average
+            !density_bar  = density_real(iradius,1,1)
+            !vel1_bar     = vel1_real(iradius,1,1)
+            !vel2_bar     = vel2_real(iradius,1,1)
+            !vel3_bar     = vel3_real(iradius,1,1)
+            !pressure_bar = pressure_real(iradius,1,1)
+            !c_bar        = sqrt(gam*pressure_bar/density_bar)
             ! Get radius-local average
-            density_bar  = density_real(iradius,1,1)
-            vel1_bar     = vel1_real(iradius,1,1)
-            vel2_bar     = vel2_real(iradius,1,1)
-            vel3_bar     = vel3_real(iradius,1,1)
-            pressure_bar = pressure_real(iradius,1,1)
-            c_bar        = sqrt(gam*pressure_bar/density_bar)
+            density_bar  = density_bar_r(iradius)
+            vel1_bar     = vel1_bar_r(iradius)
+            vel2_bar     = vel2_bar_r(iradius)
+            vel3_bar     = vel3_bar_r(iradius)
+            pressure_bar = pressure_bar_r(iradius)
+            c_bar        = c_bar_r(iradius)
 
             ! starting with 2 here because the first mode is treated with 1D characteristics
             do itheta = 1,ntheta
@@ -1080,6 +1229,21 @@ contains
                     ! Contribution from pressure:
                     Tinv_real(5,5) = ONE/(TWO*density_bar*c_bar*c_bar)
 
+
+
+!                    print*, 'Tinv: ', omega, lm
+!                    print*, 'real'
+!                    print*, Tinv_real(1,1)%x_ad_, Tinv_real(1,2)%x_ad_, Tinv_real(1,3)%x_ad_, Tinv_real(1,4)%x_ad_, Tinv_real(1,5)%x_ad_
+!                    print*, Tinv_real(2,1)%x_ad_, Tinv_real(2,2)%x_ad_, Tinv_real(2,3)%x_ad_, Tinv_real(2,4)%x_ad_, Tinv_real(2,5)%x_ad_
+!                    print*, Tinv_real(3,1)%x_ad_, Tinv_real(3,2)%x_ad_, Tinv_real(3,3)%x_ad_, Tinv_real(3,4)%x_ad_, Tinv_real(3,5)%x_ad_
+!                    print*, Tinv_real(4,1)%x_ad_, Tinv_real(4,2)%x_ad_, Tinv_real(4,3)%x_ad_, Tinv_real(4,4)%x_ad_, Tinv_real(4,5)%x_ad_
+!                    print*, Tinv_real(5,1)%x_ad_, Tinv_real(5,2)%x_ad_, Tinv_real(5,3)%x_ad_, Tinv_real(5,4)%x_ad_, Tinv_real(5,5)%x_ad_
+!                    print*, 'imag'
+!                    print*, Tinv_imag(1,1)%x_ad_, Tinv_imag(1,2)%x_ad_, Tinv_imag(1,3)%x_ad_, Tinv_imag(1,4)%x_ad_, Tinv_imag(1,5)%x_ad_
+!                    print*, Tinv_imag(2,1)%x_ad_, Tinv_imag(2,2)%x_ad_, Tinv_imag(2,3)%x_ad_, Tinv_imag(2,4)%x_ad_, Tinv_imag(2,5)%x_ad_
+!                    print*, Tinv_imag(3,1)%x_ad_, Tinv_imag(3,2)%x_ad_, Tinv_imag(3,3)%x_ad_, Tinv_imag(3,4)%x_ad_, Tinv_imag(3,5)%x_ad_
+!                    print*, Tinv_imag(4,1)%x_ad_, Tinv_imag(4,2)%x_ad_, Tinv_imag(4,3)%x_ad_, Tinv_imag(4,4)%x_ad_, Tinv_imag(4,5)%x_ad_
+!                    print*, Tinv_imag(5,1)%x_ad_, Tinv_imag(5,2)%x_ad_, Tinv_imag(5,3)%x_ad_, Tinv_imag(5,4)%x_ad_, Tinv_imag(5,5)%x_ad_
 
 
                     ! Project
@@ -1168,6 +1332,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine eigenmodes_to_primitive(self,worker,bc_comm,             &
+                                       density_bar_r, vel1_bar_r, vel2_bar_r, vel3_bar_r, pressure_bar_r, c_bar_r, &
                                        a1_real,       a1_imag,          &
                                        a2_real,       a2_imag,          &
                                        a3_real,       a3_imag,          &
@@ -1181,6 +1346,12 @@ contains
         class(giles_HB_base_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(mpi_comm),             intent(in)      :: bc_comm
+        type(AD_D),                 intent(in)      :: density_bar_r(:)
+        type(AD_D),                 intent(in)      :: vel1_bar_r(:)
+        type(AD_D),                 intent(in)      :: vel2_bar_r(:)
+        type(AD_D),                 intent(in)      :: vel3_bar_r(:)
+        type(AD_D),                 intent(in)      :: pressure_bar_r(:)
+        type(AD_D),                 intent(in)      :: c_bar_r(:)
         type(AD_D),                 intent(in)      :: a1_real(:,:,:)
         type(AD_D),                 intent(in)      :: a1_imag(:,:,:)
         type(AD_D),                 intent(in)      :: a2_real(:,:,:)
@@ -1217,16 +1388,21 @@ contains
         ntime  = size(density_real,3)
 
         ! Project
-        print*, 'WARNING! HARDCODED ACCESS TO FIRST FREQUENCY ONLY!!!'
         print*, 'WARNING! CHECK DEFINITION OF lm PITCH!'
         do iradius = 1,nr
-            ! Get radius-local average
-            density_bar  = density_real(iradius,1,1)
-            vel1_bar     = vel1_real(iradius,1,1)
-            vel2_bar     = vel2_real(iradius,1,1)
-            vel3_bar     = vel3_real(iradius,1,1)
-            pressure_bar = pressure_real(iradius,1,1)
-            c_bar        = sqrt(gam*pressure_bar/density_bar)
+            !! Get radius-local average
+            !density_bar  = density_real(iradius,1,1)
+            !vel1_bar     = vel1_real(iradius,1,1)
+            !vel2_bar     = vel2_real(iradius,1,1)
+            !vel3_bar     = vel3_real(iradius,1,1)
+            !pressure_bar = pressure_real(iradius,1,1)
+            !c_bar        = sqrt(gam*pressure_bar/density_bar)
+            density_bar  = density_bar_r(iradius)
+            vel1_bar     = vel1_bar_r(iradius)
+            vel2_bar     = vel2_bar_r(iradius)
+            vel3_bar     = vel3_bar_r(iradius)
+            pressure_bar = pressure_bar_r(iradius)
+            c_bar        = c_bar_r(iradius)
 
             ! starting with 2 here because the first mode is treated with 1D characteristics
             do itheta = 1,ntheta
@@ -1311,6 +1487,21 @@ contains
                     T_real(5,4) = density_bar*c_bar*c_bar
                     T_real(5,5) = density_bar*c_bar*c_bar
 
+
+
+!                    print*, 'T: ', omega, lm
+!                    print*, 'real'
+!                    print*, T_real(1,1)%x_ad_, T_real(1,2)%x_ad_, T_real(1,3)%x_ad_, T_real(1,4)%x_ad_, T_real(1,5)%x_ad_
+!                    print*, T_real(2,1)%x_ad_, T_real(2,2)%x_ad_, T_real(2,3)%x_ad_, T_real(2,4)%x_ad_, T_real(2,5)%x_ad_
+!                    print*, T_real(3,1)%x_ad_, T_real(3,2)%x_ad_, T_real(3,3)%x_ad_, T_real(3,4)%x_ad_, T_real(3,5)%x_ad_
+!                    print*, T_real(4,1)%x_ad_, T_real(4,2)%x_ad_, T_real(4,3)%x_ad_, T_real(4,4)%x_ad_, T_real(4,5)%x_ad_
+!                    print*, T_real(5,1)%x_ad_, T_real(5,2)%x_ad_, T_real(5,3)%x_ad_, T_real(5,4)%x_ad_, T_real(5,5)%x_ad_
+!                    print*, 'imag'
+!                    print*, T_imag(1,1)%x_ad_, T_imag(1,2)%x_ad_, T_imag(1,3)%x_ad_, T_imag(1,4)%x_ad_, T_imag(1,5)%x_ad_
+!                    print*, T_imag(2,1)%x_ad_, T_imag(2,2)%x_ad_, T_imag(2,3)%x_ad_, T_imag(2,4)%x_ad_, T_imag(2,5)%x_ad_
+!                    print*, T_imag(3,1)%x_ad_, T_imag(3,2)%x_ad_, T_imag(3,3)%x_ad_, T_imag(3,4)%x_ad_, T_imag(3,5)%x_ad_
+!                    print*, T_imag(4,1)%x_ad_, T_imag(4,2)%x_ad_, T_imag(4,3)%x_ad_, T_imag(4,4)%x_ad_, T_imag(4,5)%x_ad_
+!                    print*, T_imag(5,1)%x_ad_, T_imag(5,2)%x_ad_, T_imag(5,3)%x_ad_, T_imag(5,4)%x_ad_, T_imag(5,5)%x_ad_
 
 
                     ! Density
@@ -1417,7 +1608,7 @@ contains
         type(AD_D),             intent(inout)   :: k5_imag
 
         real(rk),   allocatable, dimension(:)   :: pitch, unorm3
-        type(AD_D)  :: pyra, ktmp_real, ktmp_imag
+        type(AD_D)  :: pyra, ktmp_real, ktmp_imag, vg4, vg5
 
         complex(rk) :: omega_c, pyra_c, k4_c, k5_c
         real(rk)    :: vel2_bar_r, vel3_bar_r, c_bar_r
@@ -1435,30 +1626,34 @@ contains
 
         if (pyra >= ZERO) then
             k4_real = (-vel3_bar*(omega - kz*vel2_bar) + c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
-            k4_imag = ZERO*k4_real
             k5_real = (-vel3_bar*(omega - kz*vel2_bar) - c_bar*sqrt(pyra))/(c_bar**TWO - vel3_bar**TWO)
+            k4_imag = ZERO*k4_real
             k5_imag = ZERO*k4_real
 
-            ! test direction of propagation by perturbing omega
-            vel3_bar_r = vel3_bar%x_ad_
-            vel2_bar_r = vel2_bar%x_ad_
-            c_bar_r = c_bar%x_ad_
-            omega_c = cmplx(omega,-0.00001_rk)
-            pyra_c = (omega_c - kz*vel2_bar_r)**TWO - kz*kz*(c_bar_r**TWO - vel3_bar_r**TWO)
-            k4_c = (-vel3_bar_r*(omega_c - kz*vel2_bar_r) + c_bar_r*sqrt(pyra_c))/(c_bar_r**TWO - vel3_bar_r**TWO)
-            k5_c = (-vel3_bar_r*(omega_c - kz*vel2_bar_r) - c_bar_r*sqrt(pyra_c))/(c_bar_r**TWO - vel3_bar_r**TWO)
+!            ! test direction of propagation by perturbing omega
+!            vel3_bar_r = vel3_bar%x_ad_
+!            vel2_bar_r = vel2_bar%x_ad_
+!            c_bar_r = c_bar%x_ad_
+!            omega_c = cmplx(omega,-0.00001_rk)
+!            pyra_c = (omega_c - kz*vel2_bar_r)**TWO - kz*kz*(c_bar_r**TWO - vel3_bar_r**TWO)
+!            k4_c = (-vel3_bar_r*(omega_c - kz*vel2_bar_r) + c_bar_r*sqrt(pyra_c))/(c_bar_r**TWO - vel3_bar_r**TWO)
+!            k5_c = (-vel3_bar_r*(omega_c - kz*vel2_bar_r) - c_bar_r*sqrt(pyra_c))/(c_bar_r**TWO - vel3_bar_r**TWO)
+!
+!            if (imagpart(k4_c) < ZERO) then
+!                k4_imag = -0.0000001_rk
+!            else
+!                k4_imag = 0.0000001_rk
+!            end if
+!
+!            if (imagpart(k5_c) < ZERO) then
+!                k5_imag = -0.0000001_rk
+!            else
+!                k5_imag = 0.0000001_rk
+!            end if
 
-            if (imagpart(k4_c) < ZERO) then
-                k4_imag = -0.0000001_rk
-            else
-                k4_imag = 0.0000001_rk
-            end if
 
-            if (imagpart(k5_c) < ZERO) then
-                k5_imag = -0.0000001_rk
-            else
-                k5_imag = 0.0000001_rk
-            end if
+            vg4 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar - (c_bar*(omega-kz*vel2_bar)/sqrt(pyra)))
+            vg5 = -(c_bar*c_bar - vel3_bar*vel3_bar)/(vel3_bar + (c_bar*(omega-kz*vel2_bar)/sqrt(pyra)))
 
 
         else
@@ -1466,21 +1661,88 @@ contains
             k4_imag =  c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
             k5_real = (-vel3_bar*(omega - kz*vel2_bar))/(c_bar**TWO - vel3_bar**TWO)
             k5_imag = -c_bar*sqrt(-pyra)/(c_bar**TWO - vel3_bar**TWO)
+
+!            ! test direction of propagation by perturbing omega
+!            vel3_bar_r = vel3_bar%x_ad_
+!            vel2_bar_r = vel2_bar%x_ad_
+!            c_bar_r = c_bar%x_ad_
+!            omega_c = cmplx(omega,-0.00001_rk)
+!            pyra_c = (omega_c - kz*vel2_bar_r)**TWO - kz*kz*(c_bar_r**TWO - vel3_bar_r**TWO)
+!            k4_c = (-vel3_bar_r*(omega_c - kz*vel2_bar_r) + c_bar_r*sqrt(pyra_c))/(c_bar_r**TWO - vel3_bar_r**TWO)
+!            k5_c = (-vel3_bar_r*(omega_c - kz*vel2_bar_r) - c_bar_r*sqrt(pyra_c))/(c_bar_r**TWO - vel3_bar_r**TWO)
+!
+!            if ( ((imagpart(k4_c) < ZERO) .and. (k4_imag > ZERO)) .or. &
+!                 ((imagpart(k4_c) > ZERO) .and. (k4_imag < ZERO)) ) then
+!                k4_imag = -k4_imag
+!            end if
+!
+!            if ( ((imagpart(k5_c) < ZERO) .and. (k5_imag > ZERO)) .or. &
+!                 ((imagpart(k5_c) > ZERO) .and. (k5_imag < ZERO)) ) then
+!                k5_imag = -k5_imag
+!            end if
+
+            vg4 = ZERO*k4_real
+            vg5 = ZERO*k4_real
+            if (k4_imag < ZERO) then
+                vg4 = ONE
+            else
+                vg4 = -ONE
+            end if
+
+            if (k5_imag < ZERO) then
+                vg5 = ONE
+            else
+                vg5 = -ONE
+            end if
+
         end if
+
+!        print*, 'k4, k5, normal3'
+!        print*, omega, lm
+!        print*, vel2_bar%x_ad_, vel3_bar%x_ad_, c_bar%x_ad_
+!        print*, k4_real%x_ad_, k4_imag%x_ad_
+!!        print*, realpart(k4_c), imagpart(k4_c)
+!        print*, k5_real%x_ad_, k5_imag%x_ad_
+!!        print*, realpart(k5_c), imagpart(k5_c)
+!!        print*, worker%unit_normal(3)
+
+!        unorm3 = worker%unit_normal(3)
+!        if (k5_imag*unorm3(1) < ZERO) then
+!            ktmp_real = k5_real
+!            ktmp_imag = k5_imag
+!
+!            k5_real = k4_real
+!            k5_imag = k4_imag
+!            k4_real = ktmp_real
+!            k4_imag = ktmp_imag
+!        end if
+
 
         unorm3 = worker%unit_normal(3)
-        if (k4_imag*unorm3(1) < ZERO) then
-            ! Do nothing
-        else if (k5_imag*unorm3(1) < ZERO) then
-            ktmp_real = k5_real
-            ktmp_imag = k5_imag
+        if (unorm3(1) < ZERO) then
+            if (vg5 < ZERO) then
+                ktmp_real = k5_real
+                ktmp_imag = k5_imag
 
-            k5_real = k4_real
-            k5_imag = k4_imag
-            k4_real = ktmp_real
-            k4_imag = ktmp_imag
+                k5_real = k4_real
+                k5_imag = k4_imag
+                k4_real = ktmp_real
+                k4_imag = ktmp_imag
+            end if
         end if
 
+        
+        if (unorm3(1) > ZERO) then
+            if (vg5 > ZERO) then
+                ktmp_real = k5_real
+                ktmp_imag = k5_imag
+
+                k5_real = k4_real
+                k5_imag = k4_imag
+                k4_real = ktmp_real
+                k4_imag = ktmp_imag
+            end if
+        end if
 
     end subroutine compute_eigenvalues
     !********************************************************************************
@@ -1699,8 +1961,8 @@ contains
     !!  @date   4/16/2018
     !!
     !--------------------------------------------------------------------------------
-    subroutine compute_boundary_average(self,worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar, &
-                                                            density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
+    subroutine compute_boundary_average(self,worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar,c_bar, &
+                                                            density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg,c_avg)
         class(giles_HB_base_t),  intent(inout)   :: self
         type(chidg_worker_t),                       intent(in)      :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
@@ -1709,11 +1971,13 @@ contains
         type(AD_D),                                 intent(in)      :: vel2_bar(:)
         type(AD_D),                                 intent(in)      :: vel3_bar(:)
         type(AD_D),                                 intent(in)      :: pressure_bar(:)
+        type(AD_D),                                 intent(in)      :: c_bar(:)
         type(AD_D),                                 intent(inout)   :: density_avg
         type(AD_D),                                 intent(inout)   :: vel1_avg
         type(AD_D),                                 intent(inout)   :: vel2_avg
         type(AD_D),                                 intent(inout)   :: vel3_avg
         type(AD_D),                                 intent(inout)   :: pressure_avg
+        type(AD_D),                                 intent(inout)   :: c_avg
 
         real(rk)    :: area, dr
         integer(ik) :: irad
@@ -1724,6 +1988,7 @@ contains
         vel2_avg     = ZERO*density_bar(1)
         vel3_avg     = ZERO*density_bar(1)
         pressure_avg = ZERO*density_bar(1)
+        c_avg        = ZERO*density_bar(1)
 
         if (worker%coordinate_system() == 'Cartesian') then
             dr = self%r(2) - self%r(1)
@@ -1734,6 +1999,7 @@ contains
                 vel2_avg     = vel2_avg     + dr*(vel2_bar(irad+1)    +vel2_bar(irad))/TWO
                 vel3_avg     = vel3_avg     + dr*(vel3_bar(irad+1)    +vel3_bar(irad))/TWO
                 pressure_avg = pressure_avg + dr*(pressure_bar(irad+1)+pressure_bar(irad))/TWO
+                c_avg        = c_avg        + dr*(c_bar(irad+1)       +c_bar(irad))/TWO
                 area = area + dr
             end do
 
@@ -1746,6 +2012,7 @@ contains
                 vel2_avg     = vel2_avg     + dr*(self%r(irad+1)*vel2_bar(irad+1)     + self%r(irad)*vel2_bar(irad))/TWO
                 vel3_avg     = vel3_avg     + dr*(self%r(irad+1)*vel3_bar(irad+1)     + self%r(irad)*vel3_bar(irad))/TWO
                 pressure_avg = pressure_avg + dr*(self%r(irad+1)*pressure_bar(irad+1) + self%r(irad)*pressure_bar(irad))/TWO
+                c_avg        = c_avg        + dr*(self%r(irad+1)*c_bar(irad+1)        + self%r(irad)*c_bar(irad))/TWO
                 area = area + dr*(self%r(irad+1)+self%r(irad))/TWO
             end do
 
@@ -1756,6 +2023,7 @@ contains
         vel2_avg     = vel2_avg     / area
         vel3_avg     = vel3_avg     / area
         pressure_avg = pressure_avg / area
+        c_avg        = c_avg        / area
 
     end subroutine compute_boundary_average
     !********************************************************************************
@@ -2070,14 +2338,28 @@ contains
         integer(ik),            intent(in)  :: itime
 
         real(rk) :: omega
+        integer(ik) :: ntime
+
+        ntime = worker%time_manager%ntime
 
         if (itime == 1) then
             omega = ZERO
-        else if (itime == 2) then
-            omega = worker%time_manager%freqs(1)
-        else if (itime == 3) then
-            omega = -worker%time_manager%freqs(1)
+        else if (itime <= ((ntime-1)/2 + 1)) then
+            omega = worker%time_manager%freqs(itime-1)
+        else
+            omega = -worker%time_manager%freqs(ntime-itime+1)
         end if
+
+
+
+!        if (itime == 1) then
+!            omega = ZERO
+!        else if (itime == 2) then
+!            omega = worker%time_manager%freqs(1)
+!        else if (itime == 3) then
+!            omega = -worker%time_manager%freqs(1)
+!        end if
+
 
     end function get_omega
     !**************************************************************************************

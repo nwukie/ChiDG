@@ -112,13 +112,13 @@ contains
 
 
         type(AD_D), allocatable, dimension(:,:,:) ::                                            &
-            density_Ft_real, vel1_Ft_real, vel2_Ft_real, vel3_Ft_real, pressure_Ft_real,        &
-            density_Ft_imag, vel1_Ft_imag, vel2_Ft_imag, vel3_Ft_imag, pressure_Ft_imag,        &
-            density_Fts_real, vel1_Fts_real, vel2_Fts_real, vel3_Fts_real, pressure_Fts_real,   &
-            density_Fts_imag, vel1_Fts_imag, vel2_Fts_imag, vel3_Fts_imag, pressure_Fts_imag,   &
+            density_Ft_real, vel1_Ft_real, vel2_Ft_real, vel3_Ft_real, pressure_Ft_real, c_Ft_real,       &
+            density_Ft_imag, vel1_Ft_imag, vel2_Ft_imag, vel3_Ft_imag, pressure_Ft_imag, c_Ft_imag,       &
+            density_Fts_real, vel1_Fts_real, vel2_Fts_real, vel3_Fts_real, pressure_Fts_real, c_Fts_real,  &
+            density_Fts_imag, vel1_Fts_imag, vel2_Fts_imag, vel3_Fts_imag, pressure_Fts_imag, c_Fts_imag,  &
             density_Fts_real_gq, vel1_Fts_real_gq, vel2_Fts_real_gq, vel3_Fts_real_gq, pressure_Fts_real_gq,   &
             density_Fts_imag_gq, vel1_Fts_imag_gq, vel2_Fts_imag_gq, vel3_Fts_imag_gq, pressure_Fts_imag_gq,    &
-            density_grid, vel1_grid, vel2_grid, vel3_grid, pressure_grid
+            density_grid, vel1_grid, vel2_grid, vel3_grid, pressure_grid, c_grid
 
 
         real(rk),       allocatable, dimension(:)   :: p_user, r, pitch
@@ -183,6 +183,7 @@ contains
                                  vel2_grid,       &
                                  vel3_grid,       &
                                  pressure_grid)
+        c_grid = sqrt(1.4*pressure_grid/density_grid)
 
 
         ! Compute Fourier decomposition of temporal data at points
@@ -194,11 +195,14 @@ contains
                                        vel2_grid,                           &
                                        vel3_grid,                           &
                                        pressure_grid,                       &
+                                       c_grid,                              &
                                        density_Ft_real,  density_Ft_imag,   &
                                        vel1_Ft_real,     vel1_Ft_imag,      &
                                        vel2_Ft_real,     vel2_Ft_imag,      &
                                        vel3_Ft_real,     vel3_Ft_imag,      &
-                                       pressure_Ft_real, pressure_Ft_imag)
+                                       pressure_Ft_real, pressure_Ft_imag,  &
+                                       c_Ft_real,        c_Ft_imag)
+
 
         ! Compute Fourier decomposition in theta at set of radial 
         ! stations for each temporal mode:
@@ -209,11 +213,13 @@ contains
                                       vel2_Ft_real,      vel2_Ft_imag,        &
                                       vel3_Ft_real,      vel3_Ft_imag,        &
                                       pressure_Ft_real,  pressure_Ft_imag,    &
+                                      c_Ft_real,         c_Ft_imag,           &
                                       density_Fts_real,  density_Fts_imag,    &
                                       vel1_Fts_real,     vel1_Fts_imag,       &
                                       vel2_Fts_real,     vel2_Fts_imag,       &
                                       vel3_Fts_real,     vel3_Fts_imag,       &
-                                      pressure_Fts_real, pressure_Fts_imag)
+                                      pressure_Fts_real, pressure_Fts_imag,   &
+                                      c_Fts_real,        c_Fts_imag)
 
 
         call self%compute_absorbing_outlet(worker,bc_comm,       &
@@ -226,7 +232,9 @@ contains
                                            vel3_Fts_real,        &
                                            vel3_Fts_imag,        &
                                            pressure_Fts_real,    &
-                                           pressure_Fts_imag)
+                                           pressure_Fts_imag,    &
+                                           c_Fts_real,           &
+                                           c_Fts_imag)
 
 
 

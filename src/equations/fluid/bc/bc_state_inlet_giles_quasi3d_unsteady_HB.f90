@@ -80,7 +80,8 @@ contains
         call self%bcproperties%add('Normal-3', 'Required')
 
         ! Add functions
-        call self%bcproperties%add('Pitch',               'Required')
+        call self%bcproperties%add('Pitch A',             'Required')
+        call self%bcproperties%add('Pitch B',             'Required')
         call self%bcproperties%add('Spatial Periodicity', 'Required')
 
         ! Set default values
@@ -144,13 +145,10 @@ contains
             density_grid_p, vel1_grid_p, vel2_grid_p, vel3_grid_p, pressure_grid_p, c_grid_p
 
 
-        real(rk),       allocatable, dimension(:)   :: r, pitch
+        real(rk),       allocatable, dimension(:)   :: r
         real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag
         integer(ik) :: ierr
 
-
-        ! Get back pressure from function.
-        pitch  = self%bcproperties%compute('Pitch', worker%time(),worker%coords())
 
         ! Interpolate interior solution to face quadrature nodes
         grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')
@@ -198,13 +196,14 @@ contains
 
 
         ! Get primitive variables at (radius,theta,time) grid.
-        call self%get_q_interior(worker,bc_comm,    &
-                                 density_grid_m,    &
-                                 vel1_grid_m,       &
-                                 vel2_grid_m,       &
-                                 vel3_grid_m,       &
-                                 pressure_grid_m)
+        call self%get_q_side(worker,bc_comm,'B',    &
+                             density_grid_m,        &
+                             vel1_grid_m,           &
+                             vel2_grid_m,           &
+                             vel3_grid_m,           &
+                             pressure_grid_m)
         c_grid_m = sqrt(gam*pressure_grid_m/density_grid_m)
+
 
         ! Compute Fourier decomposition of temporal data at points
         ! on the spatial transform grid.
@@ -222,6 +221,7 @@ contains
                                        vel3_check_real_m,     vel3_check_imag_m,        &
                                        pressure_check_real_m, pressure_check_imag_m,    &
                                        c_check_real_m,        c_check_imag_m)
+
 
         ! Compute Fourier decomposition in theta at set of radial 
         ! stations for each temporal mode:
@@ -257,6 +257,7 @@ contains
                                                           density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg,c_avg)
 
 
+
         ! Get boundary condition Total Temperature, Total Pressure, and normal vector
         PT   = self%bcproperties%compute('Total Pressure',   worker%time(),worker%coords())
         TT   = self%bcproperties%compute('Total Temperature',worker%time(),worker%coords())
@@ -285,6 +286,7 @@ contains
         vel2_avg = n2(1)*vmag
         vel3_avg = n3(1)*vmag
 
+
         ! Get exterior perturbation
         call self%get_q_exterior(worker,bc_comm,    &
                                  density_grid_p,    &
@@ -292,6 +294,8 @@ contains
                                  vel2_grid_p,       &
                                  vel3_grid_p,       &
                                  pressure_grid_p)
+
+
 
         ! Add space-time average
         density_grid_p  = density_grid_p  + density_avg
@@ -339,6 +343,7 @@ contains
                                       c_hat_real_p,             c_hat_imag_p)
 
 
+
         ! Compute q_abs = f(q_p,q_m)
         call self%compute_absorbing_inlet(worker,bc_comm,                               &
                                           density_hat_real_m,    density_hat_imag_m,    &
@@ -378,7 +383,7 @@ contains
         ! Reconstruct primitive variables at quadrature nodes from absorbing Fourier modes
         ! via inverse transform.
         !   q_check(rgq,theta,omega) = IDFT(q_hat)[m]
-        call self%compute_spatial_idft_gq(worker,bc_comm,                                   &
+        call self%compute_spatial_idft_gq(worker,bc_comm,'B',                               &
                                           density_hat_real_gq,      density_hat_imag_gq,    & 
                                           vel1_hat_real_gq,         vel1_hat_imag_gq,       &
                                           vel2_hat_real_gq,         vel2_hat_imag_gq,       &
@@ -389,6 +394,7 @@ contains
                                           vel2_check_real_gq,       vel2_check_imag_gq,     &
                                           vel3_check_real_gq,       vel3_check_imag_gq,     &
                                           pressure_check_real_gq,   pressure_check_imag_gq)
+
 
         ! q(rgq,theta,t) = IDFT(q_check)[omega]
         call self%compute_temporal_idft_gq(worker,bc_comm,                                      &
@@ -408,6 +414,7 @@ contains
         mom2_bc    = density_bc*vel2_bc
         mom3_bc    = density_bc*vel3_bc
         energy_bc  = pressure_bc/(gam - ONE)  + HALF*(mom1_bc*mom1_bc + mom2_bc*mom2_bc + mom3_bc*mom3_bc)/density_bc
+
 
 
         !
@@ -460,7 +467,7 @@ contains
         ! Define Fourier space discretization to determine
         ! number of theta-samples are being taken
         nradius = size(self%r)
-        ntheta  = size(self%theta,2)
+        ntheta  = size(self%theta_b,2)
         ntime   = worker%time_manager%ntime
 
         ! Allocate storage for discrete time instances
@@ -480,11 +487,11 @@ contains
         do iradius = 1,nradius
             do itime = 1,ntime
                 ! Interpolate solution to physical_nodes at current radial station: [ntheta]
-                density(iradius,:,itime) = worker%interpolate_field_general('Density',    donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
-                mom1(iradius,:,itime)    = worker%interpolate_field_general('Momentum-1', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
-                mom2(iradius,:,itime)    = worker%interpolate_field_general('Momentum-2', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
-                mom3(iradius,:,itime)    = worker%interpolate_field_general('Momentum-3', donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
-                energy(iradius,:,itime)  = worker%interpolate_field_general('Energy',     donors=self%donor(iradius,:), donor_nodes=self%donor_node(iradius,:,:), itime=itime)
+                density(iradius,:,itime) = worker%interpolate_field_general('Density',    donors=self%donor_b(iradius,:), donor_nodes=self%donor_node_b(iradius,:,:), itime=itime)
+                mom1(iradius,:,itime)    = worker%interpolate_field_general('Momentum-1', donors=self%donor_b(iradius,:), donor_nodes=self%donor_node_b(iradius,:,:), itime=itime)
+                mom2(iradius,:,itime)    = worker%interpolate_field_general('Momentum-2', donors=self%donor_b(iradius,:), donor_nodes=self%donor_node_b(iradius,:,:), itime=itime)
+                mom3(iradius,:,itime)    = worker%interpolate_field_general('Momentum-3', donors=self%donor_b(iradius,:), donor_nodes=self%donor_node_b(iradius,:,:), itime=itime)
+                energy(iradius,:,itime)  = worker%interpolate_field_general('Energy',     donors=self%donor_b(iradius,:), donor_nodes=self%donor_node_b(iradius,:,:), itime=itime)
 
                 if (worker%coordinate_system() == 'Cylindrical') then
                     mom2(iradius,:,itime) = mom2(iradius,:,itime)/self%r(iradius)  ! convert to tangential momentum
@@ -506,8 +513,8 @@ contains
         pressure = ZERO
 
 !        do itime = 1,ntime
-!            density(:,:,itime) = 0.001_rk*sin(-TWO*PI*self%theta + worker%time_manager%freqs(1)*worker%time_manager%times(itime))
-!            !pressure(:,:,itime) = 100000._rk + 10._rk*sin(TWO*PI*self%theta + worker%time_manager%freqs(1)*worker%time_manager%times(itime))
+!            density(:,:,itime) = 0.001_rk*sin(-TWO*PI*self%theta_b + worker%time_manager%freqs(1)*worker%time_manager%times(itime))
+!            !pressure(:,:,itime) = 100000._rk + 10._rk*sin(TWO*PI*self%theta_b + worker%time_manager%freqs(1)*worker%time_manager%times(itime))
 !        end do
 
 

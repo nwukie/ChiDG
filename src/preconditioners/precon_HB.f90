@@ -158,7 +158,7 @@ contains
         type(chidg_vector_t),   intent(in)      :: b
 
         integer(ik) :: ielem, itime, sz, irow_start, irow_end, icol_start, icol_end, &
-                       itime_a, itime_b, idiag, ierr, ifield, nfields, nterms
+                       itime_a, itime_b, idiag, ierr, ifield, nfields, nterms, i
         real(rk), allocatable   :: hb_mat(:,:)
 
         do ielem = 1,size(self%hb_matrix%elems)
@@ -185,34 +185,48 @@ contains
             do itime_a = 1,size(A%dom(1)%lblks,2)
                 do itime_b = 1,size(A%dom(1)%lblks,2)
 
-                    ! LHS HB contribution for each variable
-                    if (allocated(hb_mat)) deallocate(hb_mat)
-                    allocate(hb_mat(nterms*nfields,nterms*nfields), stat=ierr)
-                    if (ierr /= 0) call AllocationError
-                    hb_mat(:,:) = ZERO
+                    if (itime_a /= itime_b) then
 
-                    ! Accumulate hb coupling for each field
-                    do ifield = 1,nfields
-                        irow_start = 1 + (ifield-1)*nterms
-                        irow_end   = irow_start + (nterms-1)
-                        icol_start = 1 + (ifield-1)*nterms
-                        icol_end   = icol_start + (nterms-1)
-                        hb_mat(irow_start:irow_end,icol_start:icol_end) = self%D(itime_a,itime_b)*A%dom(1)%lblks(ielem,itime_a)%mass
-                    end do  ! ifield
+                        ! LHS HB contribution for each variable
+                        if (allocated(hb_mat)) deallocate(hb_mat)
+                        allocate(hb_mat(nterms*nfields,nterms*nfields), stat=ierr)
+                        if (ierr /= 0) call AllocationError
+                        hb_mat(:,:) = ZERO
 
-                    ! Store hb coupling for (itime_a,itime_b)
-                    sz = size(A%dom(1)%lblks(ielem,itime_a)%data_(1)%mat,1)
-                    irow_start = 1 + (itime_a-1)*sz
-                    irow_end = irow_start + (sz-1)
-                    icol_start = 1 + (itime_b-1)*sz
-                    icol_end = icol_start + (sz-1)
-                    self%hb_matrix%elems(ielem)%mat(irow_start:irow_end,icol_start:icol_end) = hb_mat
+                        ! Accumulate hb coupling for each field
+                        do ifield = 1,nfields
+                            irow_start = 1 + (ifield-1)*nterms
+                            irow_end   = irow_start + (nterms-1)
+                            icol_start = 1 + (ifield-1)*nterms
+                            icol_end   = icol_start + (nterms-1)
+                            hb_mat(irow_start:irow_end,icol_start:icol_end) = self%D(itime_a,itime_b)*A%dom(1)%lblks(ielem,itime_a)%mass
+                        end do  ! ifield
+
+                        ! Store hb coupling for (itime_a,itime_b)
+                        sz = size(A%dom(1)%lblks(ielem,itime_a)%data_(1)%mat,1)
+                        irow_start = 1 + (itime_a-1)*sz
+                        irow_end = irow_start + (sz-1)
+                        icol_start = 1 + (itime_b-1)*sz
+                        icol_end = icol_start + (sz-1)
+                        self%hb_matrix%elems(ielem)%mat(irow_start:irow_end,icol_start:icol_end) = hb_mat
+
+                    end if
 
                 end do !itime_b
             end do !itime_a
 
+            print*, 'matrix: '
+            do i = 1,size(self%hb_matrix%elems(ielem)%mat,1)
+                print*, self%hb_matrix%elems(ielem)%mat(i,:)
+            end do
+
             ! Invert and store
             self%hb_matrix%elems(ielem)%mat = inv(self%hb_matrix%elems(ielem)%mat)
+
+            print*, 'inverted: '
+            do i = 1,size(self%hb_matrix%elems(ielem)%mat,1)
+                print*, self%hb_matrix%elems(ielem)%mat(i,:)
+            end do
 
         end do !ielem
 

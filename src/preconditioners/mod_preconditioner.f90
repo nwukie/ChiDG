@@ -19,6 +19,7 @@ module mod_preconditioner
     type(precon_identity_t)             :: IDENTITY
     type(precon_jacobi_t)               :: BLOCKJACOBI
     type(precon_ILU0_t)                 :: ILU0
+    type(precon_HB_t)                   :: HB
     type(precon_RASILU0_t)              :: RASILU0
 
 
@@ -51,7 +52,7 @@ contains
                 allocate(instance, source=ILU0)
 
             case('HB','hb')
-                allocate(instance, source=ILU0)
+                allocate(instance, source=HB)
 
             case('rasilu0','RASILU0', 'ras-ilu0', 'RAS-ILU0', 'RAS+ILU0', 'ras+ilu0', 'RAS ILU0', 'ras ilu0')
                 allocate(instance, source=RASILU0)

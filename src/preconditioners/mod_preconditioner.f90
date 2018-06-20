@@ -9,6 +9,7 @@ module mod_preconditioner
     use precon_identity,            only: precon_identity_t
     use precon_jacobi,              only: precon_jacobi_t
     use precon_ILU0,                only: precon_ILU0_t
+    use precon_HB,                  only: precon_HB_t
     use precon_RASILU0,             only: precon_RASILU0_t
     implicit none
 
@@ -47,6 +48,9 @@ contains
                 allocate(instance, source=BLOCKJACOBI)
 
             case('ilu0','ILU0')
+                allocate(instance, source=ILU0)
+
+            case('HB','hb')
                 allocate(instance, source=ILU0)
 
             case('rasilu0','RASILU0', 'ras-ilu0', 'RAS-ILU0', 'RAS+ILU0', 'ras+ilu0', 'RAS ILU0', 'ras ilu0')

@@ -6,5 +6,6 @@ add_lib_sources(
                 precon_jacobi.f90
                 precon_ILU0.f90
                 precon_identity.f90
+                precon_HB.f90
                 )
 

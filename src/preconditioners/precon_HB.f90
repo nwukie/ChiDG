@@ -215,18 +215,18 @@ contains
                 end do !itime_b
             end do !itime_a
 
-            print*, 'matrix: '
-            do i = 1,size(self%hb_matrix%elems(ielem)%mat,1)
-                print*, self%hb_matrix%elems(ielem)%mat(i,:)
-            end do
+            !print*, 'matrix: '
+            !do i = 1,size(self%hb_matrix%elems(ielem)%mat,1)
+            !    print*, self%hb_matrix%elems(ielem)%mat(i,:)
+            !end do
 
             ! Invert and store
             self%hb_matrix%elems(ielem)%mat = inv(self%hb_matrix%elems(ielem)%mat)
 
-            print*, 'inverted: '
-            do i = 1,size(self%hb_matrix%elems(ielem)%mat,1)
-                print*, self%hb_matrix%elems(ielem)%mat(i,:)
-            end do
+            !print*, 'inverted: '
+            !do i = 1,size(self%hb_matrix%elems(ielem)%mat,1)
+            !    print*, self%hb_matrix%elems(ielem)%mat(i,:)
+            !end do
 
         end do !ielem
 

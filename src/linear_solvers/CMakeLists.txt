@@ -2,6 +2,7 @@ add_lib_sources(type_linear_solver.f90
                 mod_linear_solver.f90 
                 type_fgmres.f90
                 type_fgmres_cgs.f90
+                type_fgmres_cgs_mpc.f90
                 type_fgmres_cgs_boost.f90
                 type_fgmres_cgs_mg.f90
                 type_jacobi.f90

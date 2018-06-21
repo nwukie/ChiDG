@@ -13,6 +13,7 @@ module mod_linear_solver
 !    use type_gmres,         only: gmres_t
     use type_fgmres,            only: fgmres_t
     use type_fgmres_cgs,        only: fgmres_cgs_t
+    use type_fgmres_cgs_mpc,    only: fgmres_cgs_mpc_t
     use type_fgmres_cgs_boost,  only: fgmres_cgs_boost_t
     use type_fgmres_cgs_mg,     only: fgmres_cgs_mg_t
     use type_jacobi,            only: jacobi_t
@@ -29,6 +30,7 @@ module mod_linear_solver
 !    type(gmres_t)           :: GMRES
     type(fgmres_t)              :: FGMRES
     type(fgmres_cgs_t)          :: FGMRES_CGS
+    type(fgmres_cgs_mpc_t)      :: FGMRES_CGS_MPC
     type(fgmres_cgs_boost_t)    :: FGMRES_CGS_BOOST
     type(fgmres_cgs_mg_t)       :: FGMRES_CGS_MG
     type(jacobi_t)              :: JACOBI
@@ -82,6 +84,9 @@ contains
 
             case ('fgmres_cgs', 'FGMRES_CGS')
                 allocate(lsolver, source=FGMRES_CGS, stat=ierr)
+
+            case ('fgmres_cgs_mpc', 'FGMRES_CGS_MPC')
+                allocate(lsolver, source=FGMRES_CGS_MPC, stat=ierr)
 
             case ('fgmres_cgs_mg', 'FGMRES_CGS_MG')
                 allocate(lsolver, source=FGMRES_CGS_MG, stat=ierr)

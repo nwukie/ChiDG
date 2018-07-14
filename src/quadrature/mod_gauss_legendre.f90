@@ -288,7 +288,7 @@ contains
         ! Tolerance tested up to 10th order
         !
         !tol = 1.2e-16_rk
-        tol = 1.1_rk * epsilon(1._rk)
+        tol = 3.0_rk * epsilon(1._rk)
 
         !
         ! compute Legendre term used to generate the correct number of nodes
@@ -316,7 +316,9 @@ contains
             !
             n = real(nnodes,rk)
             theta = PI*(FOUR*real(i,rk) - ONE)/(FOUR*n + TWO)
-            x = (ONE  + (n-ONE)/(EIGHT*n*n*n) - (ONE/(384._rk*n*n*n*n))*( &
+            !x = (ONE  + (n-ONE)/(EIGHT*n*n*n) - (ONE/(384._rk*n*n*n*n))*( &
+            !    39._rk - 28._rk/(sin(theta)**(TWO))))*cos(theta)
+            x = (ONE  + (ONE-n)/(EIGHT*n*n*n) - (ONE/(384._rk*n*n*n*n))*( &
                 39._rk - 28._rk/(sin(theta)**(TWO))))*cos(theta)
 
 
@@ -325,7 +327,8 @@ contains
             !
             do while (resid > tol)
                 xnew = x - legendre_val1D(polyterm,x)/dlegendre_val1D(polyterm,x)
-                resid = abs(xnew-x)
+                !resid = abs(xnew-x)
+                resid = abs(legendre_val1D(polyterm,x))
                 x = xnew
             end do
             nodes(j) = x

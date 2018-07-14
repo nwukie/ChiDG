@@ -92,6 +92,7 @@ module type_chidg_data
         procedure   :: new_pmm
         procedure   :: add_pmm_domain
         procedure   :: add_pmm_group
+        procedure   :: npmm_groups
 
 
         ! Release allocated memory
@@ -461,25 +462,39 @@ contains
 
         integer(ik)                         :: pmm_ID
 
-
-        !
         ! Create a new boundary condition
-        !
         pmm_ID = self%new_pmm()
 
 
-
-        !
         ! Initialize pmm from pmm_group. Note that, since pmm_group contains pmm,
         ! we must pass the pmm info instead of pmm_group to avoid a circular dependency.
-        !
         call self%pmm(pmm_ID)%init_pmm_group(pmm_group%pmm)
-
 
     end subroutine add_pmm_group
     !******************************************************************************************
 
 
+
+
+    !>  Return number of prescribed mesh motion groups.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/14/2018
+    !!
+    !------------------------------------------------------------------------------------------
+    function npmm_groups(self) result(npmm)
+        class(chidg_data_t),    intent(in)  :: self
+
+        integer(ik) :: npmm
+
+        if (allocated(self%pmm)) then
+            npmm = size(self%pmm)
+        else
+            npmm = 0
+        end if
+
+    end function npmm_groups
+    !******************************************************************************************
 
 
 

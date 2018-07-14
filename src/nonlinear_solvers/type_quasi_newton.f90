@@ -59,7 +59,7 @@ contains
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, iblk, iindex,  &
                                    niter, ieqn, idom, ierr,                     &
-                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step, eqn_ID, icfl, ifield
+                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step, eqn_ID, icfl, ifield, ii
 
         real(rk)                :: dtau, amp, cfl, timing, resid, resid_prev, resid0, resid_new,    &
                                    alpha, f0, fn, forcing_term, residual_ratio
@@ -129,6 +129,8 @@ contains
                 call system%assemble( data,             &
                                       timing=timing,    &
                                       differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
+
+
                 resid_prev = resid
                 resid      = rhs%norm(ChiDG_COMM)
 

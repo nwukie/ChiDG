@@ -25,6 +25,13 @@
 !!  read_equations_hdf
 !!  write_equations_hdf
 !!
+!!  read_prescribedmeshmotion_hdf
+!!      read_pmm_groups_hdf
+!!      read_pmm_domain_data_hdf
+!!
+!!  write_prescribedmeshmotion_hdf
+!!      write_pmm_groups_hdf
+!!      write_pmm_domain_data_hdf
 !!
 !!  read_global_connectivity_hdf
 !!  TODO: write_global_connectivity_hdf
@@ -1586,16 +1593,10 @@ contains
         type(svector_t) :: eqn_groups
         type(string_t)  :: eqn_string
 
-
-        !
         ! Open file
-        !
         fid = open_file_hdf(filename)
 
-
-        !
         ! Add equation groups to chidg_data
-        !
         do eqn_ID = 1,data%nequation_sets()
 
             eqnset_name = data%get_equation_set_name(eqn_ID)
@@ -1603,10 +1604,7 @@ contains
 
         end do !eqn_ID
 
-
-        !
         ! Close file
-        !
         call close_file_hdf(fid)
 
     end subroutine write_equations_hdf
@@ -1629,8 +1627,6 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/9/2016
     !!
-    !!
-    !!
     !----------------------------------------------------------------------------------------
     subroutine read_global_connectivity_hdf(filename, connectivities)
         character(*),                               intent(in)      :: filename
@@ -1646,9 +1642,7 @@ contains
         logical                             :: contains_grid
 
 
-
         fid = open_file_hdf(filename)
-
 
         ! Check contains grid
         contains_grid = get_contains_grid_hdf(fid)
@@ -1658,10 +1652,7 @@ contains
         if (.not. contains_grid) call chidg_signal(FATAL,user_msg)
 
 
-
-        !
         !  Allocate number of domains
-        !
         ndomains = get_ndomains_hdf(fid)
         user_msg = "read_global_connectivity_hdf: No domains were found in the file."
         if (ndomains == 0) call chidg_signal(FATAL,user_msg)
@@ -1669,11 +1660,7 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-
-
-        !
-        !  Loop through groups and read domain connectivities
-        !
+        ! Loop through groups and read domain connectivities
         domain_names = get_domain_names_hdf(fid)
         do idom = 1,size(domain_names)
 
@@ -1681,16 +1668,12 @@ contains
                 domain_id = open_domain_hdf(fid,trim(domain_name))
 
 
-                !
                 ! Get connectivity and total number of nodes in the domain
-                !
                 connectivity = get_domain_connectivity_hdf(domain_id)
                 nnodes       = get_domain_nnodes_hdf(domain_id)
 
 
-                !
                 ! Initialize domain connectivity structure
-                !
                 nelements = size(connectivity,1)
                 call connectivities(idom)%init(domain_name,nelements, nnodes)
 
@@ -1742,11 +1725,13 @@ contains
 
 
 
-
-
-
     end subroutine read_weights_hdf
     !*****************************************************************************************
+
+
+
+
+
 
     ! Mesh Motion
 
@@ -1769,36 +1754,24 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine read_prescribedmeshmotion_hdf(filename, pmm_domain_data, pmm_group_wrapper, partition)
-        character(*),           intent(in)                      :: filename
-        type(prescribed_mesh_motion_domain_data_t),  intent(inout), allocatable    :: pmm_domain_data(:)
-        type(prescribed_mesh_motion_group_wrapper_t),  intent(inout)                        :: pmm_group_wrapper
-        type(partition_t),      intent(in)                      :: partition
+        character(*),                                   intent(in)                      :: filename
+        type(prescribed_mesh_motion_domain_data_t),     intent(inout), allocatable      :: pmm_domain_data(:)
+        type(prescribed_mesh_motion_group_wrapper_t),   intent(inout)                   :: pmm_group_wrapper
+        type(partition_t),                              intent(in)                      :: partition
 
-        integer(HID_T)          :: fid
-        integer                 :: ierr, nconn
-
-
+        integer(HID_T)  :: fid
+        integer         :: ierr, nconn
 
         fid = open_file_hdf(filename)
 
-
-        !
-        !  Allocate for number of domains in the partition
-        !
+        ! Allocate for number of domains in the partition
         nconn = size(partition%connectivities)
         allocate(pmm_domain_data(nconn), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
-        !
         ! Read prescribed mesh motion
-        !
-
         call read_pmm_domain_data_hdf(fid, pmm_domain_data, partition)
-
-
         call read_pmm_groups_hdf(fid,pmm_group_wrapper,partition)
-
 
         call close_file_hdf(fid)
 
@@ -1806,13 +1779,14 @@ contains
     !****************************************************************************************
 
 
+
+
+
     !>  Read the boundary condition patch connectivity data from file and store in
     !!  bc_patch_data.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/31/2016
-    !!
-    !!
     !!
     !----------------------------------------------------------------------------------------
     subroutine read_pmm_domain_data_hdf(fid,pmm_domain_data, partition)
@@ -1829,23 +1803,14 @@ contains
         integer(HID_T)              :: patch_id
 
 
-
-
-        !
-        !  Loop through connectivities and read boundary conditions
-        !
+        ! Loop through connectivities and read boundary conditions
         nconn = size(partition%connectivities)
         do iconn = 1,nconn
 
-
-            !
             ! Get name of current domain
-            !
             domain = partition%connectivities(iconn)%get_domain_name()
             pmm_domain_data(iconn)%domain_name = domain
 
-
-            
             ! Get the name of the PMM group for the current domain.
             ! This is stored as an attribute.
             call h5gopen_f(fid, "D_"//trim(domain), domain_id, ierr)
@@ -1855,17 +1820,11 @@ contains
             pmm_group = get_pmm_domain_group_hdf(domain_id)
             pmm_domain_data(iconn)%pmm_group_name = pmm_group
 
-
             ! Close face boundary condition group
             call h5gclose_f(domain_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"read_bc_patches_hdf: h5gclose")
 
-
-
-
         end do  ! iconn
-
-
 
     end subroutine read_pmm_domain_data_hdf
     !****************************************************************************************
@@ -1899,47 +1858,41 @@ contains
         pmm_group_names = get_pmm_group_names_hdf(fid)
 
 
-
-        !
         ! Read each group of pmm's
-        !
         if (ngroups>0) then
-        if (allocated(pmm_groups_wrapper%pmm_groups)) deallocate(pmm_groups_wrapper%pmm_groups)
-        allocate(pmm_groups_wrapper%pmm_groups(ngroups), stat=ierr)
-        if (ierr /= 0) call AllocationError
+
+            if (allocated(pmm_groups_wrapper%pmm_groups)) deallocate(pmm_groups_wrapper%pmm_groups)
+            allocate(pmm_groups_wrapper%pmm_groups(ngroups), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
 
-        do igroup = 1,ngroups
+            do igroup = 1,ngroups
 
-            ! Open face boundary condition group
-            group_name = pmm_group_names%at(igroup)
-            !group_id = open_pmm_group_hdf(fid,group_name%get())
-            call h5gopen_f(fid, "PMM_"//trim(group_name%get()), group_id, ierr)
-            if (ierr /= 0) call chidg_signal_one(FATAL,"get_pmm_state_hdf: error opening bc_state group.",trim(pmm_name%get()))
-
-
-
-            if (allocated(pmm)) deallocate(pmm)
-            if (allocated(pmm_temp)) deallocate(pmm_temp)
-            
-            
-            call get_pmm_hdf_test(group_id, group_name%get(), pmm_temp)
-            allocate(pmm, source = pmm_temp)
-
-            ! Save to pmm_group_t
-            pmm_groups_wrapper%ngroups = pmm_groups_wrapper%ngroups+1
-            pmm_groups_wrapper%pmm_groups(igroup)%name = group_name%get()
-            allocate(pmm_groups_wrapper%pmm_groups(igroup)%pmm, source = pmm)
-            !pmm_groups_wrapper%pmm_groups(igroup)%pmm = pmm
+                ! Open face boundary condition group
+                group_name = pmm_group_names%at(igroup)
+                !group_id = open_pmm_group_hdf(fid,group_name%get())
+                call h5gopen_f(fid, "PMM_"//trim(group_name%get()), group_id, ierr)
+                if (ierr /= 0) call chidg_signal_one(FATAL,"get_pmm_state_hdf: error opening bc_state group.",trim(pmm_name%get()))
 
 
+                if (allocated(pmm)) deallocate(pmm)
+                if (allocated(pmm_temp)) deallocate(pmm_temp)
+                
+                
+                call get_pmm_hdf_test(group_id, group_name%get(), pmm_temp)
+                allocate(pmm, source = pmm_temp)
 
-            ! Close boundary condition state group
-            call h5gclose_f(group_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: h5gclose")
+                ! Save to pmm_group_t
+                pmm_groups_wrapper%ngroups = pmm_groups_wrapper%ngroups+1
+                pmm_groups_wrapper%pmm_groups(igroup)%name = group_name%get()
+                allocate(pmm_groups_wrapper%pmm_groups(igroup)%pmm, source = pmm)
+                !pmm_groups_wrapper%pmm_groups(igroup)%pmm = pmm
 
+                ! Close boundary condition state group
+                call h5gclose_f(group_id, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: h5gclose")
 
-        end do !igroup
+            end do !igroup
         end if
 
 
@@ -1948,6 +1901,116 @@ contains
     !****************************************************************************************
 
 
+
+
+
+!    !>  Write boundary condition state groups to file.
+!    !!
+!    !!  Writes all boundary condition state groups, regardless of if they
+!    !!  are used on the current partition or not.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   7/14/2018
+!    !!
+!    !---------------------------------------------------------------------------------------
+!    subroutine write_pmm_groups_hdf(data,filename)
+!        type(chidg_data_t), intent(in)  :: data
+!        character(*),       intent(in)  :: filename
+!
+!        type(svector_t)                     :: pmm_group_names, pmm_names
+!        type(string_t)                      :: group_name, pmm_name
+!        class(prescribed_mesh_motion_t),  allocatable     :: pmm, pmm_temp
+!
+!        integer(HID_T)  :: group_id
+!        integer(ik)     :: igroup, ngroups, istate, ierr
+!
+!
+!        ngroups        = get_npmm_groups_hdf(fid)
+!        pmm_group_names = get_pmm_group_names_hdf(fid)
+!
+!
+!        ! Read each group of pmm's
+!        if (ngroups>0) then
+!
+!            if (allocated(pmm_groups_wrapper%pmm_groups)) deallocate(pmm_groups_wrapper%pmm_groups)
+!            allocate(pmm_groups_wrapper%pmm_groups(ngroups), stat=ierr)
+!            if (ierr /= 0) call AllocationError
+!
+!            do igroup = 1,ngroups
+!
+!                ! Open face boundary condition group
+!                group_name = pmm_group_names%at(igroup)
+!                call h5gopen_f(fid, "PMM_"//trim(group_name%get()), group_id, ierr)
+!                if (ierr /= 0) call chidg_signal_one(FATAL,"get_pmm_state_hdf: error opening bc_state group.",trim(pmm_name%get()))
+!
+!                if (allocated(pmm)) deallocate(pmm)
+!                if (allocated(pmm_temp)) deallocate(pmm_temp)
+!                
+!                call get_pmm_hdf_test(group_id, group_name%get(), pmm_temp)
+!                allocate(pmm, source = pmm_temp)
+!
+!                ! Save to pmm_group_t
+!                pmm_groups_wrapper%ngroups = pmm_groups_wrapper%ngroups+1
+!                pmm_groups_wrapper%pmm_groups(igroup)%name = group_name%get()
+!                allocate(pmm_groups_wrapper%pmm_groups(igroup)%pmm, source = pmm)
+!
+!                ! Close boundary condition state group
+!                call h5gclose_f(group_id, ierr)
+!                if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: h5gclose")
+!
+!
+!            end do !igroup
+!        end if
+!
+!
+!        integer(ik)                 :: igroup, istate, ierr
+!        integer(HID_T)              :: fid, bcsg_id
+!        character(:),   allocatable :: group_name, state_name
+!        logical                     :: exists
+!
+!        fid = open_file_hdf(file_name)
+!
+!
+!        !
+!        ! Add boundary condition state groups to the file.
+!        !
+!        do igroup = 1,data%npmm_groups()
+!            group_name = data%pmm(igroup)%get_name()
+!
+!            ! If the group already exists, completely remove so we don't end up with
+!            ! conflicting settings.
+!            exists = check_link_exists_hdf(fid,"PMM_"//group_name)
+!            if (exists) call remove_pmm_group_hdf(fid,trim(group_name))
+!
+!            !
+!            ! Add all states
+!            !
+!            call create_bc_state_group_hdf(fid,trim(group_name))
+!            bcsg_id = open_bc_state_group_hdf(fid,trim(group_name))
+!
+!            do istate = 1,data%bc_state_group(igroup)%nbc_states()
+!
+!                state_name = data%bc_state_group(igroup)%bc_state(istate)%state%name
+!                call add_bc_state_hdf(bcsg_id, data%bc_state_group(igroup)%bc_state(istate)%state)
+!
+!            end do !istate
+!
+!
+!            call close_bc_state_group_hdf(bcsg_id)
+!        end do !igroup
+!
+!
+!        call close_file_hdf(fid)
+!
+!
+!
+!
+!
+!
+!
+!
+!    end subroutine write_pmm_groups_hdf
+!    !****************************************************************************************
 
 
 

@@ -63,6 +63,7 @@ module mod_bc
     use bc_state_outlet_giles_quasi3d_steady,       only: outlet_giles_quasi3d_steady_t
     use bc_state_outlet_giles_quasi3d_unsteady_HB,  only: outlet_giles_quasi3d_unsteady_HB_t
     use bc_state_inlet_giles_quasi3d_unsteady_HB,   only: inlet_giles_quasi3d_unsteady_HB_t
+    use bc_state_turbo_interface_steady,            only: turbo_interface_steady_t
     use bc_state_fluid_extrapolate,                 only: fluid_extrapolate_t
     use bc_state_momentum_inlet,                    only: momentum_inlet_t
     use bc_state_symmetry,                          only: symmetry_t
@@ -176,6 +177,7 @@ contains
         type(outlet_giles_quasi3d_steady_t)     :: OUTLET_GILES_QUASI3D_STEADY
         type(outlet_giles_quasi3d_unsteady_HB_t):: OUTLET_GILES_QUASI3D_UNSTEADY_HB
         type(inlet_giles_quasi3d_unsteady_HB_t) :: INLET_GILES_QUASI3D_UNSTEADY_HB
+        type(turbo_interface_steady_t)          :: TURBO_INTERFACE_STEADY
         type(fluid_extrapolate_t)               :: FLUID_EXTRAPOLATE
         type(momentum_inlet_t)                  :: MOMENTUM_INLET
         type(symmetry_t)                        :: SYMMETRY
@@ -258,6 +260,7 @@ contains
             call registered_bcs%push_back(OUTLET_GILES_QUASI3D_STEADY)
             call registered_bcs%push_back(OUTLET_GILES_QUASI3D_UNSTEADY_HB)
             call registered_bcs%push_back(INLET_GILES_QUASI3D_UNSTEADY_HB)
+            call registered_bcs%push_back(TURBO_INTERFACE_STEADY)
             !call registered_bcs%push_back(OUTLET_POINT_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_Z_PRESSURE)

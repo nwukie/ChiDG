@@ -19,9 +19,7 @@ module type_prescribed_mesh_motion
     !!  @date   3/16/2017
     !!
     !---------------------------------------------------------------------------------------------------------------
-
-
-    type     :: prescribed_mesh_motion_t
+    type, public :: prescribed_mesh_motion_t
         
         ! Prescribed mesh motions are stored as a vector of prescribed_mesh_motion_t's
         ! chidg%data%mesh%pmm(1:npmm)
@@ -29,15 +27,12 @@ module type_prescribed_mesh_motion
         !pmm_ID is the unique ID for this pmm, so that it can be accessed via
         ! chidg%data%mesh%pmm(pmm_ID)
 
-        integer(ik)                                                 :: pmm_ID
-        real(rk)                                                    :: time = 0.0_rk
-
-        !pmm_name is a name assigned to this pmm
-        ! This is not really used right now.
-        character(:), allocatable                                   :: pmm_name
+        integer(ik)                 :: pmm_ID
+        real(rk)                    :: time = 0.0_rk
+        character(:), allocatable   :: pmm_name
 
         ! pmmf_name is the name of the prescribed_mesh_motion_function_t associated with this pmm
-        character(:), allocatable                                   :: pmmf_name
+        character(:), allocatable   :: pmmf_name
 
         ! pmm_function is the prescribed_mesh_motion_function_t associated with this pmm
         ! This is what really specifies the grid positions and velocities.
@@ -76,17 +71,18 @@ module type_prescribed_mesh_motion
     end type prescribed_mesh_motion_t
     
 contains
+
+
+
     !>
     !!  @author Eric Wolf
     !!  @date 4/7/2017
     !--------------------------------------------------------------------------------
     subroutine set_name(self,pmm_name)
-        class(prescribed_mesh_motion_t),            intent(inout)       :: self
-        character(*),                               intent(in)          :: pmm_name                        
-
+        class(prescribed_mesh_motion_t),    intent(inout)   :: self
+        character(*),                       intent(in)      :: pmm_name                        
 
         self%pmm_name = pmm_name
-
 
     end subroutine set_name
     !********************************************************************************
@@ -96,10 +92,9 @@ contains
     !!  @date 4/7/2017
     !--------------------------------------------------------------------------------
     function get_name(self) result(pmm_name)
-        class(prescribed_mesh_motion_t),            intent(inout)       :: self
+        class(prescribed_mesh_motion_t), intent(inout)  :: self
 
-        character(len=:), allocatable                                   :: pmm_name                        
-
+        character(len=:), allocatable   :: pmm_name
 
         pmm_name =  self%pmm_name
 
@@ -117,12 +112,10 @@ contains
     !!  @date 4/7/2017
     !--------------------------------------------------------------------------------
     subroutine init_pmm_group(self,pmm_in)
-        class(prescribed_mesh_motion_t),               intent(inout)       :: self
-        class(prescribed_mesh_motion_t),               intent(inout)       :: pmm_in
-
+        class(prescribed_mesh_motion_t),    intent(inout)   :: self
+        class(prescribed_mesh_motion_t),    intent(inout)   :: pmm_in
 
         integer(ik)     :: ierr
-        
 
         call self%set_name(pmm_in%get_name())
         self%pmmf_name = pmm_in%pmmf_name

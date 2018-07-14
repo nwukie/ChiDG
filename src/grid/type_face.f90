@@ -548,19 +548,28 @@ contains
         !
         select case (self%iface)
             case (XI_MIN, XI_MAX)
-                self%norm(:,XI_DIR)   = self%jinv(:)*self%metric(1,1,:)
-                self%norm(:,ETA_DIR)  = self%jinv(:)*self%metric(1,2,:)
-                self%norm(:,ZETA_DIR) = self%jinv(:)*self%metric(1,3,:)
+                !self%norm(:,XI_DIR)   = self%jinv(:)*self%metric(1,1,:)
+                !self%norm(:,ETA_DIR)  = self%jinv(:)*self%metric(1,2,:)
+                !self%norm(:,ZETA_DIR) = self%jinv(:)*self%metric(1,3,:)
+                do inode = 1,size(self%jinv)
+                    self%norm(inode,:) = matmul(transpose(self%metric(:,:,inode)), [self%jinv(inode), ZERO, ZERO])
+                end do
 
             case (ETA_MIN, ETA_MAX)
-                self%norm(:,XI_DIR)   = self%jinv(:)*self%metric(2,1,:)
-                self%norm(:,ETA_DIR)  = self%jinv(:)*self%metric(2,2,:)
-                self%norm(:,ZETA_DIR) = self%jinv(:)*self%metric(2,3,:)
+                !self%norm(:,XI_DIR)   = self%jinv(:)*self%metric(2,1,:)
+                !self%norm(:,ETA_DIR)  = self%jinv(:)*self%metric(2,2,:)
+                !self%norm(:,ZETA_DIR) = self%jinv(:)*self%metric(2,3,:)
+                do inode = 1,size(self%jinv)
+                    self%norm(inode,:) = matmul(transpose(self%metric(:,:,inode)), [ZERO, self%jinv(inode), ZERO])
+                end do
 
             case (ZETA_MIN, ZETA_MAX)
-                self%norm(:,XI_DIR)   = self%jinv(:)*self%metric(3,1,:)
-                self%norm(:,ETA_DIR)  = self%jinv(:)*self%metric(3,2,:)
-                self%norm(:,ZETA_DIR) = self%jinv(:)*self%metric(3,3,:)
+                !self%norm(:,XI_DIR)   = self%jinv(:)*self%metric(3,1,:)
+                !self%norm(:,ETA_DIR)  = self%jinv(:)*self%metric(3,2,:)
+                !self%norm(:,ZETA_DIR) = self%jinv(:)*self%metric(3,3,:)
+                do inode = 1,size(self%jinv)
+                    self%norm(inode,:) = matmul(transpose(self%metric(:,:,inode)), [ZERO, ZERO, self%jinv(inode)])
+                end do
 
             case default
                 user_msg = "face%interpolate_normals: Invalid face index in face initialization."

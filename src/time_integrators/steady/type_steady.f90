@@ -3,6 +3,7 @@ module type_steady
     use mod_kinds,                      only: rk,ik
     use mod_constants,                  only: ZERO
     use mod_spatial,                    only: update_space
+    use mod_update_grid,                only: update_grid
     use mod_chidg_mpi,                  only: GLOBAL_MASTER
 
     use type_time_integrator_steady,    only: time_integrator_steady_t
@@ -153,6 +154,7 @@ contains
         ! Steady equation, so we only need the spatial operators computed.
         data%time_manager%itime = 1
         data%time_manager%t     = ZERO
+        call update_grid(data)
         call update_space(data,differentiate,timing)
 
 !        !

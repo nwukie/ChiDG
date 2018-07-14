@@ -169,6 +169,7 @@ contains
         type(domain_connectivity_t),    intent(in)      :: connectivity
         character(*),                   intent(in)      :: coord_system
 
+        integer(ik) :: inode
 
         !
         ! Store number of terms in coordinate expansion and domain index
@@ -196,6 +197,14 @@ contains
         call self%init_elems_geom(nodes,connectivity,coord_system)
         call self%init_faces_geom()
 
+        
+        if (self%idomain_g == 1) then
+            print*, "WARNING WARNING WARNING!! HARD-CODED velocity for domain 1"
+            do inode = 1,size(self%vnodes,1)
+                self%vnodes(inode,1:3) = [ZERO, 20._rk, ZERO]
+            end do
+            call self%set_displacements_velocities(self%dnodes,self%vnodes)
+        end if
 
         !
         ! Set coordinate system and confirm initialization 

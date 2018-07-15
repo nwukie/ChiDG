@@ -579,15 +579,16 @@ contains
 
 
         ! Update space-time average as average of 'A' and 'B'
-        density_real_abs(:,1,1) = (density_real_m(:,1,1) + density_real_p(:,1,1))/TWO
-        density_imag_abs(:,1,1) = ZERO
-        vel1_real_abs(:,1,1) = (vel1_real_m(:,1,1) + vel1_real_p(:,1,1))/TWO
-        vel1_imag_abs(:,1,1) = ZERO
-        vel2_real_abs(:,1,1) = (vel2_real_m(:,1,1) + vel2_real_p(:,1,1))/TWO
-        vel2_imag_abs(:,1,1) = ZERO
-        vel3_real_abs(:,1,1) = (vel3_real_m(:,1,1) + vel3_real_p(:,1,1))/TWO
-        vel3_imag_abs(:,1,1) = ZERO
+        density_real_abs(:,1,1)  = (density_real_m(:,1,1)  + density_real_p(:,1,1))/TWO
+        vel1_real_abs(:,1,1)     = (vel1_real_m(:,1,1)     + vel1_real_p(:,1,1))/TWO
+        vel2_real_abs(:,1,1)     = (vel2_real_m(:,1,1)     + vel2_real_p(:,1,1))/TWO
+        vel3_real_abs(:,1,1)     = (vel3_real_m(:,1,1)     + vel3_real_p(:,1,1))/TWO
         pressure_real_abs(:,1,1) = (pressure_real_m(:,1,1) + pressure_real_p(:,1,1))/TWO
+
+        density_imag_abs(:,1,1)  = ZERO
+        vel1_imag_abs(:,1,1)     = ZERO
+        vel2_imag_abs(:,1,1)     = ZERO
+        vel3_imag_abs(:,1,1)     = ZERO
         pressure_imag_abs(:,1,1) = ZERO
 
                                        

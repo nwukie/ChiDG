@@ -42,6 +42,29 @@ module mod_chimera
     implicit none
 
 
+    type, public, abstract:: multi_donor_rule_t
+
+    contains
+        procedure(select_donor_interface), deferred, nopass :: select_donor
+    end type multi_donor_rule_t
+
+    abstract interface 
+        function select_donor_interface(mesh,donors,candidate_domains_g,candidate_domains_l,candidate_elements_g,candidate_elements_l) result(donor_index)
+            import mesh_t
+            import ivector_t
+            import ik
+            type(mesh_t),       intent(in)  :: mesh
+            type(ivector_t),    intent(in)  :: donors
+            type(ivector_t),    intent(in)  :: candidate_domains_g
+            type(ivector_t),    intent(in)  :: candidate_domains_l
+            type(ivector_t),    intent(in)  :: candidate_elements_g
+            type(ivector_t),    intent(in)  :: candidate_elements_l
+            integer(ik) :: donor_index
+        end function
+    end interface
+
+
+
 
 
 contains
@@ -705,7 +728,7 @@ contains
     !!                                      multiple are available.
     !!
     !-------------------------------------------------------------------------------------
-    subroutine find_gq_donor(mesh,gq_node,offset,receiver_face,donor_element,donor_coordinate,donor_found,donor_volume)
+    subroutine find_gq_donor(mesh,gq_node,offset,receiver_face,donor_element,donor_coordinate,donor_found,donor_volume,multi_donor_rule)
         type(mesh_t),               intent(in)              :: mesh
         real(rk),                   intent(in)              :: gq_node(3)
         real(rk),                   intent(in)              :: offset(3)
@@ -714,6 +737,7 @@ contains
         real(rk),                   intent(inout)           :: donor_coordinate(3)
         logical,                    intent(inout)           :: donor_found
         real(rk),                   intent(inout), optional :: donor_volume
+        class(multi_donor_rule_t),  intent(in),    optional :: multi_donor_rule
 
         integer(ik)                 :: idom, ielem, inewton, idomain_g, idomain_l,      &
                                        ielement_g, ielement_l, icandidate, ncandidates, &
@@ -889,15 +913,19 @@ contains
             if (allocated(donor_vols) ) deallocate(donor_vols)
             allocate(donor_vols(donors%size()))
             
-            do idonor = 1,donors%size()
-                donor_vols(idonor) = mesh%domain(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%vol
-            end do 
     
+            ! If provided a rule use that, if not select by lowest volume
+            if (present(multi_donor_rule)) then
+                donor_index = multi_donor_rule%select_donor(mesh,donors,candidate_domains_g,candidate_domains_l,candidate_elements_g,candidate_elements_l)
+            else
+                ! Get index of domain with minimum volume
+                do idonor = 1,donors%size()
+                    donor_vols(idonor) = mesh%domain(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%vol
+                end do 
+                donor_index = minloc(donor_vols,1)
+            end if
 
-            ! Get index of domain with minimum volume
-            donor_index = minloc(donor_vols,1)
             idonor = donors%at(donor_index)
-
             donor_element%idomain_g  = candidate_domains_g%at(idonor)
             donor_element%idomain_l  = candidate_domains_l%at(idonor)
             donor_element%ielement_g = candidate_elements_g%at(idonor)

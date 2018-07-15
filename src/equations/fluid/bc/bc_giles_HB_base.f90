@@ -7,7 +7,7 @@ module bc_giles_HB_base
     use mod_interpolation,      only: interpolate_linear, interpolate_linear_ad
     use mod_gridspace,          only: linspace
     use mod_dft,                only: dft, idft_eval
-    use mod_chimera,            only: find_gq_donor, find_gq_donor_parallel
+    use mod_chimera,            only: find_gq_donor, find_gq_donor_parallel, multi_donor_rule_t
 
     use type_point,             only: point_t
     use type_mesh,              only: mesh_t
@@ -17,6 +17,7 @@ module bc_giles_HB_base
     use type_properties,        only: properties_t
     use type_face_info,         only: face_info_t, face_info_constructor
     use type_element_info,      only: element_info_t
+    use type_ivector,           only: ivector_t
     use mod_chidg_mpi,          only: IRANK
     use mod_interpolate,        only: interpolate_face_autodiff
     use mpi_f08,                only: MPI_REAL8, MPI_INTEGER4, MPI_AllReduce, mpi_comm, MPI_BCast, MPI_MIN, MPI_MAX, MPI_SUM
@@ -93,7 +94,15 @@ module bc_giles_HB_base
     !*********************************************************************************
 
 
+    type, extends(multi_donor_rule_t), public :: rule_prefers_A
+    contains
+        procedure, nopass :: select_donor => select_donor_A
+    end type
 
+    type, extends(multi_donor_rule_t), public :: rule_prefers_B
+    contains
+        procedure, nopass :: select_donor => select_donor_B
+    end type
 
 contains
 
@@ -1363,104 +1372,102 @@ contains
                     ! Space-time average handled at the bottom
                     if (itime == 1 .and. itheta == 1) then
 
-                        ! Zero Tinv
-                        Tinv_real = ZERO*density_real(1,1,1)
-                        Tinv_imag = ZERO*density_real(1,1,1)
-
-                        Tinv_real(1,1) = -c_bar*c_bar
-                        Tinv_real(1,2) = ZERO
-                        Tinv_real(1,3) = ZERO
-                        Tinv_real(1,4) = ZERO
-                        Tinv_real(1,5) = ONE
-
-                        Tinv_real(2,1) = ZERO
-                        Tinv_real(2,2) = ZERO
-                        Tinv_real(2,3) = density_bar*c_bar
-                        Tinv_real(2,4) = ZERO
-                        Tinv_real(2,5) = ZERO
-
-                        Tinv_real(3,1) = ZERO
-                        Tinv_real(3,2) = ZERO
-                        Tinv_real(3,3) = ZERO
-                        Tinv_real(3,4) = density_bar*c_bar
-                        Tinv_real(3,5) = ZERO
-
-                        Tinv_real(4,1) = ZERO
-                        Tinv_real(4,2) = density_bar*c_bar
-                        Tinv_real(4,3) = ZERO
-                        Tinv_real(4,4) = ZERO
-                        Tinv_real(4,5) = ONE
-
-                        Tinv_real(5,1) = ZERO
-                        Tinv_real(5,2) = -density_bar*c_bar
-                        Tinv_real(5,3) = ZERO
-                        Tinv_real(5,4) = ZERO
-                        Tinv_real(5,5) = ONE
+!                        ! Zero Tinv
+!                        Tinv_real = ZERO*density_real(1,1,1)
+!                        Tinv_imag = ZERO*density_real(1,1,1)
+!
+!                        Tinv_real(1,1) = -c_bar*c_bar
+!                        Tinv_real(1,2) = ZERO
+!                        Tinv_real(1,3) = ZERO
+!                        Tinv_real(1,4) = ZERO
+!                        Tinv_real(1,5) = ONE
+!
+!                        Tinv_real(2,1) = ZERO
+!                        Tinv_real(2,2) = ZERO
+!                        Tinv_real(2,3) = density_bar*c_bar
+!                        Tinv_real(2,4) = ZERO
+!                        Tinv_real(2,5) = ZERO
+!
+!                        Tinv_real(3,1) = ZERO
+!                        Tinv_real(3,2) = ZERO
+!                        Tinv_real(3,3) = ZERO
+!                        Tinv_real(3,4) = density_bar*c_bar
+!                        Tinv_real(3,5) = ZERO
+!
+!                        Tinv_real(4,1) = ZERO
+!                        Tinv_real(4,2) = density_bar*c_bar
+!                        Tinv_real(4,3) = ZERO
+!                        Tinv_real(4,4) = ZERO
+!                        Tinv_real(4,5) = ONE
+!
+!                        Tinv_real(5,1) = ZERO
+!                        Tinv_real(5,2) = -density_bar*c_bar
+!                        Tinv_real(5,3) = ZERO
+!                        Tinv_real(5,4) = ZERO
+!                        Tinv_real(5,5) = ONE
                     
                     else
 
-                        ! Get temporal/spatial frequencies
-                        omega = get_omega(worker,itime)
-                        lm    = get_lm(itheta,ntheta)
+                    ! Get temporal/spatial frequencies
+                    omega = get_omega(worker,itime)
+                    lm    = get_lm(itheta,ntheta)
 
-                        ! Compute wavenumbers
-                        call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
-                                                      kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
+                    ! Compute wavenumbers
+                    call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
+                                                  kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
 
-                        ! Zero Tinv
-                        Tinv_real = ZERO*density_real(1,1,1)
-                        Tinv_imag = ZERO*density_real(1,1,1)
-
-
-                        ! Assemble (1,:)
-                        Tinv_real(1,1) = ONE/density_bar
-                        Tinv_real(1,5) = -ONE/(density_bar*c_bar*c_bar)
-
-                        ! Assemble (2,:)
-                        Tinv_real(2,3) = ONE/c_bar
-
-                        ! Assemble (3,:)
-                        Tinv_real(3,2) = (-kz/(c_bar*(k1*k1+kz*kz)))
-                        Tinv_real(3,4) = ( k1/(c_bar*(k1*k1+kz*kz)))
-                        Tinv_real(3,5) = (-kz/(density_bar*c_bar*vel3_bar*(k1*k1+kz*kz)))
+                    ! Zero Tinv
+                    Tinv_real = ZERO*density_real(1,1,1)
+                    Tinv_imag = ZERO*density_real(1,1,1)
 
 
-                        ! Assemble (4,:)
-                        ! Contribution from vel3:
-                        denom  = TWO*c_bar*c_bar*((k4_real*k1 + kz*kz)**TWO + k4_imag*k4_imag*k1*k1)
-                        c_real = -vel3_bar*( (k4_real*k1 - k1*k1)*(k4_real*k1 + kz*kz) + (k4_imag*k4_imag*k1*k1) )/denom
-                        c_imag = -vel3_bar*( (k4_real*k1 + kz*kz)*k4_imag*k1 - (k4_real*k1 - k1*k1)*k4_imag*k1 )/denom
-                        Tinv_real(4,2) = c_real
-                        Tinv_imag(4,2) = c_imag
+                    ! Assemble (1,:)
+                    Tinv_real(1,1) = ONE/density_bar
+                    Tinv_real(1,5) = -ONE/(density_bar*c_bar*c_bar)
 
-                        ! Contribution from vel2: 
-                        c_real = -vel3_bar*( (k4_real*kz - k1*kz)*(k4_real*k1 + kz*kz) + (k4_imag*k4_imag*kz*k1) )/denom
-                        c_imag = -vel3_bar*( (k4_real*k1 + kz*kz)*k4_imag*kz - (k4_real*kz - k1*kz)*k4_imag*k1 )/denom
-                        Tinv_real(4,4) = c_real
-                        Tinv_imag(4,4) = c_imag
+                    ! Assemble (2,:)
+                    Tinv_real(2,3) = ONE/c_bar
 
-                        ! Contribution from pressure:
-                        Tinv_real(4,5) = ONE/(TWO*density_bar*c_bar*c_bar)
+                    ! Assemble (3,:)
+                    Tinv_real(3,2) = (-kz/(c_bar*(k1*k1+kz*kz)))
+                    Tinv_real(3,4) = ( k1/(c_bar*(k1*k1+kz*kz)))
+                    Tinv_real(3,5) = (-kz/(density_bar*c_bar*vel3_bar*(k1*k1+kz*kz)))
 
 
-                        ! Assemble (5,:)
-                        ! Contribution from vel3:
-                        denom  = TWO*c_bar*c_bar*((k5_real*k1 + kz*kz)**TWO + k5_imag*k5_imag*k1*k1)
-                        c_real = -vel3_bar*( (k5_real*k1 - k1*k1)*(k5_real*k1 + kz*kz) + (k5_imag*k5_imag*k1*k1) )/denom
-                        c_imag = -vel3_bar*( (k5_real*k1 + kz*kz)*k5_imag*k1 - (k5_real*k1 - k1*k1)*k5_imag*k1 )/denom
-                        Tinv_real(5,2) = c_real
-                        Tinv_imag(5,2) = c_imag
+                    ! Assemble (4,:)
+                    ! Contribution from vel3:
+                    denom  = TWO*c_bar*c_bar*((k4_real*k1 + kz*kz)**TWO + k4_imag*k4_imag*k1*k1)
+                    c_real = -vel3_bar*( (k4_real*k1 - k1*k1)*(k4_real*k1 + kz*kz) + (k4_imag*k4_imag*k1*k1) )/denom
+                    c_imag = -vel3_bar*( (k4_real*k1 + kz*kz)*k4_imag*k1 - (k4_real*k1 - k1*k1)*k4_imag*k1 )/denom
+                    Tinv_real(4,2) = c_real
+                    Tinv_imag(4,2) = c_imag
 
-                        ! Contribution from vel2: 
-                        c_real = -vel3_bar*( (k5_real*kz - k1*kz)*(k5_real*k1 + kz*kz) + (k5_imag*k5_imag*kz*k1) )/denom
-                        c_imag = -vel3_bar*( (k5_real*k1 + kz*kz)*k5_imag*kz - (k5_real*kz - k1*kz)*k5_imag*k1 )/denom
-                        Tinv_real(5,4) = c_real
-                        Tinv_imag(5,4) = c_imag
+                    ! Contribution from vel2: 
+                    c_real = -vel3_bar*( (k4_real*kz - k1*kz)*(k4_real*k1 + kz*kz) + (k4_imag*k4_imag*kz*k1) )/denom
+                    c_imag = -vel3_bar*( (k4_real*k1 + kz*kz)*k4_imag*kz - (k4_real*kz - k1*kz)*k4_imag*k1 )/denom
+                    Tinv_real(4,4) = c_real
+                    Tinv_imag(4,4) = c_imag
 
-                        ! Contribution from pressure:
-                        Tinv_real(5,5) = ONE/(TWO*density_bar*c_bar*c_bar)
+                    ! Contribution from pressure:
+                    Tinv_real(4,5) = ONE/(TWO*density_bar*c_bar*c_bar)
 
-                    end if
+
+                    ! Assemble (5,:)
+                    ! Contribution from vel3:
+                    denom  = TWO*c_bar*c_bar*((k5_real*k1 + kz*kz)**TWO + k5_imag*k5_imag*k1*k1)
+                    c_real = -vel3_bar*( (k5_real*k1 - k1*k1)*(k5_real*k1 + kz*kz) + (k5_imag*k5_imag*k1*k1) )/denom
+                    c_imag = -vel3_bar*( (k5_real*k1 + kz*kz)*k5_imag*k1 - (k5_real*k1 - k1*k1)*k5_imag*k1 )/denom
+                    Tinv_real(5,2) = c_real
+                    Tinv_imag(5,2) = c_imag
+
+                    ! Contribution from vel2: 
+                    c_real = -vel3_bar*( (k5_real*kz - k1*kz)*(k5_real*k1 + kz*kz) + (k5_imag*k5_imag*kz*k1) )/denom
+                    c_imag = -vel3_bar*( (k5_real*k1 + kz*kz)*k5_imag*kz - (k5_real*kz - k1*kz)*k5_imag*k1 )/denom
+                    Tinv_real(5,4) = c_real
+                    Tinv_imag(5,4) = c_imag
+
+                    ! Contribution from pressure:
+                    Tinv_real(5,5) = ONE/(TWO*density_bar*c_bar*c_bar)
 
 
                     ! Project
@@ -1528,7 +1535,7 @@ contains
                                                     Tinv_real(5,4)*vel2_imag(iradius,itheta,itime)     + Tinv_imag(5,4)*vel2_real(iradius,itheta,itime)    + &
                                                     Tinv_real(5,5)*pressure_imag(iradius,itheta,itime) + Tinv_imag(5,5)*pressure_real(iradius,itheta,itime)
 
-!                    end if
+                    end if
                 end do !itime
             end do !itheta
         end do !iradius
@@ -1621,117 +1628,116 @@ contains
                     ! Space-time average handled at the bottom
                     if (itime == 1 .and. itheta == 1) then
 
-                        ! Zero Tinv
-                        T_real = ZERO*a1_real(1,1,1)
-                        T_imag = ZERO*a1_real(1,1,1)
-
-                        T_real(1,1) = -ONE/(c_bar*c_bar)
-                        T_real(1,2) = ZERO
-                        T_real(1,3) = ZERO
-                        T_real(1,4) = ONE/(TWO*c_bar*c_bar)
-                        T_real(1,5) = ONE/(TWO*c_bar*c_bar)
-
-                        T_real(2,1) = ZERO
-                        T_real(2,2) = ZERO
-                        T_real(2,3) = ZERO
-                        T_real(2,4) =  ONE/(TWO*density_bar*c_bar)
-                        T_real(2,5) = -ONE/(TWO*density_bar*c_bar)
-
-                        T_real(3,1) = ZERO
-                        T_real(3,2) = ONE/(density_bar*c_bar)
-                        T_real(3,3) = ZERO
-                        T_real(3,4) = ZERO
-                        T_real(3,5) = ZERO
-
-                        T_real(4,1) = ZERO
-                        T_real(4,2) = ZERO
-                        T_real(4,3) = ONE/(density_bar*c_bar)
-                        T_real(4,4) = ZERO
-                        T_real(4,5) = ZERO
-
-                        T_real(5,1) = ZERO
-                        T_real(5,2) = ZERO
-                        T_real(5,3) = ZERO
-                        T_real(5,4) = HALF
-                        T_real(5,5) = HALF
+!                        ! Zero Tinv
+!                        T_real = ZERO*a1_real(1,1,1)
+!                        T_imag = ZERO*a1_real(1,1,1)
+!
+!                        T_real(1,1) = -ONE/(c_bar*c_bar)
+!                        T_real(1,2) = ZERO
+!                        T_real(1,3) = ZERO
+!                        T_real(1,4) = ONE/(TWO*c_bar*c_bar)
+!                        T_real(1,5) = ONE/(TWO*c_bar*c_bar)
+!
+!                        T_real(2,1) = ZERO
+!                        T_real(2,2) = ZERO
+!                        T_real(2,3) = ZERO
+!                        T_real(2,4) =  ONE/(TWO*density_bar*c_bar)
+!                        T_real(2,5) = -ONE/(TWO*density_bar*c_bar)
+!
+!                        T_real(3,1) = ZERO
+!                        T_real(3,2) = ONE/(density_bar*c_bar)
+!                        T_real(3,3) = ZERO
+!                        T_real(3,4) = ZERO
+!                        T_real(3,5) = ZERO
+!
+!                        T_real(4,1) = ZERO
+!                        T_real(4,2) = ZERO
+!                        T_real(4,3) = ONE/(density_bar*c_bar)
+!                        T_real(4,4) = ZERO
+!                        T_real(4,5) = ZERO
+!
+!                        T_real(5,1) = ZERO
+!                        T_real(5,2) = ZERO
+!                        T_real(5,3) = ZERO
+!                        T_real(5,4) = HALF
+!                        T_real(5,5) = HALF
 
                     
                     else
 
-                        ! Get temporal/spatial frequencies
-                        omega = get_omega(worker,itime)
-                        lm    = get_lm(itheta,ntheta)
+                    ! Get temporal/spatial frequencies
+                    omega = get_omega(worker,itime)
+                    lm    = get_lm(itheta,ntheta)
 
-                        ! Compute wavenumbers
-                        call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
-                                                      kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
+                    ! Compute wavenumbers
+                    call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
+                                                  kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
 
-                        ! First zero fields
-                        density_real(iradius,itheta,itime)  = ZERO
-                        density_imag(iradius,itheta,itime)  = ZERO
-                        vel1_real(iradius,itheta,itime)     = ZERO
-                        vel1_imag(iradius,itheta,itime)     = ZERO
-                        vel2_real(iradius,itheta,itime)     = ZERO
-                        vel2_imag(iradius,itheta,itime)     = ZERO
-                        vel3_real(iradius,itheta,itime)     = ZERO
-                        vel3_imag(iradius,itheta,itime)     = ZERO
-                        pressure_real(iradius,itheta,itime) = ZERO
-                        pressure_imag(iradius,itheta,itime) = ZERO
-                        T_real = ZERO*density_real(1,1,1)
-                        T_imag = ZERO*density_real(1,1,1)
-
-
-                        ! Assemble (1,:)
-                        T_real(1,1) = density_bar
-                        T_real(1,4) = density_bar
-                        T_real(1,5) = density_bar
-
-                        
-                        ! Assemble (2,:)
-                        T_real(2,3) = -c_bar*kz
-
-                        ! Contribution from a4
-                        denom = vel3_bar*( (k4_real-k1)**TWO + k4_imag*k4_imag)
-                        c_real = (-c_bar*c_bar*(k4_real*(k4_real-k1) + k4_imag*k4_imag)/denom)
-                        c_imag = (c_bar*c_bar*(k4_imag*k1)/denom)
-                        T_real(2,4) = c_real
-                        T_imag(2,4) = c_imag
-
-                        ! Contribution from a5
-                        denom = vel3_bar*( (k5_real-k1)**TWO + k5_imag*k5_imag)
-                        c_real = (-c_bar*c_bar*(k5_real*(k5_real-k1) + k5_imag*k5_imag)/denom)
-                        c_imag = (c_bar*c_bar*(k5_imag*k1)/denom)
-                        T_real(2,5) = c_real
-                        T_imag(2,5) = c_imag
+                    ! First zero fields
+                    density_real(iradius,itheta,itime)  = ZERO
+                    density_imag(iradius,itheta,itime)  = ZERO
+                    vel1_real(iradius,itheta,itime)     = ZERO
+                    vel1_imag(iradius,itheta,itime)     = ZERO
+                    vel2_real(iradius,itheta,itime)     = ZERO
+                    vel2_imag(iradius,itheta,itime)     = ZERO
+                    vel3_real(iradius,itheta,itime)     = ZERO
+                    vel3_imag(iradius,itheta,itime)     = ZERO
+                    pressure_real(iradius,itheta,itime) = ZERO
+                    pressure_imag(iradius,itheta,itime) = ZERO
+                    T_real = ZERO*density_real(1,1,1)
+                    T_imag = ZERO*density_real(1,1,1)
 
 
-                        ! Assemble (3,:)
-                        T_real(3,2) = c_bar
+                    ! Assemble (1,:)
+                    T_real(1,1) = density_bar
+                    T_real(1,4) = density_bar
+                    T_real(1,5) = density_bar
+
+                    
+                    ! Assemble (2,:)
+                    T_real(2,3) = -c_bar*kz
+
+                    ! Contribution from a4
+                    denom = vel3_bar*( (k4_real-k1)**TWO + k4_imag*k4_imag)
+                    c_real = (-c_bar*c_bar*(k4_real*(k4_real-k1) + k4_imag*k4_imag)/denom)
+                    c_imag = (c_bar*c_bar*(k4_imag*k1)/denom)
+                    T_real(2,4) = c_real
+                    T_imag(2,4) = c_imag
+
+                    ! Contribution from a5
+                    denom = vel3_bar*( (k5_real-k1)**TWO + k5_imag*k5_imag)
+                    c_real = (-c_bar*c_bar*(k5_real*(k5_real-k1) + k5_imag*k5_imag)/denom)
+                    c_imag = (c_bar*c_bar*(k5_imag*k1)/denom)
+                    T_real(2,5) = c_real
+                    T_imag(2,5) = c_imag
 
 
-                        ! Assemble (4,:)
-                        ! Contribution from a3
-                        T_real(4,3) = c_bar*k1
-
-                        ! Contribution from a4
-                        denom = vel3_bar*((k4_real-k1)**TWO + k4_imag*k4_imag)
-                        c_real = -c_bar*c_bar*kz*(k4_real-k1)/denom
-                        c_imag =  c_bar*c_bar*kz*k4_imag/denom
-                        T_real(4,4) = c_real
-                        T_imag(4,4) = c_imag
-
-                        ! Contribution from a5
-                        denom = vel3_bar*((k5_real-k1)**TWO + k5_imag*k5_imag)
-                        c_real = -c_bar*c_bar*kz*(k5_real-k1)/denom
-                        c_imag =  c_bar*c_bar*kz*k5_imag/denom
-                        T_real(4,5) = c_real
-                        T_imag(4,5) = c_imag
+                    ! Assemble (3,:)
+                    T_real(3,2) = c_bar
 
 
-                        ! Assemble (5,:)
-                        T_real(5,4) = density_bar*c_bar*c_bar
-                        T_real(5,5) = density_bar*c_bar*c_bar
-                    end if
+                    ! Assemble (4,:)
+                    ! Contribution from a3
+                    T_real(4,3) = c_bar*k1
+
+                    ! Contribution from a4
+                    denom = vel3_bar*((k4_real-k1)**TWO + k4_imag*k4_imag)
+                    c_real = -c_bar*c_bar*kz*(k4_real-k1)/denom
+                    c_imag =  c_bar*c_bar*kz*k4_imag/denom
+                    T_real(4,4) = c_real
+                    T_imag(4,4) = c_imag
+
+                    ! Contribution from a5
+                    denom = vel3_bar*((k5_real-k1)**TWO + k5_imag*k5_imag)
+                    c_real = -c_bar*c_bar*kz*(k5_real-k1)/denom
+                    c_imag =  c_bar*c_bar*kz*k5_imag/denom
+                    T_real(4,5) = c_real
+                    T_imag(4,5) = c_imag
+
+
+                    ! Assemble (5,:)
+                    T_real(5,4) = density_bar*c_bar*c_bar
+                    T_real(5,5) = density_bar*c_bar*c_bar
 
 
 
@@ -1800,7 +1806,7 @@ contains
                                                           T_real(5,4)*a4_imag(iradius,itheta,itime) + T_imag(5,4)*a4_real(iradius,itheta,itime) + &
                                                           T_real(5,5)*a5_imag(iradius,itheta,itime) + T_imag(5,5)*a5_real(iradius,itheta,itime)
 
-                    !end if
+                    end if
 
                 end do !itime
             end do !itheta
@@ -2482,6 +2488,10 @@ contains
         real(rk),               allocatable :: donor_nodes(:,:,:)
         real(rk)                            :: theta_ref
 
+        type(rule_prefers_A)    :: donor_rule_A
+        type(rule_prefers_B)    :: donor_rule_B
+        class(multi_donor_rule_t), allocatable  :: multi_donor_rule
+
         ! If no faces on A/B, then the auxiliary grid for that side should not
         ! be constructed.
         if (side=='A' .and. self%nfaces_a==0) return
@@ -2538,10 +2548,14 @@ contains
             pitch  = self%bcproperties%compute('Pitch A',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
             theta_ref = self%theta_ref_a
             z = self%z_ref_a
+            allocate(multi_donor_rule,source=donor_rule_A,stat=ierr)
+            if (ierr /= 0) call AllocationError
         else if (side == 'B') then
             pitch  = self%bcproperties%compute('Pitch B',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
             theta_ref = self%theta_ref_b
             z = self%z_ref_b
+            allocate(multi_donor_rule,source=donor_rule_B,stat=ierr)
+            if (ierr /= 0) call AllocationError
         end if
         dtheta = pitch(1)
         dtheta_n = dtheta/ntheta
@@ -2572,7 +2586,9 @@ contains
                                    face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
                                    donors(iradius,itheta),              &
                                    donor_nodes(iradius,itheta,1:3),     &
-                                   donor_found)
+                                   donor_found,                         &
+                                   multi_donor_rule=multi_donor_rule)
+
 
                 ! Reject if not correct face_normal for side: do this by checking the element center
                 ! against the z-constant value.
@@ -2592,7 +2608,9 @@ contains
                                        face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
                                        donors(iradius,itheta),              &
                                        donor_nodes(iradius,itheta,1:3),     &
-                                       donor_found)
+                                       donor_found,                         &
+                                       multi_donor_rule=multi_donor_rule)
+
 
                     ! Reject if not correct face_normal for side: do this by checking the element center
                     ! against the z-constant value.
@@ -2607,6 +2625,7 @@ contains
                         noverset=noverset+1
                         thetas(iradius,itheta) = thetas(iradius,itheta) - pitch(1)
                     end if
+
                 end if
 
 
@@ -2779,7 +2798,55 @@ contains
     end function get_face_side
     !**************************************************************************************
 
+    !>  When multiple donors exist during construction of the Fourier interface 
+    !!  interpolations, for side 'A', prefer donors with the smaller z-coordinate value
+    !!
+    !--------------------------------------------------------------------------------------
+    function select_donor_A(mesh,donors,candidate_domains_g,candidate_domains_l,candidate_elements_g,candidate_elements_l) result(donor_index)
+        type(mesh_t),       intent(in)  :: mesh
+        type(ivector_t),    intent(in)  :: donors
+        type(ivector_t),    intent(in)  :: candidate_domains_g
+        type(ivector_t),    intent(in)  :: candidate_domains_l
+        type(ivector_t),    intent(in)  :: candidate_elements_g
+        type(ivector_t),    intent(in)  :: candidate_elements_l
+        integer(ik) :: donor_index
 
+        real(rk), allocatable   :: donor_z(:)
+        integer(ik) :: idonor
+
+        ! Get index of domain with minimum volume
+        allocate(donor_z(donors%size()))
+        do idonor = 1,donors%size()
+            donor_z(idonor) = minval(mesh%domain(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%node_coords_def(:,3))
+        end do 
+        donor_index = minloc(donor_z,1)
+
+    end function select_donor_A
+
+    !>  When multiple donors exist during construction of the Fourier interface 
+    !!  interpolations, for side 'B', prefer donors with the larger z-coordinate value
+    !!
+    !--------------------------------------------------------------------------------------
+    function select_donor_B(mesh,donors,candidate_domains_g,candidate_domains_l,candidate_elements_g,candidate_elements_l) result(donor_index)
+        type(mesh_t),       intent(in)  :: mesh
+        type(ivector_t),    intent(in)  :: donors
+        type(ivector_t),    intent(in)  :: candidate_domains_g
+        type(ivector_t),    intent(in)  :: candidate_domains_l
+        type(ivector_t),    intent(in)  :: candidate_elements_g
+        type(ivector_t),    intent(in)  :: candidate_elements_l
+        integer(ik) :: donor_index
+
+        real(rk), allocatable   :: donor_z(:)
+        integer(ik) :: idonor
+
+        ! Get index of domain with minimum volume
+        allocate(donor_z(donors%size()))
+        do idonor = 1,donors%size()
+            donor_z(idonor) = maxval(mesh%domain(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%node_coords_def(:,3))
+        end do 
+        donor_index = maxloc(donor_z,1)
+
+    end function select_donor_B
 
 
 

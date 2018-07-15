@@ -98,6 +98,7 @@ contains
         real(rk), allocatable, dimension(:) :: &
             unorm_1, unorm_2, unorm_3, r
 
+        real(rk),   allocatable, dimension(:,:) :: grid_velocity
 
 
 
@@ -158,10 +159,31 @@ contains
         unorm_3 = worker%unit_normal(3)
 
 
+        !   ANALYSIS
         !
-        ! Dot momentum with normal vector
+        !   We want to reflect the normal part of the relative velocity.
+        !   
+        !   Relationship between absolute(U), relative(W), and ALE velocity(VG)
+        !       U = W + VG
         !
-        normal_momentum = mom1_m*unorm_1 + mom2_m*unorm_2 + mom3_m*unorm_3
+        !   The condition we would like to impose is
+        !       W_bc = W_m - 2*(W_m dot n)*n
+        !
+        !   Substituting in W = U - VG
+        !       U_bc - VG = U_m - VG - 2*[(U_m - VG) dot n]*n
+        !
+        !   Simplifying gives
+        !       U_bc = U_m - 2*[(U_m - VG) dot n]*n
+        !
+
+
+        !
+        ! Dot relative momentum with normal vector
+        !
+        grid_velocity = worker%get_grid_velocity_face('face interior')
+        normal_momentum = (mom1_m-grid_velocity(:,1)*density_m)*unorm_1 + &
+                          (mom2_m-grid_velocity(:,2)*density_m)*unorm_2 + &
+                          (mom3_m-grid_velocity(:,3)*density_m)*unorm_3
 
 
         !
@@ -173,13 +195,13 @@ contains
 
 
 
+
         !
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
         !
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
-
 
 
         !

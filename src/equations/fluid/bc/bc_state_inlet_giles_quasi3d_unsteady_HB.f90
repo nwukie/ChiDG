@@ -227,7 +227,7 @@ contains
         ! Compute Fourier decomposition in theta at set of radial 
         ! stations for each temporal mode:
         !   q_hat(r,m,omega) = DFT(q_check)[theta]
-        call self%compute_spatial_dft(worker,bc_comm,                                &
+        call self%compute_spatial_dft(worker,bc_comm,'A',                            &
                                       density_check_real_m,  density_check_imag_m,   &
                                       vel1_check_real_m,     vel1_check_imag_m,      &
                                       vel2_check_real_m,     vel2_check_imag_m,      &
@@ -329,7 +329,7 @@ contains
         ! Compute Fourier decomposition in theta at set of radial 
         ! stations for each temporal mode:
         !   q_hat(r,m,omega) = DFT(q_check)[theta]
-        call self%compute_spatial_dft(worker,bc_comm,                                   &
+        call self%compute_spatial_dft(worker,bc_comm,'B',                               &
                                       density_check_real_p,     density_check_imag_p,   &
                                       vel1_check_real_p,        vel1_check_imag_p,      &
                                       vel2_check_real_p,        vel2_check_imag_p,      &

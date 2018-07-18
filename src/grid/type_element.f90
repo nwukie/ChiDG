@@ -2047,6 +2047,7 @@ contains
         !
         ! Newton iteration to find the donor local coordinates
         !
+        !tol = 1000000._rk*RKTOL
         !tol = 100000._rk*RKTOL
         tol = 100._rk*RKTOL
         coord_comp = ZERO

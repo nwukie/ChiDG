@@ -107,9 +107,9 @@ contains
         type(AD_D), allocatable, dimension(:)   ::                                                      &
             density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, pressure_bc, vel1_bc, vel2_bc, vel3_bc,   &
             density_m, mom1_m, mom2_m, mom3_m, energy_m, pressure_m, vel1_m, vel2_m, vel3_m,   &
-            density_reflect_1d, vel1_reflect_1d, vel2_reflect_1d, vel3_reflect_1d, pressure_reflect_1d, &
-            density_reflect_3d, vel1_reflect_3d, vel2_reflect_3d, vel3_reflect_3d, pressure_reflect_3d, &
-            c1_1d, c2_1d, c3_1d, c4_1d, c5_1d,  ddensity, dvel1, dvel2, dvel3, dpressure, &
+            density_reflection, vel1_reflection, vel2_reflection, vel3_reflection, pressure_reflection, &
+            !c1_1d, c2_1d, c3_1d, c4_1d, c5_1d,  &
+            ddensity, dvel1, dvel2, dvel3, dpressure, &
             c1_3d, c2_3d, c3_3d, c4_3d, &
             density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, &
             ddensity_1d, dvel1_1d, dvel2_1d, dvel3_1d, dpressure_1d, &
@@ -138,10 +138,11 @@ contains
             density_grid_m, vel1_grid_m, vel2_grid_m, vel3_grid_m, pressure_grid_m, c_grid_m,                   &
             density_grid_p, vel1_grid_p, vel2_grid_p, vel3_grid_p, pressure_grid_p, c_grid_p
 
-        type(AD_D)  :: density_avg, vel1_avg, vel2_avg, vel3_avg, pressure_avg, c_avg
+        type(AD_D)  :: density_avg, vel1_avg, vel2_avg, vel3_avg, pressure_avg, c_avg, c5_1d
 
         real(rk),       allocatable, dimension(:)   :: p_user, r
         integer(ik) :: igq
+
 
 
         ! Get back pressure from function.
@@ -349,6 +350,59 @@ contains
 
 
 
+!        ! Interpolate interior solution to face quadrature nodes
+!        density_m = worker%get_field('Density'   , 'value', 'face interior')
+!        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
+!        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
+!        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
+!        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
+!
+!        ! Account for cylindrical. Get tangential momentum from angular momentum.
+!        r = worker%coordinate('1','boundary')
+!        if (worker%coordinate_system() == 'Cylindrical') then
+!            mom2_m = mom2_m / r
+!        end if
+!
+!        ! Compute velocity and pressure
+!        vel1_m = mom1_m/density_m
+!        vel2_m = mom2_m/density_m
+!        vel3_m = mom3_m/density_m
+!        pressure_m = worker%get_field('Pressure', 'value', 'face interior')
+!
+!
+!
+!
+!        ! Subtract reflection
+!        density_bc  = density_m  - density_reflection
+!        vel1_bc     = vel1_m     - vel1_reflection
+!        vel2_bc     = vel2_m     - vel2_reflection
+!        vel3_bc     = vel3_m     - vel3_reflection
+!        pressure_bc = pressure_m - pressure_reflection
+!
+!        !print*, 'bc state: ', density_bc(1)%x_ad_, vel1_bc(1)%x_ad_, vel2_bc(1)%x_ad_, vel3_bc(1)%x_ad_, pressure_bc(1)%x_ad_
+!        print*, 'bc reflection: ', density_reflection(1)%x_ad_, vel1_reflection(1)%x_ad_, vel2_reflection(1)%x_ad_, vel3_reflection(1)%x_ad_, pressure_reflection(1)%x_ad_
+!
+!        ! Add effect of update to global average
+!        call self%compute_boundary_global_average(worker,bc_comm,density_hat_real_m(:,1,1),     &
+!                                                                 vel1_hat_real_m(:,1,1),        &
+!                                                                 vel2_hat_real_m(:,1,1),        &
+!                                                                 vel3_hat_real_m(:,1,1),        &
+!                                                                 pressure_hat_real_m(:,1,1),    &
+!                                                                 density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
+!        c_avg = sqrt(gam*pressure_avg/density_avg)
+!
+!        ! Allocate/compute 1d characteristics
+!        c5_1d = -TWO*(pressure_avg - p_user(1))
+!
+!        ! Now add local perturbation from the average
+!        do igq = 1,size(density_bc)
+!            density_bc(igq) = density_bc(igq)  + (ONE/(TWO*c_avg*c_avg))*c5_1d
+!            vel3_bc(igq)    = vel3_bc(igq)     -  (ONE/(TWO*density_avg*c_avg))*c5_1d
+!            pressure_bc(igq)= pressure_bc(igq) +  HALF*c5_1d
+!        end do
+
+
+
 
         !
         ! Form conserved variables
@@ -377,6 +431,7 @@ contains
         call worker%store_bc_state('Momentum-2', mom2_bc,    'value')
         call worker%store_bc_state('Momentum-3', mom3_bc,    'value')
         call worker%store_bc_state('Energy'    , energy_bc,  'value')
+
 
 
     end subroutine compute_bc_state
@@ -673,6 +728,7 @@ contains
             c3_1d(iradius) = density_avg*c_avg*dvel2(iradius)
             c4_1d(iradius) = density_avg*c_avg*dvel3(iradius)  +  dpressure(iradius)
             c5_1d(iradius) = -TWO*(pressure_avg - p_user(1))
+            !c5_1d(iradius) = -density_avg*c_avg*dvel3(iradius) + dpressure(iradius)
         end do
 
 
@@ -682,6 +738,11 @@ contains
         vel2_real_abs(:,1,1)     = vel2_avg
         vel3_real_abs(:,1,1)     = vel3_avg
         pressure_real_abs(:,1,1) = pressure_avg
+        !density_real_abs(:,1,1)  = ZERO*density_avg
+        !vel1_real_abs(:,1,1)     = ZERO*vel1_avg
+        !vel2_real_abs(:,1,1)     = ZERO*vel2_avg
+        !vel3_real_abs(:,1,1)     = ZERO*vel3_avg
+        !pressure_real_abs(:,1,1) = ZERO*pressure_avg
 
 
         ! Now add local perturbation from the average
@@ -780,8 +841,10 @@ contains
         a3_imag = a3_imag_m
         a4_real = a4_real_m
         a4_imag = a4_imag_m
+        !a5_real = a5_real_m
+        !a5_imag = a5_imag_m
 
-        ! Incoming amplitudes from exterior
+        !! Incoming amplitudes from exterior
         a5_real = ZERO*a5_real_p
         a5_imag = ZERO*a5_imag_p
 

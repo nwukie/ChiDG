@@ -190,7 +190,9 @@ contains
 
         ! Convert to tangential to angular momentum flux
         if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * r
+            flux_1 = flux_1 * r
+            flux_2 = flux_2 * r
+            flux_3 = flux_3 * r
         end if
 
         call worker%integrate_boundary_condition('Momentum-2','Diffusion',flux_1,flux_2,flux_3)

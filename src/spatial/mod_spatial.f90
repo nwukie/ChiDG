@@ -138,6 +138,7 @@ contains
 
 
 
+
                 ! Faces loop. For the current element, compute the 
                 ! contributions from boundary integrals.
                 do iface = 1,NFACES

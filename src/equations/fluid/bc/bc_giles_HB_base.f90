@@ -946,7 +946,7 @@ contains
 
         type(AD_D)  :: k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, &
                        density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, &
-                       c_real, c_imag, denom, Tinv_real(5,5), Tinv_imag(5,5)
+                       c_real, c_imag, denom, Tinv_real(5,5), Tinv_imag(5,5), beta
 
         real(rk),       allocatable, dimension(:)   :: unorm3
         real(rk)                                    :: theta_offset, omega, kz, lm
@@ -1037,6 +1037,27 @@ contains
                         a4_imag(iradius,itheta,itime) = (density_bar*c_bar)*vel3_imag(iradius,itheta,itime)  +  (ONE)*pressure_imag(iradius,itheta,itime)
                         a5_imag(iradius,itheta,itime) = -(density_bar*c_bar)*vel3_imag(iradius,itheta,itime) +  (ONE)*pressure_imag(iradius,itheta,itime)
 
+
+                        !! Account for sign(mode) in the calculation of beta. The second half of the
+                        !! modes are negative frequencies.
+                        !if (itheta <= (ntheta-1)/2 + 1) then
+                        !    beta = sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
+                        !else if (itheta > (ntheta-1)/2 + 1) then
+                        !    beta = -sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
+                        !end if
+
+                        !a1_real(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
+                        !a2_real(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
+                        !a3_real(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
+                        !a4_real(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
+
+                        !a1_imag(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
+                        !a2_imag(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
+                        !a3_imag(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
+                        !a4_imag(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
+
+                        !a5_real(iradius,itheta,itime) = density_bar*c_bar*vel2_bar * vel3_real(iradius,itheta,itime) - density_bar*c_bar*vel3_bar * vel2_real(iradius,itheta,itime) + beta*pressure_real(iradius,itheta,itime)
+                        !a5_imag(iradius,itheta,itime) = density_bar*c_bar*vel2_bar * vel3_imag(iradius,itheta,itime) - density_bar*c_bar*vel3_bar * vel2_imag(iradius,itheta,itime) + beta*pressure_imag(iradius,itheta,itime)
                     
                     else
 
@@ -1232,7 +1253,7 @@ contains
 
         type(AD_D)  :: k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, &
                        density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, &
-                       c_bar,  denom, c_real, c_imag, T_real(5,5), T_imag(5,5)
+                       c_bar,  denom, c_real, c_imag, T_real(5,5), T_imag(5,5), beta
         
         real(rk),       allocatable, dimension(:)   :: unorm3
         real(rk)                                    :: theta_offset, omega, kz, lm
@@ -1321,6 +1342,30 @@ contains
                         vel2_imag(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a3_imag(iradius,itheta,itime)
                         vel3_imag(iradius,itheta,itime)     = (ONE/(TWO*density_bar*c_bar))*a4_imag(iradius,itheta,itime)  -  (ONE/(TWO*density_bar*c_bar))*a5_imag(iradius,itheta,itime)
                         pressure_imag(iradius,itheta,itime) = HALF*a4_imag(iradius,itheta,itime)  +  HALF*a5_imag(iradius,itheta,itime)
+
+
+                        !! Account for sign(mode) in the calculation of beta. The second half of the
+                        !! modes are negative frequencies.
+                        !if (itheta <= (ntheta-1)/2 + 1) then
+                        !    beta = sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
+                        !else if (itheta > (ntheta-1)/2 + 1) then
+                        !    beta = -sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
+                        !end if
+
+                        !vel1_real(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
+                        !vel1_imag(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
+
+                        !density_real(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (-density_bar/c_bar) * (c_bar*vel2_bar - vel3_bar*beta) * a5_real(iradius,itheta,itime)
+                        !density_imag(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (-density_bar/c_bar) * (c_bar*vel2_bar - vel3_bar*beta) * a5_imag(iradius,itheta,itime)
+                        !
+                        !vel3_real(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (-c_bar*beta + vel3_bar*vel2_bar) * a5_real(iradius,itheta,itime)
+                        !vel3_imag(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (-c_bar*beta + vel3_bar*vel2_bar) * a5_imag(iradius,itheta,itime)
+
+                        !vel2_real(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (c_bar*c_bar - vel3_bar*vel3_bar) * a5_real(iradius,itheta,itime)
+                        !vel2_imag(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (c_bar*c_bar - vel3_bar*vel3_bar) * a5_imag(iradius,itheta,itime)
+
+                        !pressure_real(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (-density_bar*c_bar*(c_bar*vel2_bar - vel3_bar*beta)) * a5_real(iradius,itheta,itime)
+                        !pressure_imag(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (-density_bar*c_bar*(c_bar*vel2_bar - vel3_bar*beta)) * a5_imag(iradius,itheta,itime)
 
                     
                     else

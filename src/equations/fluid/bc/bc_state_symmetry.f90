@@ -101,7 +101,6 @@ contains
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
 
 
-
         !
         ! Interpolate interior solution to quadrature nodes
         !
@@ -236,7 +235,6 @@ contains
         call worker%store_bc_state('Energy'    , grad1_energy_m,  'grad1')
         call worker%store_bc_state('Energy'    , grad2_energy_m,  'grad2')
         call worker%store_bc_state('Energy'    , grad3_energy_m,  'grad3')
-
 
 
     end subroutine compute_bc_state

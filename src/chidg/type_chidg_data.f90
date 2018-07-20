@@ -159,6 +159,7 @@ contains
         !
         call self%sdata%init(self%mesh, function_data)
 
+
     end subroutine initialize_solution_solver
     !***************************************************************************************
 

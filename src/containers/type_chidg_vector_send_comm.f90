@@ -6,7 +6,7 @@ module type_chidg_vector_send_comm
     use type_ivector,               only: ivector_t
     use mod_chidg_mpi,              only: ChiDG_COMM
     use type_mpi_request_vector,    only: mpi_request_vector_t
-    use mpi_f08,                    only: MPI_Request, MPI_INTEGER4, MPI_ISend
+    use mpi_f08,                    only: MPI_Request, MPI_INTEGER4, MPI_ISend, MPI_Barrier
     implicit none
 
 
@@ -108,6 +108,7 @@ contains
         end do ! idom
 
 
+        if (self%dom_send%size() > mesh%ndomains()) call chidg_signal(FATAL,"mismatch in domain actual and send size. A")
 
 
         !
@@ -133,7 +134,7 @@ contains
                             proc_coupled = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(elem_ID)
 
                             if (proc == proc_coupled) then
-                                idom = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(elem_ID)
+                                idom = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
                                 call self%dom_send%push_back_unique(idom)
                             end if
 
@@ -146,8 +147,11 @@ contains
         end do !group_ID
 
 
-
-
+        ! Check the domains we accumulated to send make sense.
+        if (self%dom_send%size() > mesh%ndomains()) call chidg_signal(FATAL,"mismatch in domain actual and send size. B")
+        do idom_send = 1,self%dom_send%size()
+            if (self%dom_send%at(idom_send) > size(mesh%domain)) call chidg_signal(FATAL,"trying to send domain that is out of bounds.")
+        end do
 
         !
         ! Allocate number of domains to send to proc
@@ -160,15 +164,12 @@ contains
 
 
 
-
         !
         ! Initialize element send indices for each domain to be sent
         !
         do idom_send = 1,self%dom_send%size()
 
-
             idom = self%dom_send%at(idom_send)
-
 
             !
             ! Register elements to send to off-processor INTERIOR neighbors
@@ -196,7 +197,6 @@ contains
 
 
 
-
             !
             ! Register elements to send to off-processor CHIMERA receivers 
             !
@@ -205,7 +205,6 @@ contains
                 call self%elems_send(idom_send)%push_back_unique(ielem)
             end do !ielem_send
             
-
 
 
             !
@@ -229,10 +228,7 @@ contains
 
                                 ! Get 'proc' for coupled element. Test if if matches 'proc' here
                                 proc_coupled  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(elem_ID)
-                                idom_coupled  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(elem_ID)
-
-                                send_element = (proc == proc_coupled) .and. (idom == idom_coupled)
-
+                                send_element = (proc == proc_coupled) .and. (mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l() == idom)
 
                                 !
                                 ! If face_ID has coupling with proc, for the current domain idom, add 
@@ -249,14 +245,7 @@ contains
 
             end do !group_ID
 
-
-
         end do ! idom_send
-
-
-
-
-
 
 
 
@@ -269,50 +258,29 @@ contains
         call self%initialization_requests%push_back(request)
 
 
+
         ! These send's are recv'd by blockvector%init_recv
         do idom_send = 1,self%dom_send%size()
-            idom = self%dom_send%at(idom_send)
-        end do
-
-
-
-        do idom_send = 1,self%dom_send%size()
 
             idom = self%dom_send%at(idom_send)
-
-
-            ! Communicate domain indices
-            call MPI_ISend(mesh%domain(idom)%idomain_g, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, request1, ierr)
-            call MPI_ISend(mesh%domain(idom)%idomain_l, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, request2, ierr)
-
-            call self%initialization_requests%push_back(request1)
-            call self%initialization_requests%push_back(request2)
 
             ! Communicate number of elements from the domain being sent
             call MPI_ISend(self%elems_send(idom_send)%size_, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, request, ierr)
             call self%initialization_requests%push_back(request)
 
-            ! Send each element
+            ! Send each element location and auxiliary information
             do ielem_send = 1,self%elems_send(idom_send)%size()
                 ielem = self%elems_send(idom_send)%at(ielem_send)
 
-                call MPI_ISend(mesh%domain(idom)%elems(ielem)%ielement_g, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, request1, ierr)
-                call MPI_ISend(mesh%domain(idom)%elems(ielem)%ielement_l, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, request2, ierr)
-                call MPI_ISend(mesh%domain(idom)%elems(ielem)%nterms_s,   1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, request3, ierr)
-                call MPI_ISend(mesh%domain(idom)%elems(ielem)%neqns,      1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, request4, ierr)
-                call MPI_ISend(mesh%domain(idom)%elems(ielem)%ntime,      1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, request5, ierr)
+                call MPI_ISend(mesh%domain(idom)%elems(ielem)%element_location, 5, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, request1, ierr)
+                call MPI_ISend(mesh%domain(idom)%elems(ielem)%element_data,     8, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, request2, ierr)
 
                 call self%initialization_requests%push_back(request1)
                 call self%initialization_requests%push_back(request2)
-                call self%initialization_requests%push_back(request3)
-                call self%initialization_requests%push_back(request4)
-                call self%initialization_requests%push_back(request5)
 
             end do ! ielem_send
 
         end do ! idom_send
-
-
 
 
     end subroutine init

@@ -160,6 +160,7 @@ contains
         if (allocated(self%dom)) deallocate(self%dom)
 
 
+
         ! Allocate domain_vector_t for each mesh
         ndomains = mesh%ndomains()
         allocate(self%dom(ndomains), stat=ierr)
@@ -175,13 +176,12 @@ contains
 
         ! Call initialization for determining what data to send and where
         call self%send%init(mesh)
+
         ! Call initialization for determining what data to receive and allocate storage for it
         call self%recv%init(mesh)
 
-
         ! Wait on outstanding mpi_reqests initiated during the send%init(mesh) call
         call self%send%init_wait()
-
 
     end subroutine initialize
     !******************************************************************************************

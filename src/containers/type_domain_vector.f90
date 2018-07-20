@@ -215,16 +215,17 @@ contains
         type(ivector_t) :: recv_elems
         integer(ik)     :: nelem_recv, ielem_recv, ierr, ielem, iface, nterms,  &
                            neqns, loc, recv_element, idomain_g, idomain_l,      &
-                           ielement_g, ielement_l, ntime
+                           ielement_g, ielement_l, ntime, element_location(5),  &
+                           element_data(8)
         logical         :: new_elements, proc_element, already_added, comm_element
 
 
 
-        !
-        ! Get the domain index we are receiving
-        !
-        call MPI_Recv(idomain_g, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-        call MPI_Recv(idomain_l, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+!        !
+!        ! Get the domain index we are receiving
+!        !
+!        call MPI_Recv(idomain_g, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+!        call MPI_Recv(idomain_l, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
 
         !
@@ -268,11 +269,17 @@ contains
         do ielem_recv = 1,nelem_recv
 
 
-            call MPI_Recv(ielement_g, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(ielement_l, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(nterms,     1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(neqns,      1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(ntime,      1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(element_location, 5, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(element_data,     8, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            
+            ! Interpret information that has been received
+            idomain_g  = element_location(1)
+            idomain_l  = element_location(2)
+            ielement_g = element_location(3)
+            ielement_l = element_location(4)
+            nterms = element_data(5)
+            neqns  = element_data(4)
+            ntime  = element_data(7)
 
             !
             ! Call densevector initialization routine

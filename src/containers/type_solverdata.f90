@@ -138,6 +138,7 @@ contains
         call self%q_in%init( mesh,mesh%ntime_)
         call self%q_out%init(mesh,mesh%ntime_)
 
+
         ! Initialize matrix and parallel recv data
         call self%lhs%init(mesh,'full')
         call self%lhs%init_recv(self%rhs)

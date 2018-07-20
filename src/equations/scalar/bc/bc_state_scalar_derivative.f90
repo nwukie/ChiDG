@@ -56,9 +56,7 @@ contains
         !
         ! Add functions
         !
-        call self%bcproperties%add('Grad1','Required')         ! add StaticPressure
-        call self%bcproperties%add('Grad2','Required')         ! add StaticPressure
-        call self%bcproperties%add('Grad3','Required')         ! add StaticPressure
+        call self%bcproperties%add('Normal Gradient','Required')         ! add StaticPressure
 
 
         !
@@ -93,7 +91,8 @@ contains
         type(mpi_comm),             intent(in)      :: bc_COMM
 
 
-        type(AD_D), allocatable, dimension(:)   :: u_bc, dudx_bc, dudy_bc, dudz_bc
+        type(AD_D), allocatable, dimension(:)   :: u_bc, grad1u_bc, grad2u_bc, grad3u_bc
+        real(rk),   allocatable, dimension(:)   :: normal_gradient
 
 
         !
@@ -105,30 +104,25 @@ contains
         !
         ! Initialize derivative arrays
         !
-        dudx_bc = ZERO*worker%get_field('u', 'grad1','face interior')
-        dudy_bc = ZERO*dudx_bc
-        dudz_bc = ZERO*dudx_bc
+        grad1u_bc = ZERO*u_bc
+        grad2u_bc = ZERO*u_bc
+        grad3u_bc = ZERO*u_bc
 
 
-        if ((worker%element_info%ielement_g == 1) .and. (worker%iface == 1)) then
-        !if (worker%iface == 1) then
-           u_bc(1) = 70000._rk
-        end if 
+        
+        ! Retrieve normal gradient and get components
+        normal_gradient = self%bcproperties%compute("Normal Gradient",worker%time(),worker%coords())
+        grad1u_bc = normal_gradient*worker%unit_normal(1)
+        grad2u_bc = normal_gradient*worker%unit_normal(2)
+        grad3u_bc = normal_gradient*worker%unit_normal(3)
 
 
 
-        !
-        ! Get derivative value
-        !
-        dudx_bc = self%bcproperties%compute("Grad1",worker%time(),worker%coords())
-        dudy_bc = self%bcproperties%compute("Grad2",worker%time(),worker%coords())
-        dudz_bc = self%bcproperties%compute("Grad3",worker%time(),worker%coords())
-
-
-        call worker%store_bc_state('u', u_bc,    'value')
-        call worker%store_bc_state('u', dudx_bc, 'grad1')
-        call worker%store_bc_state('u', dudy_bc, 'grad2')
-        call worker%store_bc_state('u', dudz_bc, 'grad3')
+        ! Store
+        call worker%store_bc_state('u', u_bc,      'value')
+        call worker%store_bc_state('u', grad1u_bc, 'grad1')
+        call worker%store_bc_state('u', grad2u_bc, 'grad2')
+        call worker%store_bc_state('u', grad3u_bc, 'grad3')
 
 
 

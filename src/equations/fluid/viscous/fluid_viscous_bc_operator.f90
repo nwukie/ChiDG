@@ -98,7 +98,7 @@ contains
             k,       k_l,     k_t,                  &
             tau_11, tau_22, tau_33,                 &
             tau_12, tau_13, tau_23,                 &
-            flux_1, flux_2, flux_3, integrand
+            flux_1, flux_2, flux_3
 
         real(rk),   allocatable, dimension(:)   ::  r
 

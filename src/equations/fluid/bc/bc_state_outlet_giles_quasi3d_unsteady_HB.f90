@@ -350,59 +350,6 @@ contains
 
 
 
-!        ! Interpolate interior solution to face quadrature nodes
-!        density_m = worker%get_field('Density'   , 'value', 'face interior')
-!        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
-!        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
-!        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
-!        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
-!
-!        ! Account for cylindrical. Get tangential momentum from angular momentum.
-!        r = worker%coordinate('1','boundary')
-!        if (worker%coordinate_system() == 'Cylindrical') then
-!            mom2_m = mom2_m / r
-!        end if
-!
-!        ! Compute velocity and pressure
-!        vel1_m = mom1_m/density_m
-!        vel2_m = mom2_m/density_m
-!        vel3_m = mom3_m/density_m
-!        pressure_m = worker%get_field('Pressure', 'value', 'face interior')
-!
-!
-!
-!
-!        ! Subtract reflection
-!        density_bc  = density_m  - density_reflection
-!        vel1_bc     = vel1_m     - vel1_reflection
-!        vel2_bc     = vel2_m     - vel2_reflection
-!        vel3_bc     = vel3_m     - vel3_reflection
-!        pressure_bc = pressure_m - pressure_reflection
-!
-!        !print*, 'bc state: ', density_bc(1)%x_ad_, vel1_bc(1)%x_ad_, vel2_bc(1)%x_ad_, vel3_bc(1)%x_ad_, pressure_bc(1)%x_ad_
-!        print*, 'bc reflection: ', density_reflection(1)%x_ad_, vel1_reflection(1)%x_ad_, vel2_reflection(1)%x_ad_, vel3_reflection(1)%x_ad_, pressure_reflection(1)%x_ad_
-!
-!        ! Add effect of update to global average
-!        call self%compute_boundary_global_average(worker,bc_comm,density_hat_real_m(:,1,1),     &
-!                                                                 vel1_hat_real_m(:,1,1),        &
-!                                                                 vel2_hat_real_m(:,1,1),        &
-!                                                                 vel3_hat_real_m(:,1,1),        &
-!                                                                 pressure_hat_real_m(:,1,1),    &
-!                                                                 density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg)
-!        c_avg = sqrt(gam*pressure_avg/density_avg)
-!
-!        ! Allocate/compute 1d characteristics
-!        c5_1d = -TWO*(pressure_avg - p_user(1))
-!
-!        ! Now add local perturbation from the average
-!        do igq = 1,size(density_bc)
-!            density_bc(igq) = density_bc(igq)  + (ONE/(TWO*c_avg*c_avg))*c5_1d
-!            vel3_bc(igq)    = vel3_bc(igq)     -  (ONE/(TWO*density_avg*c_avg))*c5_1d
-!            pressure_bc(igq)= pressure_bc(igq) +  HALF*c5_1d
-!        end do
-
-
-
 
         !
         ! Form conserved variables
@@ -606,8 +553,6 @@ contains
         !
         ! Step 1: handle higher-order modes: m /= 0
         !
-
-
         ! Project interior to eigenmodes
         call self%primitive_to_eigenmodes(worker,bc_comm,                   &
                                           density_real_m(:,1,1),            &
@@ -728,7 +673,6 @@ contains
             c3_1d(iradius) = density_avg*c_avg*dvel2(iradius)
             c4_1d(iradius) = density_avg*c_avg*dvel3(iradius)  +  dpressure(iradius)
             c5_1d(iradius) = -TWO*(pressure_avg - p_user(1))
-            !c5_1d(iradius) = -density_avg*c_avg*dvel3(iradius) + dpressure(iradius)
         end do
 
 
@@ -738,11 +682,6 @@ contains
         vel2_real_abs(:,1,1)     = vel2_avg
         vel3_real_abs(:,1,1)     = vel3_avg
         pressure_real_abs(:,1,1) = pressure_avg
-        !density_real_abs(:,1,1)  = ZERO*density_avg
-        !vel1_real_abs(:,1,1)     = ZERO*vel1_avg
-        !vel2_real_abs(:,1,1)     = ZERO*vel2_avg
-        !vel3_real_abs(:,1,1)     = ZERO*vel3_avg
-        !pressure_real_abs(:,1,1) = ZERO*pressure_avg
 
 
         ! Now add local perturbation from the average
@@ -841,10 +780,8 @@ contains
         a3_imag = a3_imag_m
         a4_real = a4_real_m
         a4_imag = a4_imag_m
-        !a5_real = a5_real_m
-        !a5_imag = a5_imag_m
 
-        !! Incoming amplitudes from exterior
+        ! Incoming amplitudes from exterior
         a5_real = ZERO*a5_real_p
         a5_imag = ZERO*a5_imag_p
 
@@ -886,62 +823,6 @@ contains
         end do !iradius
 
 
-
-
-
-
-
-
-!        ! Outoing amplitudes from interior
-!        a1_real = a1_real_m
-!        a1_imag = a1_imag_m
-!        a2_real = a2_real_m
-!        a2_imag = a2_imag_m
-!        a3_real = a3_real_m
-!        a3_imag = a3_imag_m
-!        a4_real = a4_real_m
-!        a4_imag = a4_imag_m
-!
-!        ! Incoming amplitudes from exterior
-!        a5_real = a5_real_p
-!        a5_imag = a5_imag_p
-!
-!
-!        itime = 1   ! Time-constant
-!        do iradius = 1,size(a1_real_m,1)
-!            ! Get average parts
-!            density_bar  = density_bar_r(iradius)
-!            vel1_bar     = vel1_bar_r(iradius)
-!            vel2_bar     = vel2_bar_r(iradius)
-!            vel3_bar     = vel3_bar_r(iradius)
-!            pressure_bar = pressure_bar_r(iradius)
-!            c_bar        = sqrt(gam*pressure_bar/density_bar)
-!
-!            ! starting with 2 here because the first mode is treated with 1D characteristics
-!            ntheta = size(a1_real_m,2)
-!            do itheta = 2,ntheta
-!                ! Account for sign(mode) in the calculation of beta. The second half of the
-!                ! modes are negative frequencies.
-!                if (itheta <= (ntheta-1)/2 + 1) then
-!                    beta = sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
-!                else if (itheta > (ntheta-1)/2 + 1) then
-!                    beta = -sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
-!                end if
-!
-!                ! The imaginary part of beta has already been accounted for in
-!                ! the expressions for B2 and B3
-!                B3_real = -TWO*vel3_bar*vel2_bar/(vel2_bar*vel2_bar + beta*beta)
-!                B3_imag = -TWO*beta*vel3_bar/(vel2_bar*vel2_bar + beta*beta)
-!
-!                B4_real = (beta*beta - vel2_bar*vel2_bar)/(beta*beta + vel2_bar*vel2_bar)
-!                B4_imag = -TWO*beta*vel2_bar/(beta*beta + vel2_bar*vel2_bar)
-!
-!                a5_real(iradius,itheta,itime) = (B3_real*a3_real_m(iradius,itheta,itime) - B3_imag*a3_imag_m(iradius,itheta,itime))  &   ! A3*c3 (real)
-!                                              - (B4_real*a4_real_m(iradius,itheta,itime) - B4_imag*a4_imag_m(iradius,itheta,itime))      ! A4*c4 (real)
-!                a5_imag(iradius,itheta,itime) = (B3_imag*a3_real_m(iradius,itheta,itime) + B3_real*a3_imag_m(iradius,itheta,itime))  &   ! A3*c3 (imag)
-!                                              - (B4_imag*a4_real_m(iradius,itheta,itime) + B4_real*a4_imag_m(iradius,itheta,itime))      ! A4*c4 (imag)
-!            end do !itheta
-!        end do !iradius
 
 
     end subroutine apply_nonreflecting_condition

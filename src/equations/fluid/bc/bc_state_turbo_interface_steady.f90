@@ -225,12 +225,6 @@ contains
 
 
         ! Get exterior perturbation
-        !call self%get_q_exterior(worker,bc_comm,    &
-        !                         density_grid_p,    &
-        !                         vel1_grid_p,       &
-        !                         vel2_grid_p,       &
-        !                         vel3_grid_p,       &
-        !                         pressure_grid_p)
         call self%get_q_side(worker,bc_comm,'B', &
                              density_grid_p,     &
                              vel1_grid_p,        &

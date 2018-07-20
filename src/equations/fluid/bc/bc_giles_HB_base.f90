@@ -588,12 +588,8 @@ contains
         ! Get BC properties
         if (side == 'A') then
             pitch = self%bcproperties%compute('Pitch A', worker%time(),worker%coords())
-            !theta_ref = self%theta_ref_a
-            !theta_ref = self%theta_a(1,1)
         else if (side == 'B') then
             pitch = self%bcproperties%compute('Pitch B', worker%time(),worker%coords())
-            !theta_ref = self%theta_ref_b
-            !theta_ref = self%theta_b(1,1)
         end if
 
         ! Get gq coordinates 
@@ -624,8 +620,6 @@ contains
 
 
                 theta_offset = coords(igq)%c2_ - self%theta_ref
-                !theta_offset = coords(igq)%c2_ - self%theta(1,1)
-                !theta_offset = coords(igq)%c2_ - theta_ref
                 ! **** WARNING: probably want ipdft_eval here ****
                 call idft_eval(density_hat_real(igq,:,itime),       &
                                density_hat_imag(igq,:,itime),       &
@@ -981,41 +975,6 @@ contains
 
                     else if (itime == 1 .and. itheta > 1) then
 
-                        !! Zero Tinv
-                        !Tinv_real(:,:) = ZERO*density_real(1,1,1)
-                        !Tinv_imag(:,:) = ZERO*density_real(1,1,1)
-
-                        !! Compute Tinv based on 1D characteristics
-                        !Tinv_real(1,1) = -c_bar*c_bar
-                        !Tinv_real(1,2) = ZERO
-                        !Tinv_real(1,3) = ZERO
-                        !Tinv_real(1,4) = ZERO
-                        !Tinv_real(1,5) = ONE
-
-                        !Tinv_real(2,1) = ZERO
-                        !Tinv_real(2,2) = ZERO
-                        !Tinv_real(2,3) = density_bar*c_bar
-                        !Tinv_real(2,4) = ZERO
-                        !Tinv_real(2,5) = ZERO
-
-                        !Tinv_real(3,1) = ZERO
-                        !Tinv_real(3,2) = ZERO
-                        !Tinv_real(3,3) = ZERO
-                        !Tinv_real(3,4) = density_bar*c_bar
-                        !Tinv_real(3,5) = ZERO
-
-                        !Tinv_real(4,1) = ZERO
-                        !Tinv_real(4,2) = density_bar*c_bar
-                        !Tinv_real(4,3) = ZERO
-                        !Tinv_real(4,4) = ZERO
-                        !Tinv_real(4,5) = ONE
-
-                        !Tinv_real(5,1) = ZERO
-                        !Tinv_real(5,2) = -density_bar*c_bar
-                        !Tinv_real(5,3) = ZERO
-                        !Tinv_real(5,4) = ZERO
-                        !Tinv_real(5,5) = ONE
-
                         a1_real(iradius,itheta,itime) = -(c_bar*c_bar)*density_real(iradius,itheta,itime)    +  (ONE)*pressure_real(iradius,itheta,itime)
                         a2_real(iradius,itheta,itime) = (density_bar*c_bar)*vel1_real(iradius,itheta,itime)
                         a3_real(iradius,itheta,itime) = (density_bar*c_bar)*vel2_real(iradius,itheta,itime)
@@ -1028,28 +987,6 @@ contains
                         a4_imag(iradius,itheta,itime) = (density_bar*c_bar)*vel3_imag(iradius,itheta,itime)  +  (ONE)*pressure_imag(iradius,itheta,itime)
                         a5_imag(iradius,itheta,itime) = -(density_bar*c_bar)*vel3_imag(iradius,itheta,itime) +  (ONE)*pressure_imag(iradius,itheta,itime)
 
-
-                        !! Account for sign(mode) in the calculation of beta. The second half of the
-                        !! modes are negative frequencies.
-                        !if (itheta <= (ntheta-1)/2 + 1) then
-                        !    beta = sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
-                        !else if (itheta > (ntheta-1)/2 + 1) then
-                        !    beta = -sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
-                        !end if
-
-                        !a1_real(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
-                        !a2_real(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
-                        !a3_real(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
-                        !a4_real(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
-
-                        !a1_imag(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
-                        !a2_imag(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
-                        !a3_imag(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
-                        !a4_imag(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
-
-                        !a5_real(iradius,itheta,itime) = density_bar*c_bar*vel2_bar * vel3_real(iradius,itheta,itime) - density_bar*c_bar*vel3_bar * vel2_real(iradius,itheta,itime) + beta*pressure_real(iradius,itheta,itime)
-                        !a5_imag(iradius,itheta,itime) = density_bar*c_bar*vel2_bar * vel3_imag(iradius,itheta,itime) - density_bar*c_bar*vel3_bar * vel2_imag(iradius,itheta,itime) + beta*pressure_imag(iradius,itheta,itime)
-                    
                     else
 
 
@@ -1288,39 +1225,6 @@ contains
 
                     else if (itime == 1 .and. itheta > 1) then
 
-                        !! Zero Tinv
-                        !T_real = ZERO*a1_real(1,1,1)
-                        !T_imag = ZERO*a1_real(1,1,1)
-
-                        !T_real(1,1) = -ONE/(c_bar*c_bar)
-                        !T_real(1,2) = ZERO
-                        !T_real(1,3) = ZERO
-                        !T_real(1,4) = ONE/(TWO*c_bar*c_bar)
-                        !T_real(1,5) = ONE/(TWO*c_bar*c_bar)
-
-                        !T_real(2,1) = ZERO
-                        !T_real(2,2) = ZERO
-                        !T_real(2,3) = ZERO
-                        !T_real(2,4) =  ONE/(TWO*density_bar*c_bar)
-                        !T_real(2,5) = -ONE/(TWO*density_bar*c_bar)
-
-                        !T_real(3,1) = ZERO
-                        !T_real(3,2) = ONE/(density_bar*c_bar)
-                        !T_real(3,3) = ZERO
-                        !T_real(3,4) = ZERO
-                        !T_real(3,5) = ZERO
-
-                        !T_real(4,1) = ZERO
-                        !T_real(4,2) = ZERO
-                        !T_real(4,3) = ONE/(density_bar*c_bar)
-                        !T_real(4,4) = ZERO
-                        !T_real(4,5) = ZERO
-
-                        !T_real(5,1) = ZERO
-                        !T_real(5,2) = ZERO
-                        !T_real(5,3) = ZERO
-                        !T_real(5,4) = HALF
-                        !T_real(5,5) = HALF
 
                         density_real(iradius,itheta,itime)  = (-ONE/(c_bar*c_bar))*a1_real(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a4_real(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a5_real(iradius,itheta,itime)
                         vel1_real(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a2_real(iradius,itheta,itime)
@@ -1335,30 +1239,6 @@ contains
                         pressure_imag(iradius,itheta,itime) = HALF*a4_imag(iradius,itheta,itime)  +  HALF*a5_imag(iradius,itheta,itime)
 
 
-                        !! Account for sign(mode) in the calculation of beta. The second half of the
-                        !! modes are negative frequencies.
-                        !if (itheta <= (ntheta-1)/2 + 1) then
-                        !    beta = sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
-                        !else if (itheta > (ntheta-1)/2 + 1) then
-                        !    beta = -sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
-                        !end if
-
-                        !vel1_real(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
-                        !vel1_imag(iradius,itheta,itime) = ZERO*density_real(iradius,itheta,itime)
-
-                        !density_real(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (-density_bar/c_bar) * (c_bar*vel2_bar - vel3_bar*beta) * a5_real(iradius,itheta,itime)
-                        !density_imag(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (-density_bar/c_bar) * (c_bar*vel2_bar - vel3_bar*beta) * a5_imag(iradius,itheta,itime)
-                        !
-                        !vel3_real(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (-c_bar*beta + vel3_bar*vel2_bar) * a5_real(iradius,itheta,itime)
-                        !vel3_imag(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (-c_bar*beta + vel3_bar*vel2_bar) * a5_imag(iradius,itheta,itime)
-
-                        !vel2_real(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (c_bar*c_bar - vel3_bar*vel3_bar) * a5_real(iradius,itheta,itime)
-                        !vel2_imag(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (c_bar*c_bar - vel3_bar*vel3_bar) * a5_imag(iradius,itheta,itime)
-
-                        !pressure_real(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (-density_bar*c_bar*(c_bar*vel2_bar - vel3_bar*beta)) * a5_real(iradius,itheta,itime)
-                        !pressure_imag(iradius,itheta,itime) = (ONE/(TWO*density_bar*c_bar*(c_bar+vel3_bar))) * (-density_bar*c_bar*(c_bar*vel2_bar - vel3_bar*beta)) * a5_imag(iradius,itheta,itime)
-
-                    
                     else
 
                         ! Get temporal/spatial frequencies
@@ -1913,12 +1793,12 @@ contains
             dr = self%r(2) - self%r(1)
             area = ZERO
             do irad = 1,size(density_bar)-1
-                density_avg  = density_avg  + dr*(density_bar(irad+1) +density_bar(irad))/TWO
-                vel1_avg     = vel1_avg     + dr*(vel1_bar(irad+1)    +vel1_bar(irad))/TWO
-                vel2_avg     = vel2_avg     + dr*(vel2_bar(irad+1)    +vel2_bar(irad))/TWO
-                vel3_avg     = vel3_avg     + dr*(vel3_bar(irad+1)    +vel3_bar(irad))/TWO
-                pressure_avg = pressure_avg + dr*(pressure_bar(irad+1)+pressure_bar(irad))/TWO
-                c_avg        = c_avg        + dr*(c_bar(irad+1)       +c_bar(irad))/TWO
+                density_avg  = density_avg  + dr*(density_bar(irad+1)  + density_bar(irad))/TWO
+                vel1_avg     = vel1_avg     + dr*(vel1_bar(irad+1)     + vel1_bar(irad))/TWO
+                vel2_avg     = vel2_avg     + dr*(vel2_bar(irad+1)     + vel2_bar(irad))/TWO
+                vel3_avg     = vel3_avg     + dr*(vel3_bar(irad+1)     + vel3_bar(irad))/TWO
+                pressure_avg = pressure_avg + dr*(pressure_bar(irad+1) + pressure_bar(irad))/TWO
+                c_avg        = c_avg        + dr*(c_bar(irad+1)        + c_bar(irad))/TWO
                 area = area + dr
             end do
 

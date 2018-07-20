@@ -92,9 +92,6 @@ contains
             grad1_u, grad2_u, grad3_u,              &
             flux_1,  flux_2,  flux_3, mu
 
-        real(rk),   allocatable, dimension(:)   :: r
-
-        r = worker%coordinate('1','boundary')
 
         !
         ! Interpolate boundary condition state to face quadrature nodes
@@ -113,7 +110,6 @@ contains
         !=================================================
         ! Mass flux
         !=================================================
-        !flux_1 = -mu*grad1_u  -  (100._rk*r + 200._rk + 100._rk/r)
         flux_1 = -mu*grad1_u
         flux_2 = -mu*grad2_u
         flux_3 = -mu*grad3_u

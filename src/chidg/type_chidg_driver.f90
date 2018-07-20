@@ -175,8 +175,8 @@ contains
         call create_bc('Scalar Value',      dirichlet_zero)
         call create_bc('Scalar Derivative', neumann_zero  )
 
-        call dirichlet_zero%set_fcn_option( 'Value'     , 'val', ZERO)
-        call neumann_zero%set_fcn_option(   'Derivative', 'val', ZERO)
+        call dirichlet_zero%set_fcn_option('Value', 'val', ZERO)
+        call neumann_zero%set_fcn_option('Normal Gradient', 'val', ZERO)
 
 
 

@@ -3,6 +3,7 @@ module bc_giles_HB_base
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, FOUR, HALF, ME, CYLINDRICAL,    &
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, PI
+    use mod_io,                 only: verbosity
     use mod_fluid,              only: Rgas, cp, gam
     use mod_interpolation,      only: interpolate_linear, interpolate_linear_ad
     use mod_gridspace,          only: linspace
@@ -455,10 +456,6 @@ contains
                 call dft(pressure_Ft_real(iradius,:,itime), pressure_Ft_imag(iradius,:,itime), pressure_real_tmp, pressure_imag_tmp, negate=negate_dft)
                 call dft(c_Ft_real(       iradius,:,itime), c_Ft_imag(       iradius,:,itime), c_real_tmp,        c_imag_tmp,        negate=negate_dft)
 
-!                if (iradius == 1) then
-!                    print*, 'Density after DFT: ', density_real_tmp(:)%x_ad_
-!                end if
-
 
                 ! Adjust Fourier coefficients so their phase is relative to self%theta_ref
                 ! instead of the minimum theta of the transform.
@@ -515,15 +512,11 @@ contains
                     !c_Fts_imag(       iradius,imode,itime) = c_imag_tmp(imode)
                 end do !imode
 
-                !if (iradius == 1) then
-                !    print*, 'Density after shift: ', density_Fts_real(1,:,1)%x_ad_
-                !end if
-
             end do !itime
         end do !iradius
 
-        print*, 'WARNING: need scaling since dft is only over a single passage.'
-        print*, 'WARNING: check correct pitch in phase shift.'
+        call write_line('WARNING: need scaling since dft is only over a single passage.', io_proc=IRANK, silence=(verbosity<5))
+        call write_line('WARNING: check correct pitch in phase shift.', io_proc=IRANK, silence=(verbosity<5))
 
     end subroutine compute_spatial_dft
     !*********************************************************************************
@@ -742,8 +735,6 @@ contains
                            [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
                            density_tmp,                                                     &
                            expect_zero,symmetric=.true.)
-                           !expect_zero,symmetric=.false.)
-                           !print*, 'EXPECT ZERO: ', expect_zero%x_ad_
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(vel1_check_real(igq,:),                                          &
@@ -971,7 +962,7 @@ contains
 
 
         ! Project
-        print*, 'WARNING! CHECK DEFINITION OF lm PITCH!'
+        call write_line('WARNING: CHECK DEFINITION OF lm PITCH.', io_proc=IRANK, silence=(verbosity<5))
         do iradius = 1,nr
             ! Get radius-local average
             density_bar  = density_bar_r(iradius)
@@ -1278,7 +1269,7 @@ contains
         ntime  = size(density_real,3)
 
         ! Project
-        print*, 'WARNING! CHECK DEFINITION OF lm PITCH!'
+        call write_line('WARNING: CHECK DEFINITION OF lm PITCH.', io_proc=IRANK, silence=(verbosity<5))
         do iradius = 1,nr
             ! Get radius-local average
             density_bar  = density_bar_r(iradius)
@@ -2376,9 +2367,6 @@ contains
         else if (side=='B' .and. self%nfaces_a==0) then
             self%theta_a = self%theta_b
         end if
-
-        !print*, 'Theta A: ', self%theta_a(1,:)
-        !print*, 'Theta B: ', self%theta_b(1,:)
 
     end subroutine initialize_fourier_discretization
     !**************************************************************************************

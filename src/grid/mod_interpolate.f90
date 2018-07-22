@@ -153,12 +153,10 @@ contains
         end if
 
 
-        !!
-        !! If the current element is being differentiated (ielem == ielem_seed)
-        !! then copy the solution modes to local AD variable and seed derivatives
-        !!
-        !differentiate_me = ( (elem_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-        !                     (elem_info%ielement_g == fcn_info%seed%ielement_g) )
+        !
+        ! If the current element is being differentiated (ielem == ielem_seed)
+        ! then copy the solution modes to local AD variable and seed derivatives
+        !
         ! If the current element is being differentiated (ielem == ielem_seed)
         ! then copy the solution modes to local AD variable and seed derivatives
         differentiate_me = ( (elem_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &

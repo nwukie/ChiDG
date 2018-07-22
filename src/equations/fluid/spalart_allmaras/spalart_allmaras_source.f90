@@ -1,6 +1,8 @@
 module spalart_allmaras_source
+#include<messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,SIX,HALF,PI
+    use mod_chidg_mpi,          only: GLOBAL_MASTER
     use mod_spalart_allmaras,   only: SA_c_b1, SA_c_b2, SA_kappa, SA_sigma,         &
                                       SA_c_w1, SA_c_w2, SA_c_w3, SA_c_v1, SA_c_v2,  &
                                       SA_c_v3, SA_c_t3, SA_c_t4, SA_c_n1,           &
@@ -10,6 +12,7 @@ module spalart_allmaras_source
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
+    use ieee_arithmetic
     implicit none
 
     private
@@ -131,7 +134,7 @@ contains
         eps = 1.e-6_rk
         dwall = worker%get_field('Wall Distance', 'value', 'element')
 
-
+        if (any(ieee_is_nan(dwall(:)%x_ad_))) call write_line('dwall is nan',io_proc=GLOBAL_MASTER)
 
         !
         ! Divide by density
@@ -163,6 +166,7 @@ contains
         end where
         
 
+        if (any(ieee_is_nan(mu_t(:)%x_ad_))) call write_line('mu_t is nan',io_proc=GLOBAL_MASTER)
 
         !
         ! Compute f_n1
@@ -173,6 +177,7 @@ contains
             f_n1 = (SA_c_n1 + chi*chi*chi)/(SA_c_n1 - chi*chi*chi)
         end where
 
+        if (any(ieee_is_nan(f_n1(:)%x_ad_))) call write_line('f_n1is nan',io_proc=GLOBAL_MASTER)
 
 
         !
@@ -193,10 +198,12 @@ contains
             vorticity = sqrt(vorticity2)
         end where
 
+        if (any(ieee_is_nan(vorticity(:)%x_ad_))) call write_line('vorticity is nan',io_proc=GLOBAL_MASTER)
 
         f_v2 = ONE - (chi/(ONE+chi*f_v1))
         vorticity_bar = (nutilde/(SA_kappa*SA_kappa*(dwall*dwall + eps)))*f_v2
 
+        if (any(ieee_is_nan(vorticity_bar(:)%x_ad_))) call write_line('vorticity_bar is nan',io_proc=GLOBAL_MASTER)
 
         vorticity_mod = vorticity
         where (vorticity_bar >= -SA_c_v2*vorticity)
@@ -206,6 +213,7 @@ contains
         end where
 
 
+        if (any(ieee_is_nan(vorticity_mod(:)%x_ad_))) call write_line('vorticity_mod is nan',io_proc=GLOBAL_MASTER)
 
 
         !
@@ -260,7 +268,6 @@ contains
         grad3_nutilde = dnutilde_drho*grad3_rho  +  dnutilde_drho_nutilde*grad3_rho_nutilde
 
 
-
         !========================================================================
         !                       Spalart-Allmaras Source Term
         !========================================================================
@@ -269,6 +276,9 @@ contains
                     -(SA_c_b2/SA_sigma)*rho*(grad1_nutilde*grad1_nutilde + grad2_nutilde*grad2_nutilde + grad3_nutilde*grad3_nutilde)   &
                     +(ONE/SA_sigma)*(nu + f_n1*nutilde)*(grad1_rho*grad1_nutilde + grad2_rho*grad2_nutilde + grad3_rho*grad3_nutilde)   &
                   )
+
+
+        if (any(ieee_is_nan(source(:)%x_ad_))) call write_line('source is nan',io_proc=GLOBAL_MASTER)
 
         call worker%integrate_volume_source('Density * NuTilde',source)
 

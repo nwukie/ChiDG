@@ -162,7 +162,6 @@ contains
         end if
 
 
-
         !
         ! Resize cache
         !
@@ -179,7 +178,6 @@ contains
         compute_gradients = (allocated(equation_set(eqn_ID)%volume_diffusive_operator)   .or. &
                              allocated(equation_set(eqn_ID)%boundary_diffusive_operator) )
 !        compute_gradients = .true.
-
 
 
 
@@ -1493,6 +1491,7 @@ contains
         worker%interpolation_source = 'face interior'
         do imodel = 1,equation_set(eqn_ID)%nmodels()
 
+
             !
             ! Compute if model dependency matches specified model type in the 
             ! function interface.
@@ -1643,6 +1642,7 @@ contains
                 idiff = 0
             end if
             
+
             ! 
             ! Compute the number of exterior element dependencies for face exterior state
             !

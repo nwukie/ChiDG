@@ -1,7 +1,7 @@
 module mod_spatial
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR, NO_ID
+    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR, NO_ID, ZERO
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
     use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier
@@ -43,7 +43,9 @@ contains
         real(rk),           intent(inout),  optional    :: timing
 
         integer(ik)                 :: idom, ielem, iface, idiff, ierr, &
-                                       diff_min, diff_max, eqn_ID
+                                       diff_min, diff_max, eqn_ID, nelem_total, &
+                                       loop_status
+        real(rk)                    :: percent_complete, percent_report
         type(timer_t)               :: timer, comm_timer, loop_timer
 
         type(element_info_t)        :: elem_info
@@ -114,9 +116,13 @@ contains
 
 
 
+        nelem_total = data%mesh%nelements()
 
 
         call loop_timer%start()
+        loop_status = 0
+        percent_complete = ZERO
+        percent_report = 20.
         do idom = 1,data%mesh%ndomains()
             do ielem = 1,data%mesh%domain(idom)%nelements()
                 eqn_ID = worker%mesh%domain(idom)%elems(ielem)%eqn_ID
@@ -161,6 +167,17 @@ contains
 
 
                 end associate
+
+                ! Report every x-percent
+                loop_status = loop_status + 1 
+                if (real(loop_status,rk)/real(nelem_total,rk)*100. > percent_report) then
+                    percent_complete = percent_complete + percent_report
+                    loop_status = 0
+                    call write_line(percent_complete,' percent complete...',ltrim=.true.,io_proc=GLOBAL_MASTER,silence=(verbosity<4))
+                end if
+
+
+
             end do  ! ielem
         end do  ! idom
         call loop_timer%stop()

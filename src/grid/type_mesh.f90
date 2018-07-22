@@ -42,6 +42,9 @@ module type_mesh
 
     contains
 
+        ! Mesh procedures
+        procedure           :: nelements
+
         ! Domain procedures
         procedure           :: add_domain
         procedure           :: get_domain_id
@@ -1377,6 +1380,27 @@ contains
         idomain = self%new_domain()
 
     end function stub_new_domain
+    !********************************************************************************
+
+
+
+    !>  Return number of elements on the processor-local mesh.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   6/21/2018
+    !!
+    !--------------------------------------------------------------------------------
+    function nelements(self) result(nelem)
+        class(mesh_t),  intent(in)  :: self
+
+        integer(ik) :: nelem, idom
+
+        nelem = 0
+        do idom = 1,self%ndomains()
+            nelem = nelem + self%domain(idom)%nelements()
+        end do
+
+    end function nelements
     !********************************************************************************
 
 

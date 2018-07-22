@@ -105,7 +105,6 @@ contains
 
                 call rans_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
-
             case default
                 call chidg_signal_one(FATAL, "build_rans: I didn't recognize the &
                                               construction parameter that was passed to build &

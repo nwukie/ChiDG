@@ -112,7 +112,7 @@ contains
         do igq = 1,size(d)
             ! Don't allow negative. Can't take fractional powers of negative
             ! numbers
-            if (d_normalization(igq) < RKTOL) then
+            if (d(igq) < RKTOL) then
                 d_normalization(igq) = ZERO
                 
             else if (sumsqr(igq) < 1.e-8_rk) then
@@ -131,8 +131,12 @@ contains
         end do
 
 
-
-
+        ! Make sure the normalized distance didn't happen to go negative
+        do igq = 1,size(d_normalization)
+            if (d_normalization(igq) < RKTOL) then
+                d_normalization(igq) = ZERO
+            end if
+        end do
 
 
         !

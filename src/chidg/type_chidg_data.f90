@@ -2,6 +2,7 @@ module type_chidg_data
 #include <messenger.h>
     use mod_kinds,                      only: rk,ik
     use mod_constants,                  only: NO_ID
+    use mod_chidg_mpi,                  only: IRANK, NRANK
     use type_domain_connectivity,       only: domain_connectivity_t
     use type_boundary_connectivity,     only: boundary_connectivity_t
 
@@ -25,8 +26,6 @@ module type_chidg_data
     !Mesh motion
     use type_prescribed_mesh_motion,        only: prescribed_mesh_motion_t
     use type_prescribed_mesh_motion_group,  only: prescribed_mesh_motion_group_t
-
-
     implicit none
 
 
@@ -1037,6 +1036,11 @@ contains
 
     end subroutine report
     !****************************************************************************************
+
+
+
+
+
 
 
 

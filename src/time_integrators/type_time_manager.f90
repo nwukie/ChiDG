@@ -1,12 +1,10 @@
 module type_time_manager
 #include <messenger.h>
-    
     use mod_kinds,       only: rk,ik
     use mod_constants,   only: PI,ZERO,ONE,TWO
     use type_rvector,    only: rvector_t
     use mod_HB_matrices, only: calc_pseudo_spectral_operator
     use mod_io
-
     implicit none
 
 
@@ -15,9 +13,7 @@ module type_time_manager
     !!  @author Matteo Ugolotti
     !!  @date   12/22/2016
     !!
-    !!
     !------------------------------------------------------------------------------------------
-
     type, public        :: time_manager_t
         
         !Time scheme
@@ -43,7 +39,6 @@ module type_time_manager
         procedure   :: init         ! Initialization procedure to store all the time information needed
         procedure   :: set_name     ! Procedure to set the name of the time_integrator used
         procedure   :: get_name     ! Procedure to get the neme of the time_integrator used
-    
 
     end type time_manager_t
     !------------------------------------------------------------------------------------------
@@ -53,14 +48,12 @@ contains
 
 
 
-    !> Time Manager initialization
+    !>  Time Manager initialization
     !!
     !!  read data from namelist (mod_io.f90) and save time informations needed
     !!  
-    !!  
     !!  @author Matteo Ugolotti
     !!  @date   12/25/2016
-    !!
     !!  
     !-----------------------------------------------------------------------------------------
     subroutine init(self)
@@ -87,11 +80,16 @@ contains
                 
                 call self%set_name(time_integrator)
 
-                self%dt     = 0
+                self%t      = ZERO
+                self%dt     = ZERO
+                self%times  = [ZERO]
                 self%ntime  = 1
                 self%nsteps = 1
                 self%nwrite = 0     ! don't write intermediate file
-                self%times  = [ZERO]
+                if (.not. allocated(self%freqs)) then
+                    allocate(self%freqs(0), stat=ierr)
+                    if (ierr /= 0) call AllocationError
+                end if
 
 
             !
@@ -113,12 +111,15 @@ contains
                 !
                 ! add dt, ntimes, nsteps and nwrite to the time_manager
                 !
-                
                 self%dt     = dt
                 self%nsteps = time_steps
                 self%ntime  = 1
                 self%nwrite = nwrite
                 self%times  = [ZERO]
+                if (.not. allocated(self%freqs)) then
+                    allocate(self%freqs(0), stat=ierr)
+                    if (ierr /= 0) call AllocationError
+                end if
 
 
             
@@ -129,22 +130,21 @@ contains
                   'harmonic_balance', 'HB')
                 
                 call self%set_name(time_integrator)
-                self%nsteps     = 1
-                self%nwrite     = 0     ! don't write intermediate file
-                !
+                self%nsteps = 1
+                self%nwrite = 0     ! don't write intermediate file
+                self%dt     = ZERO
+
+
                 ! Verify that at least one frequency has been passed in
-                !
                 user_msg = "time_integrator%init: The time scheme set needs frequencies &
                             passed in along with it. Please define at least one frequency &
                             different than 0 in chidg.nml"
                 if ( (maxval(frequencies) == ZERO) .and. (minval(frequencies) == ZERO) ) call chidg_signal_one(FATAL,user_msg,trim(time_integrator))
 
 
-                !
                 ! Determine number of frequencies and time levels
                 !   : determine number of frequencies, by number of nonzero entries in IO variable 'frequencies'
                 !   : number of time levels = 2*nfreq + 1
-                !
                 nfreq = 0
                 do i = 1,size(frequencies)
                     if ( frequencies(i) /= ZERO ) then
@@ -154,39 +154,31 @@ contains
                 self%ntime = 2*nfreq + 1
 
                 
-                !
                 ! Allocate times(:),freqs(:) storage
-                !
                 if (allocated(self%times)) deallocate(self%times)
                 if (allocated(self%freqs)) deallocate(self%freqs)
                 allocate(self%times(self%ntime), self%freqs(nfreq), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
                 
-                !
                 ! Store input frequencies
-                !
                 do i = 1,size(frequencies)
                     if ( frequencies(i) /= ZERO ) then
                         self%freqs(i) = frequencies(i)
                     end if
                 end do
 
-                !
+
                 ! Compute, store time levels. Take abs(freqs) in-case of negative frequencies
-                !
                 do i = 1,self%ntime
                     !self%times(i) = ((TWO*PI)/minval(self%freqs)) * (real(i)/real(self%ntime))
                     self%times(i) = ((TWO*PI)/minval(abs(self%freqs))) * (real(i)/real(self%ntime))
                 end do
 
 
-                !
                 ! Compute the pseudo spectral operator when the HB time integrator is specified
                 ! in the namelist file
-                !
                 self%D = calc_pseudo_spectral_operator(self%freqs,self%times)
-
 
             case default
                 user_msg = "We can't seem to find a time integrator that matches the input &
@@ -239,7 +231,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_name(self) result(res)
-        class(time_manager_t),  intent(inout)   :: self
+        class(time_manager_t),  intent(in)   :: self
         
         character(:),   allocatable :: res
 
@@ -248,8 +240,6 @@ contains
     end function get_name
     !-----------------------------------------------------------------------------------------
 
-
-    
 
 
 end module type_time_manager

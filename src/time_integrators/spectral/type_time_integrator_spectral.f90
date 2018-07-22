@@ -115,26 +115,19 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(HID_T)          :: fid
-        integer                 :: ierr, iwrite
+        integer(HID_T)  :: fid
+        integer(ik)     :: ierr, iwrite
 
 
-        do iwrite = 0,NRANK - 1
+        do iwrite = 0,NRANK-1
             if (iwrite == IRANK) then
                 
-                ! Assuming that the file exists, open the hdf file
                 fid = open_file_hdf(filename)
-
-                
-                ! Write nsteps, nwrite, frequencies and time levels to hdf file
-                call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()))
-                call set_nsteps_hdf(     fid,data%time_manager%nsteps)
-                call set_nwrite_hdf(     fid,data%time_manager%nwrite)        
-                call set_frequencies_hdf(fid,data%time_manager%freqs )
-                print*, 'setting: ', data%time_manager%times
-                call set_times_hdf(      fid,data%time_manager%times )
-
-                
+                call set_time_integrator_hdf(fid, trim(data%time_manager%get_name()))
+                call set_times_hdf(          fid, data%time_manager%times           )
+                call set_frequencies_hdf(    fid, data%time_manager%freqs           )
+                call set_nsteps_hdf(         fid, data%time_manager%nsteps          )
+                call set_nwrite_hdf(         fid, data%time_manager%nwrite          )        
                 call close_file_hdf(fid)
 
             end if

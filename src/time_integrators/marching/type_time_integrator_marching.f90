@@ -105,20 +105,17 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(HID_T)                  :: fid
-        integer(ik)                     :: ierr, iwrite
+        integer(HID_T)  :: fid
+        integer(ik)     :: ierr, iwrite
         
 
-        do iwrite = 0,NRANK -1
+        do iwrite = 0,NRANK-1
             if (iwrite == IRANK) then
 
-                !
-                ! Write dt, no. of time steps and nwrite to hdf file
-                !
                 fid = open_file_hdf(filename)
                 call set_time_integrator_hdf(fid, trim(data%time_manager%get_name()))
-                call set_time_step_hdf(      fid, data%time_manager%dt              )
                 call set_times_hdf(          fid, [data%time_manager%t]             )
+                call set_time_step_hdf(      fid, data%time_manager%dt              )
                 call set_nsteps_hdf(         fid, data%time_manager%nsteps          )
                 call set_nwrite_hdf(         fid, data%time_manager%nwrite          )
                 call close_file_hdf(fid)

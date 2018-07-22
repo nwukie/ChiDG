@@ -1161,7 +1161,8 @@ contains
                 do iproc = 0,NRANK-1
                     if (iproc == IRANK) then
                         fid = open_file_hdf(file_name)
-                        call initialize_file_structure_hdf(fid,self%data)
+                        !call initialize_file_structure_hdf(fid,self%data)
+                        call initialize_file_structure_hdf(fid,self%data%mesh)
                         call close_file_hdf(fid)
                     end if
                     call MPI_Barrier(ChiDG_COMM,ierr)

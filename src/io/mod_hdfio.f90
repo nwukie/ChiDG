@@ -301,7 +301,8 @@ contains
 
             ! Write equation set attribute
             eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has the same eqn_ID
-            call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(eqn_ID)%name))
+            !call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(eqn_ID)%name))
+            call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(eqn_ID)%get_name()))
 
 
 
@@ -486,7 +487,7 @@ contains
         character(*),       intent(in), optional    :: field
 
 
-        character(:),   allocatable     :: field_name, domain_name, time_string
+        character(:),   allocatable     :: field_name, domain_name
         integer(HID_T)                  :: fid, domain_id
         integer(HSIZE_T)                :: adim, nfreq, ntime
         integer(ik)                     :: idom, ieqn, neqns, iwrite, &
@@ -494,7 +495,6 @@ contains
         integer                         :: ierr, order_s
         logical                         :: file_exists
         integer(ik)                     :: itime
-        real(rk),       allocatable     :: freq(:), time_lev(:)
 
 
         !
@@ -521,7 +521,8 @@ contains
                 do iproc = 0,NRANK-1
                     if (iproc == IRANK) then
                         fid = open_file_hdf(file_name)
-                        call initialize_file_structure_hdf(fid,data)
+                        !call initialize_file_structure_hdf(fid,data)
+                        call initialize_file_structure_hdf(fid,data%mesh)
                         call close_file_hdf(fid)
                     end if
                     call MPI_Barrier(ChiDG_COMM,ierr)

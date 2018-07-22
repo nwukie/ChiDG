@@ -40,22 +40,6 @@
 !!  set_contains_solution_hdf
 !!  get_contains_solution_hdf
 !!
-!!  set_time_step_hdf
-!!  get_time_step_hdf
-!!
-!!  set_nsteps_hdf
-!!  get_nsteps_hdf
-!!
-!!  set_nwrite_hdf
-!!  get_nwrite_hdf
-!!
-!!  set_frequencies_hdf
-!!  get_frequencies_hdf
-!!
-!!  !set_time_levels_hdf
-!!  !get_time_levels_hdf
-!!
-!!  
 !!
 !!  =====================================================================
 !!  Domain-level routines:
@@ -201,15 +185,22 @@
 !!  set_time_integrator_hdf
 !!  get_time_integrator_hdf
 !!
-!!  !set_ntimes_hdf
-!!  !get_ntimes_hdf
-!!
 !!  set_times_hdf
 !!  get_times_hdf
 !!
 !!  set_frequencies_hdf
 !!  get_frequencies_hdf
 !!
+!!  set_time_step_hdf
+!!  get_time_step_hdf
+!!
+!!  set_nsteps_hdf
+!!  get_nsteps_hdf
+!!
+!!  set_nwrite_hdf
+!!  get_nwrite_hdf
+!!
+!!  
 !!
 !!  Utilities:
 !!  ---------------------------------------------------------------------
@@ -237,7 +228,7 @@ module mod_hdf_utilities
     use type_bc_state,          only: bc_state_t
     use type_point,             only: point_t
     use type_file_properties,   only: file_properties_t
-    use type_chidg_data,        only: chidg_data_t
+    use type_mesh,              only: mesh_t
     use hdf5
     use h5lt
 
@@ -406,26 +397,29 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine initialize_file_structure_hdf(fid,data)
+    !subroutine initialize_file_structure_hdf(fid,data)
+    subroutine initialize_file_structure_hdf(fid,mesh)
         integer(HID_T),     intent(in)  :: fid
-        type(chidg_data_t), intent(in)  :: data
+        !type(chidg_data_t), intent(in)  :: data
+        type(mesh_t),       intent(in)  :: mesh
 
-        integer(ik)                 :: idom, eqn_ID
-        integer(HID_T)              :: domain_id
+        integer(ik)                 :: idom
         character(:),   allocatable :: domain_name
+!        integer(ik)                 :: eqn_ID
+!        integer(HID_T)              :: domain_id
 
-        do idom = 1,data%mesh%ndomains()
+        do idom = 1,mesh%ndomains()
 
             ! Create domain group
-            domain_name = data%mesh%domain(idom)%name
+            domain_name = mesh%domain(idom)%name
             call create_domain_hdf(fid,domain_name)
 
 
-            ! Set additional attributes
-            eqn_ID    = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has same eqn_ID
-            domain_id = open_domain_hdf(fid,trim(domain_name))
-            call set_domain_equation_set_hdf(domain_id,data%eqnset(eqn_ID)%get_name())
-            call close_domain_hdf(domain_id)
+!            ! Set additional attributes
+!            eqn_ID    = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has same eqn_ID
+!            domain_id = open_domain_hdf(fid,trim(domain_name))
+!            call set_domain_equation_set_hdf(domain_id,data%eqnset(eqn_ID)%get_name())
+!            call close_domain_hdf(domain_id)
     
 
         end do !idom
@@ -5165,8 +5159,8 @@ contains
     !!
     !!  Sets the array:  /Frequencies
     !!
-    !!  For time-steady:   size(Frequencies)  = N/A
-    !!  For time-marching: size(Frequencies)  = N/A
+    !!  For time-steady:   size(Frequencies)  = 0
+    !!  For time-marching: size(Frequencies)  = 0
     !!  For time-spectral: size(Frequencies) >= 1
     !!
     !!  @author Nathan A. Wukie (AFRL)

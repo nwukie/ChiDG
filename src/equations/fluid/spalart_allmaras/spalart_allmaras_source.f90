@@ -166,7 +166,6 @@ contains
         end where
         
 
-        if (any(ieee_is_nan(mu_t(:)%x_ad_))) call write_line('mu_t is nan',io_proc=GLOBAL_MASTER)
 
         !
         ! Compute f_n1
@@ -177,7 +176,6 @@ contains
             f_n1 = (SA_c_n1 + chi*chi*chi)/(SA_c_n1 - chi*chi*chi)
         end where
 
-        if (any(ieee_is_nan(f_n1(:)%x_ad_))) call write_line('f_n1is nan',io_proc=GLOBAL_MASTER)
 
 
         !
@@ -198,12 +196,10 @@ contains
             vorticity = sqrt(vorticity2)
         end where
 
-        if (any(ieee_is_nan(vorticity(:)%x_ad_))) call write_line('vorticity is nan',io_proc=GLOBAL_MASTER)
 
         f_v2 = ONE - (chi/(ONE+chi*f_v1))
         vorticity_bar = (nutilde/(SA_kappa*SA_kappa*(dwall*dwall + eps)))*f_v2
 
-        if (any(ieee_is_nan(vorticity_bar(:)%x_ad_))) call write_line('vorticity_bar is nan',io_proc=GLOBAL_MASTER)
 
         vorticity_mod = vorticity
         where (vorticity_bar >= -SA_c_v2*vorticity)
@@ -212,8 +208,6 @@ contains
             vorticity_mod = vorticity + vorticity*(SA_c_v2*SA_c_v2*vorticity + SA_c_v3*vorticity_bar)/( (SA_c_v3 - TWO*SA_c_v2)*vorticity - vorticity_bar ) 
         end where
 
-
-        if (any(ieee_is_nan(vorticity_mod(:)%x_ad_))) call write_line('vorticity_mod is nan',io_proc=GLOBAL_MASTER)
 
 
         !
@@ -277,8 +271,6 @@ contains
                     +(ONE/SA_sigma)*(nu + f_n1*nutilde)*(grad1_rho*grad1_nutilde + grad2_rho*grad2_nutilde + grad3_rho*grad3_nutilde)   &
                   )
 
-
-        if (any(ieee_is_nan(source(:)%x_ad_))) call write_line('source is nan',io_proc=GLOBAL_MASTER)
 
         call worker%integrate_volume_source('Density * NuTilde',source)
 

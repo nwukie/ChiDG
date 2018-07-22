@@ -5,8 +5,6 @@ module type_quasi_newton
     use mod_hdfio,              only: write_fields_hdf
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
     use mod_io,                 only: verbosity
-    use mod_tecio_old,          only: write_tecio_old
-    !use mod_tecio,              only: write_tecio
     use mpi_f08,                only: MPI_Barrier
 
     use type_chidg_data,        only: chidg_data_t
@@ -65,7 +63,7 @@ contains
                                    alpha, f0, fn, forcing_term, residual_ratio
         real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:), elem_field(:)
         type(chidg_vector_t)    :: b, qn, qold, qnew, dqdtau, q0
-        logical                 :: searching, absolute_convergence, relative_convergence
+        logical                 :: searching, absolute_convergence, relative_convergence, stop_run
 
         type(solver_controller_t),  target  :: default_controller
         class(solver_controller_t), pointer :: controller
@@ -99,8 +97,9 @@ contains
             !
             ! Startup values
             !
-            absolute_convergence = .true.
-            relative_convergence = .true.
+            absolute_convergence = .true.   ! measures absolute convergence
+            relative_convergence = .true.   ! measures relative convergence
+            stop_run             = .false.  ! watches for file in directory so user can stop nicely with output
             qn     = q      ! Store qn, since q will be operated on in the inner loop
             resid  = ONE    ! Force inner loop entry
             niter  = 0      ! Initialize inner loop counter
@@ -109,7 +108,7 @@ contains
             !
             ! NONLINEAR CONVERGENCE INNER LOOP
             !
-            do while ( absolute_convergence .and. relative_convergence )
+            do while ( absolute_convergence .and. relative_convergence .and. (.not. stop_run))
                 niter = niter + 1
 
                 ! Store the value of the current inner iteration solution (k) 
@@ -319,6 +318,7 @@ contains
                 call self%residual_time%push_back(timing)
                 absolute_convergence = (fn > self%tol)
                 relative_convergence = ( (log10(resid0) - log10(fn)) < real(self%norders_reduction,rk) )
+                inquire(file='STOP', exist=stop_run)
 
 
                 ! Print iteration information
@@ -326,15 +326,6 @@ contains
 
 
                 call MPI_Barrier(ChiDG_COMM,ierr)
-
-
-                call data%sdata%q_out%init(data%mesh,data%time_manager%ntime)
-                call data%sdata%q_out%set_ntime(data%time_manager%ntime)
-                call data%sdata%q_out%clear()
-                data%sdata%q_out = data%sdata%q
-
-!                write(filename, "(A,F8.6,A4)") 'quasi_newton_', real(niter,rk), '.plt'
-!                call write_tecio_old(data,filename, write_domains=.true., write_surfaces=.false.)
 
             end do ! niter
 

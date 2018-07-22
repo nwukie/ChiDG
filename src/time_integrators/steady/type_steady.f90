@@ -153,7 +153,6 @@ contains
 
         ! Steady equation, so we only need the spatial operators computed.
         data%time_manager%itime = 1
-        data%time_manager%t     = ZERO
         call update_grid(data)
         call update_space(data,differentiate,timing)
 

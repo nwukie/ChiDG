@@ -82,15 +82,10 @@ contains
                 call rans_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
 
                 call rans_eqns%add_model('Ideal Gas')
-                call rans_eqns%add_model('Sutherlands Law')
+                !call rans_eqns%add_model('Sutherlands Law')
+                call rans_eqns%add_model('Constant Viscosity')
                 call rans_eqns%add_model('Stokes Hypothesis')
                 call rans_eqns%add_model('Reynolds Analogy')
-                !call rans_eqns%add_model('Fluid Advection Velocity')
-                !call rans_eqns%add_model('Constant Viscosity')
-!                call rans_eqns%add_model('Zero Turbulent Model Fields')
-
-
-
 
 
                 call rans_eqns%add_operator('Spalart-Allmaras Source Operator')

@@ -41,6 +41,11 @@ module mod_chimera
     use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
+    integer(ik) :: idomain_g_prev = NO_ID
+    integer(ik) :: idomain_l_prev = NO_ID
+    integer(ik) :: ielement_g_prev = NO_ID
+    integer(ik) :: ielement_l_prev = NO_ID
+
 
     type, public, abstract:: multi_donor_rule_t
 
@@ -774,81 +779,21 @@ contains
         search3 = zgq + offset3
 
 
-
-        !
-        ! Loop through LOCAL domains and search for potential donor candidates
-        !
-        ncandidates = 0
-        do idom = 1,mesh%ndomains()
-            idomain_g = mesh%domain(idom)%idomain_g
-            idomain_l = mesh%domain(idom)%idomain_l
-
-
-
-            !
-            ! Loop through elements in the current domain
-            !
-            do ielem = 1,mesh%domain(idom)%nelem
-                ielement_g = mesh%domain(idom)%elems(ielem)%ielement_g
-                ielement_l = mesh%domain(idom)%elems(ielem)%ielement_l
-
-                !
-                ! Get bounding coordinates for the current element
-                !
-                xmin = minval(mesh%domain(idom)%elems(ielem)%node_coords(:,1))
-                xmax = maxval(mesh%domain(idom)%elems(ielem)%node_coords(:,1))
-                ymin = minval(mesh%domain(idom)%elems(ielem)%node_coords(:,2))
-                ymax = maxval(mesh%domain(idom)%elems(ielem)%node_coords(:,2))
-                zmin = minval(mesh%domain(idom)%elems(ielem)%node_coords(:,3))
-                zmax = maxval(mesh%domain(idom)%elems(ielem)%node_coords(:,3))
-
-                !
-                ! Grow bounding box by 10%. Use delta x,y,z instead of scaling xmin etc. in case xmin is 0
-                !
-                dx = abs(xmax - xmin)  
-                dy = abs(ymax - ymin)
-                dz = abs(zmax - zmin)
-
-                xmin = xmin - 0.1*dx
-                xmax = xmax + 0.1*dx
-                ymin = ymin - 0.1*dy
-                ymax = ymax + 0.1*dy
-                zmin = (zmin-0.001) - 0.1*dz    ! This is to help 2D
-                zmax = (zmax+0.001) + 0.1*dz    ! This is to help 2D
-
-                !
-                ! Test if gq_node is contained within the bounding coordinates
-                !
-                contained = ( (xmin < search1) .and. (search1 < xmax ) .and. &
-                              (ymin < search2) .and. (search2 < ymax ) .and. &
-                              (zmin < search3) .and. (search3 < zmax ) )
-
-
-                ! If the node was within the bounding coordinates, flag the element as a potential donor
-                if (contained) then
-                    call candidate_domains_g%push_back(idomain_g)
-                    call candidate_domains_l%push_back(idomain_l)
-                    call candidate_elements_g%push_back(ielement_g)
-                    call candidate_elements_l%push_back(ielement_l)
-                    ncandidates = ncandidates + 1
-                end if
-
-            end do ! ielem
-
-        end do ! idom
-
-
-
-
-        !
-        ! Test gq_node physical coordinates on candidate element volume to try and map to donor local coordinates
-        !
+        ! Try previous donor, since it is relatively likely the previous donor
+        ! for a quadrature node set will satisfy the next node. Consider
+        ! abutting boundaries, all nodes are satisfied by the same donor.
+        !---------------------------------------------------------------------
         ndonors = 0
-        do icandidate = 1,ncandidates
-            idomain_g  = candidate_domains_g%at(icandidate)
-            idomain_l  = candidate_domains_l%at(icandidate)
-            ielement_g = candidate_elements_g%at(icandidate)
-            ielement_l = candidate_elements_l%at(icandidate)
+        if (idomain_g_prev /= NO_ID) then
+            idomain_g  = idomain_g_prev
+            idomain_l  = idomain_l_prev
+            ielement_g = ielement_g_prev
+            ielement_l = ielement_l_prev
+            call candidate_domains_g%push_back(idomain_g)
+            call candidate_domains_l%push_back(idomain_l)
+            call candidate_elements_g%push_back(ielement_g)
+            call candidate_elements_l%push_back(ielement_l)
+            ncandidates = 1
 
             ! Try to find donor (xi,eta,zeta) coordinates for receiver (xgq,ygq,zgq)
             donor_comp = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([search1,search2,search3])    ! Newton's method routine
@@ -867,15 +812,125 @@ contains
             ! Add donor if donor_comp is valid
             if ( node_found .and. (.not. node_self)) then
                 ndonors = ndonors + 1
-                call donors%push_back(icandidate)
+                call donors%push_back(1)
                 call donors_xi%push_back(  donor_comp(1))
                 call donors_eta%push_back( donor_comp(2))
                 call donors_zeta%push_back(donor_comp(3))
-                !exit
             end if
+        end if
+        !---------------------------------------------------------------------
 
-        end do ! icandidate
 
+
+
+        ! If the previous donor didn't work, then we will go through a global
+        ! search again.
+        if (ndonors == 0) then
+
+            !
+            ! Loop through LOCAL domains and search for potential donor candidates
+            !
+            ncandidates = 0
+            call candidate_domains_g%clear()
+            call candidate_domains_l%clear()
+            call candidate_elements_g%clear()
+            call candidate_elements_l%clear()
+            do idom = 1,mesh%ndomains()
+                idomain_g = mesh%domain(idom)%idomain_g
+                idomain_l = mesh%domain(idom)%idomain_l
+
+
+                !
+                ! Loop through elements in the current domain
+                !
+                do ielem = 1,mesh%domain(idom)%nelem
+                    ielement_g = mesh%domain(idom)%elems(ielem)%ielement_g
+                    ielement_l = mesh%domain(idom)%elems(ielem)%ielement_l
+
+                    !
+                    ! Get bounding coordinates for the current element
+                    !
+                    xmin = minval(mesh%domain(idom)%elems(ielem)%node_coords(:,1))
+                    xmax = maxval(mesh%domain(idom)%elems(ielem)%node_coords(:,1))
+                    ymin = minval(mesh%domain(idom)%elems(ielem)%node_coords(:,2))
+                    ymax = maxval(mesh%domain(idom)%elems(ielem)%node_coords(:,2))
+                    zmin = minval(mesh%domain(idom)%elems(ielem)%node_coords(:,3))
+                    zmax = maxval(mesh%domain(idom)%elems(ielem)%node_coords(:,3))
+
+                    !
+                    ! Grow bounding box by 10%. Use delta x,y,z instead of scaling xmin etc. in case xmin is 0
+                    !
+                    dx = abs(xmax - xmin)  
+                    dy = abs(ymax - ymin)
+                    dz = abs(zmax - zmin)
+
+                    xmin = xmin - 0.1*dx
+                    xmax = xmax + 0.1*dx
+                    ymin = ymin - 0.1*dy
+                    ymax = ymax + 0.1*dy
+                    zmin = (zmin-0.001) - 0.1*dz    ! This is to help 2D
+                    zmax = (zmax+0.001) + 0.1*dz    ! This is to help 2D
+
+                    !
+                    ! Test if gq_node is contained within the bounding coordinates
+                    !
+                    contained = ( (xmin < search1) .and. (search1 < xmax ) .and. &
+                                  (ymin < search2) .and. (search2 < ymax ) .and. &
+                                  (zmin < search3) .and. (search3 < zmax ) )
+
+
+                    ! If the node was within the bounding coordinates, flag the element as a potential donor
+                    if (contained) then
+                        call candidate_domains_g%push_back(idomain_g)
+                        call candidate_domains_l%push_back(idomain_l)
+                        call candidate_elements_g%push_back(ielement_g)
+                        call candidate_elements_l%push_back(ielement_l)
+                        ncandidates = ncandidates + 1
+                    end if
+
+                end do ! ielem
+
+            end do ! idom
+
+
+            !
+            ! Test gq_node physical coordinates on candidate element volume to try and map to donor local coordinates
+            !
+            ndonors = 0
+            do icandidate = 1,ncandidates
+                idomain_g  = candidate_domains_g%at(icandidate)
+                idomain_l  = candidate_domains_l%at(icandidate)
+                ielement_g = candidate_elements_g%at(icandidate)
+                ielement_l = candidate_elements_l%at(icandidate)
+
+                ! Try to find donor (xi,eta,zeta) coordinates for receiver (xgq,ygq,zgq)
+                donor_comp = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([search1,search2,search3])    ! Newton's method routine
+
+                ! Node is not nan
+                node_found = (any(ieee_is_nan(donor_comp)) .eqv. .false.) 
+
+                ! Node is not self: could be periodic, so same element is okay, but we don't want the same node
+                if ( (idomain_g == receiver_face%idomain_g) .and. (ielement_g == receiver_face%ielement_g) ) then
+                    recv_comp  = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([xgq, ygq, zgq])
+                    node_self = (abs(sum(recv_comp - donor_comp)) < 1.e-3_rk)
+                else
+                    node_self = .false.
+                end if
+
+                ! Add donor if donor_comp is valid
+                if ( node_found .and. (.not. node_self)) then
+                    ndonors = ndonors + 1
+                    call donors%push_back(icandidate)
+                    call donors_xi%push_back(  donor_comp(1))
+                    call donors_eta%push_back( donor_comp(2))
+                    call donors_zeta%push_back(donor_comp(3))
+                    !exit
+                end if
+
+            end do ! icandidate
+
+
+        end if !ndonors == 0, from check of previous donor element.
 
         
 
@@ -947,6 +1002,15 @@ contains
 
         else
             call chidg_signal(FATAL,"find_gq_donor: invalid number of donors")
+        end if
+
+        ! Store donor as previous donor, only if one was found. Don't want to
+        ! set to zero!
+        if (ndonors > 0) then
+            idomain_g_prev = donor_element%idomain_g
+            idomain_l_prev = donor_element%idomain_l
+            ielement_g_prev = donor_element%ielement_g
+            ielement_l_prev = donor_element%ielement_l
         end if
 
 

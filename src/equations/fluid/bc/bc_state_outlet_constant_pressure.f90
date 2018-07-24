@@ -91,14 +91,14 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc
+            u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc, mom_norm
             
 
-        real(rk),   allocatable, dimension(:) :: r
+        real(rk),   allocatable, dimension(:) :: r, unorm1, unorm2, unorm3
         real(rk),   allocatable, dimension(:) :: p_input
 
         real(rk)    :: rho0, K0
-        integer :: i
+        integer :: igq
 
 
 
@@ -166,32 +166,40 @@ contains
 
 
 
-        !
         ! Extrapolate temperature and velocity
-        !
         T_bc = T_m
         u_bc = mom1_m/density_m
         v_bc = mom2_m/density_m
         w_bc = mom3_m/density_m
 
 
-        !
-        ! Extrapolate pressure, adjust by dp for a point
-        !
-        ! Confirmed, signs are correct
+        ! Set user-specified constant pressure
         p_bc = density_m
         p_bc = p_input
 
 
-        !
         ! Compute density, momentum, energy
-        !
         density_bc = p_bc/(Rgas*T_bc)
         mom1_bc    = u_bc*density_bc
         mom2_bc    = v_bc*density_bc
         mom3_bc    = w_bc*density_bc
         energy_bc  = p_bc/(gam - ONE) + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
 
+        ! If reversed flow, enforce outflow by subtracting two-times the
+        ! reversed momentum in the normal direction
+        unorm1 = worker%unit_normal(1)
+        unorm2 = worker%unit_normal(2)
+        unorm3 = worker%unit_normal(3)
+        mom_norm = mom1_bc*unorm1 + &
+                   mom2_bc*unorm2 + &
+                   mom3_bc*unorm3
+        do igq = 1,size(mom_norm)
+            if (mom_norm(igq) < ZERO) then
+                mom1_bc(igq) = mom1_bc(igq) - TWO*mom_norm(igq)*unorm1(igq)
+                mom2_bc(igq) = mom2_bc(igq) - TWO*mom_norm(igq)*unorm2(igq)
+                mom3_bc(igq) = mom3_bc(igq) - TWO*mom_norm(igq)*unorm3(igq)
+            end if
+        end do
 
 
         !

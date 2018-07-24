@@ -2049,7 +2049,8 @@ contains
         !
         !tol = 1000000._rk*RKTOL
         !tol = 100000._rk*RKTOL
-        tol = 100._rk*RKTOL
+        !tol = 100._rk*RKTOL
+        tol = 1000._rk*RKTOL
         coord_comp = ZERO
         do inewton = 1,20
 

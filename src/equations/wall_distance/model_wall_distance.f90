@@ -104,6 +104,7 @@ contains
         !p = get_p_poisson_parameter()
         p = 6._rk
         sumsqr = grad1_d*grad1_d + grad2_d*grad2_d + grad3_d*grad3_d
+        !d_normalization = (((p/(p-ONE))*d) + sumsqr**(p/TWO))**((p-ONE)/p) - sumsqr**((p-ONE)/TWO)
 
 
         ! Beware of sumsqr==0, produces NaN, so don't normalize in this case. 
@@ -114,22 +115,19 @@ contains
             ! numbers
             if (d(igq) < RKTOL) then
                 d_normalization(igq) = ZERO
-                
-            else if (sumsqr(igq) < 1.e-8_rk) then
-                d_normalization(igq) = d(igq)
-                if (ieee_is_nan(d_normalization(igq)%x_ad_)) then
-                    call write_line('d is nan', io_proc=GLOBAL_MASTER)
-                    call write_line(d(igq)%x_ad_, grad1_d(igq)%x_ad_,grad2_d(igq)%x_ad_, grad3_d(igq)%x_ad_, io_proc=GLOBAL_MASTER)
-                end if
+            !else if (sumsqr(igq) < 1.e-8_rk) then
+            !    d_normalization(igq) = d(igq)
             else
-                d_normalization(igq) = (((p/(p-ONE))*d(igq)) + sumsqr(igq)**(p/TWO))**((p-ONE)/p) - sumsqr(igq)**((p-ONE)/TWO)
-                if (ieee_is_nan(d_normalization(igq)%x_ad_)) then
-                    call write_line('d_normalization is nan', io_proc=GLOBAL_MASTER)
-                    call write_line(d(igq)%x_ad_, grad1_d(igq)%x_ad_,grad2_d(igq)%x_ad_, grad3_d(igq)%x_ad_, io_proc=GLOBAL_MASTER)
-                end if
+                d_normalization(igq) = (((p/(p-ONE))*abs(d(igq))) + sumsqr(igq)**(p/TWO))**((p-ONE)/p) - sumsqr(igq)**((p-ONE)/TWO)
+                !d_normalization(igq) = d(igq)
             end if
         end do
 
+
+        !! Make sure the normalized distance didn't happen to go negative
+        !where (d_normalization < RKTOL) 
+        !    d_normalization = ZERO
+        !end where
 
         ! Make sure the normalized distance didn't happen to go negative
         do igq = 1,size(d_normalization)

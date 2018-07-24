@@ -82,8 +82,8 @@ contains
                 call rans_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
 
                 call rans_eqns%add_model('Ideal Gas')
-                !call rans_eqns%add_model('Sutherlands Law')
-                call rans_eqns%add_model('Constant Viscosity')
+                call rans_eqns%add_model('Sutherlands Law')
+                !call rans_eqns%add_model('Constant Viscosity')
                 call rans_eqns%add_model('Stokes Hypothesis')
                 call rans_eqns%add_model('Reynolds Analogy')
 
@@ -104,6 +104,8 @@ contains
 
 
                 call rans_eqns%add_pseudo_timestep(fluid_pseudo_time)
+
+                call rans_eqns%add_io_field('Wall Distance')
 
             case default
                 call chidg_signal_one(FATAL, "build_rans: I didn't recognize the &

@@ -267,6 +267,11 @@ contains
             do p = 2,6,2
                 call write_line('Wall Distance Driver : Loop 1 : p = ', p)
                 
+                if (p==6) then
+                    wall_distance%linear_solver%tol = 1.e-4_rk
+                    wall_distance%nonlinear_solver%norders_reduction = 7
+                end if
+                
                 !
                 ! Update p-Poisson fidelity
                 !

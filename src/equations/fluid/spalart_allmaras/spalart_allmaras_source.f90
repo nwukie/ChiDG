@@ -131,7 +131,8 @@ contains
         !
         ! Interpolate auxiliary field, Wall Distance
         !
-        eps = 1.e-6_rk
+        !eps = 1.e-10_rk
+        eps = 1.e-11_rk
         dwall = worker%get_field('Wall Distance', 'value', 'element')
 
         if (any(ieee_is_nan(dwall(:)%x_ad_))) call write_line('dwall is nan',io_proc=GLOBAL_MASTER)

@@ -7,5 +7,6 @@ add_lib_sources(
                 precon_ILU0.f90
                 precon_identity.f90
                 precon_HB.f90
+                precon_line.f90
                 )
 

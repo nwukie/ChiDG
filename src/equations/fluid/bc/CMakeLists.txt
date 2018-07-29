@@ -14,11 +14,13 @@ add_lib_sources(
                 bc_state_fluid_extrapolate.f90
                 bc_state_momentum_inlet.f90
                 bc_state_symmetry.f90
+                bc_state_slipwall.f90
                 bc_state_farfield.f90
                 bc_state_farfield_perturbation.f90
                 bc_state_outlet_steady_1dchar.f90
                 bc_state_outlet_3dgiles.f90
                 bc_state_outlet_3dgiles_innerproduct.f90
+#                bc_state_inlet_giles_quasi3d_steady.f90
                 bc_state_outlet_giles_quasi3d_steady.f90
                 bc_state_outlet_giles_quasi3d_steady_extrapolate_average.f90
                 bc_state_outlet_giles_quasi3d_unsteady_HB.f90

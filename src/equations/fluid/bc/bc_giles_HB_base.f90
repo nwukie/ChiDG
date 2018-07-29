@@ -427,7 +427,12 @@ contains
         nradius = size(density_Ft_real,1)
         ntheta = size(density_Ft_real,2)
         ntime   = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%ntime
-        spatial_periodicity = self%bcproperties%compute('Spatial Periodicity', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+        !spatial_periodicity = self%bcproperties%compute('Spatial Periodicity', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+        if (side=='A') then
+            spatial_periodicity = self%bcproperties%compute('Pitch A', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+        else if (side=='B') then
+            spatial_periodicity = self%bcproperties%compute('Pitch B', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+        end if
         
         ! Allocate storage in result
         allocate(density_Fts_real( nradius,ntheta,ntime), density_Fts_imag( nradius,ntheta,ntime),  &
@@ -615,7 +620,7 @@ contains
                 if (itime == 1) then
                     negate_dft = .false.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
                 else if (itime > 1) then
-                    negate_dft = .true.     ! this is consistens with Lindblad's formulation, which is used for the unsteady modes(itime>1)
+                    negate_dft = .true.     ! this is consistent with Lindblad's formulation, which is used for the unsteady modes(itime>1)
                 end if
 
 
@@ -975,17 +980,17 @@ contains
 
                     else if (itime == 1 .and. itheta > 1) then
 
-                        a1_real(iradius,itheta,itime) = -(c_bar*c_bar)*density_real(iradius,itheta,itime)    +  (ONE)*pressure_real(iradius,itheta,itime)
-                        a2_real(iradius,itheta,itime) = (density_bar*c_bar)*vel1_real(iradius,itheta,itime)
-                        a3_real(iradius,itheta,itime) = (density_bar*c_bar)*vel2_real(iradius,itheta,itime)
-                        a4_real(iradius,itheta,itime) = (density_bar*c_bar)*vel3_real(iradius,itheta,itime)  +  (ONE)*pressure_real(iradius,itheta,itime)
-                        a5_real(iradius,itheta,itime) = -(density_bar*c_bar)*vel3_real(iradius,itheta,itime) +  (ONE)*pressure_real(iradius,itheta,itime)
+                        a1_real(iradius,itheta,itime) = -(c_bar*c_bar)*density_real(iradius,itheta,itime)    + (ONE)*pressure_real(iradius,itheta,itime)
+                        a2_real(iradius,itheta,itime) =  (density_bar*c_bar)*vel1_real(iradius,itheta,itime)
+                        a3_real(iradius,itheta,itime) =  (density_bar*c_bar)*vel2_real(iradius,itheta,itime)
+                        a4_real(iradius,itheta,itime) =  (density_bar*c_bar)*vel3_real(iradius,itheta,itime) + (ONE)*pressure_real(iradius,itheta,itime)
+                        a5_real(iradius,itheta,itime) = -(density_bar*c_bar)*vel3_real(iradius,itheta,itime) + (ONE)*pressure_real(iradius,itheta,itime)
                                                      
-                        a1_imag(iradius,itheta,itime) = -(c_bar*c_bar)*density_imag(iradius,itheta,itime)    +  (ONE)*pressure_imag(iradius,itheta,itime)
-                        a2_imag(iradius,itheta,itime) = (density_bar*c_bar)*vel1_imag(iradius,itheta,itime)
-                        a3_imag(iradius,itheta,itime) = (density_bar*c_bar)*vel2_imag(iradius,itheta,itime)
-                        a4_imag(iradius,itheta,itime) = (density_bar*c_bar)*vel3_imag(iradius,itheta,itime)  +  (ONE)*pressure_imag(iradius,itheta,itime)
-                        a5_imag(iradius,itheta,itime) = -(density_bar*c_bar)*vel3_imag(iradius,itheta,itime) +  (ONE)*pressure_imag(iradius,itheta,itime)
+                        a1_imag(iradius,itheta,itime) = -(c_bar*c_bar)*density_imag(iradius,itheta,itime)    + (ONE)*pressure_imag(iradius,itheta,itime)
+                        a2_imag(iradius,itheta,itime) =  (density_bar*c_bar)*vel1_imag(iradius,itheta,itime)
+                        a3_imag(iradius,itheta,itime) =  (density_bar*c_bar)*vel2_imag(iradius,itheta,itime)
+                        a4_imag(iradius,itheta,itime) =  (density_bar*c_bar)*vel3_imag(iradius,itheta,itime) + (ONE)*pressure_imag(iradius,itheta,itime)
+                        a5_imag(iradius,itheta,itime) = -(density_bar*c_bar)*vel3_imag(iradius,itheta,itime) + (ONE)*pressure_imag(iradius,itheta,itime)
 
                     else
 

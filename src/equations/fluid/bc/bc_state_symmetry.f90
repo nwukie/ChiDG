@@ -193,8 +193,6 @@ contains
         mom3_bc = mom3_m  -  TWO*normal_momentum*unorm_3
 
 
-
-
         !
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
         !

@@ -8,7 +8,7 @@
 !!
 !!
 !---------------------------------------------------------------------------------------------
-module mod_chidg_airfoil
+module mod_chidg_forces
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO, TWO, NO_ID
@@ -42,15 +42,16 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------
-    subroutine chidg_airfoil(filename)
+    subroutine chidg_forces(filename,patch_group)
         character(*)    :: filename
+        character(*)    :: patch_group
     
         type(chidg_t)               :: chidg
         type(file_properties_t)     :: file_props
         integer(ik)                 :: nterms_s, solution_order, group_ID, &
                                        ibc, patch_ID, face_ID, idomain_g, &
-                                       ielement_g, iface, itime
-        logical                     :: found_airfoil
+                                       ielement_g, iface, itime, myunit
+        logical                     :: exists
 
         type(chidg_worker_t)        :: worker
         type(chidg_cache_t)         :: cache
@@ -70,7 +71,8 @@ contains
             stress_x,   stress_y,   stress_z,       &
             pressure, normal_stress
 
-        type(AD_D)  :: lift, drag
+        type(AD_D)  :: lift, drag, force(3)
+
 
         gq_rule = 3
 
@@ -151,7 +153,7 @@ contains
         !
         ! Get 'Airfoil' boundary group ID
         !
-        group_ID = chidg%data%mesh%get_bc_patch_group_id('Airfoil')
+        group_ID = chidg%data%mesh%get_bc_patch_group_id(trim(patch_group))
 
 
         !
@@ -165,11 +167,12 @@ contains
         !
         ! Loop over domains/elements/faces for 'Airfoil' patches
         !
-        lift = AD_D(1)
-        drag = AD_D(1)
-
-        lift = ZERO
-        drag = ZERO
+        force(1:3) = AD_D(1)
+        force(1:3) = ZERO
+        !lift = AD_D(1)
+        !drag = AD_D(1)
+        !lift = ZERO
+        !drag = ZERO
         do patch_ID = 1,chidg%data%mesh%bc_patch_group(group_ID)%npatches()
 
             !
@@ -182,7 +185,7 @@ contains
                 iface      = chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
 
 
-                call write_line('Airfoil: ', idomain_g, ielement_g, iface)
+                call write_line(trim(patch_group), idomain_g, ielement_g, iface)
 
 
                 !
@@ -274,8 +277,9 @@ contains
                 weights = worker%mesh%domain(idomain_g)%faces(ielement_g,iface)%basis_s%weights_face(iface)
                 areas   = sqrt(norm_1*norm_1 + norm_2*norm_2 + norm_3*norm_3)
 
-                lift = lift + sum( stress_y * weights * areas)
-                drag = drag + sum( stress_x * weights * areas)
+                force(1) = force(1) + sum( stress_x * weights * areas)
+                force(2) = force(2) + sum( stress_y * weights * areas)
+                force(3) = force(3) + sum( stress_z * weights * areas)
 
 
 
@@ -288,8 +292,22 @@ contains
 
 
 
-        call write_line('Lift: ', lift%x_ad_)
-        call write_line('Drag: ', drag%x_ad_)
+        call write_line('Force: ', force(1)%x_ad_, force(2)%x_ad_, force(3)%x_ad_)
+
+        if (IRANK == GLOBAL_MASTER) then
+            inquire(file="forces.txt", exist=exists)
+            if (exists) then
+                open(newunit=myunit, file="forces.txt", status="old", position="append",action="write")
+            else
+                open(newunit=myunit, file="forces.txt", status="new",action="write")
+                write(myunit,*) 'force-1', 'force-2', 'force-3'
+            end if
+            write(myunit,*) force(1)%x_ad_, force(2)%x_ad_, force(3)%x_ad_
+            close(myunit)
+        end if
+
+
+
 
 
 
@@ -300,7 +318,7 @@ contains
 
 
 
-    end subroutine chidg_airfoil
+    end subroutine chidg_forces
     !******************************************************************************************
 
 
@@ -308,4 +326,4 @@ contains
 
 
 
-end module mod_chidg_airfoil
+end module mod_chidg_forces

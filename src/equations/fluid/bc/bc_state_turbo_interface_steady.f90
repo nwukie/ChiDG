@@ -4,10 +4,6 @@ module bc_state_turbo_interface_steady
     use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL,    &
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, PI
     use mod_fluid,              only: gam, Rgas, cp
-    use mod_interpolation,      only: interpolate_linear, interpolate_linear_ad
-    use mod_gridspace,          only: linspace
-    use mod_dft,                only: idft_eval
-    use mod_chimera,            only: find_gq_donor, find_gq_donor_parallel
 
     use type_point,             only: point_t
     use type_mesh,              only: mesh_t
@@ -18,10 +14,8 @@ module bc_state_turbo_interface_steady
     use type_properties,        only: properties_t
     use type_face_info,         only: face_info_t, face_info_constructor
     use type_element_info,      only: element_info_t
-    use mod_chidg_mpi,          only: IRANK
-    use mod_interpolate,        only: interpolate_face_autodiff
-    use mpi_f08,                only: MPI_REAL8, MPI_AllReduce, mpi_comm, MPI_INTEGER, MPI_BCast, MPI_MIN, MPI_MAX
     use ieee_arithmetic,        only: ieee_is_nan
+    use mpi_f08,                only: mpi_comm
     use DNAD_D
     implicit none
 
@@ -47,6 +41,7 @@ module bc_state_turbo_interface_steady
         procedure   :: init                         ! Set-up bc state with options/name etc.
         procedure   :: compute_bc_state             ! boundary condition function implementation
         procedure   :: compute_absorbing_interface
+        procedure   :: apply_nonreflecting_condition
 
     end type turbo_interface_steady_t
     !*********************************************************************************
@@ -467,12 +462,12 @@ contains
 
         ! Project exterior to eigenmodes
         call self%primitive_to_eigenmodes(worker,bc_comm,                   &
-                                          density_real_p(:,1,1),            &
-                                          vel1_real_p(:,1,1),               &
-                                          vel2_real_p(:,1,1),               &
-                                          vel3_real_p(:,1,1),               &
-                                          pressure_real_p(:,1,1),           &
-                                          c_real_p(:,1,1),                  &
+                                          density_real_m(:,1,1),            &
+                                          vel1_real_m(:,1,1),               &
+                                          vel2_real_m(:,1,1),               &
+                                          vel3_real_m(:,1,1),               &
+                                          pressure_real_m(:,1,1),           &
+                                          c_real_m(:,1,1),                  &
                                           density_real_p,  density_imag_p,  &
                                           vel1_real_p,     vel1_imag_p,     &
                                           vel2_real_p,     vel2_imag_p,     &
@@ -497,45 +492,28 @@ contains
         a5_real = ZERO*a1_real_m
         a5_imag = ZERO*a1_real_m
 
-
-
-
-        ! Handle modal solution composition for sides 'A' and 'B'
-        if (side == 'A') then
-            ! Outgoing amplitudes: all from 'm'
-            a1_real = a1_real_m
-            a1_imag = a1_imag_m
-            a2_real = a2_real_m
-            a2_imag = a2_imag_m
-            a3_real = a3_real_m
-            a3_imag = a3_imag_m
-            a4_real = a4_real_m
-            a4_imag = a4_imag_m
-
-            ! Incoming amplitudes: average from 'p'
-            a5_real(:,1,1) = a5_real_p(:,1,1)
-            a5_imag(:,1,1) = a5_imag_p(:,1,1)
-            
-
-        else if (side == 'B') then
-            ! Outgoing amplitudes: all from 'p'
-            a4_real = a4_real_p
-            a4_imag = a4_imag_p
-
-            ! Incoming amplitudes: average from 'm'
-            a1_real(:,1,1) = a1_real_m(:,1,1)
-            a1_imag(:,1,1) = a1_imag_m(:,1,1)
-            a2_real(:,1,1) = a2_real_m(:,1,1)
-            a2_imag(:,1,1) = a2_imag_m(:,1,1)
-            a3_real(:,1,1) = a3_real_m(:,1,1)
-            a3_imag(:,1,1) = a3_imag_m(:,1,1)
-            a5_real(:,1,1) = a5_real_m(:,1,1)
-            a5_imag(:,1,1) = a5_imag_m(:,1,1)
-
-
-        else
-            call chidg_signal(FATAL,"turbo_interface_steady_t: invalid input for argument 'side': 'A' or 'B'")
-        end if
+        call self%apply_nonreflecting_condition(worker,bc_comm,side,        &
+                                                density_real_m(:,1,1),      &
+                                                vel1_real_m(:,1,1),         &
+                                                vel2_real_m(:,1,1),         &
+                                                vel3_real_m(:,1,1),         &
+                                                pressure_real_m(:,1,1),     &
+                                                c_real_m(:,1,1),            &
+                                                a1_real_m,    a1_imag_m,    &
+                                                a2_real_m,    a2_imag_m,    &
+                                                a3_real_m,    a3_imag_m,    &
+                                                a4_real_m,    a4_imag_m,    &
+                                                a5_real_m,    a5_imag_m,    &
+                                                a1_real_p,    a1_imag_p,    &
+                                                a2_real_p,    a2_imag_p,    &
+                                                a3_real_p,    a3_imag_p,    &
+                                                a4_real_p,    a4_imag_p,    &
+                                                a5_real_p,    a5_imag_p,    &
+                                                a1_real,      a1_imag,      &
+                                                a2_real,      a2_imag,      &
+                                                a3_real,      a3_imag,      &
+                                                a4_real,      a4_imag,      &
+                                                a5_real,      a5_imag)
 
 
 
@@ -579,6 +557,7 @@ contains
         vel3_real_abs(:,1,1)     = (vel3_real_m(:,1,1)     + vel3_real_p(:,1,1))/TWO
         pressure_real_abs(:,1,1) = (pressure_real_m(:,1,1) + pressure_real_p(:,1,1))/TWO
 
+        ! Zero imaginary part
         density_imag_abs(:,1,1)  = ZERO
         vel1_imag_abs(:,1,1)     = ZERO
         vel2_imag_abs(:,1,1)     = ZERO
@@ -590,6 +569,218 @@ contains
     !********************************************************************************
 
 
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine apply_nonreflecting_condition(self,worker,bc_comm,side, &
+                                             density_bar_r, vel1_bar_r, vel2_bar_r, vel3_bar_r, pressure_bar_r, c_bar_r, &
+                                             a1_real_m,    a1_imag_m,    &
+                                             a2_real_m,    a2_imag_m,    &
+                                             a3_real_m,    a3_imag_m,    &
+                                             a4_real_m,    a4_imag_m,    &
+                                             a5_real_m,    a5_imag_m,    &
+                                             a1_real_p,    a1_imag_p,    &
+                                             a2_real_p,    a2_imag_p,    &
+                                             a3_real_p,    a3_imag_p,    &
+                                             a4_real_p,    a4_imag_p,    &
+                                             a5_real_p,    a5_imag_p,    &
+                                             a1_real,      a1_imag,      &
+                                             a2_real,      a2_imag,      &
+                                             a3_real,      a3_imag,      &
+                                             a4_real,      a4_imag,      &
+                                             a5_real,      a5_imag)
+        class(turbo_interface_steady_t),    intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(mpi_comm),             intent(in)      :: bc_comm
+        character(1),               intent(in)      :: side
+        type(AD_D),                 intent(in)      :: density_bar_r(:)
+        type(AD_D),                 intent(in)      :: vel1_bar_r(:)
+        type(AD_D),                 intent(in)      :: vel2_bar_r(:)
+        type(AD_D),                 intent(in)      :: vel3_bar_r(:)
+        type(AD_D),                 intent(in)      :: pressure_bar_r(:)
+        type(AD_D),                 intent(in)      :: c_bar_r(:)
+        type(AD_D),                 intent(inout)   :: a1_real_m(:,:,:)
+        type(AD_D),                 intent(inout)   :: a1_imag_m(:,:,:)
+        type(AD_D),                 intent(inout)   :: a2_real_m(:,:,:)
+        type(AD_D),                 intent(inout)   :: a2_imag_m(:,:,:)
+        type(AD_D),                 intent(inout)   :: a3_real_m(:,:,:)
+        type(AD_D),                 intent(inout)   :: a3_imag_m(:,:,:)
+        type(AD_D),                 intent(inout)   :: a4_real_m(:,:,:)
+        type(AD_D),                 intent(inout)   :: a4_imag_m(:,:,:)
+        type(AD_D),                 intent(inout)   :: a5_real_m(:,:,:)
+        type(AD_D),                 intent(inout)   :: a5_imag_m(:,:,:)
+        type(AD_D),                 intent(inout)   :: a1_real_p(:,:,:)
+        type(AD_D),                 intent(inout)   :: a1_imag_p(:,:,:)
+        type(AD_D),                 intent(inout)   :: a2_real_p(:,:,:)
+        type(AD_D),                 intent(inout)   :: a2_imag_p(:,:,:)
+        type(AD_D),                 intent(inout)   :: a3_real_p(:,:,:)
+        type(AD_D),                 intent(inout)   :: a3_imag_p(:,:,:)
+        type(AD_D),                 intent(inout)   :: a4_real_p(:,:,:)
+        type(AD_D),                 intent(inout)   :: a4_imag_p(:,:,:)
+        type(AD_D),                 intent(inout)   :: a5_real_p(:,:,:)
+        type(AD_D),                 intent(inout)   :: a5_imag_p(:,:,:)
+        type(AD_D), allocatable,    intent(inout)   :: a1_real(:,:,:)
+        type(AD_D), allocatable,    intent(inout)   :: a1_imag(:,:,:)
+        type(AD_D), allocatable,    intent(inout)   :: a2_real(:,:,:)
+        type(AD_D), allocatable,    intent(inout)   :: a2_imag(:,:,:)
+        type(AD_D), allocatable,    intent(inout)   :: a3_real(:,:,:)
+        type(AD_D), allocatable,    intent(inout)   :: a3_imag(:,:,:)
+        type(AD_D), allocatable,    intent(inout)   :: a4_real(:,:,:)
+        type(AD_D), allocatable,    intent(inout)   :: a4_imag(:,:,:)
+        type(AD_D), allocatable,    intent(inout)   :: a5_real(:,:,:)
+        type(AD_D), allocatable,    intent(inout)   :: a5_imag(:,:,:)
+        
+        integer(ik) :: iradius, itheta, ntheta, itime
+
+        type(AD_D)  :: beta, B3_real, B3_imag, B4_real, B4_imag, &
+                       density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar
+
+
+        ! NOTE the amplitude strategy here is for 1d characteristics. The unsteady amplitudes
+        ! have diffferent propagation directions so the logic will be different. 
+
+
+        if (side=='A') then
+
+            ! Extrapolate amplitudes from upstream
+            a1_real = a1_real_m
+            a1_imag = a1_imag_m
+            a2_real = a2_real_m
+            a2_imag = a2_imag_m
+            a3_real = a3_real_m
+            a3_imag = a3_imag_m
+            a4_real = a4_real_m
+            a4_imag = a4_imag_m
+
+            ! Zero amplitudes from downstream
+            a5_real = ZERO*a5_real_p
+            a5_imag = ZERO*a5_imag_p
+
+            ! Adjust steady modes based on Giles' original steady formulation.
+            itime = 1   ! Time-constant
+            do iradius = 1,size(a1_real_m,1)
+                ! Get average parts
+                density_bar  = density_bar_r(iradius)
+                vel1_bar     = vel1_bar_r(iradius)
+                vel2_bar     = vel2_bar_r(iradius)
+                vel3_bar     = vel3_bar_r(iradius)
+                pressure_bar = pressure_bar_r(iradius)
+                c_bar        = sqrt(gam*pressure_bar/density_bar)
+
+                ! starting with 2 here because the first mode is treated with 1D characteristics
+                ntheta = size(a1_real_m,2)
+                do itheta = 2,ntheta
+                    ! Account for sign(mode) in the calculation of beta. The second half of the
+                    ! modes are negative frequencies.
+                    if (itheta <= (ntheta-1)/2 + 1) then
+                        beta = sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
+                    else if (itheta > (ntheta-1)/2 + 1) then
+                        beta = -sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
+                    end if
+
+                    ! The imaginary part of beta has already been accounted for in
+                    ! the expressions for B2 and B3
+                    B3_real = -TWO*vel3_bar*vel2_bar/(vel2_bar*vel2_bar + beta*beta)
+                    B3_imag = -TWO*beta*vel3_bar/(vel2_bar*vel2_bar + beta*beta)
+
+                    B4_real = (beta*beta - vel2_bar*vel2_bar)/(beta*beta + vel2_bar*vel2_bar)
+                    B4_imag = -TWO*beta*vel2_bar/(beta*beta + vel2_bar*vel2_bar)
+
+                    a5_real(iradius,itheta,itime) = (B3_real*a3_real_m(iradius,itheta,itime) - B3_imag*a3_imag_m(iradius,itheta,itime))  &   ! A3*c3 (real)
+                                                  - (B4_real*a4_real_m(iradius,itheta,itime) - B4_imag*a4_imag_m(iradius,itheta,itime))      ! A4*c4 (real)
+                    a5_imag(iradius,itheta,itime) = (B3_imag*a3_real_m(iradius,itheta,itime) + B3_real*a3_imag_m(iradius,itheta,itime))  &   ! A3*c3 (imag)
+                                                  - (B4_imag*a4_real_m(iradius,itheta,itime) + B4_real*a4_imag_m(iradius,itheta,itime))      ! A4*c4 (imag)
+                end do !itheta
+            end do !iradius
+
+
+        else if (side=='B') then
+
+
+            ! Zero amplitudes from upsteady
+!            a1_real(:,:,1) = ZERO
+!            a1_imag(:,:,1) = ZERO
+!            a2_real(:,:,1) = ZERO
+!            a2_imag(:,:,1) = ZERO
+!            a3_real(:,:,1) = ZERO
+!            a3_imag(:,:,1) = ZERO
+!            a4_real(:,:,1) = ZERO
+!            a4_imag(:,:,1) = ZERO
+!
+!            a5_real(:,:,1) = a5_real_p(:,:,1)
+!            a5_imag(:,:,1) = a5_imag_p(:,:,1)
+
+            ! Zero incoming amplitudes
+            a1_real = ZERO
+            a1_imag = ZERO
+            a2_real = ZERO
+            a2_imag = ZERO
+            a3_real = ZERO
+            a3_imag = ZERO
+            a4_real = ZERO
+            a4_imag = ZERO
+
+            ! Extrapolate outgoing amplitudes
+            a5_real = a5_real_p
+            a5_imag = a5_imag_p
+
+
+            itime = 1   ! Time-constant
+            do iradius = 1,size(a1_real_m,1)
+                ! Get average parts
+                density_bar  = density_bar_r(iradius)
+                vel1_bar     = vel1_bar_r(iradius)
+                vel2_bar     = vel2_bar_r(iradius)
+                vel3_bar     = vel3_bar_r(iradius)
+                pressure_bar = pressure_bar_r(iradius)
+                c_bar        = sqrt(gam*pressure_bar/density_bar)
+
+                ! starting with 2 here because the first mode is treated with 1D characteristics
+                ntheta = size(a1_real_m,2)
+                do itheta = 2,ntheta
+                    ! Account for sign(mode) in the calculation of beta. The second half of the
+                    ! modes are negative frequencies.
+                    if (itheta <= (ntheta-1)/2 + 1) then
+                        beta = sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
+                    else if (itheta > (ntheta-1)/2 + 1) then
+                        beta = -sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
+                    end if
+
+
+                    B3_real = -vel2_bar/(c_bar + vel3_bar)
+                    B3_imag = -beta/(c_bar + vel3_bar)
+
+                    B4_real = (vel2_bar*vel2_bar - beta*beta)/((c_bar + vel3_bar)**TWO)
+                    B4_imag = TWO*vel2_bar*beta/((c_bar + vel3_bar)**TWO)
+
+
+                    a1_real(iradius,itheta,itime) = ZERO
+                    a1_imag(iradius,itheta,itime) = ZERO
+                    a2_real(iradius,itheta,itime) = ZERO
+                    a2_imag(iradius,itheta,itime) = ZERO
+                                          
+                    a3_real(iradius,itheta,itime) = (B3_real*a5_real_p(iradius,itheta,itime) - B3_imag*a5_imag_p(iradius,itheta,itime))
+                    a3_imag(iradius,itheta,itime) = (B3_imag*a5_real_p(iradius,itheta,itime) + B3_real*a5_imag_p(iradius,itheta,itime))
+                                                                                                                 
+                    a4_real(iradius,itheta,itime) = (B4_real*a5_real_p(iradius,itheta,itime) - B4_imag*a5_imag_p(iradius,itheta,itime))
+                    a4_imag(iradius,itheta,itime) = (B4_imag*a5_real_p(iradius,itheta,itime) + B4_real*a5_imag_p(iradius,itheta,itime))
+
+                end do !itheta
+            end do !iradius
+
+        else
+            call chidg_signal(FATAL,"turbo_interface_steady%apply_nonreflecting_condition: invalid input for argument 'side': 'A' or 'B'")
+        end if
+
+
+
+    end subroutine apply_nonreflecting_condition
+    !********************************************************************************
 
 
 

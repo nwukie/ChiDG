@@ -26,7 +26,7 @@ program driver
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
     use mod_chidg_post,         only: chidg_post, chidg_post_vtk, chidg_post_matplotlib
-    use mod_chidg_airfoil,      only: chidg_airfoil
+    use mod_chidg_forces,       only: chidg_forces
     use mod_chidg_clone,        only: chidg_clone
     use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec_new
     use mod_tutorials,          only: tutorial_driver
@@ -42,7 +42,7 @@ program driver
 
 
     integer                                     :: iarg, narg, iorder, ierr, loc, ifield
-    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern, tutorial
+    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern, tutorial, patch_group
     character(len=10)                           :: time_string
     character(:),                   allocatable :: command, tmp_file
     class(function_t),              allocatable :: fcn
@@ -471,10 +471,33 @@ program driver
                 call get_command_argument(3,solution_file)
                 call chidg_post_matplotlib(trim(grid_file),trim(solution_file))
 
-            case ('airfoil')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'airfoil' action expects to be called as: chidg airfoil solutionfile.h5")
+            case ('forces')
+                if (narg /= 2) call chidg_signal(FATAL,"The 'forces' action expects to be called as: chidg forces solutionfile.h5")
                 call get_command_argument(2,solution_file)
-                call chidg_airfoil(trim(solution_file))
+                call write_line('Enter patch group to integrate: ')
+                read*, patch_group
+
+
+                call date_and_time(time=time_string)
+                tmp_file = 'chidg_forces_files'//time_string//'.txt'
+                call get_command_argument(2,pattern)
+                command = 'ls '//trim(pattern)//' > '//tmp_file
+                call system(command)
+            
+                open(7,file=tmp_file,action='read')
+                do
+                    read(7,fmt='(a)', iostat=ierr) solution_file
+                    if (ierr /= 0) exit
+                    call chidg_forces(trim(solution_file),trim(patch_group))
+                end do
+                close(7)
+
+                call delete_file(tmp_file)
+
+
+
+
+
 
             case ('tutorial')
                 if (narg /= 2) call chidg_signal(FATAL,"The 'tutorial' action expects to be called as: chidg tutorial selected_tutorial.")
@@ -485,7 +508,7 @@ program driver
                 call compute_euler_eigenmodes()
 
             case default
-                call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")
+                call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'forces'.")
         end select
 
         call chidg%shut_down('core')

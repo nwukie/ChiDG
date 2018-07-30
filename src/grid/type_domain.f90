@@ -253,6 +253,7 @@ contains
 
 
 
+
         !
         ! Set coordinate system and confirm initialization 
         !
@@ -944,7 +945,7 @@ contains
                        ineighbor_element_g, ineighbor_element_l,            &
                        ineighbor_face, ineighbor_neqns, ineighbor_nterms_s, &
                        data(7), corner_indices(4), grad_size(2),            &
-                       invmass_size(2), br2_face_size(2), br2_vol_size(2), size_data(8)
+                       invmass_size(2), br2_face_size(2), br2_vol_size(2)
         logical     :: includes_corner_one, includes_corner_two, &
                        includes_corner_three, includes_corner_four, neighbor_element
 
@@ -958,6 +959,10 @@ contains
         ! also contained in an element, then they are neighbors.
         neighbor_element = .false.
         do ielem_l = 1,self%nelem
+            !includes_corner_one   = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(1) )
+            !includes_corner_two   = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(2) )
+            !includes_corner_three = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(3) )
+            !includes_corner_four  = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(4) )
             includes_corner_one   = any( self%elems(ielem_l)%connectivity == corner_indices(1) )
             includes_corner_two   = any( self%elems(ielem_l)%connectivity == corner_indices(2) )
             includes_corner_three = any( self%elems(ielem_l)%connectivity == corner_indices(3) )
@@ -1009,44 +1014,27 @@ contains
             !
             ! Send Element Data
             !
-            !grad_size(1)     = size(self%faces(ielem_l,iface)%grad1,1)
-            !grad_size(2)     = size(self%faces(ielem_l,iface)%grad1,2)
-            !br2_face_size(1) = size(self%faces(ielem_l,iface)%br2_face,1)
-            !br2_face_size(2) = size(self%faces(ielem_l,iface)%br2_face,2)
-            !br2_vol_size(1)  = size(self%faces(ielem_l,iface)%br2_vol,1)
-            !br2_vol_size(2)  = size(self%faces(ielem_l,iface)%br2_vol,2)
-            !invmass_size(1)  = size(self%elems(ielem_l)%invmass,1)
-            !invmass_size(2)  = size(self%elems(ielem_l)%invmass,2)
-            size_data(1) = size(self%faces(ielem_l,iface)%grad1,1)
-            size_data(2) = size(self%faces(ielem_l,iface)%grad1,2)
-            size_data(3) = size(self%faces(ielem_l,iface)%br2_face,1)
-            size_data(4) = size(self%faces(ielem_l,iface)%br2_face,2)
-            size_data(5) = size(self%faces(ielem_l,iface)%br2_vol,1)
-            size_data(6) = size(self%faces(ielem_l,iface)%br2_vol,2)
-            size_data(7) = size(self%elems(ielem_l)%invmass,1)
-            size_data(8) = size(self%elems(ielem_l)%invmass,2)
+            grad_size(1)     = size(self%faces(ielem_l,iface)%grad1,1)
+            grad_size(2)     = size(self%faces(ielem_l,iface)%grad1,2)
+            br2_face_size(1) = size(self%faces(ielem_l,iface)%br2_face,1)
+            br2_face_size(2) = size(self%faces(ielem_l,iface)%br2_face,2)
+            br2_vol_size(1)  = size(self%faces(ielem_l,iface)%br2_vol,1)
+            br2_vol_size(2)  = size(self%faces(ielem_l,iface)%br2_vol,2)
+            invmass_size(1)  = size(self%elems(ielem_l)%invmass,1)
+            invmass_size(2)  = size(self%elems(ielem_l)%invmass,2)
 
-            call MPI_Send(size_data,8,MPI_INTEGER4,iproc,5,ChiDG_COMM,ierr)
-            !call MPI_Send(grad_size,    2,MPI_INTEGER4,iproc,5,ChiDG_COMM,ierr)
-            !call MPI_Send(br2_face_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,ierr)
-            !call MPI_Send(br2_vol_size, 2,MPI_INTEGER4,iproc,7,ChiDG_COMM,ierr)
-            !call MPI_Send(invmass_size, 2,MPI_INTEGER4,iproc,8,ChiDG_COMM,ierr)
+            call MPI_Send(grad_size,    2,MPI_INTEGER4,iproc,5,ChiDG_COMM,ierr)
+            call MPI_Send(br2_face_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,ierr)
+            call MPI_Send(br2_vol_size, 2,MPI_INTEGER4,iproc,7,ChiDG_COMM,ierr)
+            call MPI_Send(invmass_size, 2,MPI_INTEGER4,iproc,8,ChiDG_COMM,ierr)
 
-            !call MPI_Send(self%faces(ielem_l,iface)%grad1,      grad_size(1)*grad_size(2),          MPI_REAL8,iproc, 9,ChiDG_COMM,ierr)
-            !call MPI_Send(self%faces(ielem_l,iface)%grad2,      grad_size(1)*grad_size(2),          MPI_REAL8,iproc,10,ChiDG_COMM,ierr)
-            !call MPI_Send(self%faces(ielem_l,iface)%grad3,      grad_size(1)*grad_size(2),          MPI_REAL8,iproc,11,ChiDG_COMM,ierr)
-            !call MPI_Send(self%faces(ielem_l,iface)%br2_face,   br2_face_size(1)*br2_face_size(2),  MPI_REAL8,iproc,12,ChiDG_COMM,ierr)
-            !call MPI_Send(self%faces(ielem_l,iface)%br2_vol,    br2_vol_size(1)*br2_vol_size(2),    MPI_REAL8,iproc,13,ChiDG_COMM,ierr)
-            !call MPI_Send(self%elems(ielem_l)%invmass,          invmass_size(1)*invmass_size(2),    MPI_REAL8,iproc,14,ChiDG_COMM,ierr)
-            !call MPI_Send(self%elems(ielem_l)%h,                3,                                  MPI_REAL8,iproc,15,ChiDG_COMM,ierr)
-
-            call MPI_Send(self%faces(ielem_l,iface)%grad1,      grad_size(1)*grad_size(2),          MPI_REAL8,iproc, 6,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%grad2,      grad_size(1)*grad_size(2),          MPI_REAL8,iproc, 7,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%grad3,      grad_size(1)*grad_size(2),          MPI_REAL8,iproc, 8,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%br2_face,   br2_face_size(1)*br2_face_size(2),  MPI_REAL8,iproc, 9,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%br2_vol,    br2_vol_size(1)*br2_vol_size(2),    MPI_REAL8,iproc,10,ChiDG_COMM,ierr)
-            call MPI_Send(self%elems(ielem_l)%invmass,          invmass_size(1)*invmass_size(2),    MPI_REAL8,iproc,11,ChiDG_COMM,ierr)
-            call MPI_Send(self%elems(ielem_l)%h,                3,                                  MPI_REAL8,iproc,12,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%grad1,      grad_size(1)*grad_size(2),          MPI_REAL8,iproc, 9,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%grad2,      grad_size(1)*grad_size(2),          MPI_REAL8,iproc,10,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%grad3,      grad_size(1)*grad_size(2),          MPI_REAL8,iproc,11,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%br2_face,   br2_face_size(1)*br2_face_size(2),  MPI_REAL8,iproc,12,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%br2_vol,    br2_vol_size(1)*br2_vol_size(2),    MPI_REAL8,iproc,13,ChiDG_COMM,ierr)
+            call MPI_Send(self%elems(ielem_l)%invmass,          invmass_size(1)*invmass_size(2),    MPI_REAL8,iproc,14,ChiDG_COMM,ierr)
+            call MPI_Send(self%elems(ielem_l)%h,                3,                                  MPI_REAL8,iproc,15,ChiDG_COMM,ierr)
         end if
 
 
@@ -1213,7 +1201,7 @@ contains
 
         integer(ik) :: corner_one, corner_two, corner_three, corner_four,           &
                        corner_indices(4), data(7), mapping, iproc, idomain_g, ierr, &
-                       grad_size(2), invmass_size(2), br2_face_size(2), br2_vol_size(2), size_data(8)
+                       grad_size(2), invmass_size(2), br2_face_size(2), br2_vol_size(2)
         logical     :: neighbor_element, has_domain
 
 
@@ -1273,15 +1261,10 @@ contains
                         ineighbor_nterms_s  = data(7)
                         ineighbor_proc      = iproc
 
-                        call MPI_Recv(size_data,8,MPI_INTEGER4,iproc,5,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        !call MPI_Recv(grad_size,    2,MPI_INTEGER4,iproc,5,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        !call MPI_Recv(br2_face_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        !call MPI_Recv(br2_vol_size, 2,MPI_INTEGER4,iproc,7,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        !call MPI_Recv(invmass_size, 2,MPI_INTEGER4,iproc,8,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        grad_size     = size_data(1:2)
-                        br2_face_size = size_data(3:4)
-                        br2_vol_size  = size_data(5:6)
-                        invmass_size  = size_data(7:8)
+                        call MPI_Recv(grad_size,    2,MPI_INTEGER4,iproc,5,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(br2_face_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(br2_vol_size, 2,MPI_INTEGER4,iproc,7,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(invmass_size, 2,MPI_INTEGER4,iproc,8,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
 
                         if (allocated(neighbor_grad1)) deallocate(neighbor_grad1,neighbor_grad2,neighbor_grad3, &
                                                                 neighbor_br2_face, neighbor_br2_vol, neighbor_invmass)
@@ -1293,20 +1276,13 @@ contains
                                  neighbor_invmass(invmass_size(1),invmass_size(2)),  stat=ierr)
                         if (ierr /= 0) call AllocationError
 
-                        !call MPI_Recv(neighbor_grad1,     grad_size(1)*grad_size(2),          MPI_REAL8, iproc,  9, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        !call MPI_Recv(neighbor_grad2,     grad_size(1)*grad_size(2),          MPI_REAL8, iproc, 10, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        !call MPI_Recv(neighbor_grad3,     grad_size(1)*grad_size(2),          MPI_REAL8, iproc, 11, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        !call MPI_Recv(neighbor_br2_face,  br2_face_size(1)*br2_face_size(2),  MPI_REAL8, iproc, 12, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        !call MPI_Recv(neighbor_br2_vol,   br2_vol_size(1)*br2_vol_size(2),    MPI_REAL8, iproc, 13, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        !call MPI_Recv(neighbor_invmass,   invmass_size(1)*invmass_size(2),    MPI_REAL8, iproc, 14, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        !call MPI_Recv(neighbor_h,         3,                                  MPI_REAL8, iproc, 15, ChiDG_COMM, MPI_STATUS_IGNORE,ierr) 
-                        call MPI_Recv(neighbor_grad1,     grad_size(1)*grad_size(2),          MPI_REAL8, iproc,  6, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_grad2,     grad_size(1)*grad_size(2),          MPI_REAL8, iproc,  7, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_grad3,     grad_size(1)*grad_size(2),          MPI_REAL8, iproc,  8, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_br2_face,  br2_face_size(1)*br2_face_size(2),  MPI_REAL8, iproc,  9, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_br2_vol,   br2_vol_size(1)*br2_vol_size(2),    MPI_REAL8, iproc, 10, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_invmass,   invmass_size(1)*invmass_size(2),    MPI_REAL8, iproc, 11, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_h,         3,                                  MPI_REAL8, iproc, 12, ChiDG_COMM, MPI_STATUS_IGNORE,ierr) 
+                        call MPI_Recv(neighbor_grad1,     grad_size(1)*grad_size(2),          MPI_REAL8, iproc,  9, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_grad2,     grad_size(1)*grad_size(2),          MPI_REAL8, iproc, 10, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_grad3,     grad_size(1)*grad_size(2),          MPI_REAL8, iproc, 11, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_br2_face,  br2_face_size(1)*br2_face_size(2),  MPI_REAL8, iproc, 12, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_br2_vol,   br2_vol_size(1)*br2_vol_size(2),    MPI_REAL8, iproc, 13, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_invmass,   invmass_size(1)*invmass_size(2),    MPI_REAL8, iproc, 14, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_h,         3,                                  MPI_REAL8, iproc, 15, ChiDG_COMM, MPI_STATUS_IGNORE,ierr) 
 
                         neighbor_status = NEIGHBOR_FOUND
 

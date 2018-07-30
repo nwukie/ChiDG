@@ -959,7 +959,7 @@ contains
                 if ( extension == '.h5' ) then
                     call read_prescribedmeshmotion_hdf(grid_file,pmm_domain_data,pmm_group_wrapper,self%partition)
                 else
-                    call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
+                    call chidg_signal(FATAL,"chidg%read_prescribedmeshmotions: grid file extension not recognized")
                 end if
 
 
@@ -973,7 +973,7 @@ contains
 
         call write_line('Prescribed Mesh Motions: processing...', io_proc=GLOBAL_MASTER)
         !
-        ! Add all boundary condition groups
+        ! Add all prescribed mesh motion groups
         !
         npmm_groups = pmm_group_wrapper%ngroups
         if (npmm_groups>0) then
@@ -986,7 +986,7 @@ contains
 
 
         !
-        ! Add boundary condition patches
+        ! Add prescribed mesh motion patches
         !
         if (npmm_groups>0) then
         ndomains = size(pmm_domain_data)

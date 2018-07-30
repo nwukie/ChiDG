@@ -47,7 +47,6 @@ contains
                     mesh%domain(idom)%vnodes(inode,:) = data%pmm(pmm_ID)%pmmf%compute_vel(data%time_manager%t, mesh%domain(idom)%nodes(inode,:))
                 end do
 
-                !call mesh%domain(idom)%init_ale(mesh%domain(idom)%dnodes, mesh%domain(idom)%vnodes)
                 call mesh%domain(idom)%set_displacements_velocities(mesh%domain(idom)%dnodes, mesh%domain(idom)%vnodes)
                 call mesh%domain(idom)%update_interpolations_ale()
             end if

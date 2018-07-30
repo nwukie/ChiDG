@@ -169,16 +169,6 @@ contains
         type(domain_connectivity_t),    intent(in)      :: connectivity
         character(*),                   intent(in)      :: coord_system
 
-        integer(ik) :: inode, msg1, msg2, funit
-        real(rk)    :: R1_velocity_1, R1_velocity_2, R1_velocity_3, &
-                       R2_velocity_1, R2_velocity_2, R2_velocity_3
-        integer(ik) :: R1_domain_min, R1_domain_max, &
-                       R2_domain_min, R2_domain_max
-        logical     :: file_exists
-
-        namelist /region_one/ R1_velocity_1, R1_velocity_2, R1_velocity_3, R1_domain_min, R1_domain_max
-        namelist /region_two/ R2_velocity_1, R2_velocity_2, R2_velocity_3, R2_domain_min, R2_domain_max
-
         !
         ! Store number of terms in coordinate expansion and domain index
         !
@@ -204,54 +194,6 @@ contains
         !
         call self%init_elems_geom(nodes,connectivity,coord_system)
         call self%init_faces_geom()
-
-
-        !
-        ! Check for grid velocity specification in grid_velocity.nml
-        !
-        inquire(file='grid_velocity.nml', exist=file_exists)
-        if (file_exists) then
-            open(newunit=funit,form='formatted',file='grid_velocity.nml')
-            read(funit,nml=region_one,iostat=msg1)
-            read(funit,nml=region_two,iostat=msg2)
-            close(funit)
-
-            ! Region 1 
-            if (msg1 == 0 .and. self%idomain_g >= R1_domain_min .and. self%idomain_g <= R1_domain_max) then
-                print*, 'setting velocity: ', R1_velocity_1, R1_velocity_2, R1_velocity_3, ' on domain: ', self%idomain_g
-                do inode = 1,size(self%vnodes,1)
-                    select case(trim(coord_system))
-                        case('Cartesian')
-                            self%vnodes(inode,1:3) = [R1_velocity_1,R1_velocity_2,R1_velocity_3]
-                        case('Cylindrical')
-                            self%vnodes(inode,1:3) = [R1_velocity_1,self%nodes(inode,1)*R1_velocity_2,R1_velocity_3]
-                        case default
-                            call chidg_signal_one(FATAL,"domain%init_geom: Invalid coordinate system.",trim(coord_system))
-                    end select
-                end do
-                call self%set_displacements_velocities(self%dnodes,self%vnodes)
-            end if
-
-            ! Region 2
-            if (msg2 == 0 .and. self%idomain_g >= R2_domain_min .and. self%idomain_g <= R2_domain_max) then
-                print*, 'setting velocity: ', R2_velocity_1, R2_velocity_2, R2_velocity_3, ' on domain: ', self%idomain_g
-                do inode = 1,size(self%vnodes,1)
-                    select case(trim(coord_system))
-                        case('Cartesian')
-                            self%vnodes(inode,1:3) = [R2_velocity_1,R2_velocity_2,R2_velocity_3]
-                        case('Cylindrical')
-                            self%vnodes(inode,1:3) = [R2_velocity_1,self%nodes(inode,1)*R2_velocity_2,R2_velocity_3]
-                        case default
-                            call chidg_signal_one(FATAL,"domain%init_geom: Invalid coordinate system.",trim(coord_system))
-                    end select
-                end do
-                call self%set_displacements_velocities(self%dnodes,self%vnodes)
-            end if
-
-        end if
-
-
-
 
 
         !
@@ -293,7 +235,6 @@ contains
                 call self%faces(ielem,iface)%set_displacements_velocities(self%elems(ielem))
             end do !iface
         end do !ielem
-
 
     end subroutine set_displacements_velocities
     !*****************************************************************************************

@@ -105,10 +105,8 @@ contains
             dvel2_ddensity, dvel2_dmom1, dvel2_dmom2, dvel2_dmom3, dvel2_denergy, &
             dvel3_ddensity, dvel3_dmom1, dvel3_dmom2, dvel3_dmom3, dvel3_denergy, &
             dp_ddensity, dp_dmom1, dp_dmom2, dp_dmom3, dp_denergy, &
-            vel1_m, vel2_m, vel3_m, p_m, T_m, u_sub, v_sub, w_sub, invdensity
-
-        type(AD_D), allocatable, dimension(:,:) ::  &
-            grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
+            vel1_m, vel2_m, vel3_m, p_m, T_m, invdensity
+!            u_sub, v_sub, w_sub, invdensity
 
         real(rk),   allocatable, dimension(:)   :: r
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
@@ -186,19 +184,14 @@ contains
 
 
         !
-        ! We want:  W dot n = 0
-        !
-        u_sub = mom1_m/density_m-grid_velocity(:,1)
-        v_sub = mom2_m/density_m-grid_velocity(:,2)
-        w_sub = mom3_m/density_m-grid_velocity(:,3)
-
-
-        !
         ! Energy subtract change in kinetic energy
         !   Compute energy by extrapolating pressure and adding the fluid velocity on the wall
         !
+        !u_sub = mom1_m/density_m-grid_velocity(:,1)
+        !v_sub = mom2_m/density_m-grid_velocity(:,2)
+        !w_sub = mom3_m/density_m-grid_velocity(:,3)
         !energy_bc = energy_m - HALF*density_m*(u_sub*u_sub  +  v_sub*v_sub  +  w_sub*w_sub)
-        energy_bc = p_m/(gam-ONE) + HALF*density_m*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3))
+        energy_bc = p_m/(gam-ONE) + HALF*density_m*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO)
 
 
         if (worker%coordinate_system() == 'Cylindrical') then
@@ -232,9 +225,9 @@ contains
         ! compute velocity jacobians
         !
         invdensity = ONE/density_m
-        dvel1_ddensity  = -invdensity*invdensity*mom1_m
-        dvel2_ddensity  = -invdensity*invdensity*mom2_m
-        dvel3_ddensity  = -invdensity*invdensity*mom3_m
+        dvel1_ddensity = -invdensity*invdensity*mom1_m
+        dvel2_ddensity = -invdensity*invdensity*mom2_m
+        dvel3_ddensity = -invdensity*invdensity*mom3_m
 
         dvel1_dmom1 = invdensity
         dvel2_dmom2 = invdensity
@@ -370,18 +363,18 @@ contains
         grad1_energy_bc = (p_m*grid_velocity(:,1)/(Rgas*T_m))*grad1_vel1 +  &
                           (p_m*grid_velocity(:,2)/(Rgas*T_m))*grad1_vel2 +  &
                           (p_m*grid_velocity(:,3)/(Rgas*T_m))*grad1_vel3 +  &
-                          HALF*(p_m/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO)*grad1_p
+                          (ONE/(gam-ONE) + HALF*(ONE/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO))*grad1_p
 
         grad2_energy_bc = (p_m*grid_velocity(:,1)/(Rgas*T_m))*grad2_vel1 +  &
                           (p_m*grid_velocity(:,2)/(Rgas*T_m))*grad2_vel2 +  &
                           (p_m*grid_velocity(:,3)/(Rgas*T_m))*grad2_vel3 +  &
-                          HALF*(p_m/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO)*grad1_p
+                          (ONE/(gam-ONE) + HALF*(ONE/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO))*grad2_p
 
 
         grad3_energy_bc = (p_m*grid_velocity(:,1)/(Rgas*T_m))*grad3_vel1 +  &
                           (p_m*grid_velocity(:,2)/(Rgas*T_m))*grad3_vel2 +  &
                           (p_m*grid_velocity(:,3)/(Rgas*T_m))*grad3_vel3 +  &
-                          HALF*(p_m/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO)*grad1_p
+                          (ONE/(gam-ONE) + HALF*(ONE/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO))*grad3_p
 
 
         ! Convert gradients of tangential momentum to angular momentum

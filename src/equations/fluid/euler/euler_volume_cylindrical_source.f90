@@ -128,7 +128,8 @@ contains
             !   Translating/Rotating/deforming reference frame
             !       source = [ale_g*ale_Dinv(2,2)*(density*v*v + p) - ale_Dinv(2,2)*Ugrid_2*(density*v)]/r
             !
-            source = ( ale_g*ale_Dinv(2,2,:)*(density*v*v + p)  -  ale_Dinv(2,2,:)*grid_vel(:,2)*(density*v) )/r
+            !source = ( ale_g*ale_Dinv(2,2,:)*(density*v*v + p)  -  ale_Dinv(2,2,:)*grid_vel(:,2)*(density*v) )/r
+            source = ( ale_g*ale_Dinv(2,2,:)*(density*v*v + p) )/r
 
             call worker%integrate_volume_source('Momentum-1',source)
 

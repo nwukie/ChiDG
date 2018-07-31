@@ -186,9 +186,7 @@ contains
         vorticity_2 = worker%get_field('Vorticity-2', 'value', 'element')
         vorticity_3 = worker%get_field('Vorticity-3', 'value', 'element')
 
-        !vorticity2 =  (dw_dy - dv_dz)**TWO  +  (du_dz - dw_dx)**TWO  +  (dv_dx - du_dy)**TWO 
         vorticity2 =  vorticity_1**TWO  +  vorticity_2**TWO  +  vorticity_3**TWO 
-        
         epsilon_vorticity = 1.e-6_rk
         vorticity = vorticity2
         where(vorticity2 < epsilon_vorticity)

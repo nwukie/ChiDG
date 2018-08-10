@@ -81,17 +81,19 @@ contains
     !!  @date   6/19/2018
     !!
     !----------------------------------------------------------------------------------
-    subroutine init_hb_matrix(self,mesh)
+    subroutine init_hb_matrix(self,mesh,idom)
         class(hb_matrix_t), intent(inout)   :: self
         type(mesh_t),       intent(in)      :: mesh
+        integer(ik),        intent(in)      :: idom
 
         integer(ik) :: ierr, ielem
 
-        allocate(self%elems(mesh%domain(1)%nelements()), stat=ierr)
+
+        allocate(self%elems(mesh%domain(idom)%nelements()), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-        do ielem = 1,mesh%domain(1)%nelements()
-            call self%elems(ielem)%init(mesh%domain(1)%elems(ielem))
+        do ielem = 1,mesh%domain(idom)%nelements()
+            call self%elems(ielem)%init(mesh%domain(idom)%elems(ielem))
         end do
 
     end subroutine init_hb_matrix
@@ -142,7 +144,7 @@ contains
         
         ! Initialize domain storage
         do idom = 1,data%sdata%lhs%ndomains()
-            call self%hb_matrix(idom)%init(data%mesh)
+            call self%hb_matrix(idom)%init(data%mesh,idom)
             call self%hb_matrix(idom)%clear()
         end do !idom
 

@@ -15,6 +15,7 @@ add_lib_sources(
                 eqn_filtered_euler_FP2.f90
                 eqn_navier_stokes.f90
                 eqn_rans.f90
+                eqn_rans_cv.f90
                 mod_fluid.f90
                 mod_force.f90
                 mod_entropy.f90

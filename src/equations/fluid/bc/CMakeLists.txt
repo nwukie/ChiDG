@@ -3,6 +3,7 @@ add_lib_sources(
                 bc_state_inlet_total.f90
                 bc_state_inlet_characteristic.f90
                 bc_state_outlet_constant_pressure.f90
+                bc_state_outlet_linear_pressure.f90
                 bc_state_outlet_auxiliary_equations.f90
                 bc_state_outlet_neumann_pressure_fd.f90
                 bc_state_outlet_neumann_pressure_localdg.f90

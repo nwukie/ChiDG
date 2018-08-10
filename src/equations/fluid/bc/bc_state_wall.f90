@@ -101,12 +101,11 @@ contains
             grad1_vel2, grad2_vel2, grad3_vel2, &
             grad1_vel3, grad2_vel3, grad3_vel3, &
             grad1_p, grad2_p, grad3_p, &
-            dvel1_ddensity, dvel1_dmom1, dvel1_dmom2, dvel1_dmom3, dvel1_denergy, &
-            dvel2_ddensity, dvel2_dmom1, dvel2_dmom2, dvel2_dmom3, dvel2_denergy, &
-            dvel3_ddensity, dvel3_dmom1, dvel3_dmom2, dvel3_dmom3, dvel3_denergy, &
+            dvel1_ddensity, dvel1_dmom1, &
+            dvel2_ddensity, dvel2_dmom2, &
+            dvel3_ddensity, dvel3_dmom3, &
             dp_ddensity, dp_dmom1, dp_dmom2, dp_dmom3, dp_denergy, &
             vel1_m, vel2_m, vel3_m, p_m, T_m, invdensity
-!            u_sub, v_sub, w_sub, invdensity
 
         real(rk),   allocatable, dimension(:)   :: r
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
@@ -184,13 +183,8 @@ contains
 
 
         !
-        ! Energy subtract change in kinetic energy
-        !   Compute energy by extrapolating pressure and adding the fluid velocity on the wall
+        ! Compute energy by extrapolating pressure and adding the fluid velocity on the wall
         !
-        !u_sub = mom1_m/density_m-grid_velocity(:,1)
-        !v_sub = mom2_m/density_m-grid_velocity(:,2)
-        !w_sub = mom3_m/density_m-grid_velocity(:,3)
-        !energy_bc = energy_m - HALF*density_m*(u_sub*u_sub  +  v_sub*v_sub  +  w_sub*w_sub)
         energy_bc = p_m/(gam-ONE) + HALF*density_m*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO)
 
 
@@ -287,62 +281,6 @@ contains
 
 
 
-
-!        grad1_density_bc = (ONE/(Rgas*T_m))*grad1_p
-!        grad2_density_bc = (ONE/(Rgas*T_m))*grad2_p
-!        grad3_density_bc = (ONE/(Rgas*T_m))*grad3_p
-!
-!        grad1_mom1_bc = (p_m/(Rgas*T_m))*grad1_vel1
-!        grad2_mom1_bc = (p_m/(Rgas*T_m))*grad2_vel1
-!        grad3_mom1_bc = (p_m/(Rgas*T_m))*grad3_vel1
-!
-!        grad1_mom2_bc = (p_m/(Rgas*T_m))*grad1_vel2
-!        grad2_mom2_bc = (p_m/(Rgas*T_m))*grad2_vel2
-!        grad3_mom2_bc = (p_m/(Rgas*T_m))*grad3_vel2
-!
-!        grad1_mom3_bc = (p_m/(Rgas*T_m))*grad1_vel3
-!        grad2_mom3_bc = (p_m/(Rgas*T_m))*grad2_vel3
-!        grad3_mom3_bc = (p_m/(Rgas*T_m))*grad3_vel3
-!
-!        grad1_energy_bc = density_m
-!        grad2_energy_bc = density_m
-!        grad3_energy_bc = density_m
-!        grad1_energy_bc = ZERO
-!        grad2_energy_bc = ZERO
-!        grad3_energy_bc = ZERO
-
-
-
-!        grad1_mom1_bc = (p_m/(Rgas*T_m))*grad1_vel1  +  (vel1_m/(Rgas*T_m))*grad1_p
-!        grad2_mom1_bc = (p_m/(Rgas*T_m))*grad2_vel1  +  (vel1_m/(Rgas*T_m))*grad2_p
-!        grad3_mom1_bc = (p_m/(Rgas*T_m))*grad3_vel1  +  (vel1_m/(Rgas*T_m))*grad3_p
-!
-!        grad1_mom2_bc = (p_m/(Rgas*T_m))*grad1_vel2  +  (vel2_m/(Rgas*T_m))*grad1_p
-!        grad2_mom2_bc = (p_m/(Rgas*T_m))*grad2_vel2  +  (vel2_m/(Rgas*T_m))*grad2_p
-!        grad3_mom2_bc = (p_m/(Rgas*T_m))*grad3_vel2  +  (vel2_m/(Rgas*T_m))*grad3_p
-!
-!        grad1_mom3_bc = (p_m/(Rgas*T_m))*grad1_vel3  +  (vel3_m/(Rgas*T_m))*grad1_p
-!        grad2_mom3_bc = (p_m/(Rgas*T_m))*grad2_vel3  +  (vel3_m/(Rgas*T_m))*grad2_p
-!        grad3_mom3_bc = (p_m/(Rgas*T_m))*grad3_vel3  +  (vel3_m/(Rgas*T_m))*grad3_p
-!
-!        grad1_energy_bc = (p_m*vel1_m/(Rgas*T_m))*grad1_vel1 +  &
-!                          (p_m*vel2_m/(Rgas*T_m))*grad1_vel2 +  &
-!                          (p_m*vel3_m/(Rgas*T_m))*grad1_vel3 +  &
-!                          HALF*(p_m/(Rgas*T_m))*(vel1_m*vel1_m + vel2_m*vel2_m + vel3_m*vel3_m)*grad1_p
-!
-!        grad2_energy_bc = (p_m*vel1_m/(Rgas*T_m))*grad2_vel1 +  &
-!                          (p_m*vel2_m/(Rgas*T_m))*grad2_vel2 +  &
-!                          (p_m*vel3_m/(Rgas*T_m))*grad2_vel3 +  &
-!                          HALF*(p_m/(Rgas*T_m))*(vel1_m*vel1_m + vel2_m*vel2_m + vel3_m*vel3_m)*grad1_p
-!
-!
-!        grad3_energy_bc = (p_m*vel1_m/(Rgas*T_m))*grad3_vel1 +  &
-!                          (p_m*vel2_m/(Rgas*T_m))*grad3_vel2 +  &
-!                          (p_m*vel3_m/(Rgas*T_m))*grad3_vel3 +  &
-!                          HALF*(p_m/(Rgas*T_m))*(vel1_m*vel1_m + vel2_m*vel2_m + vel3_m*vel3_m)*grad1_p
-
-
-
         grad1_density_bc = (ONE/(Rgas*T_m))*grad1_p
         grad2_density_bc = (ONE/(Rgas*T_m))*grad2_p
         grad3_density_bc = (ONE/(Rgas*T_m))*grad3_p
@@ -370,7 +308,6 @@ contains
                           (p_m*grid_velocity(:,3)/(Rgas*T_m))*grad2_vel3 +  &
                           (ONE/(gam-ONE) + HALF*(ONE/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO))*grad2_p
 
-
         grad3_energy_bc = (p_m*grid_velocity(:,1)/(Rgas*T_m))*grad3_vel1 +  &
                           (p_m*grid_velocity(:,2)/(Rgas*T_m))*grad3_vel2 +  &
                           (p_m*grid_velocity(:,3)/(Rgas*T_m))*grad3_vel3 +  &
@@ -380,7 +317,7 @@ contains
         ! Convert gradients of tangential momentum to angular momentum
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            grad1_mom2_bc = r*grad1_mom2_bc + mom2_m
+            grad1_mom2_bc = r*grad1_mom2_bc + density_bc*grid_velocity(:,2) !mom2_bc
             grad2_mom2_bc = r*grad2_mom2_bc
             grad3_mom2_bc = r*grad3_mom2_bc
         end if

@@ -1,8 +1,9 @@
-module bc_state_outlet_constant_pressure
+module bc_state_outlet_linear_pressure
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, HALF, TWO, FOUR
     use mod_fluid,              only: gam, Rgas
+    use mod_interpolation,      only: interpolate_linear
 
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -21,14 +22,14 @@ module bc_state_outlet_constant_pressure
     !!  @date   1/31/2016
     !!
     !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_constant_pressure_t
+    type, public, extends(bc_state_t) :: outlet_linear_pressure_t
 
     contains
 
         procedure   :: init                 ! Set-up bc state with options/name etc.
         procedure   :: compute_bc_state     ! boundary condition function implementation
 
-    end type outlet_constant_pressure_t
+    end type outlet_linear_pressure_t
     !****************************************************************************************
 
 
@@ -45,21 +46,23 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_constant_pressure_t),   intent(inout) :: self
+        class(outlet_linear_pressure_t),   intent(inout) :: self
         
         !
         ! Set name, family
         !
-        call self%set_name("Outlet - Constant Pressure")
+        call self%set_name("Outlet - Linear Pressure")
         call self%set_family("Outlet")
 
 
         !
         ! Add functions
         !
-        call self%bcproperties%add('Static Pressure','Required')
-        call self%set_fcn_option('Static Pressure', 'val', 100000._rk)
+        call self%bcproperties%add('Static Pressure Min','Required')
+        call self%bcproperties%add('Static Pressure Max','Required')
 
+        call self%bcproperties%add('Radius Min','Required')
+        call self%bcproperties%add('Radius Max','Required')
 
     end subroutine init
     !********************************************************************************
@@ -78,7 +81,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(outlet_constant_pressure_t),  intent(inout)   :: self
+        class(outlet_linear_pressure_t),  intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
         type(mpi_comm),                     intent(in)      :: bc_COMM
@@ -95,10 +98,12 @@ contains
             
 
         real(rk),   allocatable, dimension(:) :: r, unorm1, unorm2, unorm3
-        real(rk),   allocatable, dimension(:) :: p_input
+        real(rk),   allocatable, dimension(:) :: p_input, p_min, p_max, r_min, r_max
 
         real(rk)    :: rho0, K0
         integer :: igq
+
+        type(point_t),  allocatable :: coords(:)
 
 
 
@@ -106,7 +111,10 @@ contains
         !
         ! Get back pressure from function.
         !
-        p_input = self%bcproperties%compute('Static Pressure',worker%time(),worker%coords())
+        p_min = self%bcproperties%compute('Static Pressure Min',worker%time(),worker%coords())
+        p_max = self%bcproperties%compute('Static Pressure Max',worker%time(),worker%coords())
+        r_min = self%bcproperties%compute('Radius Min',worker%time(),worker%coords())
+        r_max = self%bcproperties%compute('Radius Max',worker%time(),worker%coords())
 
 
         !
@@ -168,9 +176,14 @@ contains
         w_bc = mom3_m/density_m
 
 
-        ! Set user-specified constant pressure
+        ! Set user-specified linear pressure
         p_bc = density_m
         p_bc = p_input
+
+        coords = worker%coords()
+        do igq = 1,size(density_m)
+            p_bc(igq) = interpolate_linear([r_min(1),r_max(1)],[p_min(1),p_max(1)],coords(igq)%c1_)
+        end do
 
 
 
@@ -238,4 +251,4 @@ contains
 
 
 
-end module bc_state_outlet_constant_pressure
+end module bc_state_outlet_linear_pressure

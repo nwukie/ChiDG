@@ -29,6 +29,7 @@ module mod_equations
     use eqn_filtered_euler_FP2,             only: filtered_euler_FP2
     use eqn_navier_stokes,                  only: navier_stokes
     use eqn_rans,                           only: rans
+    use eqn_rans_cv,                        only: rans_cv
     use eqn_rae,                            only: rae
     use eqn_rac,                            only: rac
     use eqn_tm,                             only: tm
@@ -134,6 +135,7 @@ contains
         type(filtered_euler_FP2)            :: filtered_euler_FP2_builder
         type(navier_stokes)                 :: navier_stokes_builder
         type(rans)                          :: rans_builder
+        type(rans_cv)                       :: rans_cv_builder
         type(rae)                           :: rae_builder
         type(rac)                           :: rac_builder
         type(tm)                            :: tm_builder
@@ -166,6 +168,7 @@ contains
             call equation_set_factory%register(filtered_euler_FP2_builder%build('default'))
             call equation_set_factory%register(navier_stokes_builder%build('default'))
             call equation_set_factory%register(rans_builder%build('default'))
+            call equation_set_factory%register(rans_cv_builder%build('default'))
             call equation_set_factory%register(rae_builder%build('default'))
             call equation_set_factory%register(rac_builder%build('default'))
             call equation_set_factory%register(tm_builder%build('default'))

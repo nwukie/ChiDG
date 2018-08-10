@@ -418,7 +418,7 @@ contains
             density_imag_tmp, vel1_imag_tmp, vel2_imag_tmp, vel3_imag_tmp, pressure_imag_tmp, c_imag_tmp
 
         integer(ik) :: nradius, ntheta, iradius, itheta, imode, itime, ntime, ierr
-        real(rk)    :: shift_r, shift_i
+        real(rk)    :: shift_r, shift_i, shift_sign
         logical     :: negate_dft
         real(rk),   allocatable :: spatial_periodicity(:)
 
@@ -449,8 +449,10 @@ contains
 
                 if (itime == 1) then
                     negate_dft = .false.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
+                    shift_sign = ONE
                 else if (itime > 1) then
                     negate_dft = .true.     ! this is consistens with Lindblad's formulation, which is used for the unsteady modes(itime>1)
+                    shift_sign = -ONE
                 end if
 
                 ! DFT in space
@@ -471,11 +473,11 @@ contains
                 !
                 do imode = 1,size(density_real_tmp)
                     if (side=='A') then
-                        shift_r = realpart(exp(cmplx(ZERO,ONE)*real(imode-1,rk)*TWO*PI*(self%theta_ref-self%theta_a(iradius,1))/spatial_periodicity(1)))
-                        shift_i = imagpart(exp(cmplx(ZERO,ONE)*real(imode-1,rk)*TWO*PI*(self%theta_ref-self%theta_a(iradius,1))/spatial_periodicity(1)))
+                        shift_r = realpart(exp(shift_sign*cmplx(ZERO,ONE)*real(imode-1,rk)*TWO*PI*(self%theta_ref-self%theta_a(iradius,1))/spatial_periodicity(1)))
+                        shift_i = imagpart(exp(shift_sign*cmplx(ZERO,ONE)*real(imode-1,rk)*TWO*PI*(self%theta_ref-self%theta_a(iradius,1))/spatial_periodicity(1)))
                     else if (side=='B') then
-                        shift_r = realpart(exp(cmplx(ZERO,ONE)*real(imode-1,rk)*TWO*PI*(self%theta_ref-self%theta_b(iradius,1))/spatial_periodicity(1)))
-                        shift_i = imagpart(exp(cmplx(ZERO,ONE)*real(imode-1,rk)*TWO*PI*(self%theta_ref-self%theta_b(iradius,1))/spatial_periodicity(1)))
+                        shift_r = realpart(exp(shift_sign*cmplx(ZERO,ONE)*real(imode-1,rk)*TWO*PI*(self%theta_ref-self%theta_b(iradius,1))/spatial_periodicity(1)))
+                        shift_i = imagpart(exp(shift_sign*cmplx(ZERO,ONE)*real(imode-1,rk)*TWO*PI*(self%theta_ref-self%theta_b(iradius,1))/spatial_periodicity(1)))
                     else
                         call chidg_signal(FATAL,"giles_HB_base_t%compute_spatial_dft: Invalid input for argument 'side'. 'A' or 'B'.")
                     end if
@@ -2005,7 +2007,7 @@ contains
         
         ! Create radial stations
         if ( (side=='A' .and. self%nfaces_a > 0) .or. (side=='B' .and. self%nfaces_b > 0) ) then
-            self%r = linspace(global_rmin + 0.000001_rk,global_rmax-0.000001_rk,self%nr)
+            self%r = linspace(global_rmin + 0.0000001_rk,global_rmax-0.0000001_rk,self%nr)
         end if
 
         ! Compute z_ref

@@ -924,8 +924,8 @@ contains
         a4_real = a4_real_m
         a4_imag = a4_imag_m
 
-!!        a1_real(:,2,2) = 0.001_rk   ! entropy
-!!        a3_real(:,2,2) = 0.001_rk   ! vorticity
+!        a1_real(:,2,2) = 0.001_rk   ! entropy
+!        a3_real(:,2,2) = 0.001_rk   ! vorticity
 !        a5_real(:,2,2) = 0.001_rk   ! downstream pressure
 
 

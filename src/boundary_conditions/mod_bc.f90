@@ -47,6 +47,7 @@ module mod_bc
     use bc_state_inlet_total,                       only: inlet_total_t
     use bc_state_inlet_characteristic,              only: inlet_characteristic_t
     use bc_state_outlet_constant_pressure,          only: outlet_constant_pressure_t
+    use bc_state_outlet_linear_pressure,            only: outlet_linear_pressure_t
     use bc_state_outlet_auxiliary_equations,        only: outlet_auxiliary_equations_t
     use bc_state_outlet_neumann_pressure_fd,        only: outlet_neumann_pressure_fd_t
     use bc_state_outlet_neumann_pressure_localdg,   only: outlet_neumann_pressure_localdg_t
@@ -163,6 +164,7 @@ contains
         type(inlet_total_t)                     :: INLET_TOTAL
         type(inlet_characteristic_t)            :: INLET_CHARACTERISTIC
         type(outlet_constant_pressure_t)        :: OUTLET_CONSTANT_PRESSURE
+        type(outlet_linear_pressure_t)          :: OUTLET_LINEAR_PRESSURE
         type(outlet_auxiliary_equations_t)      :: OUTLET_AUXILIARY_EQUATIONS
         type(outlet_neumann_pressure_fd_t)      :: OUTLET_NEUMANN_PRESSURE_FD
         type(outlet_neumann_pressure_localdg_t) :: OUTLET_NEUMANN_PRESSURE_LOCALDG
@@ -252,6 +254,7 @@ contains
             call registered_bcs%push_back(INLET_TOTAL)
             call registered_bcs%push_back(INLET_CHARACTERISTIC)
             call registered_bcs%push_back(OUTLET_CONSTANT_PRESSURE)
+            call registered_bcs%push_back(OUTLET_LINEAR_PRESSURE)
             call registered_bcs%push_back(OUTLET_AUXILIARY_EQUATIONS)
             call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_FD)
             call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_LOCALDG)

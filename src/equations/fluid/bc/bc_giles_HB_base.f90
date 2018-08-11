@@ -44,11 +44,11 @@ module bc_giles_HB_base
     type, public, abstract, extends(bc_state_t) :: giles_HB_base_t
 
         integer(ik) :: nr = 10
-        integer(ik) :: nfourier_space = 14
+        integer(ik) :: nfourier_space = 20
         !integer(ik) :: nfourier_space = 8
 
         real(rk),               allocatable :: r(:)
-        real(rk)    :: theta_ref = ZERO
+        real(rk)                            :: theta_ref = ZERO
 
         integer(ik)                         :: nfaces_a         ! Global count across all procs in group
         real(rk),               allocatable :: theta_a(:,:)     ! (nr,ntheta)
@@ -481,14 +481,6 @@ contains
                     else
                         call chidg_signal(FATAL,"giles_HB_base_t%compute_spatial_dft: Invalid input for argument 'side'. 'A' or 'B'.")
                     end if
-
-                    !if (side=='A') then
-                    !    print*, 'Theta Ref, Theta, pitch: ', self%theta_ref, self%theta_a(iradius,1), spatial_periodicity(1)
-                    !    print*, 'Shift: ', shift_r, shift_i
-                    !else if (side=='B') then
-                    !    print*, 'Theta Ref, Theta, pitch: ', self%theta_ref, self%theta_b(iradius,1), spatial_periodicity(1)
-                    !    print*, 'Shift: ', shift_r, shift_i
-                    !end if
 
                     density_Fts_real( iradius,imode,itime) = density_real_tmp(imode)*shift_r  - density_imag_tmp(imode)*shift_i
                     vel1_Fts_real(    iradius,imode,itime) = vel1_real_tmp(imode)*shift_r     - vel1_imag_tmp(imode)*shift_i
@@ -2013,10 +2005,11 @@ contains
         ! Compute z_ref
         if (side == 'A')then
             self%theta_ref_a = (global_thetamin + global_thetamax)/TWO
-            self%theta_ref = self%theta_ref_a
+            if (self%nfaces_a /= 0) self%theta_ref = self%theta_ref_a
             call MPI_AllReduce(local_zref_a,self%z_ref_a,1,MPI_REAL8,MPI_MIN,bc_comm,ierr)
         else if (side == 'B') then
             self%theta_ref_b = (global_thetamin + global_thetamax)/TWO
+            if (self%nfaces_b /= 0) self%theta_ref = self%theta_ref_b
             call MPI_AllReduce(local_zref_b,self%z_ref_b,1,MPI_REAL8,MPI_MAX,bc_comm,ierr)
         else
             call chidg_signal(FATAL,"bc_giles: analyze_bc_geometry invalid input for argument 'side'. 'A' or 'B'.")

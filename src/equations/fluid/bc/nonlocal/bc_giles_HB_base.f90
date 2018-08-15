@@ -45,7 +45,6 @@ module bc_giles_HB_base
 
         integer(ik) :: nr = 10
         integer(ik) :: nfourier_space = 20
-        !integer(ik) :: nfourier_space = 8
 
         real(rk),               allocatable :: r(:)
         real(rk)                            :: theta_ref = ZERO
@@ -319,8 +318,6 @@ contains
 
         ! Define Fourier space discretization to determine
         ! number of theta-samples are being taken
-        !ntheta  = size(self%theta,2)
-        !nradius = size(self%r)
         nradius = size(density_grid,1)
         ntheta  = size(density_grid,2)
         ntime   = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%ntime
@@ -417,7 +414,7 @@ contains
             density_real_tmp, vel1_real_tmp, vel2_real_tmp, vel3_real_tmp, pressure_real_tmp, c_real_tmp, &
             density_imag_tmp, vel1_imag_tmp, vel2_imag_tmp, vel3_imag_tmp, pressure_imag_tmp, c_imag_tmp
 
-        integer(ik) :: nradius, ntheta, iradius, itheta, imode, itime, ntime, ierr
+        integer(ik) :: nradius, ntheta, iradius, imode, itime, ntime, ierr, m
         real(rk)    :: shift_r, shift_i, shift_sign
         logical     :: negate_dft
         real(rk),   allocatable :: spatial_periodicity(:)
@@ -448,8 +445,10 @@ contains
             do itime = 1,ntime
 
                 if (itime == 1) then
-                    negate_dft = .false.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
-                    shift_sign = ONE
+                    !negate_dft = .false.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
+                    !shift_sign = ONE
+                    negate_dft = .true.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
+                    shift_sign = -ONE
                 else if (itime > 1) then
                     negate_dft = .true.     ! this is consistens with Lindblad's formulation, which is used for the unsteady modes(itime>1)
                     shift_sign = -ONE
@@ -472,15 +471,17 @@ contains
                 ! NOTE: self%theta(:,1) are defined to be the DFT-theta_min at each radius
                 !
                 do imode = 1,size(density_real_tmp)
+                    m = get_lm(imode,size(density_real_tmp))
                     if (side=='A') then
-                        shift_r = realpart(exp(shift_sign*cmplx(ZERO,ONE)*real(imode-1,rk)*TWO*PI*(self%theta_ref-self%theta_a(iradius,1))/spatial_periodicity(1)))
-                        shift_i = imagpart(exp(shift_sign*cmplx(ZERO,ONE)*real(imode-1,rk)*TWO*PI*(self%theta_ref-self%theta_a(iradius,1))/spatial_periodicity(1)))
+                        shift_r = realpart(exp(shift_sign*cmplx(ZERO,ONE)*real(m,rk)*TWO*PI*(self%theta_ref-self%theta_a(iradius,1))/spatial_periodicity(1)))
+                        shift_i = imagpart(exp(shift_sign*cmplx(ZERO,ONE)*real(m,rk)*TWO*PI*(self%theta_ref-self%theta_a(iradius,1))/spatial_periodicity(1)))
                     else if (side=='B') then
-                        shift_r = realpart(exp(shift_sign*cmplx(ZERO,ONE)*real(imode-1,rk)*TWO*PI*(self%theta_ref-self%theta_b(iradius,1))/spatial_periodicity(1)))
-                        shift_i = imagpart(exp(shift_sign*cmplx(ZERO,ONE)*real(imode-1,rk)*TWO*PI*(self%theta_ref-self%theta_b(iradius,1))/spatial_periodicity(1)))
+                        shift_r = realpart(exp(shift_sign*cmplx(ZERO,ONE)*real(m,rk)*TWO*PI*(self%theta_ref-self%theta_b(iradius,1))/spatial_periodicity(1)))
+                        shift_i = imagpart(exp(shift_sign*cmplx(ZERO,ONE)*real(m,rk)*TWO*PI*(self%theta_ref-self%theta_b(iradius,1))/spatial_periodicity(1)))
                     else
                         call chidg_signal(FATAL,"giles_HB_base_t%compute_spatial_dft: Invalid input for argument 'side'. 'A' or 'B'.")
                     end if
+
 
                     density_Fts_real( iradius,imode,itime) = density_real_tmp(imode)*shift_r  - density_imag_tmp(imode)*shift_i
                     vel1_Fts_real(    iradius,imode,itime) = vel1_real_tmp(imode)*shift_r     - vel1_imag_tmp(imode)*shift_i
@@ -496,23 +497,13 @@ contains
                     pressure_Fts_imag(iradius,imode,itime) = pressure_imag_tmp(imode)*shift_r + pressure_real_tmp(imode)*shift_i
                     c_Fts_imag(       iradius,imode,itime) = c_imag_tmp(imode)*shift_r        + c_real_tmp(imode)*shift_i
 
-                    !density_Fts_real( iradius,imode,itime) = density_real_tmp(imode) 
-                    !vel1_Fts_real(    iradius,imode,itime) = vel1_real_tmp(imode)    
-                    !vel2_Fts_real(    iradius,imode,itime) = vel2_real_tmp(imode)    
-                    !vel3_Fts_real(    iradius,imode,itime) = vel3_real_tmp(imode)    
-                    !pressure_Fts_real(iradius,imode,itime) = pressure_real_tmp(imode)
-                    !c_Fts_real(       iradius,imode,itime) = c_real_tmp(imode)
-
-                    !density_Fts_imag( iradius,imode,itime) = density_imag_tmp(imode) 
-                    !vel1_Fts_imag(    iradius,imode,itime) = vel1_imag_tmp(imode)    
-                    !vel2_Fts_imag(    iradius,imode,itime) = vel2_imag_tmp(imode)    
-                    !vel3_Fts_imag(    iradius,imode,itime) = vel3_imag_tmp(imode)    
-                    !pressure_Fts_imag(iradius,imode,itime) = pressure_imag_tmp(imode)
-                    !c_Fts_imag(       iradius,imode,itime) = c_imag_tmp(imode)
                 end do !imode
 
             end do !itime
         end do !iradius
+
+
+
 
         call write_line('WARNING: need scaling since dft is only over a single passage.', io_proc=IRANK, silence=(verbosity<5))
         call write_line('WARNING: check correct pitch in phase shift.', io_proc=IRANK, silence=(verbosity<5))
@@ -612,7 +603,8 @@ contains
             do itime = 1,size(density_hat_real,3)
 
                 if (itime == 1) then
-                    negate_dft = .false.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
+                    !negate_dft = .false.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
+                    negate_dft = .true.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
                 else if (itime > 1) then
                     negate_dft = .true.     ! this is consistent with Lindblad's formulation, which is used for the unsteady modes(itime>1)
                 end if
@@ -972,19 +964,19 @@ contains
                     ! Space-time average handled at the bottom
                     if (itime == 1 .and. itheta == 1) then
 
-                    else if (itime == 1 .and. itheta > 1) then
-
-                        a1_real(iradius,itheta,itime) = -(c_bar*c_bar)*density_real(iradius,itheta,itime)    + (ONE)*pressure_real(iradius,itheta,itime)
-                        a2_real(iradius,itheta,itime) =  (density_bar*c_bar)*vel1_real(iradius,itheta,itime)
-                        a3_real(iradius,itheta,itime) =  (density_bar*c_bar)*vel2_real(iradius,itheta,itime)
-                        a4_real(iradius,itheta,itime) =  (density_bar*c_bar)*vel3_real(iradius,itheta,itime) + (ONE)*pressure_real(iradius,itheta,itime)
-                        a5_real(iradius,itheta,itime) = -(density_bar*c_bar)*vel3_real(iradius,itheta,itime) + (ONE)*pressure_real(iradius,itheta,itime)
-                                                     
-                        a1_imag(iradius,itheta,itime) = -(c_bar*c_bar)*density_imag(iradius,itheta,itime)    + (ONE)*pressure_imag(iradius,itheta,itime)
-                        a2_imag(iradius,itheta,itime) =  (density_bar*c_bar)*vel1_imag(iradius,itheta,itime)
-                        a3_imag(iradius,itheta,itime) =  (density_bar*c_bar)*vel2_imag(iradius,itheta,itime)
-                        a4_imag(iradius,itheta,itime) =  (density_bar*c_bar)*vel3_imag(iradius,itheta,itime) + (ONE)*pressure_imag(iradius,itheta,itime)
-                        a5_imag(iradius,itheta,itime) = -(density_bar*c_bar)*vel3_imag(iradius,itheta,itime) + (ONE)*pressure_imag(iradius,itheta,itime)
+!                    else if (itime == 1 .and. itheta > 1) then
+!
+!                        a1_real(iradius,itheta,itime) = -(c_bar*c_bar)*density_real(iradius,itheta,itime)    + (ONE)*pressure_real(iradius,itheta,itime)
+!                        a2_real(iradius,itheta,itime) =  (density_bar*c_bar)*vel1_real(iradius,itheta,itime)
+!                        a3_real(iradius,itheta,itime) =  (density_bar*c_bar)*vel2_real(iradius,itheta,itime)
+!                        a4_real(iradius,itheta,itime) =  (density_bar*c_bar)*vel3_real(iradius,itheta,itime) + (ONE)*pressure_real(iradius,itheta,itime)
+!                        a5_real(iradius,itheta,itime) = -(density_bar*c_bar)*vel3_real(iradius,itheta,itime) + (ONE)*pressure_real(iradius,itheta,itime)
+!                                                     
+!                        a1_imag(iradius,itheta,itime) = -(c_bar*c_bar)*density_imag(iradius,itheta,itime)    + (ONE)*pressure_imag(iradius,itheta,itime)
+!                        a2_imag(iradius,itheta,itime) =  (density_bar*c_bar)*vel1_imag(iradius,itheta,itime)
+!                        a3_imag(iradius,itheta,itime) =  (density_bar*c_bar)*vel2_imag(iradius,itheta,itime)
+!                        a4_imag(iradius,itheta,itime) =  (density_bar*c_bar)*vel3_imag(iradius,itheta,itime) + (ONE)*pressure_imag(iradius,itheta,itime)
+!                        a5_imag(iradius,itheta,itime) = -(density_bar*c_bar)*vel3_imag(iradius,itheta,itime) + (ONE)*pressure_imag(iradius,itheta,itime)
 
                     else
 
@@ -1222,20 +1214,20 @@ contains
                     ! Space-time average handled at the bottom
                     if (itime == 1 .and. itheta == 1) then
 
-                    else if (itime == 1 .and. itheta > 1) then
-
-
-                        density_real(iradius,itheta,itime)  = (-ONE/(c_bar*c_bar))*a1_real(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a4_real(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a5_real(iradius,itheta,itime)
-                        vel1_real(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a2_real(iradius,itheta,itime)
-                        vel2_real(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a3_real(iradius,itheta,itime)
-                        vel3_real(iradius,itheta,itime)     = (ONE/(TWO*density_bar*c_bar))*a4_real(iradius,itheta,itime)  -  (ONE/(TWO*density_bar*c_bar))*a5_real(iradius,itheta,itime)
-                        pressure_real(iradius,itheta,itime) = HALF*a4_real(iradius,itheta,itime)  +  HALF*a5_real(iradius,itheta,itime)
-
-                        density_imag(iradius,itheta,itime)  = (-ONE/(c_bar*c_bar))*a1_imag(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a4_imag(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a5_imag(iradius,itheta,itime)
-                        vel1_imag(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a2_imag(iradius,itheta,itime)
-                        vel2_imag(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a3_imag(iradius,itheta,itime)
-                        vel3_imag(iradius,itheta,itime)     = (ONE/(TWO*density_bar*c_bar))*a4_imag(iradius,itheta,itime)  -  (ONE/(TWO*density_bar*c_bar))*a5_imag(iradius,itheta,itime)
-                        pressure_imag(iradius,itheta,itime) = HALF*a4_imag(iradius,itheta,itime)  +  HALF*a5_imag(iradius,itheta,itime)
+!                    else if (itime == 1 .and. itheta > 1) then
+!
+!
+!                        density_real(iradius,itheta,itime)  = (-ONE/(c_bar*c_bar))*a1_real(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a4_real(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a5_real(iradius,itheta,itime)
+!                        vel1_real(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a2_real(iradius,itheta,itime)
+!                        vel2_real(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a3_real(iradius,itheta,itime)
+!                        vel3_real(iradius,itheta,itime)     = (ONE/(TWO*density_bar*c_bar))*a4_real(iradius,itheta,itime)  -  (ONE/(TWO*density_bar*c_bar))*a5_real(iradius,itheta,itime)
+!                        pressure_real(iradius,itheta,itime) = HALF*a4_real(iradius,itheta,itime)  +  HALF*a5_real(iradius,itheta,itime)
+!
+!                        density_imag(iradius,itheta,itime)  = (-ONE/(c_bar*c_bar))*a1_imag(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a4_imag(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a5_imag(iradius,itheta,itime)
+!                        vel1_imag(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a2_imag(iradius,itheta,itime)
+!                        vel2_imag(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a3_imag(iradius,itheta,itime)
+!                        vel3_imag(iradius,itheta,itime)     = (ONE/(TWO*density_bar*c_bar))*a4_imag(iradius,itheta,itime)  -  (ONE/(TWO*density_bar*c_bar))*a5_imag(iradius,itheta,itime)
+!                        pressure_imag(iradius,itheta,itime) = HALF*a4_imag(iradius,itheta,itime)  +  HALF*a5_imag(iradius,itheta,itime)
 
 
                     else
@@ -2015,6 +2007,7 @@ contains
             call chidg_signal(FATAL,"bc_giles: analyze_bc_geometry invalid input for argument 'side'. 'A' or 'B'.")
         end if
 
+        self%theta_ref = ZERO
 
     end subroutine analyze_bc_geometry
     !********************************************************************************
@@ -2248,6 +2241,8 @@ contains
             self%theta_a = self%theta_b
         end if
 
+        print*, self%name, self%theta_ref, self%theta_a(1,1), self%theta_b(1,1)
+
     end subroutine initialize_fourier_discretization
     !**************************************************************************************
 
@@ -2277,17 +2272,6 @@ contains
         else
             omega = -worker%time_manager%freqs(ntime-itime+1)
         end if
-
-
-
-!        if (itime == 1) then
-!            omega = ZERO
-!        else if (itime == 2) then
-!            omega = worker%time_manager%freqs(1)
-!        else if (itime == 3) then
-!            omega = -worker%time_manager%freqs(1)
-!        end if
-
 
     end function get_omega
     !**************************************************************************************

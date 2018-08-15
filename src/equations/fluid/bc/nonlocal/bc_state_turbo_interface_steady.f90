@@ -661,42 +661,42 @@ contains
             a5_real = ZERO*a5_real_p
             a5_imag = ZERO*a5_imag_p
 
-            ! Adjust steady modes based on Giles' original steady formulation.
-            itime = 1   ! Time-constant
-            do iradius = 1,size(a1_real_m,1)
-                ! Get average parts
-                density_bar  = density_bar_r(iradius)
-                vel1_bar     = vel1_bar_r(iradius)
-                vel2_bar     = vel2_bar_r(iradius)
-                vel3_bar     = vel3_bar_r(iradius)
-                pressure_bar = pressure_bar_r(iradius)
-                c_bar        = sqrt(gam*pressure_bar/density_bar)
-
-                ! starting with 2 here because the first mode is treated with 1D characteristics
-                ntheta = size(a1_real_m,2)
-                do itheta = 2,ntheta
-                    ! Account for sign(mode) in the calculation of beta. The second half of the
-                    ! modes are negative frequencies.
-                    if (itheta <= (ntheta-1)/2 + 1) then
-                        beta = sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
-                    else if (itheta > (ntheta-1)/2 + 1) then
-                        beta = -sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
-                    end if
-
-                    ! The imaginary part of beta has already been accounted for in
-                    ! the expressions for B2 and B3
-                    B3_real = -TWO*vel3_bar*vel2_bar/(vel2_bar*vel2_bar + beta*beta)
-                    B3_imag = -TWO*beta*vel3_bar/(vel2_bar*vel2_bar + beta*beta)
-
-                    B4_real = (beta*beta - vel2_bar*vel2_bar)/(beta*beta + vel2_bar*vel2_bar)
-                    B4_imag = -TWO*beta*vel2_bar/(beta*beta + vel2_bar*vel2_bar)
-
-                    a5_real(iradius,itheta,itime) = (B3_real*a3_real_m(iradius,itheta,itime) - B3_imag*a3_imag_m(iradius,itheta,itime))  &   ! A3*c3 (real)
-                                                  - (B4_real*a4_real_m(iradius,itheta,itime) - B4_imag*a4_imag_m(iradius,itheta,itime))      ! A4*c4 (real)
-                    a5_imag(iradius,itheta,itime) = (B3_imag*a3_real_m(iradius,itheta,itime) + B3_real*a3_imag_m(iradius,itheta,itime))  &   ! A3*c3 (imag)
-                                                  - (B4_imag*a4_real_m(iradius,itheta,itime) + B4_real*a4_imag_m(iradius,itheta,itime))      ! A4*c4 (imag)
-                end do !itheta
-            end do !iradius
+!            ! Adjust steady modes based on Giles' original steady formulation.
+!            itime = 1   ! Time-constant
+!            do iradius = 1,size(a1_real_m,1)
+!                ! Get average parts
+!                density_bar  = density_bar_r(iradius)
+!                vel1_bar     = vel1_bar_r(iradius)
+!                vel2_bar     = vel2_bar_r(iradius)
+!                vel3_bar     = vel3_bar_r(iradius)
+!                pressure_bar = pressure_bar_r(iradius)
+!                c_bar        = sqrt(gam*pressure_bar/density_bar)
+!
+!                ! starting with 2 here because the first mode is treated with 1D characteristics
+!                ntheta = size(a1_real_m,2)
+!                do itheta = 2,ntheta
+!                    ! Account for sign(mode) in the calculation of beta. The second half of the
+!                    ! modes are negative frequencies.
+!                    if (itheta <= (ntheta-1)/2 + 1) then
+!                        beta = sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
+!                    else if (itheta > (ntheta-1)/2 + 1) then
+!                        beta = -sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
+!                    end if
+!
+!                    ! The imaginary part of beta has already been accounted for in
+!                    ! the expressions for B2 and B3
+!                    B3_real = -TWO*vel3_bar*vel2_bar/(vel2_bar*vel2_bar + beta*beta)
+!                    B3_imag = -TWO*beta*vel3_bar/(vel2_bar*vel2_bar + beta*beta)
+!
+!                    B4_real = (beta*beta - vel2_bar*vel2_bar)/(beta*beta + vel2_bar*vel2_bar)
+!                    B4_imag = -TWO*beta*vel2_bar/(beta*beta + vel2_bar*vel2_bar)
+!
+!                    a5_real(iradius,itheta,itime) = (B3_real*a3_real_m(iradius,itheta,itime) - B3_imag*a3_imag_m(iradius,itheta,itime))  &   ! A3*c3 (real)
+!                                                  - (B4_real*a4_real_m(iradius,itheta,itime) - B4_imag*a4_imag_m(iradius,itheta,itime))      ! A4*c4 (real)
+!                    a5_imag(iradius,itheta,itime) = (B3_imag*a3_real_m(iradius,itheta,itime) + B3_real*a3_imag_m(iradius,itheta,itime))  &   ! A3*c3 (imag)
+!                                                  - (B4_imag*a4_real_m(iradius,itheta,itime) + B4_real*a4_imag_m(iradius,itheta,itime))      ! A4*c4 (imag)
+!                end do !itheta
+!            end do !iradius
 
 
         else if (side=='B') then
@@ -722,56 +722,56 @@ contains
             a2_imag = ZERO
             a3_real = ZERO
             a3_imag = ZERO
-            a4_real = ZERO
-            a4_imag = ZERO
+            a5_real = ZERO
+            a5_imag = ZERO
 
             ! Extrapolate outgoing amplitudes
-            a5_real = a5_real_p
-            a5_imag = a5_imag_p
+            a4_real = a4_real_p
+            a4_imag = a4_imag_p
 
 
-            itime = 1   ! Time-constant
-            do iradius = 1,size(a1_real_m,1)
-                ! Get average parts
-                density_bar  = density_bar_r(iradius)
-                vel1_bar     = vel1_bar_r(iradius)
-                vel2_bar     = vel2_bar_r(iradius)
-                vel3_bar     = vel3_bar_r(iradius)
-                pressure_bar = pressure_bar_r(iradius)
-                c_bar        = sqrt(gam*pressure_bar/density_bar)
-
-                ! starting with 2 here because the first mode is treated with 1D characteristics
-                ntheta = size(a1_real_m,2)
-                do itheta = 2,ntheta
-                    ! Account for sign(mode) in the calculation of beta. The second half of the
-                    ! modes are negative frequencies.
-                    if (itheta <= (ntheta-1)/2 + 1) then
-                        beta = sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
-                    else if (itheta > (ntheta-1)/2 + 1) then
-                        beta = -sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
-                    end if
-
-
-                    B3_real = -vel2_bar/(c_bar + vel3_bar)
-                    B3_imag = -beta/(c_bar + vel3_bar)
-
-                    B4_real = (vel2_bar*vel2_bar - beta*beta)/((c_bar + vel3_bar)**TWO)
-                    B4_imag = TWO*vel2_bar*beta/((c_bar + vel3_bar)**TWO)
-
-
-                    a1_real(iradius,itheta,itime) = ZERO
-                    a1_imag(iradius,itheta,itime) = ZERO
-                    a2_real(iradius,itheta,itime) = ZERO
-                    a2_imag(iradius,itheta,itime) = ZERO
-                                          
-                    a3_real(iradius,itheta,itime) = (B3_real*a5_real_p(iradius,itheta,itime) - B3_imag*a5_imag_p(iradius,itheta,itime))
-                    a3_imag(iradius,itheta,itime) = (B3_imag*a5_real_p(iradius,itheta,itime) + B3_real*a5_imag_p(iradius,itheta,itime))
-                                                                                                                 
-                    a4_real(iradius,itheta,itime) = (B4_real*a5_real_p(iradius,itheta,itime) - B4_imag*a5_imag_p(iradius,itheta,itime))
-                    a4_imag(iradius,itheta,itime) = (B4_imag*a5_real_p(iradius,itheta,itime) + B4_real*a5_imag_p(iradius,itheta,itime))
-
-                end do !itheta
-            end do !iradius
+!            itime = 1   ! Time-constant
+!            do iradius = 1,size(a1_real_m,1)
+!                ! Get average parts
+!                density_bar  = density_bar_r(iradius)
+!                vel1_bar     = vel1_bar_r(iradius)
+!                vel2_bar     = vel2_bar_r(iradius)
+!                vel3_bar     = vel3_bar_r(iradius)
+!                pressure_bar = pressure_bar_r(iradius)
+!                c_bar        = sqrt(gam*pressure_bar/density_bar)
+!
+!                ! starting with 2 here because the first mode is treated with 1D characteristics
+!                ntheta = size(a1_real_m,2)
+!                do itheta = 2,ntheta
+!                    ! Account for sign(mode) in the calculation of beta. The second half of the
+!                    ! modes are negative frequencies.
+!                    if (itheta <= (ntheta-1)/2 + 1) then
+!                        beta = sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
+!                    else if (itheta > (ntheta-1)/2 + 1) then
+!                        beta = -sqrt(c_bar*c_bar  -  (vel3_bar*vel3_bar + vel2_bar*vel2_bar))
+!                    end if
+!
+!
+!                    B3_real = -vel2_bar/(c_bar + vel3_bar)
+!                    B3_imag = -beta/(c_bar + vel3_bar)
+!
+!                    B4_real = (vel2_bar*vel2_bar - beta*beta)/((c_bar + vel3_bar)**TWO)
+!                    B4_imag = TWO*vel2_bar*beta/((c_bar + vel3_bar)**TWO)
+!
+!
+!                    a1_real(iradius,itheta,itime) = ZERO
+!                    a1_imag(iradius,itheta,itime) = ZERO
+!                    a2_real(iradius,itheta,itime) = ZERO
+!                    a2_imag(iradius,itheta,itime) = ZERO
+!                                          
+!                    a3_real(iradius,itheta,itime) = (B3_real*a5_real_p(iradius,itheta,itime) - B3_imag*a5_imag_p(iradius,itheta,itime))
+!                    a3_imag(iradius,itheta,itime) = (B3_imag*a5_real_p(iradius,itheta,itime) + B3_real*a5_imag_p(iradius,itheta,itime))
+!                                                                                                                 
+!                    a4_real(iradius,itheta,itime) = (B4_real*a5_real_p(iradius,itheta,itime) - B4_imag*a5_imag_p(iradius,itheta,itime))
+!                    a4_imag(iradius,itheta,itime) = (B4_imag*a5_real_p(iradius,itheta,itime) + B4_real*a5_imag_p(iradius,itheta,itime))
+!
+!                end do !itheta
+!            end do !iradius
 
         else
             call chidg_signal(FATAL,"turbo_interface_steady%apply_nonreflecting_condition: invalid input for argument 'side': 'A' or 'B'")

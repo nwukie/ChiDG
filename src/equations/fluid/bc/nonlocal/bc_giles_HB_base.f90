@@ -873,7 +873,7 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------
-    subroutine primitive_to_eigenmodes(self,worker,bc_comm,             &
+    subroutine primitive_to_eigenmodes(self,worker,bc_comm,side,        &
                                        density_bar_r,                   &
                                        vel1_bar_r,                      &
                                        vel2_bar_r,                      &
@@ -893,6 +893,7 @@ contains
         class(giles_HB_base_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(mpi_comm),             intent(in)      :: bc_comm
+        character(1),               intent(in)      :: side
         type(AD_D),                 intent(in)      :: density_bar_r(:)
         type(AD_D),                 intent(in)      :: vel1_bar_r(:)
         type(AD_D),                 intent(in)      :: vel2_bar_r(:)
@@ -986,7 +987,7 @@ contains
                         lm    = get_lm(itheta,ntheta)
 
                         ! Compute wavenumbers
-                        call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
+                        call self%compute_eigenvalues(worker,side,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
                                                       kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
 
                         ! Zero Tinv
@@ -1127,7 +1128,7 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------
-    subroutine eigenmodes_to_primitive(self,worker,bc_comm,             &
+    subroutine eigenmodes_to_primitive(self,worker,bc_comm,side,        &
                                        density_bar_r, vel1_bar_r, vel2_bar_r, vel3_bar_r, pressure_bar_r, c_bar_r, &
                                        a1_real,       a1_imag,          &
                                        a2_real,       a2_imag,          &
@@ -1142,6 +1143,7 @@ contains
         class(giles_HB_base_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(mpi_comm),             intent(in)      :: bc_comm
+        character(1),               intent(in)      :: side
         type(AD_D),                 intent(in)      :: density_bar_r(:)
         type(AD_D),                 intent(in)      :: vel1_bar_r(:)
         type(AD_D),                 intent(in)      :: vel2_bar_r(:)
@@ -1237,7 +1239,7 @@ contains
                         lm    = get_lm(itheta,ntheta)
 
                         ! Compute wavenumbers
-                        call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
+                        call self%compute_eigenvalues(worker,side,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
                                                       kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
 
                         ! First zero fields
@@ -1391,10 +1393,11 @@ contains
     !!  @date   5/8/2018
     !!
     !--------------------------------------------------------------------------------
-    subroutine compute_eigenvalues(self, worker, lm, omega, vel1_bar, vel2_bar, vel3_bar, c_bar, &
+    subroutine compute_eigenvalues(self, worker, side, lm, omega, vel1_bar, vel2_bar, vel3_bar, c_bar, &
                                    kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
         class(giles_HB_base_t), intent(inout)   :: self
         type(chidg_worker_t),   intent(inout)   :: worker
+        character(1),           intent(in)      :: side
         real(rk),               intent(in)      :: lm
         real(rk),               intent(in)      :: omega
         type(AD_D),             intent(in)      :: vel1_bar
@@ -1416,7 +1419,13 @@ contains
         complex(rk) :: omega_c, pyra_c, k4_c, k5_c
         real(rk)    :: vel2_bar_r, vel3_bar_r, c_bar_r
 
-        pitch  = self%bcproperties%compute('Pitch A',worker%time(),worker%coords())
+        if (side == 'A') then
+            pitch  = self%bcproperties%compute('Pitch A',worker%time(),worker%coords())
+        else if (side == 'B') then
+            pitch  = self%bcproperties%compute('Pitch B',worker%time(),worker%coords())
+        else
+            call chidg_signal_one(FATAL,"bc_giles_HB_base%compute_eigenvalues: invalid value for input 'side'.",side)
+        end if
 
         kz = TWO*PI*lm/pitch(1)
         pyra = (omega - kz*vel2_bar)**TWO - kz*kz*(c_bar**TWO - vel3_bar**TWO)
@@ -2240,8 +2249,6 @@ contains
         else if (side=='B' .and. self%nfaces_a==0) then
             self%theta_a = self%theta_b
         end if
-
-        print*, self%name, self%theta_ref, self%theta_a(1,1), self%theta_b(1,1)
 
     end subroutine initialize_fourier_discretization
     !**************************************************************************************

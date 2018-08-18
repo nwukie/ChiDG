@@ -675,7 +675,7 @@ contains
         print*, 'WARNING: Inconsistent use of Pitch A in eigenvalue calc'
 
         ! Project to eigenmodes
-        call self%primitive_to_eigenmodes(worker,bc_comm,                   &
+        call self%primitive_to_eigenmodes(worker,bc_comm,'A',               &
                                           density_real_m(:,1,1),            &
                                           vel1_real_m(:,1,1),               &
                                           vel2_real_m(:,1,1),               &
@@ -695,7 +695,7 @@ contains
 
 
 
-        call self%primitive_to_eigenmodes(worker,bc_comm,                   &
+        call self%primitive_to_eigenmodes(worker,bc_comm,'A',               &
                                           density_real_m(:,1,1),            &
                                           vel1_real_m(:,1,1),               &
                                           vel2_real_m(:,1,1),               &
@@ -743,7 +743,7 @@ contains
 
 
 
-        call self%eigenmodes_to_primitive(worker,bc_comm,                       &
+        call self%eigenmodes_to_primitive(worker,bc_comm,'A',                   &
                                           density_real_m(:,1,1),                &
                                           vel1_real_m(:,1,1),                   &
                                           vel2_real_m(:,1,1),                   &

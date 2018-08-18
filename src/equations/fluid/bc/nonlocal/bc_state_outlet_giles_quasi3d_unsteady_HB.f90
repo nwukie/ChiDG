@@ -370,6 +370,7 @@ contains
         end if
 
 
+
         !
         ! Store boundary condition state. Q_bc
         !
@@ -554,7 +555,7 @@ contains
         ! Step 1: handle higher-order modes: m /= 0
         !
         ! Project interior to eigenmodes
-        call self%primitive_to_eigenmodes(worker,bc_comm,                   &
+        call self%primitive_to_eigenmodes(worker,bc_comm,'A',               &
                                           density_real_m(:,1,1),            &
                                           vel1_real_m(:,1,1),               &
                                           vel2_real_m(:,1,1),               &
@@ -574,7 +575,7 @@ contains
 
 
         ! Project exterior to eigenmodes
-        call self%primitive_to_eigenmodes(worker,bc_comm,                   &
+        call self%primitive_to_eigenmodes(worker,bc_comm,'A',               &
                                           density_real_m(:,1,1),            &
                                           vel1_real_m(:,1,1),               &
                                           vel2_real_m(:,1,1),               &
@@ -619,7 +620,7 @@ contains
 
 
         ! Convert back to primitive variables
-        call self%eigenmodes_to_primitive(worker,bc_comm,                       &
+        call self%eigenmodes_to_primitive(worker,bc_comm,'A',                   &
                                           density_real_m(:,1,1),                &
                                           vel1_real_m(:,1,1),                   &
                                           vel2_real_m(:,1,1),                   &

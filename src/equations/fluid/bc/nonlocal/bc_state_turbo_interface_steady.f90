@@ -437,18 +437,24 @@ contains
             a1_real_p, a2_real_p, a3_real_p, a4_real_p, a5_real_p,  &
             a1_imag_p, a2_imag_p, a3_imag_p, a4_imag_p, a5_imag_p
 
+        type(AD_D), allocatable, dimension(:)   :: density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar
+
         real(rk),   allocatable, dimension(:,:) :: unorm
 
         print*, 'WARNING: Inconsistent use of Pitch A in eigenvalue calc'
 
+        density_bar  = (density_real_m(:,1,1)  + density_real_p(:,1,1))/TWO
+        vel1_bar     = (vel1_real_m(:,1,1)     + vel1_real_p(:,1,1))/TWO
+        vel2_bar     = (vel2_real_m(:,1,1)     + vel2_real_p(:,1,1))/TWO
+        vel3_bar     = (vel3_real_m(:,1,1)     + vel3_real_p(:,1,1))/TWO
+        pressure_bar = (pressure_real_m(:,1,1) + pressure_real_p(:,1,1))/TWO
+        c_bar        = (c_real_m(:,1,1)        + c_real_p(:,1,1))/TWO
+
+
+
         ! Project interior to eigenmodes
         call self%primitive_to_eigenmodes(worker,bc_comm,'A',               &
-                                          density_real_m(:,1,1),            &
-                                          vel1_real_m(:,1,1),               &
-                                          vel2_real_m(:,1,1),               &
-                                          vel3_real_m(:,1,1),               &
-                                          pressure_real_m(:,1,1),           &
-                                          c_real_m(:,1,1),                  &
+                                          density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, &
                                           density_real_m,  density_imag_m,  &
                                           vel1_real_m,     vel1_imag_m,     &
                                           vel2_real_m,     vel2_imag_m,     &
@@ -462,12 +468,7 @@ contains
 
         ! Project exterior to eigenmodes
         call self%primitive_to_eigenmodes(worker,bc_comm,'B',               &
-                                          density_real_m(:,1,1),            &
-                                          vel1_real_m(:,1,1),               &
-                                          vel2_real_m(:,1,1),               &
-                                          vel3_real_m(:,1,1),               &
-                                          pressure_real_m(:,1,1),           &
-                                          c_real_m(:,1,1),                  &
+                                          density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, &
                                           density_real_p,  density_imag_p,  &
                                           vel1_real_p,     vel1_imag_p,     &
                                           vel2_real_p,     vel2_imag_p,     &
@@ -493,12 +494,7 @@ contains
         a5_imag = ZERO*a1_real_m
 
         call self%apply_nonreflecting_condition(worker,bc_comm,side,        &
-                                                density_real_m(:,1,1),      &
-                                                vel1_real_m(:,1,1),         &
-                                                vel2_real_m(:,1,1),         &
-                                                vel3_real_m(:,1,1),         &
-                                                pressure_real_m(:,1,1),     &
-                                                c_real_m(:,1,1),            &
+                                                density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, &
                                                 a1_real_m,    a1_imag_m,    &
                                                 a2_real_m,    a2_imag_m,    &
                                                 a3_real_m,    a3_imag_m,    &
@@ -532,12 +528,7 @@ contains
 
         ! Convert back to primitive variables
         call self%eigenmodes_to_primitive(worker,bc_comm,side,                  &
-                                          density_real_m(:,1,1),                &
-                                          vel1_real_m(:,1,1),                   &
-                                          vel2_real_m(:,1,1),                   &
-                                          vel3_real_m(:,1,1),                   &
-                                          pressure_real_m(:,1,1),               &
-                                          c_real_m(:,1,1),                      &
+                                          density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, &
                                           a1_real,           a1_imag,           &
                                           a2_real,           a2_imag,           &
                                           a3_real,           a3_imag,           &

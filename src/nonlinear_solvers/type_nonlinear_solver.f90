@@ -6,6 +6,7 @@ module type_nonlinear_solver
     use type_rvector,       only: rvector_t
     use type_ivector,       only: ivector_t
     use type_chidg_data,    only: chidg_data_t
+    use json_module
     implicit none
 
 
@@ -231,6 +232,20 @@ contains
         real(rk)    :: residual_time, residual_norm, matrix_time, total_residual, total_matrix
         integer(ik) :: matrix_iterations
 
+        type(json_core) :: json
+        type(json_value), pointer   :: root, conv,times
+
+        call json%initialize()
+        call json%create_object(root,'')
+        call json%create_object(conv,'convergence')
+        call json%create_object(times,'timings')
+        call json%add(root,conv)
+        call json%add(root,times)
+
+        call json%add(conv, 'residual norm', self%residual_norm%data())
+        call json%add(conv, 'residual time', self%residual_time%data())
+        call json%add(conv, 'matrix iterations', self%matrix_iterations%data())
+        call json%add(conv, 'matrix time', self%matrix_time%data())
 
         ! Report if solver took at least one step
         if (self%newton_iterations%size() > 0) then
@@ -269,6 +284,11 @@ contains
                 total_matrix   = total_matrix   + self%matrix_time%at(i)
             end do
 
+            call json%add(times, 'total time', self%total_time%at(1))
+            call json%add(times, 'total residual time', total_residual)
+            call json%add(times, 'total matrix time', total_matrix)
+            call json%print(root,'chidg.json')
+            call json%destroy(root)
 
 
             call write_line(' ')

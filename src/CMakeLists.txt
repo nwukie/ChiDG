@@ -22,6 +22,7 @@ add_subdirectory(drivers)
 add_subdirectory(mesh_motion)
 add_subdirectory(tutorials)
 add_subdirectory(interfaces)
+add_subdirectory(json_fortran)
 
 # Propagate lib_srcs list to parent directory
 add_lib_sources() 

@@ -43,7 +43,7 @@ module bc_giles_HB_base
     !---------------------------------------------------------------------------------
     type, public, abstract, extends(bc_state_t) :: giles_HB_base_t
 
-        integer(ik) :: nr = 10
+        integer(ik) :: nr = 14
         integer(ik) :: nfourier_space = 20
 
         real(rk),               allocatable :: r(:)
@@ -2219,7 +2219,12 @@ contains
                 ! Abort if we didn't find a donor
                 user_msg = "bc_giles_HB_base%initialize_fourier_discretization: &
                             no donor element found for Fourier discretization node."
-                if (.not. donor_found) call chidg_signal(FATAL,user_msg)
+                if (.not. donor_found) then
+                    print*, 'Side: ', side
+                    print*, 'Offset: ', try_offset
+                    print*, 'iradius, itheta: ', iradius, itheta
+                    call chidg_signal_three(FATAL,user_msg,node(1),node(2),node(3))
+                end if
 
             end do !itheta
 

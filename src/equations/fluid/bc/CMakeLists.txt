@@ -3,6 +3,7 @@ add_subdirectory(nonlocal)
 add_lib_sources(
                 bc_state_fluid_averaging.f90
                 bc_state_inlet_total.f90
+                bc_state_inlet_total_profile.f90
                 bc_state_inlet_characteristic.f90
                 bc_state_outlet_constant_pressure.f90
                 bc_state_outlet_linear_pressure.f90
@@ -10,6 +11,7 @@ add_lib_sources(
                 bc_state_outlet_neumann_pressure_fd.f90
                 bc_state_outlet_neumann_pressure_localdg.f90
                 bc_state_outlet_neumann_pressure_localdg_new.f90
+                bc_state_outlet_neumann_pressure_localdg_new_point.f90
                 bc_state_outlet_neumann_pressure_globaldg.f90
                 bc_state_outlet_neumann_LODI_localdg.f90
                 bc_state_wall.f90

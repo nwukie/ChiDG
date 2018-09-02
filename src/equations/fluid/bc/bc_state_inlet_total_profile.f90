@@ -1,4 +1,4 @@
-module bc_state_inlet_total
+module bc_state_inlet_total_profile
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO, ZERO, HALF
@@ -8,6 +8,7 @@ module bc_state_inlet_total
     use type_properties,        only: properties_t
     use type_point,             only: point_t
     use mpi_f08,                only: mpi_comm
+    use mod_interpolation,      only: interpolate
     use ieee_arithmetic
     use DNAD_D
     implicit none
@@ -17,17 +18,24 @@ module bc_state_inlet_total
     !!      - Extrapolate interior variables to be used for calculating the boundary flux.
     !!  
     !!  @author Nathan A. Wukie
-    !!  @date   2/8/2016
+    !!  @date   9/2/2018
     !!
     !-------------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: inlet_total_t
+    type, public, extends(bc_state_t) :: inlet_total_profile_t
+
+        real(rk), allocatable   :: r(:)
+        real(rk), allocatable   :: p0(:)
+        real(rk), allocatable   :: T0(:)
+        real(rk), allocatable   :: n1(:)
+        real(rk), allocatable   :: n2(:)
+        real(rk), allocatable   :: n3(:)
 
     contains
 
         procedure   :: init
         procedure   :: compute_bc_state
 
-    end type inlet_total_t
+    end type inlet_total_profile_t
     !*******************************************************************************************
 
 
@@ -41,41 +49,46 @@ contains
 
     !>
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/29/2016
+    !!  @author Nathan A. Wukie
+    !!  @date   9/2/2018
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(inlet_total_t),   intent(inout) :: self
-        
-        !
+        class(inlet_total_profile_t),   intent(inout) :: self
+
+        integer(ik)                 :: nr
+        real(rk), dimension(1000)   :: r, p0, T0, n1, n2, n3
+        integer             :: unit, msg
+        logical             :: file_exists
+
+        namelist /profile/ nr, r, p0, T0, n1, n2, n3
+
         ! Set name, family
-        !
-        call self%set_name("Inlet - Total")
+        call self%set_name("Inlet - Total Profile")
         call self%set_family("Inlet")
 
 
-
         !
-        ! Add functions
+        ! Check if input from 'models.nml' is available.
+        !   1: if available, read and set self%mu
+        !   2: if not available, do nothing and mu retains default value
         !
-        call self%bcproperties%add('Total Pressure',       'Required')
-        call self%bcproperties%add('Total Temperature',    'Required')
-        !call self%bcproperties%add('Density Perturbation', 'Required')
+        inquire(file='inlet_total_profile.nml', exist=file_exists)
+        if (file_exists) then
+            open(newunit=unit,form='formatted',file='inlet_total_profile.nml')
+            read(unit,nml=profile,iostat=msg)
+            if (msg /= 0) call chidg_signal_one(FATAL,'inlet_total_profile%init: error reading inlet_total_profile.nml',msg)
+            close(unit)
+        else
+            call chidg_signal(FATAL,'inlet_total_profile%init: could not find inlet_total_profile.nml')
+        end if
 
-        call self%bcproperties%add('Normal-1',         'Required')
-        call self%bcproperties%add('Normal-2',         'Required')
-        call self%bcproperties%add('Normal-3',         'Required')
-
-
-        !
-        ! Set default values
-        !
-        call self%set_fcn_option('Total Pressure',    'val', 110000._rk)
-        call self%set_fcn_option('Total Temperature', 'val', 300._rk)
-        call self%set_fcn_option('Normal-1', 'val', 1._rk)
-        call self%set_fcn_option('Normal-2', 'val', 0._rk)
-        call self%set_fcn_option('Normal-3', 'val', 0._rk)
+        self%r  = r(1:nr)        
+        self%p0 = p0(1:nr)        
+        self%T0 = T0(1:nr)        
+        self%n1 = n1(1:nr)        
+        self%n2 = n2(1:nr)        
+        self%n3 = n3(1:nr)        
 
     end subroutine init
     !********************************************************************************
@@ -92,12 +105,11 @@ contains
     !>
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   9/8/2016
-    !!
+    !!  @date   9/2/2018
     !!
     !-----------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(inlet_total_t),   intent(inout)   :: self
+        class(inlet_total_profile_t),   intent(inout)   :: self
         type(chidg_worker_t),   intent(inout)   :: worker
         class(properties_t),    intent(inout)   :: prop
         type(mpi_comm),         intent(in)      :: bc_COMM
@@ -125,14 +137,21 @@ contains
         logical :: converged
 
 
-        ! Get boundary condition Total Temperature, Total Pressure, and normal vector
-        PT   = self%bcproperties%compute('Total Pressure',        worker%time(), worker%coords())
-        TT   = self%bcproperties%compute('Total Temperature',     worker%time(), worker%coords())
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        r = worker%coordinate('1','boundary')
+        PT = r
+        TT = r
+        n1 = r
+        n2 = r
+        n3 = r
+        do igq = 1,size(r)
+            PT(igq) = interpolate('linear',self%r,self%p0,r(igq))
+            TT(igq) = interpolate('linear',self%r,self%T0,r(igq))
+            n1(igq) = interpolate('linear',self%r,self%n1,r(igq))
+            n2(igq) = interpolate('linear',self%r,self%n2,r(igq))
+            n3(igq) = interpolate('linear',self%r,self%n3,r(igq))
+        end do
 
-        ! Get user-input normal vector and normalize
-        n1 = self%bcproperties%compute('Normal-1', worker%time(), worker%coords())
-        n2 = self%bcproperties%compute('Normal-2', worker%time(), worker%coords())
-        n3 = self%bcproperties%compute('Normal-3', worker%time(), worker%coords())
 
         !   Explicit allocation to handle GCC bug:
         !       GCC/GFortran Bugzilla Bug 52162 
@@ -187,19 +206,6 @@ contains
         w_m = mom3_m/density_m
 
 
-        ! Radial equilibrium START
-        print*, 'Radial equilibrium inlet profile!!!!!!'
-        ! Compute normal vector
-        K0      = 150._rk
-        u_axial = 125._rk
-        !alpha = atan2(K0/r,u_axial)
-        alpha = atan2(K0/u_axial,r)
-        
-        n1 = ZERO
-        n2 = sin(alpha)
-        n3 = cos(alpha)
-        ! Radial equilibrium END
-
         ! Compute velocity magnitude squared from interior state
         vmag2_m = (u_m*u_m) + (v_m*v_m) + (w_m*w_m)
         vmag = sqrt(vmag2_m)
@@ -217,10 +223,6 @@ contains
 
         ! Compute boundary condition density from ideal gas law
         density_bc = p_bc/(T_bc*Rgas)
-
-
-        ! Compute perturbation quantities
-        !density_bc = density_bc + drho
 
 
         ! Compute bc momentum
@@ -280,4 +282,4 @@ contains
 
 
 
-end module bc_state_inlet_total
+end module bc_state_inlet_total_profile

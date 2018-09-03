@@ -577,6 +577,7 @@ contains
         logical :: enforce_value
 
         real(rk),   allocatable, dimension(:) :: p_avg_user, gradn_p_user, grad1_p_user, grad2_p_user, grad3_p_user
+        real(rk)    :: stabilization
 
         type(AD_D)  :: delta_p, p_m_avg
 
@@ -618,6 +619,8 @@ contains
         else 
             delta_p = ZERO*p_m_avg
         end if
+        print*, 'Delta p: ', delta_p%x_ad_
+        print*, 'Element info: ', worker%element_info%idomain_g, worker%element_info%ielement_g
 
 
 
@@ -694,7 +697,8 @@ contains
                 grad3_p = grad3_p_user
 
                 diff = (p_sigma - p)
-                diff = delta_p
+                diff = 4000.*delta_p
+                !diff = delta_p
 
             end if
 
@@ -718,9 +722,10 @@ contains
 
 
             ! Penalize gradient with lift
-            grad1_p = grad1_p  +  lift_face_1
-            grad2_p = grad2_p  +  lift_face_2
-            grad3_p = grad3_p  +  lift_face_3
+            stabilization = 1.0_rk
+            grad1_p = grad1_p  +  stabilization*lift_face_1
+            grad2_p = grad2_p  +  stabilization*lift_face_2
+            grad3_p = grad3_p  +  stabilization*lift_face_3
 
             integrand = weights*( (grad1_p-grad1_sigma)*worker%normal(1) +  &
                                   (grad2_p-grad2_sigma)*worker%normal(2) +  &

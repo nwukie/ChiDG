@@ -29,10 +29,12 @@ module bc_state_inlet_total_profile
         real(rk), allocatable   :: n1(:)
         real(rk), allocatable   :: n2(:)
         real(rk), allocatable   :: n3(:)
+        logical :: profile_initialized
 
     contains
 
         procedure   :: init
+        procedure   :: read_profile
         procedure   :: compute_bc_state
 
     end type inlet_total_profile_t
@@ -56,16 +58,36 @@ contains
     subroutine init(self)
         class(inlet_total_profile_t),   intent(inout) :: self
 
-        integer(ik)                 :: nr
-        real(rk), dimension(1000)   :: r, p0, T0, n1, n2, n3
-        integer             :: unit, msg
-        logical             :: file_exists
-
-        namelist /profile/ nr, r, p0, T0, n1, n2, n3
-
         ! Set name, family
         call self%set_name("Inlet - Total Profile")
         call self%set_family("Inlet")
+
+        self%profile_initialized = .false.
+
+    end subroutine init
+    !********************************************************************************
+
+
+    
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   9/3/2018
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine read_profile(self,worker,prop,bc_comm)
+        class(inlet_total_profile_t),   intent(inout)   :: self
+        type(chidg_worker_t),   intent(inout)   :: worker
+        class(properties_t),    intent(inout)   :: prop
+        type(mpi_comm),         intent(in)      :: bc_COMM
+
+
+        integer(ik)                 :: nr
+        real(rk), dimension(1000)   :: r, p0, T0, n1, n2, n3
+        integer                     :: unit, msg
+        logical                     :: file_exists
+
+        namelist /profile/ nr, r, p0, T0, n1, n2, n3
 
 
         !
@@ -90,15 +112,10 @@ contains
         self%n2 = n2(1:nr)        
         self%n3 = n3(1:nr)        
 
-    end subroutine init
+        self%profile_initialized = .true.
+
+    end subroutine read_profile
     !********************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -107,7 +124,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   9/2/2018
     !!
-    !-----------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(inlet_total_profile_t),   intent(inout)   :: self
         type(chidg_worker_t),   intent(inout)   :: worker
@@ -136,6 +153,7 @@ contains
 
         logical :: converged
 
+        if (.not. self%profile_initialized) call self%read_profile(worker,prop,bc_COMM)
 
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         r = worker%coordinate('1','boundary')

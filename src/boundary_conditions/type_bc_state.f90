@@ -633,14 +633,15 @@ contains
                         ! Broadcast auxiliary data
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns,      1, MPI_INTEGER, iproc, bc_comm, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s,   1, MPI_INTEGER, iproc, bc_comm, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area, 1, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area, 1, MPI_REAL8,   iproc, bc_comm, ierr)
 
                         ngq = size(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def,1)
-                        call MPI_Bcast(ngq,                                                                          1, MPI_INTEGER, iproc, bc_comm, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas,          ngq, MPI_INTEGER, iproc, bc_comm, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1),      ngq, MPI_INTEGER, iproc, bc_comm, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2),      ngq, MPI_INTEGER, iproc, bc_comm, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3),      ngq, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(ngq,                                                               1,     MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas, ngq,   MPI_REAL8,   iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def,  ngq*3, MPI_REAL8,   iproc, bc_comm, ierr)
+!                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1),      ngq, MPI_INTEGER, iproc, bc_comm, ierr)
+!                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2),      ngq, MPI_INTEGER, iproc, bc_comm, ierr)
+!                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3),      ngq, MPI_INTEGER, iproc, bc_comm, ierr)
 
                         ! Send information to construct mesh%parallel_element entry
                         send_size_a = size(mesh%domain(idomain_l)%elems(ielement_l)%connectivity)
@@ -681,17 +682,18 @@ contains
                     ! Receive auxiliary data
                     call MPI_BCast(neqns,     1, MPI_INTEGER, iproc, bc_COMM, ierr)
                     call MPI_BCast(nterms_s,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(total_area,1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                    call MPI_BCast(total_area,1, MPI_REAL8,   iproc, bc_COMM, ierr)
 
                     call MPI_BCast(ngq, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
                     if (allocated(areas) ) deallocate(areas, interp_coords_def)
                     allocate(areas(ngq), interp_coords_def(ngq,3), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
-                    call MPI_BCast(areas,                  ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(interp_coords_def(:,1), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(interp_coords_def(:,2), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(interp_coords_def(:,3), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    call MPI_BCast(areas,             ngq,   MPI_REAL8, iproc, bc_COMM, ierr)
+                    call MPI_BCast(interp_coords_def, ngq*3, MPI_REAL8, iproc, bc_COMM, ierr)
+                    !call MPI_BCast(interp_coords_def(:,1), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    !call MPI_BCast(interp_coords_def(:,2), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    !call MPI_BCast(interp_coords_def(:,3), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
 
                     ! Receive information to construct mesh%parallel_element entry
                     ! element_location = [idomain_g, idomain_l, ielement_g, ielement_l, iproc]

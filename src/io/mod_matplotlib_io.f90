@@ -1,7 +1,7 @@
 module mod_matplotlib_io
 #include<messenger.h>
     use mod_kinds,          only: rk,ik,rdouble
-    use mod_constants,      only: ZERO,ONE,HALF,TWO,OUTPUT_RES
+    use mod_constants,      only: ZERO,ONE,HALF,TWO,OUTPUT_RES,NO_PROC
     use type_point,         only: point_t
     use type_chidg_data,    only: chidg_data_t
     use type_chidg_vector,  only: chidg_vector_t
@@ -98,7 +98,7 @@ contains
         ! Generate donor point coordinates
         !
         do ipt = 1,npts
-            receivers(ipt) = face_info(0_ik,0_ik,0_ik,0_ik,0_ik)
+            receivers(ipt) = face_info(0_ik,0_ik,0_ik,0_ik,0_ik,NO_PROC)
             !call find_gq_donor(data%mesh,gq_nodes(ipt),point_t(0._rk,0._rk,0._rk),receivers(ipt),donors(ipt),donor_coord, donor_found)
             call find_gq_donor(data%mesh,                                               &
                                [gq_nodes(ipt)%c1_,gq_nodes(ipt)%c2_,gq_nodes(ipt)%c3_], &

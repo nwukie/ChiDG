@@ -5,13 +5,13 @@ module bc_state_outlet_neumann_pressure_localdg_new
     use mod_fluid,              only: gam, Rgas
 
     use type_mesh,              only: mesh_t
-    use type_face_info,         only: face_info_t
+    use type_face_info,         only: face_info_t, face_info_constructor
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_point,             only: point_t
     use mpi_f08,                only: mpi_comm
-    use mod_interpolate,        only: interpolate_face_autodiff, interpolate_element_autodiff
+    use mod_interpolate,        only: interpolate_face_autodiff, interpolate_element_autodiff, interpolate_general_autodiff
     use mod_fgmres_standard,    only: fgmres_autodiff
     use mod_inv,                only: inv
     use ieee_arithmetic
@@ -309,86 +309,6 @@ contains
     end subroutine compute_local_linearization
     !**********************************************************************************************
 
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   3/13/2018
-!    !!
-!    !--------------------------------------------------------------------------------
-!    subroutine compute_local_linearization(self,worker,bc_comm,p_avg)
-!        class(outlet_neumann_pressure_localdg_new_t),   intent(inout)   :: self
-!        type(chidg_worker_t),                           intent(inout)   :: worker
-!        type(mpi_comm),                                 intent(in)      :: bc_comm
-!        type(AD_D),                                     intent(in)      :: p_avg
-!
-!
-!        type(AD_D), allocatable, dimension(:)   ::  &
-!            zero_face, R_modes_i, R_modes_p, p_modes_perturb, tmp, p_modes
-!
-!        real(rk),   allocatable, dimension(:,:) :: dRdp, inv_dRdp
-!        real(rk)    :: pert
-!        integer(ik) :: idomain_l, ielement_l, iface, nterms_s, group_ID, &
-!                       patch_ID, face_ID, ierr, i
-!
-!
-!        ! Get location on domain
-!        idomain_l  = worker%element_info%idomain_l
-!        ielement_l = worker%element_info%ielement_l
-!        iface      = worker%iface
-!        nterms_s   = worker%mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
-!
-!
-!        if (.not. worker%mesh%domain(idomain_l)%elems(ielement_l)%bc_initialized) then
-!
-!            ! Get location on bc_patch_group
-!            group_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
-!            patch_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
-!            face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
-!
-!
-!            ! Initialize empty array with derivatives allocated
-!            zero_face = worker%get_field('Density','value','face interior')
-!            zero_face = ZERO
-!
-!
-!            ! Initialize p_modes storage with derivatives
-!            nterms_s = worker%mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
-!            allocate(p_modes(nterms_s), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!            p_modes(:) = zero_face(1)
-!            if (size(p_modes) /= nterms_s) call chidg_signal(FATAL,'outlet_neumann_pressure_localdg_new: converge_p Error 1.')
-!
-!
-!            ! Allocate jacobian matrix
-!            allocate(dRdp(nterms_s,nterms_s), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!
-!            ! Construct linearization via finite-difference
-!            ! approximation of the jacobian matrix.
-!            R_modes_i = self%compute_local_residual(worker,bc_comm,p_modes,p_avg)
-!            pert = 1.e-8_rk
-!            do i = 1,size(p_modes)
-!                p_modes_perturb = p_modes
-!                p_modes_perturb(i) = p_modes_perturb(i) + pert
-!                R_modes_p = self%compute_local_residual(worker,bc_comm,p_modes_perturb,p_avg)
-!
-!                tmp = (R_modes_p - R_modes_i)/pert
-!                dRdp(:,i) = tmp(:)%x_ad_
-!            end do
-!
-!            ! Invert jacobian
-!            inv_dRdp = inv(dRdp)
-!                    
-!            ! Store and register initialized
-!            worker%mesh%domain(idomain_l)%elems(ielement_l)%bc = inv_dRdp
-!            worker%mesh%domain(idomain_l)%elems(ielement_l)%bc_initialized = .true.
-!
-!        end if ! .not. initialized
-!
-!
-!    end subroutine compute_local_linearization
-!    !**********************************************************************************************
 
 
 
@@ -415,8 +335,9 @@ contains
         integer(ik) :: ipatch, iface_bc, idomain_l, ielement_l, iface, ierr, itime, &
                        idensity, imom1, imom2, imom3, ienergy, group_ID, patch_ID, face_ID, &
                        icoupled, idomain_g_coupled, idomain_l_coupled, ielement_g_coupled,  &
-                       ielement_l_coupled, iface_coupled
+                       ielement_l_coupled, iface_coupled, proc_coupled, pelem_ID
         real(rk)    :: face_area, total_area
+        real(rk), allocatable   :: nodes(:,:)
 
 
 
@@ -448,13 +369,9 @@ contains
             ielement_g_coupled = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icoupled)
             ielement_l_coupled = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled)
             iface_coupled      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(     icoupled)
+            proc_coupled       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(      icoupled)
 
-            face_info%idomain_g  = idomain_g_coupled
-            face_info%idomain_l  = idomain_l_coupled
-            face_info%ielement_g = ielement_g_coupled
-            face_info%ielement_l = ielement_l_coupled
-            face_info%iface      = iface_coupled
-
+            face_info = face_info_constructor(idomain_g_coupled,idomain_l_coupled,ielement_g_coupled,ielement_l_coupled,iface_coupled,proc_coupled)
 
             ! Get solution
             idensity = 1
@@ -464,15 +381,28 @@ contains
             ienergy  = 5
             itime    = 1
 
-            ! Interpolate coupled element solution on face of coupled element
-            density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, idensity, itime, 'value', ME)
-            mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom1,    itime, 'value', ME)
-            mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom2,    itime, 'value', ME)
-            mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom3,    itime, 'value', ME)
-            energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, ienergy,  itime, 'value', ME)
+!            ! Interpolate coupled element solution on face of coupled element
+!            density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, idensity, itime, 'value', ME)
+!            mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom1,    itime, 'value', ME)
+!            mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom2,    itime, 'value', ME)
+!            mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom3,    itime, 'value', ME)
+!            energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, ienergy,  itime, 'value', ME)
+
+            nodes = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%quad_pts
+            density = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,idensity,itime,'value',nodes=nodes)
+            mom1    = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,imom1,   itime,'value',nodes=nodes)
+            mom2    = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,imom2,   itime,'value',nodes=nodes)
+            mom3    = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,imom3,   itime,'value',nodes=nodes)
+            energy  = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,ienergy, itime,'value',nodes=nodes)
+
 
             if (worker%coordinate_system() == 'Cylindrical') then
-                mom2 = mom2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%interp_coords_def(:,1)
+                if (proc_coupled == IRANK) then
+                    mom2 = mom2 / worker%mesh%domain(idomain_l_coupled)%faces(ielement_l_coupled,iface_coupled)%interp_coords_def(:,1)
+                else
+                    pelem_ID = worker%mesh%find_parallel_element(idomain_g_coupled,ielement_g_coupled)
+                    mom2 = mom2 / worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%quad_pts(:,1)
+                end if
             end if
             
             ! Compute quantities for averaging
@@ -651,7 +581,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   3/6/2018
     !!
-    !------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine compute_pressure_gradient(worker,grad1_p, grad2_p, grad3_p) 
         type(chidg_worker_t),                   intent(inout)   :: worker
         type(AD_D), allocatable, dimension(:),  intent(inout)   :: grad1_p 

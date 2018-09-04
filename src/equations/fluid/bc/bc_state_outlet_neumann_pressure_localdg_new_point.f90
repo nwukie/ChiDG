@@ -619,8 +619,6 @@ contains
         else 
             delta_p = ZERO*p_m_avg
         end if
-        print*, 'Delta p: ', delta_p%x_ad_
-        print*, 'Element info: ', worker%element_info%idomain_g, worker%element_info%ielement_g
 
 
 
@@ -697,8 +695,7 @@ contains
                 grad3_p = grad3_p_user
 
                 diff = (p_sigma - p)
-                diff = 4000.*delta_p
-                !diff = delta_p
+                diff = delta_p
 
             end if
 

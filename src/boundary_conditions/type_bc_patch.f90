@@ -358,7 +358,8 @@ contains
         real(rk),           intent(in)      :: areas(:)
         real(rk),           intent(in)      :: quad_pts(:,:)
 
-        call self%coupling(face_ID)%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,point_t(quad_pts))
+        !call self%coupling(face_ID)%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,point_t(quad_pts))
+        call self%coupling(face_ID)%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
     
     end subroutine set_coupled_element_data
     !***********************************************************************************

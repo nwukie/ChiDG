@@ -2,7 +2,7 @@ module bc_state_outlet_giles_quasi3d_steady
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL,    &
-                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, PI
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, PI, NO_PROC
     use mod_fluid,              only: gam
     use mod_interpolation,      only: interpolate_linear, interpolate_linear_ad
     use mod_gridspace,          only: linspace
@@ -867,7 +867,7 @@ contains
                 call find_gq_donor(mesh,                                    &
                                    node,                                    &
                                    [ZERO,ZERO,ZERO],                        &
-                                   face_info_constructor(0,0,0,0,0),        &   ! we don't really have a receiver face
+                                   face_info_constructor(0,0,0,0,0,NO_PROC),        &   ! we don't really have a receiver face
                                    self%donor(iradius,itheta),              &
                                    self%donor_node(iradius,itheta,1:3),    &
                                    donor_found)
@@ -877,7 +877,7 @@ contains
                     call find_gq_donor(mesh,                                    &
                                        node,                                    &
                                        try_offset,                              &
-                                       face_info_constructor(0,0,0,0,0),        &   ! we don't really have a receiver face
+                                       face_info_constructor(0,0,0,0,0,NO_PROC),        &   ! we don't really have a receiver face
                                        self%donor(iradius,itheta),              &
                                        self%donor_node(iradius,itheta,1:3),    &
                                        donor_found)
@@ -892,7 +892,7 @@ contains
                     call find_gq_donor_parallel(mesh,                                   &
                                                 node,                                   &
                                                 [ZERO,ZERO,ZERO],                       &
-                                                face_info_constructor(0,0,0,0,0),       &   ! we don't really have a receiver face
+                                                face_info_constructor(0,0,0,0,0,NO_PROC),       &   ! we don't really have a receiver face
                                                 self%donor(iradius,itheta),             &
                                                 self%donor_node(iradius,itheta,1:3),   &
                                                 donor_found)
@@ -904,7 +904,7 @@ contains
                     call find_gq_donor_parallel(mesh,                                   &
                                                 node,                                   &
                                                 try_offset,                             &
-                                                face_info_constructor(0,0,0,0,0),       &   ! we don't really have a receiver face
+                                                face_info_constructor(0,0,0,0,0,NO_PROC),       &   ! we don't really have a receiver face
                                                 self%donor(iradius,itheta),             &
                                                 self%donor_node(iradius,itheta,1:3),   &
                                                 donor_found)

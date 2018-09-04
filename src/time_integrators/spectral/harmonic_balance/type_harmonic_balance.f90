@@ -2,7 +2,7 @@ module type_harmonic_balance
 #include<messenger.h>
     use messenger,                      only: write_line
     use mod_kinds,                      only: rk,ik
-    use mod_constants,                  only: NO_FACE, NO_ID, ZERO
+    use mod_constants,                  only: NO_FACE, NO_ID, ZERO, NO_PROC
     use mod_spatial,                    only: update_space
 
     use type_time_integrator_spectral,  only: time_integrator_spectral_t
@@ -198,7 +198,7 @@ contains
                                          data%mesh%domain(idom)%elems(ielem)%idomain_l,  &
                                          data%mesh%domain(idom)%elems(ielem)%ielement_g, &
                                          data%mesh%domain(idom)%elems(ielem)%ielement_l, &
-                                         NO_FACE)
+                                         NO_FACE, NO_PROC)
 
 
                         call seed%init(data%mesh%domain(idom)%elems(ielem)%idomain_g,  &

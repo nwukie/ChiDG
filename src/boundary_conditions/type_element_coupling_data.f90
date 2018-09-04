@@ -36,7 +36,8 @@ module type_element_coupling_data
         integer(ik)                 :: nterms_s    = 0
         real(rk)                    :: total_area  = ZERO
         real(rk),       allocatable :: areas(:)
-        type(point_t),  allocatable :: quad_pts(:)
+        real(rk),       allocatable :: quad_pts(:,:)
+        !type(point_t),  allocatable :: quad_pts(:)
 
     contains
 
@@ -121,7 +122,8 @@ contains
         integer(ik),                    intent(in)      :: nterms_s
         real(rk),                       intent(in)      :: total_area
         real(rk),                       intent(in)      :: areas(:)
-        type(point_t),                  intent(in)      :: quad_pts(:)
+        real(rk),                       intent(in)      :: quad_pts(:,:)
+        !type(point_t),                  intent(in)      :: quad_pts(:)
 
         self%neqns      = neqns
         self%nterms_s   = nterms_s

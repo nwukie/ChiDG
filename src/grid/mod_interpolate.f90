@@ -33,7 +33,7 @@ module mod_interpolate
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: CHIMERA, INTERIOR, BOUNDARY, &
-                                      ME, NEIGHBOR, ONE, ZERO
+                                      ME, NEIGHBOR, ONE, ZERO, NO_PROC
                                   
     use mod_chidg_mpi,          only: IRANK
     use mod_DNAD_tools,         only: compute_neighbor_face
@@ -737,13 +737,13 @@ contains
                 !
                 ! Try processor-LOCAL elements
                 !
-                call find_gq_donor(mesh,                                &
-                                   nodes(inode,1:3),                    &
-                                   [ZERO,ZERO,ZERO],                    &
-                                   face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
-                                   donor,                               &
-                                   donor_node,                          &
-                                   donor_found,                         &
+                call find_gq_donor(mesh,                                    &
+                                   nodes(inode,1:3),                        &
+                                   [ZERO,ZERO,ZERO],                        &
+                                   face_info_constructor(0,0,0,0,0,NO_PROC),&   ! we don't really have a receiver face
+                                   donor,                                   &
+                                   donor_node,                              &
+                                   donor_found,                             &
                                    donor_volume=donor_volume)
 
                 !
@@ -751,13 +751,13 @@ contains
                 ! is present
                 !
                 if ( (.not. donor_found) .and. (present(try_offset)) ) then
-                    call find_gq_donor(mesh,                                &
-                                       nodes(inode,1:3),                    &
-                                       try_offset,                          &
-                                       face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
-                                       donor,                               &
-                                       donor_node,                          &
-                                       donor_found,                         &
+                    call find_gq_donor(mesh,                                    &
+                                       nodes(inode,1:3),                        &
+                                       try_offset,                              &
+                                       face_info_constructor(0,0,0,0,0,NO_PROC),&   ! we don't really have a receiver face
+                                       donor,                                   &
+                                       donor_node,                              &
+                                       donor_found,                             &
                                        donor_volume=donor_volume)
 
                 end if
@@ -768,13 +768,13 @@ contains
                 ! Try PARALLEL_ELEMENTS if donor not found amongst local elements
                 !
                 if (.not. donor_found) then
-                    call find_gq_donor_parallel(mesh,                               &
-                                                nodes(inode,1:3),                   &
-                                                [ZERO,ZERO,ZERO],                   &
-                                                face_info_constructor(0,0,0,0,0),   &   ! we don't really have a receiver face
-                                                donor,                              &
-                                                donor_node,                         &
-                                                donor_found,                        &
+                    call find_gq_donor_parallel(mesh,                                       &
+                                                nodes(inode,1:3),                           &
+                                                [ZERO,ZERO,ZERO],                           &
+                                                face_info_constructor(0,0,0,0,0,NO_PROC),   &   ! we don't really have a receiver face
+                                                donor,                                      &
+                                                donor_node,                                 &
+                                                donor_found,                                &
                                                 donor_volume=donor_volume)
                 end if
 
@@ -784,18 +784,18 @@ contains
                 ! try_offset is present
                 !
                 if ( (.not. donor_found) .and. (present(try_offset)) ) then
-                    call find_gq_donor_parallel(mesh,                               &
-                                                nodes(inode,1:3),                   &
-                                                try_offset,                         &
-                                                face_info_constructor(0,0,0,0,0),   &   ! we don't really have a receiver face
-                                                donor,                              &
-                                                donor_node,                         &
-                                                donor_found,                        &
+                    call find_gq_donor_parallel(mesh,                                       &
+                                                nodes(inode,1:3),                           &
+                                                try_offset,                                 &
+                                                face_info_constructor(0,0,0,0,0,NO_PROC),   &   ! we don't really have a receiver face
+                                                donor,                                      &
+                                                donor_node,                                 &
+                                                donor_found,                                &
                                                 donor_volume=donor_volume)
                 end if 
 
                 ! Abort if we didn't find a donor
-                if (.not. donor_found) call chidg_signal(FATAL,"interpolate_general_autodiff: no donor element found for interpolation node.")
+                if (.not. donor_found) call chidg_signal_three(FATAL,"interpolate_general_autodiff: no donor element found for interpolation node.",nodes(inode,1),nodes(inode,2),nodes(inode,3))
 
             end if ! Find Donor
 
@@ -1261,9 +1261,6 @@ contains
                 case default
                     call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
             end select
-
-
-
 
         elseif ( interpolation_source == NEIGHBOR ) then
 

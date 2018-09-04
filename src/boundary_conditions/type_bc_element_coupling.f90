@@ -213,7 +213,7 @@ contains
         integer(ik),                    intent(in)      :: nterms_s
         real(rk),                       intent(in)      :: total_area
         real(rk),                       intent(in)      :: areas(:)
-        type(point_t),                  intent(in)      :: quad_pts(:)
+        real(rk),                       intent(in)      :: quad_pts(:,:)
 
         integer(ik)                 :: elem_ID
 

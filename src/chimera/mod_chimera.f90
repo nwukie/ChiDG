@@ -173,7 +173,7 @@ contains
                        neqns_list, nterms_s_list, nterms_c_list, iproc_list, eqn_ID_list,       &
                        local_domain_g, parallel_domain_g, donor_domain_g, donor_index,          &
                        donor_ID, send_ID
-        integer(ik) :: receiver_indices(5), parallel_indices(9)
+        integer(ik) :: receiver_indices(6), parallel_indices(9)
 
 
         real(rk)                :: donor_metric(3,3), parallel_metric(3,3)
@@ -228,11 +228,18 @@ contains
                         !
                         ! Get location of the face receiving Chimera data
                         !
-                        receiver%idomain_g  = mesh%domain(idom)%chimera%recv(ichimera_face)%idomain_g
-                        receiver%idomain_l  = mesh%domain(idom)%chimera%recv(ichimera_face)%idomain_l
-                        receiver%ielement_g = mesh%domain(idom)%chimera%recv(ichimera_face)%ielement_g
-                        receiver%ielement_l = mesh%domain(idom)%chimera%recv(ichimera_face)%ielement_l
-                        receiver%iface      = mesh%domain(idom)%chimera%recv(ichimera_face)%iface
+!                        receiver%idomain_g  = mesh%domain(idom)%chimera%recv(ichimera_face)%idomain_g
+!                        receiver%idomain_l  = mesh%domain(idom)%chimera%recv(ichimera_face)%idomain_l
+!                        receiver%ielement_g = mesh%domain(idom)%chimera%recv(ichimera_face)%ielement_g
+!                        receiver%ielement_l = mesh%domain(idom)%chimera%recv(ichimera_face)%ielement_l
+!                        receiver%iface      = mesh%domain(idom)%chimera%recv(ichimera_face)%iface
+!                        receiver%proc       = IRANK
+                        receiver = face_info(mesh%domain(idom)%chimera%recv(ichimera_face)%idomain_g,   &
+                                             mesh%domain(idom)%chimera%recv(ichimera_face)%idomain_l,   &
+                                             mesh%domain(idom)%chimera%recv(ichimera_face)%ielement_g,  &
+                                             mesh%domain(idom)%chimera%recv(ichimera_face)%ielement_l,  &
+                                             mesh%domain(idom)%chimera%recv(ichimera_face)%iface,       &
+                                             IRANK)
 
                         call write_line('   Face ', ichimera_face,' of ',mesh%domain(idom)%chimera%nreceivers(), '      (domain,element,face) = ', receiver%idomain_g, receiver%ielement_g, receiver%iface, delimiter='  ')
 
@@ -268,7 +275,8 @@ contains
                             receiver_indices(3) = receiver%ielement_g
                             receiver_indices(4) = receiver%ielement_l
                             receiver_indices(5) = receiver%iface
-                            call MPI_BCast(receiver_indices,5,MPI_INTEGER4, iproc, ChiDG_COMM, ierr)
+                            receiver_indices(6) = receiver%proc
+                            call MPI_BCast(receiver_indices,6,MPI_INTEGER4, iproc, ChiDG_COMM, ierr)
 
 
 
@@ -469,12 +477,13 @@ contains
                     !
                     ! Receive receiver indices
                     !
-                    call MPI_BCast(receiver_indices,5,MPI_INTEGER4, iproc, ChiDG_COMM, ierr)
+                    call MPI_BCast(receiver_indices,6,MPI_INTEGER4, iproc, ChiDG_COMM, ierr)
                     receiver = face_info(receiver_indices(1),   &
                                          receiver_indices(2),   &
                                          receiver_indices(3),   &
                                          receiver_indices(4),   &
-                                         receiver_indices(5)    &
+                                         receiver_indices(5),   &
+                                         receiver_indices(6)    &
                                          )
 
 

@@ -48,6 +48,7 @@ module mod_bc
     use bc_state_inlet_total_profile,               only: inlet_total_profile_t
     use bc_state_inlet_characteristic,              only: inlet_characteristic_t
     use bc_state_outlet_constant_pressure,          only: outlet_constant_pressure_t
+    use bc_state_outlet_pressure_profile,           only: outlet_pressure_profile_t
     use bc_state_outlet_linear_pressure,            only: outlet_linear_pressure_t
     use bc_state_outlet_auxiliary_equations,        only: outlet_auxiliary_equations_t
     use bc_state_outlet_neumann_pressure_fd,        only: outlet_neumann_pressure_fd_t
@@ -168,6 +169,7 @@ contains
         type(inlet_total_profile_t)             :: INLET_TOTAL_PROFILE
         type(inlet_characteristic_t)            :: INLET_CHARACTERISTIC
         type(outlet_constant_pressure_t)        :: OUTLET_CONSTANT_PRESSURE
+        type(outlet_pressure_profile_t)         :: OUTLET_PRESSURE_PROFILE
         type(outlet_linear_pressure_t)          :: OUTLET_LINEAR_PRESSURE
         type(outlet_auxiliary_equations_t)      :: OUTLET_AUXILIARY_EQUATIONS
         type(outlet_neumann_pressure_fd_t)      :: OUTLET_NEUMANN_PRESSURE_FD
@@ -176,10 +178,6 @@ contains
         type(outlet_neumann_pressure_localdg_new_point_t) :: OUTLET_NEUMANN_PRESSURE_LOCALDG_NEW_POINT
         type(outlet_neumann_pressure_globaldg_t):: OUTLET_NEUMANN_PRESSURE_GLOBALDG
         type(outlet_neumann_LODI_localdg_t)     :: OUTLET_NEUMANN_LODI_LOCALDG
-        !type(outlet_point_pressure_t)           :: OUTLET_POINT_PRESSURE
-        !type(outlet_LODI_pressure_t)            :: OUTLET_LODI_PRESSURE
-        !type(outlet_LODI_z_pressure_t)          :: OUTLET_LODI_Z_PRESSURE
-        !type(outlet_wukie_t)                    :: OUTLET_WUKIE
         type(outlet_steady_1dchar_t)            :: OUTLET_STEADY_1DCHAR
         type(outlet_3dgiles_t)                  :: OUTLET_3DGILES
         type(outlet_3dgiles_innerproduct_t)     :: OUTLET_3DGILES_INNERPRODUCT
@@ -265,6 +263,7 @@ contains
             call registered_bcs%push_back(INLET_TOTAL_PROFILE)
             call registered_bcs%push_back(INLET_CHARACTERISTIC)
             call registered_bcs%push_back(OUTLET_CONSTANT_PRESSURE)
+            call registered_bcs%push_back(OUTLET_PRESSURE_PROFILE)
             call registered_bcs%push_back(OUTLET_LINEAR_PRESSURE)
             call registered_bcs%push_back(OUTLET_AUXILIARY_EQUATIONS)
             call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_FD)
@@ -280,10 +279,6 @@ contains
             call registered_bcs%push_back(OUTLET_GILES_QUASI3D_UNSTEADY_HB)
             call registered_bcs%push_back(INLET_GILES_QUASI3D_UNSTEADY_HB)
             call registered_bcs%push_back(TURBO_INTERFACE_STEADY)
-            !call registered_bcs%push_back(OUTLET_POINT_PRESSURE)
-            !call registered_bcs%push_back(OUTLET_LODI_PRESSURE)
-            !call registered_bcs%push_back(OUTLET_LODI_Z_PRESSURE)
-            !call registered_bcs%push_back(OUTLET_WUKIE)
             call registered_bcs%push_back(FLUID_EXTRAPOLATE)
             call registered_bcs%push_back(MOMENTUM_INLET)
             call registered_bcs%push_back(SYMMETRY)

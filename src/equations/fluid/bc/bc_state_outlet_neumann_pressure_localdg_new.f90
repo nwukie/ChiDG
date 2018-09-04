@@ -6,6 +6,7 @@ module bc_state_outlet_neumann_pressure_localdg_new
 
     use type_mesh,              only: mesh_t
     use type_face_info,         only: face_info_t, face_info_constructor
+    use type_element_info,      only: element_info_t
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -337,8 +338,9 @@ contains
                        icoupled, idomain_g_coupled, idomain_l_coupled, ielement_g_coupled,  &
                        ielement_l_coupled, iface_coupled, proc_coupled, pelem_ID
         real(rk)    :: face_area, total_area
-        real(rk), allocatable   :: nodes(:,:)
+        real(rk), allocatable   :: nodes(:,:), donor_nodes(:,:)
 
+        type(element_info_t), allocatable :: donors(:)
 
 
         !
@@ -389,11 +391,36 @@ contains
 !            energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, ienergy,  itime, 'value', ME)
 
             nodes = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%quad_pts
-            density = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,idensity,itime,'value',nodes=nodes)
-            mom1    = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,imom1,   itime,'value',nodes=nodes)
-            mom2    = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,imom2,   itime,'value',nodes=nodes)
-            mom3    = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,imom3,   itime,'value',nodes=nodes)
-            energy  = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,ienergy, itime,'value',nodes=nodes)
+            if (allocated(donors)) deallocate(donors)
+            allocate(donors(size(nodes,1)),stat=ierr)
+            if (ierr /= 0) call AllocationError 
+            donors(:)%idomain_g  = idomain_g_coupled 
+            donors(:)%ielement_g = ielement_g_coupled 
+            donors(:)%idomain_l  = idomain_l_coupled 
+            donors(:)%ielement_l = ielement_l_coupled 
+            donors(:)%iproc      = proc_coupled
+            if (proc_coupled /= IRANK) then
+                donors(:)%pelem_ID = worker%mesh%find_parallel_element(idomain_g_coupled,ielement_g_coupled)
+            end if
+            donors(:)%eqn_ID   = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+            donors(:)%neqns    = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%neqns(icoupled)
+            donors(:)%nterms_s = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(icoupled)
+            donors(:)%nterms_c = worker%mesh%domain(idomain_l)%elems(ielement_l)%nterms_c
+                
+            if (allocated(donor_nodes)) deallocate(donor_nodes)
+            allocate(donor_nodes(size(nodes,1),3),stat=ierr)
+            if (ierr /= 0) call AllocationError
+            donor_nodes = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nodes_face(iface_coupled)
+
+
+
+            density = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,idensity,itime,'value',nodes=nodes,donors=donors,donor_nodes=donor_nodes)
+            mom1    = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,imom1,   itime,'value',nodes=nodes,donors=donors,donor_nodes=donor_nodes)
+            mom2    = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,imom2,   itime,'value',nodes=nodes,donors=donors,donor_nodes=donor_nodes)
+            mom3    = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,imom3,   itime,'value',nodes=nodes,donors=donors,donor_nodes=donor_nodes)
+            energy  = interpolate_general_autodiff(worker%mesh,worker%solverdata%q,worker%function_info,ienergy, itime,'value',nodes=nodes,donors=donors,donor_nodes=donor_nodes)
+
+
 
 
             if (worker%coordinate_system() == 'Cylindrical') then

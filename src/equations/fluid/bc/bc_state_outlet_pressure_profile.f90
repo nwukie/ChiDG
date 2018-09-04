@@ -101,6 +101,7 @@ contains
         self%p = p(1:nr)        
         self%profile_initialized = .true.
 
+
     end subroutine read_profile
     !********************************************************************************
 
@@ -139,6 +140,9 @@ contains
 
         real(rk)    :: rho0, K0
         integer :: igq
+
+
+        if (.not. self%profile_initialized) call self%read_profile(worker,prop,bc_COMM)
 
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         r = worker%coordinate('1','boundary')

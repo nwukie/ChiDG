@@ -742,7 +742,7 @@ contains
     !!                                      multiple are available.
     !!
     !-------------------------------------------------------------------------------------
-    subroutine find_gq_donor(mesh,gq_node,offset,receiver_face,donor_element,donor_coordinate,donor_found,donor_volume,multi_donor_rule)
+    subroutine find_gq_donor(mesh,gq_node,offset,receiver_face,donor_element,donor_coordinate,donor_found,donor_volume,multi_donor_rule,prev_donor)
         type(mesh_t),               intent(in)              :: mesh
         real(rk),                   intent(in)              :: gq_node(3)
         real(rk),                   intent(in)              :: offset(3)
@@ -752,6 +752,7 @@ contains
         logical,                    intent(inout)           :: donor_found
         real(rk),                   intent(inout), optional :: donor_volume
         class(multi_donor_rule_t),  intent(in),    optional :: multi_donor_rule
+        logical,                    intent(in),    optional :: prev_donor
 
         integer(ik)                 :: idom, ielem, inewton, idomain_g, idomain_l,      &
                                        ielement_g, ielement_l, icandidate, ncandidates, &
@@ -773,6 +774,7 @@ contains
         logical                 :: receiver   = .false.
         logical                 :: node_found = .false.
         logical                 :: node_self  = .false.
+        logical                 :: check_prev_donor
 
 
         xgq = gq_node(1)
@@ -792,39 +794,47 @@ contains
         ! for a quadrature node set will satisfy the next node. Consider
         ! abutting boundaries, all nodes are satisfied by the same donor.
         !---------------------------------------------------------------------
+        if (present(prev_donor)) then
+            check_prev_donor = prev_donor
+        else
+            check_prev_donor = .true.
+        end if
+
         ndonors = 0
-        if (idomain_g_prev /= NO_ID) then
-            idomain_g  = idomain_g_prev
-            idomain_l  = idomain_l_prev
-            ielement_g = ielement_g_prev
-            ielement_l = ielement_l_prev
-            call candidate_domains_g%push_back(idomain_g)
-            call candidate_domains_l%push_back(idomain_l)
-            call candidate_elements_g%push_back(ielement_g)
-            call candidate_elements_l%push_back(ielement_l)
-            ncandidates = 1
+        if (check_prev_donor) then
+            if (idomain_g_prev /= NO_ID) then
+                idomain_g  = idomain_g_prev
+                idomain_l  = idomain_l_prev
+                ielement_g = ielement_g_prev
+                ielement_l = ielement_l_prev
+                call candidate_domains_g%push_back(idomain_g)
+                call candidate_domains_l%push_back(idomain_l)
+                call candidate_elements_g%push_back(ielement_g)
+                call candidate_elements_l%push_back(ielement_l)
+                ncandidates = 1
 
-            ! Try to find donor (xi,eta,zeta) coordinates for receiver (xgq,ygq,zgq)
-            donor_comp = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([search1,search2,search3])    ! Newton's method routine
+                ! Try to find donor (xi,eta,zeta) coordinates for receiver (xgq,ygq,zgq)
+                donor_comp = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([search1,search2,search3])    ! Newton's method routine
 
-            ! Node is not nan
-            node_found = (any(ieee_is_nan(donor_comp)) .eqv. .false.) 
+                ! Node is not nan
+                node_found = (any(ieee_is_nan(donor_comp)) .eqv. .false.) 
 
-            ! Node is not self: could be periodic, so same element is okay, but we don't want the same node
-            if ( (idomain_g == receiver_face%idomain_g) .and. (ielement_g == receiver_face%ielement_g) ) then
-                recv_comp  = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([xgq, ygq, zgq])
-                node_self = (abs(sum(recv_comp - donor_comp)) < 1.e-3_rk)
-            else
-                node_self = .false.
-            end if
+                ! Node is not self: could be periodic, so same element is okay, but we don't want the same node
+                if ( (idomain_g == receiver_face%idomain_g) .and. (ielement_g == receiver_face%ielement_g) ) then
+                    recv_comp  = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([xgq, ygq, zgq])
+                    node_self = (abs(sum(recv_comp - donor_comp)) < 1.e-3_rk)
+                else
+                    node_self = .false.
+                end if
 
-            ! Add donor if donor_comp is valid
-            if ( node_found .and. (.not. node_self)) then
-                ndonors = ndonors + 1
-                call donors%push_back(1)
-                call donors_xi%push_back(  donor_comp(1))
-                call donors_eta%push_back( donor_comp(2))
-                call donors_zeta%push_back(donor_comp(3))
+                ! Add donor if donor_comp is valid
+                if ( node_found .and. (.not. node_self)) then
+                    ndonors = ndonors + 1
+                    call donors%push_back(1)
+                    call donors_xi%push_back(  donor_comp(1))
+                    call donors_eta%push_back( donor_comp(2))
+                    call donors_zeta%push_back(donor_comp(3))
+                end if
             end if
         end if
         !---------------------------------------------------------------------

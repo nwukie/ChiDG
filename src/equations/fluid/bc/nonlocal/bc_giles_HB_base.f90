@@ -43,7 +43,7 @@ module bc_giles_HB_base
     !---------------------------------------------------------------------------------
     type, public, abstract, extends(bc_state_t) :: giles_HB_base_t
 
-        integer(ik) :: nr = 14
+        integer(ik) :: nr = 10
         integer(ik) :: nfourier_space = 20
 
         real(rk),               allocatable :: r(:)
@@ -2125,7 +2125,7 @@ contains
                                    donors(iradius,itheta),              &
                                    donor_nodes(iradius,itheta,1:3),     &
                                    donor_found,                         &
-                                   multi_donor_rule=multi_donor_rule)
+                                   multi_donor_rule=multi_donor_rule,prev_donor=.false.)
 
 
                 ! Reject if not correct face_normal for side: do this by checking the element center
@@ -2147,7 +2147,7 @@ contains
                                        donors(iradius,itheta),              &
                                        donor_nodes(iradius,itheta,1:3),     &
                                        donor_found,                         &
-                                       multi_donor_rule=multi_donor_rule)
+                                       multi_donor_rule=multi_donor_rule,prev_donor=.false.)
 
 
                     ! Reject if not correct face_normal for side: do this by checking the element center
@@ -2158,6 +2158,7 @@ contains
                         if ( (side == 'A') .and. (donor_avg_z > z) ) donor_found = .false.
                         if ( (side == 'B') .and. (donor_avg_z < z) ) donor_found = .false.
                     end if
+
 
                     if (donor_found) then
                         noverset=noverset+1
@@ -2177,6 +2178,7 @@ contains
                                                 donor_nodes(iradius,itheta,1:3),    &
                                                 donor_found)
 
+
                     ! Reject if not correct face_normal for side: do this by checking the element center
                     ! against the z-constant value.
                     if (donor_found) then
@@ -2186,6 +2188,8 @@ contains
                         if ( (side == 'A') .and. (donor_avg_z > z) ) donor_found = .false.
                         if ( (side == 'B') .and. (donor_avg_z < z) ) donor_found = .false.
                     end if
+
+
                 end if
 
                 
@@ -2199,6 +2203,7 @@ contains
                                                 donor_nodes(iradius,itheta,1:3),    &
                                                 donor_found)
 
+
                     ! Reject if not correct face_normal for side: do this by checking the element center
                     ! against the z-constant value.
                     if (donor_found) then
@@ -2208,6 +2213,7 @@ contains
                         if ( (side == 'A') .and. (donor_avg_z > z) ) donor_found = .false.
                         if ( (side == 'B') .and. (donor_avg_z < z) ) donor_found = .false.
                     end if
+
 
                     if (donor_found) then
                         noverset=noverset+1

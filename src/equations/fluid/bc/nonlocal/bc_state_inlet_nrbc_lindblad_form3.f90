@@ -1,4 +1,4 @@
-module bc_state_inlet_nrbc_lindblad
+module bc_state_inlet_nrbc_lindblad_form3
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL,    &
@@ -40,7 +40,7 @@ module bc_state_inlet_nrbc_lindblad
     !!  @date   2/8/2018
     !!
     !---------------------------------------------------------------------------------
-    type, public, extends(nonlocal_nrbc_lindblad_base_t) :: inlet_nrbc_lindblad_t
+    type, public, extends(nonlocal_nrbc_lindblad_base_t) :: inlet_nrbc_lindblad_form3_t
 
 
     contains
@@ -51,7 +51,7 @@ module bc_state_inlet_nrbc_lindblad
         procedure   :: compute_absorbing_inlet
         procedure   :: apply_nonreflecting_condition
 
-    end type inlet_nrbc_lindblad_t
+    end type inlet_nrbc_lindblad_form3_t
     !*********************************************************************************
 
 
@@ -68,10 +68,10 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(inlet_nrbc_lindblad_t),   intent(inout) :: self
+        class(inlet_nrbc_lindblad_form3_t),   intent(inout) :: self
 
         ! Set name, family
-        call self%set_name('Inlet - Nonlocal NRBC Lindblad')
+        call self%set_name('Inlet - Nonlocal NRBC Lindblad Form3')
         call self%set_family('Inlet')
 
         ! Add functions
@@ -114,7 +114,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_comm)
-        class(inlet_nrbc_lindblad_t),   intent(inout)   :: self
+        class(inlet_nrbc_lindblad_form3_t),   intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         class(properties_t),                        intent(inout)   :: prop
         type(mpi_comm),                             intent(in)      :: bc_comm
@@ -126,8 +126,12 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,                  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,                  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,                  &
-            density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, c5_1d,                      &
-            density_m, mom1_m, mom2_m, mom3_m, pressure_m, ddensity, dvel1, dvel2, dvel3, dpressure
+            density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar,                             &
+            density_m, mom1_m, mom2_m, mom3_m, vel1_m, vel2_m, vel3_m, pressure_m, energy_m, ddensity, dvel1, dvel2, dvel3, dpressure,    &
+            c1_1d, c2_1d, c3_1d, c4_1d, c5_1d, density_1d_out, vel1_1d_out, vel2_1d_out, vel3_1d_out, pressure_1d_out, &
+            density_unresolved, vel1_unresolved, vel2_unresolved, vel3_unresolved, pressure_unresolved, &
+            density_fourier_gq, vel1_fourier_gq, vel2_fourier_gq, vel3_fourier_gq, pressure_fourier_gq
+
 
         type(AD_D), allocatable, dimension(:,:) ::                                                                      &
             density_check_real_gq, vel1_check_real_gq, vel2_check_real_gq, vel3_check_real_gq, pressure_check_real_gq,  &
@@ -155,6 +159,34 @@ contains
         real(rk),       allocatable, dimension(:)   :: r
         real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag
         integer(ik) :: ierr, igq
+
+
+        density_m = worker%get_field('Density',    'value', 'face interior')
+        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
+        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
+        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
+        energy_m  = worker%get_field('Energy',     'value', 'face interior')
+
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','boundary') 
+            mom2_m = mom2_m / r
+        end if
+
+        ! Compute velocities
+        vel1_m = mom1_m/density_m
+        vel2_m = mom2_m/density_m
+        vel3_m = mom3_m/density_m
+
+        ! Get interior pressure
+        pressure_m = worker%get_field('Pressure', 'value', 'face interior')
+
+
+
+
+
 
 
         ! Interpolate interior solution to face quadrature nodes
@@ -248,8 +280,49 @@ contains
                                       c_hat_real_m,          c_hat_imag_m)
 
 
-!        ! Store steady modes
-!        density_hat_real_steady = density_hat_real_m(:
+
+        !!!!! Evaluate fourier solution
+
+        ! q_abs(r_gq) = I(q_abs(r_aux))
+        call self%interpolate_raux_to_rgq(worker,bc_comm,                               &
+                                          density_hat_real_m,  density_hat_imag_m,  &
+                                          vel1_hat_real_m,     vel1_hat_imag_m,     &
+                                          vel2_hat_real_m,     vel2_hat_imag_m,     &
+                                          vel3_hat_real_m,     vel3_hat_imag_m,     &
+                                          pressure_hat_real_m, pressure_hat_imag_m, &
+                                          density_hat_real_gq,   density_hat_imag_gq,   &
+                                          vel1_hat_real_gq,      vel1_hat_imag_gq,      &
+                                          vel2_hat_real_gq,      vel2_hat_imag_gq,      &
+                                          vel3_hat_real_gq,      vel3_hat_imag_gq,      &
+                                          pressure_hat_real_gq,  pressure_hat_imag_gq)
+        
+
+        ! Reconstruct primitive variables at quadrature nodes from absorbing Fourier modes
+        ! via inverse transform.
+        !   q_check(rgq,theta,omega) = IDFT(q_hat)[m]
+        call self%compute_spatial_idft_gq(worker,bc_comm,'B',                               &
+                                          density_hat_real_gq,      density_hat_imag_gq,    & 
+                                          vel1_hat_real_gq,         vel1_hat_imag_gq,       &
+                                          vel2_hat_real_gq,         vel2_hat_imag_gq,       &
+                                          vel3_hat_real_gq,         vel3_hat_imag_gq,       &
+                                          pressure_hat_real_gq,     pressure_hat_imag_gq,   &
+                                          density_check_real_gq,    density_check_imag_gq,  &
+                                          vel1_check_real_gq,       vel1_check_imag_gq,     &
+                                          vel2_check_real_gq,       vel2_check_imag_gq,     &
+                                          vel3_check_real_gq,       vel3_check_imag_gq,     &
+                                          pressure_check_real_gq,   pressure_check_imag_gq)
+
+
+        ! q(rgq,theta,t) = IDFT(q_check)[omega]
+        call self%compute_temporal_idft_gq(worker,bc_comm,                                                      &
+                                           density_check_real_gq,    density_check_imag_gq,     & 
+                                           vel1_check_real_gq,       vel1_check_imag_gq,        &
+                                           vel2_check_real_gq,       vel2_check_imag_gq,        &
+                                           vel3_check_real_gq,       vel3_check_imag_gq,        &
+                                           pressure_check_real_gq,   pressure_check_imag_gq,    &
+                                           density_fourier_gq, vel1_fourier_gq, vel2_fourier_gq, vel3_fourier_gq, pressure_fourier_gq)
+
+
 
 
 
@@ -265,6 +338,54 @@ contains
         ! Compute spatio-temporal average over entire surface
         call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar,c_bar, &
                                                           density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg,c_avg)
+
+
+
+
+        density_unresolved  = density_m  - density_fourier_gq
+        vel1_unresolved     = vel1_m     - vel1_fourier_gq
+        vel2_unresolved     = vel2_m     - vel2_fourier_gq
+        vel3_unresolved     = vel3_m     - vel3_fourier_gq
+        pressure_unresolved = pressure_m - pressure_fourier_gq
+
+
+        ! compute 1d characteristics associated with unresolved perturbations
+        c1_1d = ZERO*density_m
+        c2_1d = ZERO*density_m
+        c3_1d = ZERO*density_m
+        c4_1d = ZERO*density_m
+        c5_1d = ZERO*density_m
+        do igq = 1,size(density_m)
+            c1_1d(igq) = -c_avg*c_avg*density_unresolved(igq)    +  pressure_unresolved(igq)
+            c2_1d(igq) = density_avg*c_avg*vel1_unresolved(igq)
+            c3_1d(igq) = density_avg*c_avg*vel2_unresolved(igq)
+            c4_1d(igq) = density_avg*c_avg*vel3_unresolved(igq)  +  pressure_unresolved(igq)
+            c5_1d(igq) = -density_avg*c_avg*vel3_unresolved(igq)  +  pressure_unresolved(igq)
+        end do
+
+
+        ! compute 1d characteristic outgoing: c5
+        c1_1d = ZERO
+        c2_1d = ZERO
+        c3_1d = ZERO
+        c4_1d = ZERO
+
+        ! Now add local perturbation from the average
+        density_1d_out  = ZERO*density_m
+        vel1_1d_out     = ZERO*density_m
+        vel2_1d_out     = ZERO*density_m
+        vel3_1d_out     = ZERO*density_m
+        pressure_1d_out = ZERO*density_m
+        do igq = 1,size(density_m)
+            density_1d_out(igq)  = (-ONE/(c_avg*c_avg))*c1_1d(igq)  +  (ONE/(TWO*c_avg*c_avg))*c4_1d(igq)  +  (ONE/(TWO*c_avg*c_avg))*c5_1d(igq)
+            vel1_1d_out(igq)     = (ONE/(density_avg*c_avg))*c2_1d(igq)
+            vel2_1d_out(igq)     = (ONE/(density_avg*c_avg))*c3_1d(igq)
+            vel3_1d_out(igq)     = (ONE/(TWO*density_avg*c_avg))*c4_1d(igq)  -  (ONE/(TWO*density_avg*c_avg))*c5_1d(igq)
+            pressure_1d_out(igq) = HALF*c4_1d(igq)  +  HALF*c5_1d(igq)
+        end do
+
+
+
 
 
 
@@ -417,63 +538,12 @@ contains
 
 
 
-
-
-!        density_m = worker%get_field('Density'   , 'value', 'face interior')
-!        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
-!        mom2_m    = worker%get_field('Momentum-1', 'value', 'face interior')
-!        mom3_m    = worker%get_field('Momentum-1', 'value', 'face interior')
-!        pressure_m = worker%get_field('Pressure',  'value', 'face interior')
-!
-!
-!        if (worker%coordinate_system() == 'Cylindrical') then
-!            r = worker%coordinate('1','boundary') 
-!            mom2_m = mom2_m/r  ! convert to tangential momentum
-!        end if
-!
-!
-!        ! Compute perturbation of radius local-avg from boundary-global avg
-!        ddensity  = density_hat_real_gq(:,1,1)  - density_m
-!        dvel1     = vel1_hat_real_gq(:,1,1)     - mom1_m/density_m
-!        dvel2     = vel2_hat_real_gq(:,1,1)     - mom2_m/density_m
-!        dvel3     = vel3_hat_real_gq(:,1,1)     - mom3_m/density_m
-!        dpressure = pressure_hat_real_gq(:,1,1) - pressure_m
-!
-!        density_bar  = density_hat_real_gq(:,1,1)
-!        vel1_bar     = vel1_hat_real_gq(:,1,1)
-!        vel2_bar     = vel2_hat_real_gq(:,1,1)
-!        vel3_bar     = vel3_hat_real_gq(:,1,1)
-!        pressure_bar = pressure_hat_real_gq(:,1,1)
-!        c_bar = sqrt(gam*pressure_bar/density_bar)
-!
-!
-!
-!        ! Allocate/compute 1d characteristics
-!        c5_1d = ZERO*ddensity
-!        do igq = 1,size(ddensity)
-!            c5_1d(igq) = -density_bar(igq)*c_bar(igq)*dvel3(igq) + dpressure(igq)
-!        end do
-!
-!
-!        density_bc  = density_bar + (ONE/(TWO*c_bar*c_bar))*c5_1d
-!        vel1_bc     = vel1_bar
-!        vel2_bc     = vel2_bar
-!        vel3_bc     = vel3_bar - (ONE/(TWO*density_bar*c_bar))*c5_1d
-!        pressure_bc = pressure_bar + HALF*c5_1d
-!!        density_bc  = density_bar 
-!!        vel1_bc     = vel1_bar
-!!        vel2_bc     = vel2_bar
-!!        vel3_bc     = vel3_bar 
-!!        pressure_bc = pressure_bar 
-!
-!        density_bc  = density_steady_bc  + density_unsteady
-!        vel1_bc     = vel1_steady_bc     + vel1_unsteady
-!        vel2_bc     = vel2_steady_bc     + vel2_unsteady
-!        vel3_bc     = vel3_steady_bc     + vel3_unsteady
-!        pressure_bc = pressure_steady_bc + pressure_unsteady
-
-
-
+        ! Add in correction from part unresolved by Fourier decomposition
+        density_bc = density_bc   + density_1d_out
+        vel1_bc    = vel1_bc      + vel1_1d_out
+        vel2_bc    = vel2_bc      + vel2_1d_out
+        vel3_bc    = vel3_bc      + vel3_1d_out
+        pressure_bc = pressure_bc + pressure_1d_out
 
 
 
@@ -523,7 +593,7 @@ contains
     !!
     !------------------------------------------------------------------------------------
     subroutine get_q_exterior(self,worker,bc_comm, density, vel1, vel2, vel3, pressure)
-        class(inlet_nrbc_lindblad_t),   intent(inout)   :: self
+        class(inlet_nrbc_lindblad_form3_t),   intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
         type(AD_D),     allocatable,                intent(inout)   :: density(:,:,:)
@@ -624,7 +694,7 @@ contains
                                        vel2_real_abs,     vel2_imag_abs,        &
                                        vel3_real_abs,     vel3_imag_abs,        &
                                        pressure_real_abs, pressure_imag_abs)
-        class(inlet_nrbc_lindblad_t),  intent(inout)   :: self
+        class(inlet_nrbc_lindblad_form3_t),  intent(inout)   :: self
         type(chidg_worker_t),    intent(inout)   :: worker
         type(mpi_comm),          intent(in)      :: bc_comm
         type(AD_D),              intent(inout)   :: density_real_m(:,:,:)
@@ -676,7 +746,7 @@ contains
         type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, T_avg, vmag
         integer(ik) :: ierr, iradius
 
-        print*, 'WARNING: Inconsistent use of Pitch A in eigenvalue calc'
+        !print*, 'WARNING: Inconsistent use of Pitch A in eigenvalue calc'
 
         ! Project to eigenmodes
         call self%primitive_to_eigenmodes(worker,bc_comm,                   &
@@ -858,7 +928,7 @@ contains
                                              a3_real,      a3_imag,      &
                                              a4_real,      a4_imag,      &
                                              a5_real,      a5_imag)
-        class(inlet_nrbc_lindblad_t),     intent(inout)   :: self
+        class(inlet_nrbc_lindblad_form3_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(mpi_comm),             intent(in)      :: bc_comm
         type(AD_D),                 intent(in)      :: density_bar_r(:)
@@ -1020,4 +1090,4 @@ contains
 
 
 
-end module bc_state_inlet_nrbc_lindblad
+end module bc_state_inlet_nrbc_lindblad_form3

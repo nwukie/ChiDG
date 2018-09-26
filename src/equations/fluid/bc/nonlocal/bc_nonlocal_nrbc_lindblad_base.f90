@@ -44,7 +44,7 @@ module bc_nonlocal_nrbc_lindblad_base
     type, public, abstract, extends(bc_state_t) :: nonlocal_nrbc_lindblad_base_t
 
         integer(ik) :: nr = 10
-        integer(ik) :: nfourier_space = 20
+        integer(ik) :: nfourier_space = 5
 
         real(rk),               allocatable :: r(:)
         real(rk)                            :: theta_ref = ZERO
@@ -817,18 +817,20 @@ contains
         ! Interpolate spatio-temporal Fourier coefficients to quadrature nodes
         ! linear interpolation between radial coordinates.
         coords = worker%coords() ! get gq coordinates for current face
-        allocate(density_hat_real_gq( size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
-                 density_hat_imag_gq( size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
-                 vel1_hat_real_gq(    size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
-                 vel1_hat_imag_gq(    size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
-                 vel2_hat_real_gq(    size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
-                 vel2_hat_imag_gq(    size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
-                 vel3_hat_real_gq(    size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
-                 vel3_hat_imag_gq(    size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
-                 pressure_hat_real_gq(size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
-                 pressure_hat_imag_gq(size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
-                 stat=ierr)
-        if (ierr /= 0) call AllocationError
+        if (.not. allocated(density_hat_real_gq)) then
+            allocate(density_hat_real_gq( size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
+                     density_hat_imag_gq( size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
+                     vel1_hat_real_gq(    size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
+                     vel1_hat_imag_gq(    size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
+                     vel2_hat_real_gq(    size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
+                     vel2_hat_imag_gq(    size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
+                     vel3_hat_real_gq(    size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
+                     vel3_hat_imag_gq(    size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
+                     pressure_hat_real_gq(size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
+                     pressure_hat_imag_gq(size(coords),size(density_hat_real,2),size(density_hat_real,3)), &
+                     stat=ierr)
+            if (ierr /= 0) call AllocationError
+        end if
         density_hat_real_gq(:,:,:)  = ZERO*density_hat_real(1,1,1)
         density_hat_imag_gq(:,:,:)  = ZERO*density_hat_real(1,1,1)
         vel1_hat_real_gq(:,:,:)     = ZERO*density_hat_real(1,1,1)

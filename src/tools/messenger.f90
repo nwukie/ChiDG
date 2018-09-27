@@ -569,7 +569,7 @@ contains
             type is(real(8))
                 if (abs(linedata) < 0.1) then
                     write(write_internal, '(E24.14)') linedata
-                else if ( (abs(linedata) > 0.1) .and. (abs(linedata) < 1.e10) ) then
+                else if ( (abs(linedata) > 0.1) .and. (abs(linedata) < 1.e9) ) then
                     write(write_internal, '(F24.14)') linedata
                 else
                     write(write_internal, '(E24.14)') linedata

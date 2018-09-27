@@ -64,6 +64,7 @@ module mod_bc
     use bc_state_outlet_giles_quasi3d_unsteady_HB,  only: outlet_giles_quasi3d_unsteady_HB_t
     use bc_state_inlet_giles_quasi3d_unsteady_HB,   only: inlet_giles_quasi3d_unsteady_HB_t
     use bc_state_turbo_interface_steady,            only: turbo_interface_steady_t
+    use bc_state_turbo_interface_steady_form3,      only: turbo_interface_steady_form3_t
     use bc_state_fluid_extrapolate,                 only: fluid_extrapolate_t
     use bc_state_momentum_inlet,                    only: momentum_inlet_t
     use bc_state_symmetry,                          only: symmetry_t
@@ -72,10 +73,8 @@ module mod_bc
     use bc_state_farfield_perturbation,             only: farfield_perturbation_t
 
     use bc_state_outlet_nrbc_lindblad,          only: outlet_nrbc_lindblad_t
-    use bc_state_outlet_nrbc_lindblad_form2,    only: outlet_nrbc_lindblad_form2_t
     use bc_state_outlet_nrbc_lindblad_form3,    only: outlet_nrbc_lindblad_form3_t
     use bc_state_inlet_nrbc_lindblad,           only: inlet_nrbc_lindblad_t
-    use bc_state_inlet_nrbc_lindblad_form2,     only: inlet_nrbc_lindblad_form2_t
     use bc_state_inlet_nrbc_lindblad_form3,     only: inlet_nrbc_lindblad_form3_t
     use bc_state_outlet_nrbc_giles,             only: outlet_nrbc_giles_t
     use bc_state_inlet_nrbc_giles,              only: inlet_nrbc_giles_t
@@ -189,6 +188,7 @@ contains
         type(outlet_giles_quasi3d_unsteady_HB_t):: OUTLET_GILES_QUASI3D_UNSTEADY_HB
         type(inlet_giles_quasi3d_unsteady_HB_t) :: INLET_GILES_QUASI3D_UNSTEADY_HB
         type(turbo_interface_steady_t)          :: TURBO_INTERFACE_STEADY
+        type(turbo_interface_steady_form3_t)    :: TURBO_INTERFACE_STEADY_FORM3
         type(fluid_extrapolate_t)               :: FLUID_EXTRAPOLATE
         type(momentum_inlet_t)                  :: MOMENTUM_INLET
         type(symmetry_t)                        :: SYMMETRY
@@ -197,11 +197,9 @@ contains
         type(farfield_perturbation_t)           :: FARFIELD_PERTURBATION
 
         type(outlet_nrbc_lindblad_t)    ::  outlet_nrbc_lindblad
-        type(outlet_nrbc_lindblad_form2_t)    ::  outlet_nrbc_lindblad_form2
         type(outlet_nrbc_lindblad_form3_t)    ::  outlet_nrbc_lindblad_form3
         type(outlet_nrbc_giles_t)       ::  outlet_nrbc_giles
         type(inlet_nrbc_lindblad_t)     ::  inlet_nrbc_lindblad
-        type(inlet_nrbc_lindblad_form2_t)     ::  inlet_nrbc_lindblad_form2
         type(inlet_nrbc_lindblad_form3_t)     ::  inlet_nrbc_lindblad_form3
         type(inlet_nrbc_giles_t)        ::  inlet_nrbc_giles
 
@@ -287,6 +285,7 @@ contains
             call registered_bcs%push_back(OUTLET_GILES_QUASI3D_UNSTEADY_HB)
             call registered_bcs%push_back(INLET_GILES_QUASI3D_UNSTEADY_HB)
             call registered_bcs%push_back(TURBO_INTERFACE_STEADY)
+            call registered_bcs%push_back(TURBO_INTERFACE_STEADY_FORM3)
             call registered_bcs%push_back(FLUID_EXTRAPOLATE)
             call registered_bcs%push_back(MOMENTUM_INLET)
             call registered_bcs%push_back(SYMMETRY)
@@ -295,11 +294,9 @@ contains
             call registered_bcs%push_back(FARFIELD_PERTURBATION)
 
             call registered_bcs%push_back(OUTLET_NRBC_LINDBLAD)
-            call registered_bcs%push_back(OUTLET_NRBC_LINDBLAD_FORM2)
             call registered_bcs%push_back(OUTLET_NRBC_LINDBLAD_FORM3)
             call registered_bcs%push_back(OUTLET_NRBC_GILES)
             call registered_bcs%push_back(INLET_NRBC_LINDBLAD)
-            call registered_bcs%push_back(INLET_NRBC_LINDBLAD_FORM2)
             call registered_bcs%push_back(INLET_NRBC_LINDBLAD_FORM3)
             call registered_bcs%push_back(INLET_NRBC_GILES)
 

@@ -43,7 +43,7 @@ module bc_nonlocal_nrbc_lindblad_base
     !---------------------------------------------------------------------------------
     type, public, abstract, extends(bc_state_t) :: nonlocal_nrbc_lindblad_base_t
 
-        integer(ik) :: nr = 10
+        integer(ik) :: nr = 2
         integer(ik) :: nfourier_space = 5
 
         real(rk),               allocatable :: r(:)
@@ -84,6 +84,8 @@ module bc_nonlocal_nrbc_lindblad_base
         procedure   :: initialize_fourier_discretization
 
         procedure   :: get_face_side
+        procedure   :: get_omega
+        procedure   :: get_lm
 
         procedure   :: primitive_to_characteristics
         procedure   :: characteristics_to_primitive
@@ -473,7 +475,7 @@ contains
                 ! NOTE: self%theta(:,1) are defined to be the DFT-theta_min at each radius
                 !
                 do imode = 1,size(density_real_tmp)
-                    m = get_lm(imode,size(density_real_tmp))
+                    m = self%get_lm(imode,size(density_real_tmp))
                     if (side=='A') then
                         shift_r = realpart(exp(shift_sign*cmplx(ZERO,ONE)*real(m,rk)*TWO*PI*(self%theta_ref-self%theta_a(iradius,1))/spatial_periodicity(1)))
                         shift_i = imagpart(exp(shift_sign*cmplx(ZERO,ONE)*real(m,rk)*TWO*PI*(self%theta_ref-self%theta_a(iradius,1))/spatial_periodicity(1)))
@@ -873,7 +875,7 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------
-    subroutine primitive_to_eigenmodes(self,worker,bc_comm,             &
+    subroutine primitive_to_eigenmodes(self,worker,bc_comm,side,        &
                                        density_bar_r,                   &
                                        vel1_bar_r,                      &
                                        vel2_bar_r,                      &
@@ -893,6 +895,7 @@ contains
         class(nonlocal_nrbc_lindblad_base_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(mpi_comm),             intent(in)      :: bc_comm
+        character(1),               intent(in)      :: side
         type(AD_D),                 intent(in)      :: density_bar_r(:)
         type(AD_D),                 intent(in)      :: vel1_bar_r(:)
         type(AD_D),                 intent(in)      :: vel2_bar_r(:)
@@ -982,11 +985,11 @@ contains
 
 
                         ! Get temporal/spatial frequencies
-                        omega = get_omega(worker,itime)
-                        lm    = get_lm(itheta,ntheta)
+                        omega = self%get_omega(worker,itime,itheta,ntheta)
+                        lm    = self%get_lm(itheta,ntheta)
 
                         ! Compute wavenumbers
-                        call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
+                        call self%compute_eigenvalues(worker,side,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
                                                       kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
 
                         ! Zero Tinv
@@ -1127,7 +1130,7 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------
-    subroutine eigenmodes_to_primitive(self,worker,bc_comm,             &
+    subroutine eigenmodes_to_primitive(self,worker,bc_comm,side,        &
                                        density_bar_r, vel1_bar_r, vel2_bar_r, vel3_bar_r, pressure_bar_r, c_bar_r, &
                                        a1_real,       a1_imag,          &
                                        a2_real,       a2_imag,          &
@@ -1142,6 +1145,7 @@ contains
         class(nonlocal_nrbc_lindblad_base_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(mpi_comm),             intent(in)      :: bc_comm
+        character(1),               intent(in)      :: side
         type(AD_D),                 intent(in)      :: density_bar_r(:)
         type(AD_D),                 intent(in)      :: vel1_bar_r(:)
         type(AD_D),                 intent(in)      :: vel2_bar_r(:)
@@ -1233,11 +1237,11 @@ contains
                     else
 
                         ! Get temporal/spatial frequencies
-                        omega = get_omega(worker,itime)
-                        lm    = get_lm(itheta,ntheta)
+                        omega = self%get_omega(worker,itime,itheta,ntheta)
+                        lm    = self%get_lm(itheta,ntheta)
 
                         ! Compute wavenumbers
-                        call self%compute_eigenvalues(worker,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
+                        call self%compute_eigenvalues(worker,side,lm,omega,vel1_bar,vel2_bar,vel3_bar,c_bar, &
                                                       kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
 
                         ! First zero fields
@@ -1391,10 +1395,11 @@ contains
     !!  @date   5/8/2018
     !!
     !--------------------------------------------------------------------------------
-    subroutine compute_eigenvalues(self, worker, lm, omega, vel1_bar, vel2_bar, vel3_bar, c_bar, &
+    subroutine compute_eigenvalues(self, worker, side, lm, omega, vel1_bar, vel2_bar, vel3_bar, c_bar, &
                                    kz, k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag)
         class(nonlocal_nrbc_lindblad_base_t), intent(inout)   :: self
         type(chidg_worker_t),   intent(inout)   :: worker
+        character(1),           intent(in)      :: side
         real(rk),               intent(in)      :: lm
         real(rk),               intent(in)      :: omega
         type(AD_D),             intent(in)      :: vel1_bar
@@ -1416,7 +1421,16 @@ contains
         complex(rk) :: omega_c, pyra_c, k4_c, k5_c
         real(rk)    :: vel2_bar_r, vel3_bar_r, c_bar_r
 
-        pitch  = self%bcproperties%compute('Pitch A',worker%time(),worker%coords())
+
+        if (side == 'A') then
+            pitch  = self%bcproperties%compute('Pitch A',worker%time(),worker%coords())
+        else if (side == 'B') then
+            pitch  = self%bcproperties%compute('Pitch B',worker%time(),worker%coords())
+        else
+            call chidg_signal_one(FATAL,"bc_giles_HB_base%compute_eigenvalues: invalid value for input 'side'.",side)
+        end if
+
+!        pitch  = self%bcproperties%compute('Pitch A',worker%time(),worker%coords())
 
         kz = TWO*PI*lm/pitch(1)
         pyra = (omega - kz*vel2_bar)**TWO - kz*kz*(c_bar**TWO - vel3_bar**TWO)
@@ -2116,7 +2130,7 @@ contains
                                    donors(iradius,itheta),              &
                                    donor_nodes(iradius,itheta,1:3),     &
                                    donor_found,                         &
-                                   multi_donor_rule=multi_donor_rule)
+                                   multi_donor_rule=multi_donor_rule,prev_donor=.false.)
 
 
                 ! Reject if not correct face_normal for side: do this by checking the element center
@@ -2138,7 +2152,7 @@ contains
                                        donors(iradius,itheta),              &
                                        donor_nodes(iradius,itheta,1:3),     &
                                        donor_found,                         &
-                                       multi_donor_rule=multi_donor_rule)
+                                       multi_donor_rule=multi_donor_rule,prev_donor=.false.)
 
 
                     ! Reject if not correct face_normal for side: do this by checking the element center
@@ -2254,12 +2268,16 @@ contains
     !!  @date   5/28/2018
     !!
     !--------------------------------------------------------------------------------------
-    function get_omega(worker,itime) result(omega)
+    function get_omega(self,worker,itime,itheta,ntheta) result(omega)
+        class(nonlocal_nrbc_lindblad_base_t),     intent(inout)   :: self
         type(chidg_worker_t),   intent(in)  :: worker
         integer(ik),            intent(in)  :: itime
+        integer(ik),            intent(in)  :: itheta
+        integer(ik),            intent(in)  :: ntheta
 
         real(rk) :: omega
         integer(ik) :: ntime
+        real(rk), allocatable :: grid_velocity(:,:), pitch(:)
 
         ntime = worker%time_manager%ntime
 
@@ -2272,14 +2290,25 @@ contains
         end if
 
 
+        ! Convert to relative frame for higher order modes for mixing plane interface. 
+        ! DON'T WANT TO DO THIS FOR HB INTERFACE!
+        grid_velocity = worker%get_grid_velocity_face('face interior')
+        if (abs(grid_velocity(1,2)) > 0.0000001_rk) then
+            if (worker%time_manager%ntime == 1) then
 
-!        if (itime == 1) then
-!            omega = ZERO
-!        else if (itime == 2) then
-!            omega = worker%time_manager%freqs(1)
-!        else if (itime == 3) then
-!            omega = -worker%time_manager%freqs(1)
-!        end if
+                if (self%get_face_side(worker) == 'A') then
+                    pitch = self%bcproperties%compute('Pitch A', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+                else if (self%get_face_side(worker) == 'B') then
+                    pitch = self%bcproperties%compute('Pitch B', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+                end if
+
+
+                if (itheta > 1) then
+                    !omega = (vg/pitch) * real(itheta-1,rk)
+                    omega = TWO*PI*(-100._rk/pitch(1)) * self%get_lm(itheta,ntheta)
+                end if
+            end if
+        end if
 
 
     end function get_omega
@@ -2292,7 +2321,8 @@ contains
     !!  @date   5/28/2018
     !!
     !--------------------------------------------------------------------------------------
-    function get_lm(itheta,ntheta) result(lm)
+    function get_lm(self,itheta,ntheta) result(lm)
+        class(nonlocal_nrbc_lindblad_base_t),     intent(inout)   :: self
         integer(ik),    intent(in)  :: itheta
         integer(ik),    intent(in)  :: ntheta
 

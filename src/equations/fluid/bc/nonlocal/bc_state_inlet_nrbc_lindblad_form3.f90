@@ -324,21 +324,29 @@ contains
 
 
 
+        ! Get spatio-temporal average at quadrature nodes
+        density_bar  = density_hat_real_gq(:,1,1)
+        vel1_bar     = vel1_hat_real_gq(:,1,1)
+        vel2_bar     = vel2_hat_real_gq(:,1,1)
+        vel3_bar     = vel3_hat_real_gq(:,1,1)
+        pressure_bar = pressure_hat_real_gq(:,1,1)
+        c_bar = sqrt(gam*pressure_bar/density_bar)
+        !c_bar        = c_hat_real_gq(:,1,1)
 
 
-        ! Get spatio-temporal average at radial stations
-        density_bar  = density_hat_real_m(:,1,1)
-        vel1_bar     = vel1_hat_real_m(:,1,1)
-        vel2_bar     = vel2_hat_real_m(:,1,1)
-        vel3_bar     = vel3_hat_real_m(:,1,1)
-        pressure_bar = pressure_hat_real_m(:,1,1)
-        c_bar        = c_hat_real_m(:,1,1)
-
-
-        ! Compute spatio-temporal average over entire surface
-        call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar,c_bar, &
-                                                          density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg,c_avg)
-
+!        ! Get spatio-temporal average at radial stations
+!        density_bar  = density_hat_real_m(:,1,1)
+!        vel1_bar     = vel1_hat_real_m(:,1,1)
+!        vel2_bar     = vel2_hat_real_m(:,1,1)
+!        vel3_bar     = vel3_hat_real_m(:,1,1)
+!        pressure_bar = pressure_hat_real_m(:,1,1)
+!        c_bar        = c_hat_real_m(:,1,1)
+!
+!
+!        ! Compute spatio-temporal average over entire surface
+!        call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar,c_bar, &
+!                                                          density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg,c_avg)
+!
 
 
 
@@ -355,13 +363,18 @@ contains
         c3_1d = ZERO*density_m
         c4_1d = ZERO*density_m
         c5_1d = ZERO*density_m
-        do igq = 1,size(density_m)
-            c1_1d(igq) = -c_avg*c_avg*density_unresolved(igq)    +  pressure_unresolved(igq)
-            c2_1d(igq) = density_avg*c_avg*vel1_unresolved(igq)
-            c3_1d(igq) = density_avg*c_avg*vel2_unresolved(igq)
-            c4_1d(igq) = density_avg*c_avg*vel3_unresolved(igq)  +  pressure_unresolved(igq)
-            c5_1d(igq) = -density_avg*c_avg*vel3_unresolved(igq)  +  pressure_unresolved(igq)
-        end do
+!        do igq = 1,size(density_m)
+!            c1_1d(igq) = -c_avg*c_avg*density_unresolved(igq)    +  pressure_unresolved(igq)
+!            c2_1d(igq) = density_avg*c_avg*vel1_unresolved(igq)
+!            c3_1d(igq) = density_avg*c_avg*vel2_unresolved(igq)
+!            c4_1d(igq) = density_avg*c_avg*vel3_unresolved(igq)  +  pressure_unresolved(igq)
+!            c5_1d(igq) = -density_avg*c_avg*vel3_unresolved(igq)  +  pressure_unresolved(igq)
+!        end do
+        c1_1d = -c_bar*c_bar*density_unresolved    +  pressure_unresolved
+        c2_1d = density_bar*c_bar*vel1_unresolved
+        c3_1d = density_bar*c_bar*vel2_unresolved
+        c4_1d = density_bar*c_bar*vel3_unresolved  +  pressure_unresolved
+        c5_1d = -density_bar*c_bar*vel3_unresolved  +  pressure_unresolved
 
 
         ! compute 1d characteristic outgoing: c5
@@ -376,15 +389,32 @@ contains
         vel2_1d_out     = ZERO*density_m
         vel3_1d_out     = ZERO*density_m
         pressure_1d_out = ZERO*density_m
-        do igq = 1,size(density_m)
-            density_1d_out(igq)  = (-ONE/(c_avg*c_avg))*c1_1d(igq)  +  (ONE/(TWO*c_avg*c_avg))*c4_1d(igq)  +  (ONE/(TWO*c_avg*c_avg))*c5_1d(igq)
-            vel1_1d_out(igq)     = (ONE/(density_avg*c_avg))*c2_1d(igq)
-            vel2_1d_out(igq)     = (ONE/(density_avg*c_avg))*c3_1d(igq)
-            vel3_1d_out(igq)     = (ONE/(TWO*density_avg*c_avg))*c4_1d(igq)  -  (ONE/(TWO*density_avg*c_avg))*c5_1d(igq)
-            pressure_1d_out(igq) = HALF*c4_1d(igq)  +  HALF*c5_1d(igq)
-        end do
+!        do igq = 1,size(density_m)
+!            density_1d_out(igq)  = (-ONE/(c_avg*c_avg))*c1_1d(igq)  +  (ONE/(TWO*c_avg*c_avg))*c4_1d(igq)  +  (ONE/(TWO*c_avg*c_avg))*c5_1d(igq)
+!            vel1_1d_out(igq)     = (ONE/(density_avg*c_avg))*c2_1d(igq)
+!            vel2_1d_out(igq)     = (ONE/(density_avg*c_avg))*c3_1d(igq)
+!            vel3_1d_out(igq)     = (ONE/(TWO*density_avg*c_avg))*c4_1d(igq)  -  (ONE/(TWO*density_avg*c_avg))*c5_1d(igq)
+!            pressure_1d_out(igq) = HALF*c4_1d(igq)  +  HALF*c5_1d(igq)
+!        end do
+        density_1d_out  = (-ONE/(c_bar*c_bar))*c1_1d  +  (ONE/(TWO*c_bar*c_bar))*c4_1d  +  (ONE/(TWO*c_bar*c_bar))*c5_1d
+        vel1_1d_out     = (ONE/(density_bar*c_bar))*c2_1d
+        vel2_1d_out     = (ONE/(density_bar*c_bar))*c3_1d
+        vel3_1d_out     = (ONE/(TWO*density_bar*c_bar))*c4_1d  -  (ONE/(TWO*density_bar*c_bar))*c5_1d
+        pressure_1d_out = HALF*c4_1d  +  HALF*c5_1d
 
 
+        ! Get spatio-temporal average at radial stations
+        density_bar  = density_hat_real_m(:,1,1)
+        vel1_bar     = vel1_hat_real_m(:,1,1)
+        vel2_bar     = vel2_hat_real_m(:,1,1)
+        vel3_bar     = vel3_hat_real_m(:,1,1)
+        pressure_bar = pressure_hat_real_m(:,1,1)
+        c_bar        = c_hat_real_m(:,1,1)
+
+
+        ! Compute spatio-temporal average over entire surface
+        call self%compute_boundary_average(worker,bc_comm,density_bar,vel1_bar,vel2_bar,vel3_bar,pressure_bar,c_bar, &
+                                                          density_avg,vel1_avg,vel2_avg,vel3_avg,pressure_avg,c_avg)
 
 
 
@@ -749,7 +779,7 @@ contains
         !print*, 'WARNING: Inconsistent use of Pitch A in eigenvalue calc'
 
         ! Project to eigenmodes
-        call self%primitive_to_eigenmodes(worker,bc_comm,                   &
+        call self%primitive_to_eigenmodes(worker,bc_comm,'A',               &
                                           density_real_m(:,1,1),            &
                                           vel1_real_m(:,1,1),               &
                                           vel2_real_m(:,1,1),               &
@@ -769,7 +799,7 @@ contains
 
 
 
-        call self%primitive_to_eigenmodes(worker,bc_comm,                   &
+        call self%primitive_to_eigenmodes(worker,bc_comm,'B',               &
                                           density_real_m(:,1,1),            &
                                           vel1_real_m(:,1,1),               &
                                           vel2_real_m(:,1,1),               &
@@ -817,7 +847,7 @@ contains
 
 
 
-        call self%eigenmodes_to_primitive(worker,bc_comm,                       &
+        call self%eigenmodes_to_primitive(worker,bc_comm,self%get_face_side(worker), &
                                           density_real_m(:,1,1),                &
                                           vel1_real_m(:,1,1),                   &
                                           vel2_real_m(:,1,1),                   &

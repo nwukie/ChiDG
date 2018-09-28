@@ -8,7 +8,8 @@ module bc_state_spalart_allmaras_interface_steady
     use type_point,             only: point_t
     use type_mesh,              only: mesh_t
     use type_bc_state,          only: bc_state_t
-    use bc_giles_HB_base,       only: giles_HB_base_t
+    !use bc_giles_HB_base,       only: giles_HB_base_t
+    use bc_nonlocal_nrbc_lindblad_base,       only: nonlocal_nrbc_lindblad_base_t
     use type_bc_patch,          only: bc_patch_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -34,7 +35,7 @@ module bc_state_spalart_allmaras_interface_steady
     !!  @date   2/8/2018
     !!
     !---------------------------------------------------------------------------------
-    type, public, extends(giles_HB_base_t) :: spalart_allmaras_interface_steady_t
+    type, public, extends(nonlocal_nrbc_lindblad_base_t) :: spalart_allmaras_interface_steady_t
 
     contains
 

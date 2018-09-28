@@ -9,7 +9,7 @@ module bc_state_spalart_allmaras_interface_steady
     use type_mesh,              only: mesh_t
     use type_bc_state,          only: bc_state_t
     !use bc_giles_HB_base,       only: giles_HB_base_t
-    use bc_nonlocal_nrbc_lindblad_base,       only: nonlocal_nrbc_lindblad_base_t
+    !use bc_nonlocal_nrbc_lindblad_base,       only: nonlocal_nrbc_lindblad_base_t
     use type_bc_patch,          only: bc_patch_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -35,7 +35,7 @@ module bc_state_spalart_allmaras_interface_steady
     !!  @date   2/8/2018
     !!
     !---------------------------------------------------------------------------------
-    type, public, extends(nonlocal_nrbc_lindblad_base_t) :: spalart_allmaras_interface_steady_t
+    type, public, extends(bc_state_t) :: spalart_allmaras_interface_steady_t
 
     contains
 
@@ -97,10 +97,13 @@ contains
             density_nutilde_m, grad1_density_nutilde_m, grad2_density_nutilde_m, grad3_density_nutilde_m, density_m, mu_m, nu_m, density_nutilde_bc
 
         character(1)    :: side
+        real(rk),   allocatable :: normal3(:)
+
+        normal3 = worker%normal(3)
 
 
-
-        if (self%get_face_side(worker) == 'A') then
+        !if (self%get_face_side(worker) == 'A') then
+        if (normal3(1) > ZERO) then
             ! Interpolate interior solution to face quadrature nodes
             density_nutilde_m       = worker%get_field('Density * NuTilde', 'value', 'face interior')
             grad1_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad1', 'face interior')
@@ -119,7 +122,8 @@ contains
 
 
 
-        else if (self%get_face_side(worker) == 'B') then
+        !else if (self%get_face_side(worker) == 'B') then
+        else if (normal3(1) < ZERO) then
 
             grad1_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad1', 'face interior')
             grad2_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad2', 'face interior')

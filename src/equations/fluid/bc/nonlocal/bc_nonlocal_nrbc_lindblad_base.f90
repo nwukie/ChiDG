@@ -1,7 +1,7 @@
 module bc_nonlocal_nrbc_lindblad_base
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, TWO, FOUR, HALF, ME, CYLINDRICAL,    &
+    use mod_constants,          only: ZERO, ONE, TWO, FOUR, HALF, ME, CYLINDRICAL, CARTESIAN,   &
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, PI, NO_PROC
     use mod_io,                 only: verbosity
     use mod_fluid,              only: Rgas, cp, gam
@@ -49,19 +49,21 @@ module bc_nonlocal_nrbc_lindblad_base
         real(rk),               allocatable :: r(:)
         real(rk)                            :: theta_ref = ZERO
 
-        integer(ik)                         :: nfaces_a         ! Global count across all procs in group
-        real(rk),               allocatable :: theta_a(:,:)     ! (nr,ntheta)
+        integer(ik)                         :: nfaces_a             ! Global count across all procs in group
+        real(rk),               allocatable :: theta_a(:,:)         ! (nr,ntheta)
         real(rk)                            :: theta_ref_a
         real(rk)                            :: z_ref_a
         type(element_info_t),   allocatable :: donor_a(:,:)
         real(rk),               allocatable :: donor_node_a(:,:,:)
+        real(rk),               allocatable :: grid_velocity_a(:,:) ! (nr,3)
 
-        integer(ik)                         :: nfaces_b         ! Global count across all procs in group
-        real(rk),               allocatable :: theta_b(:,:)     ! (nr,ntheta)
+        integer(ik)                         :: nfaces_b             ! Global count across all procs in group
+        real(rk),               allocatable :: theta_b(:,:)         ! (nr,ntheta)
         real(rk)                            :: theta_ref_b
         real(rk)                            :: z_ref_b
         type(element_info_t),   allocatable :: donor_b(:,:)
         real(rk),               allocatable :: donor_node_b(:,:,:)
+        real(rk),               allocatable :: grid_velocity_b(:,:) ! (nr,3)
 
     contains
 
@@ -985,7 +987,7 @@ contains
 
 
                         ! Get temporal/spatial frequencies
-                        omega = self%get_omega(worker,itime,itheta,ntheta)
+                        omega = self%get_omega(worker,iradius,itime,itheta,ntheta)
                         lm    = self%get_lm(itheta,ntheta)
 
                         ! Compute wavenumbers
@@ -1237,7 +1239,7 @@ contains
                     else
 
                         ! Get temporal/spatial frequencies
-                        omega = self%get_omega(worker,itime,itheta,ntheta)
+                        omega = self%get_omega(worker,iradius,itime,itheta,ntheta)
                         lm    = self%get_lm(itheta,ntheta)
 
                         ! Compute wavenumbers
@@ -2067,11 +2069,24 @@ contains
         type(element_info_t),   allocatable :: donors(:,:)
         real(rk),               allocatable :: thetas(:,:)
         real(rk),               allocatable :: donor_nodes(:,:,:)
+        real(rk),               allocatable :: grid_velocity(:,:)
         real(rk)                            :: theta_ref
 
         type(rule_prefers_A)    :: donor_rule_A
         type(rule_prefers_B)    :: donor_rule_B
         class(multi_donor_rule_t), allocatable  :: multi_donor_rule
+
+
+        integer(ik) :: inode, msg1, msg2, funit
+        real(rk)    :: R1_velocity_1, R1_velocity_2, R1_velocity_3, &
+                       R2_velocity_1, R2_velocity_2, R2_velocity_3
+        integer(ik) :: R1_domain_min, R1_domain_max, &
+                       R2_domain_min, R2_domain_max
+        logical     :: file_exists, in_region_one, in_region_two
+        namelist /region_one/ R1_velocity_1, R1_velocity_2, R1_velocity_3, R1_domain_min, R1_domain_max
+        namelist /region_two/ R2_velocity_1, R2_velocity_2, R2_velocity_3, R2_domain_min, R2_domain_max
+
+
 
         ! If no faces on A/B, then the auxiliary grid for that side should not
         ! be constructed.
@@ -2241,10 +2256,16 @@ contains
             self%donor_a      = donors
             self%donor_node_a = donor_nodes
             self%theta_a      = thetas
+            if (.not. allocated(self%grid_velocity_a)) allocate(self%grid_velocity_a(size(self%r),3),stat=ierr)
+            if (ierr /= 0) call AllocationError
+            self%grid_velocity_a = ZERO
         else if (side == 'B') then
             self%donor_b      = donors
             self%donor_node_b = donor_nodes
             self%theta_b      = thetas
+            if (.not. allocated(self%grid_velocity_b)) allocate(self%grid_velocity_b(size(self%r),3),stat=ierr)
+            if (ierr /= 0) call AllocationError
+            self%grid_velocity_b = ZERO
         end if
 
 
@@ -2254,6 +2275,72 @@ contains
         else if (side=='B' .and. self%nfaces_a==0) then
             self%theta_a = self%theta_b
         end if
+
+
+
+        !
+        ! Check for grid velocity specification in grid_velocity.nml
+        !
+        inquire(file='grid_velocity.nml', exist=file_exists)
+        if (file_exists) then
+            open(newunit=funit,form='formatted',file='grid_velocity.nml')
+            read(funit,nml=region_one,iostat=msg1)
+            read(funit,nml=region_two,iostat=msg2)
+            close(funit)
+
+            ! Allocate temp storage
+            if (side == 'A') then
+                grid_velocity = self%grid_velocity_a
+                in_region_one = (self%donor_a(1,1)%idomain_g >= R1_domain_min .and. self%donor_a(1,1)%idomain_g <= R1_domain_max)
+                in_region_two = (self%donor_a(1,1)%idomain_g >= R2_domain_min .and. self%donor_a(1,1)%idomain_g <= R2_domain_max)
+            else if (side == 'B') then
+                grid_velocity = self%grid_velocity_b
+                in_region_one = (self%donor_b(1,1)%idomain_g >= R1_domain_min .and. self%donor_b(1,1)%idomain_g <= R1_domain_max)
+                in_region_two = (self%donor_b(1,1)%idomain_g >= R2_domain_min .and. self%donor_b(1,1)%idomain_g <= R2_domain_max)
+            end if
+
+            ! Region 1 
+            !if (msg1 == 0 .and. self%domain(idomain_l)%idomain_g >= R1_domain_min .and. self%domain(idomain_l)%idomain_g <= R1_domain_max) then
+            if (msg1 == 0 .and. in_region_one) then
+                print*, 'setting nrbc velocity: ', R1_velocity_1, R1_velocity_2, R1_velocity_3
+                do inode = 1,size(self%r)
+                    select case(mesh%domain(1)%elems(1)%coordinate_system)
+                        case(CARTESIAN)
+                            grid_velocity(inode,1:3) = [R1_velocity_1,R1_velocity_2,R1_velocity_3]
+                        case(CYLINDRICAL)
+                            grid_velocity(inode,1:3) = [R1_velocity_1,self%r(inode)*R1_velocity_2,R1_velocity_3]
+                        case default
+                            call chidg_signal(FATAL,"mesh%add_domain: Invalid coordinate system.")
+                    end select
+                end do
+            end if
+
+            ! Region 2
+            !if (msg2 == 0 .and. self%domain(idomain_l)%idomain_g >= R2_domain_min .and. self%domain(idomain_l)%idomain_g <= R2_domain_max) then
+            if (msg2 == 0 .and. in_region_two) then
+                print*, 'setting nrbc velocity: ', R2_velocity_1, R2_velocity_2, R2_velocity_3
+                do inode = 1,size(self%r)
+                    select case(mesh%domain(1)%elems(1)%coordinate_system)
+                        case(CARTESIAN)
+                            grid_velocity(inode,1:3) = [R2_velocity_1,R2_velocity_2,R2_velocity_3]
+                        case(CYLINDRICAL)
+                            grid_velocity(inode,1:3) = [R2_velocity_1,self%r(inode)*R2_velocity_2,R2_velocity_3]
+                        case default
+                            call chidg_signal(FATAL,"domain%init_geom: Invalid coordinate system.")
+                    end select
+                end do
+            end if
+
+            ! Store grid velocity
+            if (side == 'A') then
+                self%grid_velocity_a = grid_velocity
+            else if (side == 'B') then
+                self%grid_velocity_b = grid_velocity
+            end if
+
+        end if
+
+
 
     end subroutine initialize_fourier_discretization
     !**************************************************************************************
@@ -2268,14 +2355,15 @@ contains
     !!  @date   5/28/2018
     !!
     !--------------------------------------------------------------------------------------
-    function get_omega(self,worker,itime,itheta,ntheta) result(omega)
+    function get_omega(self,worker,iradius,itime,itheta,ntheta) result(omega)
         class(nonlocal_nrbc_lindblad_base_t),     intent(inout)   :: self
         type(chidg_worker_t),   intent(in)  :: worker
         integer(ik),            intent(in)  :: itime
+        integer(ik),            intent(in)  :: iradius
         integer(ik),            intent(in)  :: itheta
         integer(ik),            intent(in)  :: ntheta
 
-        real(rk) :: omega
+        real(rk) :: omega, grid_velocity_tangential
         integer(ik) :: ntime
         real(rk), allocatable :: grid_velocity(:,:), pitch(:)
 
@@ -2298,14 +2386,17 @@ contains
 
                 if (self%get_face_side(worker) == 'A') then
                     pitch = self%bcproperties%compute('Pitch A', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+                    grid_velocity_tangential = self%grid_velocity_a(iradius,2)
                 else if (self%get_face_side(worker) == 'B') then
                     pitch = self%bcproperties%compute('Pitch B', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+                    grid_velocity_tangential = self%grid_velocity_b(iradius,2)
                 end if
 
 
                 if (itheta > 1) then
                     !omega = (vg/pitch) * real(itheta-1,rk)
-                    omega = TWO*PI*(-100._rk/pitch(1)) * self%get_lm(itheta,ntheta)
+                    !omega = TWO*PI*(-100._rk/pitch(1)) * self%get_lm(itheta,ntheta)
+                    omega = TWO*PI*(grid_velocity_tangential/pitch(1)) * self%get_lm(itheta,ntheta)
                 end if
             end if
         end if

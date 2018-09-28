@@ -66,8 +66,8 @@ contains
         call self%set_family('Inlet')
 
         ! Add functions
-        call self%bcproperties%add('Pitch A', 'Required')
-        call self%bcproperties%add('Pitch B', 'Required')
+        call self%bcproperties%add('SA Pitch A', 'Required')
+        call self%bcproperties%add('SA Pitch B', 'Required')
 
     end subroutine init
     !********************************************************************************

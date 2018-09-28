@@ -43,7 +43,7 @@ module bc_nonlocal_nrbc_lindblad_base
     !---------------------------------------------------------------------------------
     type, public, abstract, extends(bc_state_t) :: nonlocal_nrbc_lindblad_base_t
 
-        integer(ik) :: nr = 2
+        integer(ik) :: nr = 3
         integer(ik) :: nfourier_space = 5
 
         real(rk),               allocatable :: r(:)

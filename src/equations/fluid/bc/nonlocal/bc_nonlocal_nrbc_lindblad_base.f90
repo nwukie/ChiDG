@@ -2394,14 +2394,13 @@ contains
 
 
                 if (itheta > 1) then
-                    !omega = (vg/pitch) * real(itheta-1,rk)
-                    !omega = TWO*PI*(-100._rk/pitch(1)) * self%get_lm(itheta,ntheta)
-                    select case (trim(worker%coordinate_system()))
-                        case('Cartesian')
-                            omega = TWO*PI*(grid_velocity_tangential/pitch(1)) * self%get_lm(itheta,ntheta)
-                        case('Cylindrical')
-                            omega = TWO*PI*(grid_velocity_tangential/(self%r(iradius)*pitch(1))) * self%get_lm(itheta,ntheta)
-                    end select
+                    omega = TWO*PI*(grid_velocity_tangential/pitch(1)) * self%get_lm(itheta,ntheta)
+                    !select case (trim(worker%coordinate_system()))
+                    !    case('Cartesian')
+                    !        omega = TWO*PI*(grid_velocity_tangential/pitch(1)) * self%get_lm(itheta,ntheta)
+                    !    case('Cylindrical')
+                    !        omega = TWO*PI*(grid_velocity_tangential/(self%r(iradius)*pitch(1))) * self%get_lm(itheta,ntheta)
+                    !end select
                 end if
             end if
         end if

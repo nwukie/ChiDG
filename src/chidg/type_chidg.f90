@@ -74,7 +74,7 @@ module type_chidg
     type, public :: chidg_t
 
         ! Auxiliary ChiDG environment that can be used to solve sub-problems
-        type(chidg_t), pointer :: auxiliary_environment
+        type(chidg_t), pointer :: auxiliary_environment => null()
 
         ! Number of terms in 3D/1D solution basis expansion
         integer(ik)     :: nterms_s     = 0
@@ -1387,10 +1387,14 @@ contains
         call MPI_AllReduce(has_wall_distance, all_have_wall_distance, 1, MPI_LOGICAL, MPI_LOR, ChiDG_COMM, ierr)
 
         if (all_have_wall_distance) then
-            allocate(self%auxiliary_environment, stat=ierr)
-            if (ierr /= 0) call AllocationError
+            if (.not. associated(self%auxiliary_environment)) then
+                 allocate(self%auxiliary_environment, stat=ierr)
+                if (ierr /= 0) call AllocationError
+            end if
             call auxiliary_driver(self,self%auxiliary_environment,'Wall Distance', grid_file = trim(self%grid_file),    &
                                                                                    aux_file  = 'wall_distance.h5')
+            deallocate(self%auxiliary_environment)
+            self%auxiliary_environment => null()
         end if
         !*************************************************************************************
 

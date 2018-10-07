@@ -1050,7 +1050,7 @@ contains
         a4_imag = a4_imag_m
 
 !        a1_real(:,2,2) = 0.001_rk   ! entropy
-        a3_real(:,2,2) = 0.001_rk   ! vorticity
+!        a3_real(:,2,2) = 0.001_rk   ! vorticity
 !        a3_real(:,39,2) = 0.0001_rk   ! vorticity
 !        a5_real(:,2,2) = 0.001_rk   ! downstream pressure
 

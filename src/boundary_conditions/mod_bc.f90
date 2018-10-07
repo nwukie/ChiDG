@@ -74,8 +74,10 @@ module mod_bc
 
     use bc_state_outlet_nrbc_lindblad,          only: outlet_nrbc_lindblad_t
     use bc_state_outlet_nrbc_lindblad_form3,    only: outlet_nrbc_lindblad_form3_t
+    use bc_state_outlet_nrbc_lindblad_form3_fix,    only: outlet_nrbc_lindblad_form3_fix_t
     use bc_state_inlet_nrbc_lindblad,           only: inlet_nrbc_lindblad_t
     use bc_state_inlet_nrbc_lindblad_form3,     only: inlet_nrbc_lindblad_form3_t
+    use bc_state_inlet_nrbc_lindblad_form3_fix,     only: inlet_nrbc_lindblad_form3_fix_t
     use bc_state_outlet_nrbc_giles,             only: outlet_nrbc_giles_t
     use bc_state_inlet_nrbc_giles,              only: inlet_nrbc_giles_t
 
@@ -198,9 +200,11 @@ contains
 
         type(outlet_nrbc_lindblad_t)    ::  outlet_nrbc_lindblad
         type(outlet_nrbc_lindblad_form3_t)    ::  outlet_nrbc_lindblad_form3
+        type(outlet_nrbc_lindblad_form3_fix_t)    ::  outlet_nrbc_lindblad_form3_fix
         type(outlet_nrbc_giles_t)       ::  outlet_nrbc_giles
         type(inlet_nrbc_lindblad_t)     ::  inlet_nrbc_lindblad
         type(inlet_nrbc_lindblad_form3_t)     ::  inlet_nrbc_lindblad_form3
+        type(inlet_nrbc_lindblad_form3_fix_t)     ::  inlet_nrbc_lindblad_form3_fix
         type(inlet_nrbc_giles_t)        ::  inlet_nrbc_giles
 
         type(spalart_allmaras_inlet_t)              :: SPALART_ALLMARAS_INLET
@@ -295,9 +299,11 @@ contains
 
             call registered_bcs%push_back(OUTLET_NRBC_LINDBLAD)
             call registered_bcs%push_back(OUTLET_NRBC_LINDBLAD_FORM3)
+            call registered_bcs%push_back(OUTLET_NRBC_LINDBLAD_FORM3_FIX)
             call registered_bcs%push_back(OUTLET_NRBC_GILES)
             call registered_bcs%push_back(INLET_NRBC_LINDBLAD)
             call registered_bcs%push_back(INLET_NRBC_LINDBLAD_FORM3)
+            call registered_bcs%push_back(INLET_NRBC_LINDBLAD_FORM3_FIX)
             call registered_bcs%push_back(INLET_NRBC_GILES)
 
             call registered_bcs%push_back(SPALART_ALLMARAS_INLET)

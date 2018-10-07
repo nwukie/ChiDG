@@ -186,8 +186,4 @@ contains
 
 
 
-
-
-
-
 end module mod_interpolation

@@ -7,11 +7,14 @@ add_lib_sources(
                 bc_state_turbo_interface_steady.f90
                 bc_state_turbo_interface_steady_form3.f90
                 bc_nonlocal_nrbc_lindblad_base.f90
+                bc_nonlocal_nrbc_lindblad_base_fix.f90
                 bc_nonlocal_nrbc_giles_base.f90
                 bc_state_outlet_nrbc_lindblad.f90
                 bc_state_outlet_nrbc_lindblad_form3.f90
+                bc_state_outlet_nrbc_lindblad_form3_fix.f90
                 bc_state_outlet_nrbc_giles.f90
                 bc_state_inlet_nrbc_lindblad.f90
                 bc_state_inlet_nrbc_lindblad_form3.f90
+                bc_state_inlet_nrbc_lindblad_form3_fix.f90
                 bc_state_inlet_nrbc_giles.f90
                 )

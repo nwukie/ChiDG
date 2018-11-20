@@ -9,20 +9,24 @@ module mod_preconditioner
     use precon_identity,        only: precon_identity_t
     use precon_jacobi,          only: precon_jacobi_t
     use precon_ILU0,            only: precon_ILU0_t
+    use precon_ILU0_overset,    only: precon_ILU0_overset_t
     use precon_HB,              only: precon_HB_t
     use precon_RASILU0,         only: precon_RASILU0_t
     use precon_line,            only: precon_line_t
+    use precon_schur_element,   only: precon_schur_element_t
     implicit none
 
 
 
     ! Instantiate preconditioner types for sourcing
-    type(precon_identity_t)     :: P_IDENTITY
-    type(precon_jacobi_t)       :: P_BLOCKJACOBI
-    type(precon_ILU0_t)         :: P_ILU0
-    type(precon_HB_t)           :: P_HB
-    type(precon_RASILU0_t)      :: P_RASILU0
-    type(precon_line_t)         :: P_LINE
+    type(precon_identity_t)         :: P_IDENTITY
+    type(precon_jacobi_t)           :: P_BLOCKJACOBI
+    type(precon_ILU0_t)             :: P_ILU0
+    type(precon_ILU0_overset_t)     :: P_ILU0_OVERSET
+    type(precon_HB_t)               :: P_HB
+    type(precon_RASILU0_t)          :: P_RASILU0
+    type(precon_line_t)             :: P_LINE
+    type(precon_schur_element_t)    :: P_SCHUR_ELEMENT
 
 
 
@@ -53,6 +57,9 @@ contains
             case('ilu0','ILU0')
                 allocate(instance, source=P_ILU0)
 
+            case('ilu0_overset','ILU0_OVERSET')
+                allocate(instance, source=P_ILU0_OVERSET)
+
             case('HB','hb')
                 allocate(instance, source=P_HB)
 
@@ -61,6 +68,9 @@ contains
 
             case('line','Line', 'LINE')
                 allocate(instance, source=P_LINE)
+
+            case('Schur Element')
+                allocate(instance, source=P_SCHUR_ELEMENT)
 
             case default
                 user_msg = "create_preconditioner: It seems like we can't find the preconditioner &

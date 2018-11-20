@@ -57,6 +57,7 @@ module type_explicit_runge_kutta
 
     contains
 
+        procedure   :: init
         procedure   :: step
 
 
@@ -66,6 +67,22 @@ module type_explicit_runge_kutta
 
 
 contains
+
+
+
+    !>  Initialize the forward_euler_t time integrator
+    !!
+    !!  Create the assembler and atatch it to the time_integrator object so it can 
+    !!  be passed to the nonlinear solver
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine init(self)
+        class(explicit_runge_kutta_t),          intent(inout)   :: self
+
+        call self%set_name('ERK')
+
+    end subroutine init
+    !***********************************************************************************
 
 
 

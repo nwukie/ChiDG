@@ -627,6 +627,7 @@ contains
 
         ! Direct copy of all parameters
         restricted = self
+        restricted%nterms = nterms_r
 
 
         ! Allocate matrix

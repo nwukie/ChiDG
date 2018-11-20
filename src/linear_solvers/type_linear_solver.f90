@@ -1,8 +1,9 @@
 module type_linear_solver
     use mod_kinds,          only: rk,ik
     use type_dict,          only: dict_t
-    use type_chidg_matrix,   only: chidg_matrix_t
-    use type_chidg_vector,   only: chidg_vector_t
+    use type_chidg_matrix,  only: chidg_matrix_t
+    use type_chidg_vector,  only: chidg_vector_t
+    use type_chidg_data,    only: chidg_data_t
     use type_timer,         only: timer_t
     use operator_chidg_mv
 
@@ -51,9 +52,10 @@ module type_linear_solver
 
 
     abstract interface
-        subroutine solve_interface(self,A,x,b,M,solver_controller)
+        subroutine solve_interface(self,A,x,b,M,solver_controller,data)
             use type_chidg_matrix,      only: chidg_matrix_t
             use type_chidg_vector,      only: chidg_vector_t
+            use type_chidg_data,        only: chidg_data_t
             use type_preconditioner,    only: preconditioner_t
             use type_solver_controller, only: solver_controller_t
             import linear_solver_t
@@ -64,6 +66,7 @@ module type_linear_solver
             type(chidg_vector_t),       intent(inout)           :: b
             class(preconditioner_t),    intent(inout), optional :: M
             class(solver_controller_t), intent(inout), optional :: solver_controller
+            type(chidg_data_t),         intent(in),    optional :: data
         end subroutine
     end interface
 

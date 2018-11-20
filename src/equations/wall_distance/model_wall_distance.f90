@@ -136,6 +136,8 @@ contains
             end if
         end do
 
+!        d_normalization = d
+
 
         !
         ! Store Wall Distance to model field

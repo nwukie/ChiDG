@@ -133,8 +133,8 @@ contains
         !
         !eps = 1.e-10_rk
         eps = 1.e-11_rk
+        !eps = ZERO
         dwall = worker%get_field('Wall Distance', 'value', 'element')
-
         if (any(ieee_is_nan(dwall(:)%x_ad_))) call write_line('dwall is nan',io_proc=GLOBAL_MASTER)
 
         !
@@ -152,13 +152,11 @@ contains
         nu  = mu*invrho
 
 
-
         !
         ! Compute turbulence viscosity
         !
         chi  = nutilde/nu
         f_v1 = (chi*chi*chi)/(chi*chi*chi + SA_c_v1*SA_c_v1*SA_c_v1)
-
 
         mu_t = rho_nutilde
         mu_t = ZERO
@@ -166,7 +164,6 @@ contains
             mu_t = rho_nutilde * f_v1
         end where
         
-
 
         !
         ! Compute f_n1
@@ -176,7 +173,6 @@ contains
         where(nutilde < ZERO)
             f_n1 = (SA_c_n1 + chi*chi*chi)/(SA_c_n1 - chi*chi*chi)
         end where
-
 
 
         !
@@ -206,7 +202,6 @@ contains
         else where
             vorticity_mod = vorticity + vorticity*(SA_c_v2*SA_c_v2*vorticity + SA_c_v3*vorticity_bar)/( (SA_c_v3 - TWO*SA_c_v2)*vorticity - vorticity_bar ) 
         end where
-
 
 
         !
@@ -269,7 +264,6 @@ contains
                     -(SA_c_b2/SA_sigma)*rho*(grad1_nutilde*grad1_nutilde + grad2_nutilde*grad2_nutilde + grad3_nutilde*grad3_nutilde)   &
                     +(ONE/SA_sigma)*(nu + f_n1*nutilde)*(grad1_rho*grad1_nutilde + grad2_rho*grad2_nutilde + grad3_rho*grad3_nutilde)   &
                   )
-
 
         call worker%integrate_volume_source('Density * NuTilde',source)
 

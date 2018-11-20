@@ -42,6 +42,7 @@ module mod_equations
     use eqn_pgradtest,                      only: pgradtest
     use eqn_primitive_linearized_euler,     only: primitive_linearized_euler
     use eqn_empty,                          only: empty
+    use eqn_hyperbolized_poisson,           only: hyperbolized_poisson
     implicit none
 
 
@@ -148,6 +149,7 @@ contains
         type(pgradtest)                     :: pgradtest_builder
         type(primitive_linearized_euler)    :: primitive_linearized_euler_builder
         type(empty)                         :: empty_builder
+        type(hyperbolized_poisson)          :: hyperbolized_poisson_builder
 
 
         !
@@ -181,6 +183,7 @@ contains
             call equation_set_factory%register(pgradtest_builder%build('default'))
             call equation_set_factory%register(primitive_linearized_euler_builder%build('default'))
             call equation_set_factory%register(empty_builder%build('default'))
+            call equation_set_factory%register(hyperbolized_poisson_builder%build('default'))
 
 
 

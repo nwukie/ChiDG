@@ -6,34 +6,22 @@ module mod_linear_solver
 
 
     ! IMPORT MATRIX SOLVERS
-!    use type_directsolver,  only: directsolver_t
-!    use type_blockjacobi,   only: blockjacobi_t
-!    use type_gaussseidel,   only: gaussseidel_t
-!    use type_sor,           only: sor_t
-!    use type_gmres,         only: gmres_t
-    use type_fgmres,            only: fgmres_t
-    use type_fgmres_cgs,        only: fgmres_cgs_t
-    use type_fgmres_cgs_mpc,    only: fgmres_cgs_mpc_t
-    use type_fgmres_cgs_boost,  only: fgmres_cgs_boost_t
-    use type_fgmres_cgs_mg,     only: fgmres_cgs_mg_t
-    use type_jacobi,            only: jacobi_t
+    use type_fgmres,                only: fgmres_t
+    use type_fgmres_cgs,            only: fgmres_cgs_t
+    use type_fgmres_cgs_correct,    only: fgmres_cgs_correct_t
+    use type_fgmres_cgs_mg,         only: fgmres_cgs_mg_t
+    use type_fgmres_cgs_mg_correct, only: fgmres_cgs_mg_correct_t
     
 
     
 
 
 
-!    type(directsolver_t)    :: DIRECT
-!    type(blockjacobi_t)     :: BLOCKJACOBI
-!    type(gaussseidel_t)     :: GAUSSSEIDEL
-!    type(sor_t)             :: SOR
-!    type(gmres_t)           :: GMRES
-    type(fgmres_t)              :: FGMRES
-    type(fgmres_cgs_t)          :: FGMRES_CGS
-    type(fgmres_cgs_mpc_t)      :: FGMRES_CGS_MPC
-    type(fgmres_cgs_boost_t)    :: FGMRES_CGS_BOOST
-    type(fgmres_cgs_mg_t)       :: FGMRES_CGS_MG
-    type(jacobi_t)              :: JACOBI
+    type(fgmres_t)                  :: FGMRES
+    type(fgmres_cgs_t)              :: FGMRES_CGS
+    type(fgmres_cgs_correct_t)      :: FGMRES_CGS_CORRECT
+    type(fgmres_cgs_mg_t)           :: FGMRES_CGS_MG
+    type(fgmres_cgs_mg_correct_t)   :: FGMRES_CGS_MG_CORRECT
 
 
 
@@ -67,8 +55,6 @@ contains
 !            case ('direct','Direct')
 !                allocate(msolver, source=DIRECT, stat=ierr)
 !
-!            case ('blockjacobi','BlockJacobi')
-!                allocate(msolver, source=BLOCKJACOBI, stat=ierr)
 !
 !            case ('gaussseidel','GaussSeidel')
 !                allocate(msolver, source=GAUSSSEIDEL, stat=ierr)
@@ -85,17 +71,14 @@ contains
             case ('fgmres_cgs', 'FGMRES_CGS')
                 allocate(lsolver, source=FGMRES_CGS, stat=ierr)
 
-            case ('fgmres_cgs_mpc', 'FGMRES_CGS_MPC')
-                allocate(lsolver, source=FGMRES_CGS_MPC, stat=ierr)
+            case ('fgmres_cgs_correct', 'FGMRES_CGS_CORRECT')
+                allocate(lsolver, source=FGMRES_CGS_CORRECT, stat=ierr)
 
             case ('fgmres_cgs_mg', 'FGMRES_CGS_MG')
                 allocate(lsolver, source=FGMRES_CGS_MG, stat=ierr)
 
-            case ('fgmres_cgs_boost', 'FGMRES_CGS_BOOST')
-                allocate(lsolver, source=FGMRES_CGS_BOOST, stat=ierr)
-
-            case ('jacobi', 'Jacobi')
-                allocate(lsolver, source=JACOBI, stat=ierr)
+            case ('fgmres_cgs_mg_correct', 'FGMRES_CGS_MG_CORRECT')
+                allocate(lsolver, source=FGMRES_CGS_MG_CORRECT, stat=ierr)
 
             case default
                 call chidg_signal(FATAL,"create_matrixsolver: matrix solver string did not match any valid type")

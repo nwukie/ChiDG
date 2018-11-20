@@ -126,6 +126,11 @@ module mod_operators
     use PRIMLINEULER_divergence_source,         only: PRIMLINEULER_divergence_source_t
 
 
+    ! Hyperbolized Poisson
+    use HP_LaxFriedrichs,                       only: HP_LaxFriedrichs_t
+    use HP_boundary_average,                    only: HP_boundary_average_t
+    use HP_volume,                              only: HP_volume_t
+    use HP_bc,                                  only: HP_bc_t
     implicit none
 
 
@@ -365,6 +370,13 @@ contains
         type(PRIMLINEULER_equation_source_t)            :: PRIMLINEULER_equation_source
         type(PRIMLINEULER_divergence_source_t)          :: PRIMLINEULER_divergence_source
 
+        ! Hyperbolized Poisson
+        type(HP_LaxFriedrichs_t)                        :: HP_LaxFriedrichs_operator
+        type(HP_volume_t)                               :: HP_volume_operator
+        type(HP_bc_t)                                   :: HP_bc_operator
+        type(HP_boundary_average_t)                     :: HP_boundary_average_operator
+
+
         if (.not. operators_initialized) then
 
             ! Register Linear Advection
@@ -491,6 +503,14 @@ contains
             call operator_factory%register(PRIMLINEULER_circumferential_source)
             call operator_factory%register(PRIMLINEULER_equation_source)
             call operator_factory%register(PRIMLINEULER_divergence_source)
+
+            ! Hyperbolized Poisson
+            call operator_factory%register(HP_LaxFriedrichs_operator)
+            call operator_factory%register(HP_volume_operator)
+            call operator_factory%register(HP_boundary_average_operator)
+            call operator_factory%register(HP_bc_operator)
+
+
 
             operators_initialized = .true.
 

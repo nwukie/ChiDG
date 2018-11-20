@@ -11,6 +11,7 @@ module type_fgmres_cgs
     use type_linear_solver,     only: linear_solver_t 
     use type_preconditioner,    only: preconditioner_t
     use type_solver_controller, only: solver_controller_t
+    use type_chidg_data,        only: chidg_data_t
     use type_chidg_vector
     use type_chidg_matrix
 
@@ -33,7 +34,11 @@ module type_fgmres_cgs
     type, public, extends(linear_solver_t) :: fgmres_cgs_t
 
         integer(ik) :: m = 2000
+        integer(ik) :: maxiter = -1
+        integer(ik) :: silence = 0
         !integer(ik) :: m = 10
+        real(rk)    :: rtol = 1.e-16_rk
+
 
     contains
 
@@ -59,13 +64,14 @@ contains
     !!  @note   parallelization
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine solve(self,A,x,b,M,solver_controller)
+    subroutine solve(self,A,x,b,M,solver_controller,data)
         class(fgmres_cgs_t),        intent(inout)               :: self
         type(chidg_matrix_t),       intent(inout)               :: A
         type(chidg_vector_t),       intent(inout)               :: x
         type(chidg_vector_t),       intent(inout)               :: b
         class(preconditioner_t),    intent(inout), optional     :: M
         class(solver_controller_t), intent(inout), optional     :: solver_controller
+        type(chidg_data_t),         intent(in),    optional     :: data
 
         type(timer_t)   :: timer_mv, timer_dot, timer_norm, timer_precon
 
@@ -78,12 +84,12 @@ contains
 
         integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem, xstart, xend
         integer(ik) :: i, j, k, l, ii, ih                 ! Loop counters
-        real(rk)    :: res, err, r0norm, gam, delta 
+        real(rk)    :: res, err, r0norm, r0norm_initial, gam, delta 
 
-        logical :: converged = .false.
-        logical :: max_iter  = .false.
+        logical :: converged_absolute
+        logical :: converged_relative
+        logical :: converged_maxiter
         logical :: reorthogonalize = .false.
-
 
 
         !
@@ -94,7 +100,7 @@ contains
 
         call self%timer%reset()
         call self%timer%start()
-        call write_line('           Linear Solver: ', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
+        call write_line('           Linear Solver: ', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
 
 
 
@@ -167,6 +173,9 @@ contains
 
         !res = 1000000000000._rk
         res = huge(1._rk)
+        converged_absolute = .false.
+        converged_relative = .false.
+        converged_maxiter  = .false.
         do while (res > self%tol)
 
             !
@@ -196,6 +205,8 @@ contains
             p(1)   = r0norm
 
 
+            if (self%niter == 0) r0norm_initial = r0norm
+
             !
             ! Inner GMRES restart loop
             !
@@ -213,6 +224,7 @@ contains
                 call timer_precon%start()
                 z(j) = M%apply(A,v(j))
                 call timer_precon%stop()
+
 
 
                 !
@@ -375,10 +387,17 @@ contains
                 ! Test exit conditions
                 !
                 res = abs(p(j+1))
-                call write_line(res, io_proc=GLOBAL_MASTER, silence=(verbosity<4))
-                converged = (res < self%tol)
+                call write_line(res, io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
+
+                converged_absolute = (res < self%tol)
+                converged_relative = (res/r0norm_initial < self%rtol)
+                if (self%maxiter < 0) then
+                    converged_maxiter = .false.
+                else
+                    converged_maxiter  = ( self%niter >= self%maxiter )
+                end if
                 
-                if ( converged ) then
+                if ( converged_absolute .or. converged_relative .or. converged_maxiter ) then
                     exit
                 end if
 
@@ -437,7 +456,8 @@ contains
             !
             ! Test exit condition
             !
-            if ( converged ) then
+            !if ( converged ) then
+            if ( converged_absolute .or. converged_relative .or. converged_maxiter ) then
                 exit
             else
                 x0 = x
@@ -458,33 +478,33 @@ contains
         !
         err = self%error(A,x,b)
         call self%timer%stop()
-        call write_line('   Linear Solver Error: ',         err,                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
-        call write_line('   Linear Solver compute time: ',  self%timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
-        call write_line('   Linear Solver Iterations: ',    self%niter,           delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
+        call write_line('   Linear Solver Error: ',         err,                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
+        call write_line('   Linear Solver compute time: ',  self%timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
+        call write_line('   Linear Solver Iterations: ',    self%niter,           delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
 
         !call self%timer%report('Linear solver compute time: ')
         !call timer_precon%report('Preconditioner time: ')
-        call write_line('   Preconditioner time: ',           timer_precon%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
-        call write_line('       Precon time per iteration: ', timer_precon%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('   Preconditioner time: ',           timer_precon%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
+        call write_line('       Precon time per iteration: ', timer_precon%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
 
 
         !call timer_mv%report('MV time: ')
-        call write_line('   MV time: ',                   timer_mv%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
-        call write_line('       MV time per iteration: ', timer_mv%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('   MV time: ',                   timer_mv%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
+        call write_line('       MV time per iteration: ', timer_mv%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
 
         !call timer_comm%report('MV comm time: ')
-        call write_line('   MV comm time: ',                   timer_comm%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
-        call write_line('       MV comm time per iteration: ', timer_comm%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('   MV comm time: ',                   timer_comm%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
+        call write_line('       MV comm time per iteration: ', timer_comm%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         !call timer_blas%report('MV blas time: ')
-        call write_line('   MV blas time: ',                   timer_blas%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
-        call write_line('       MV blas time per iteration: ', timer_blas%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('   MV blas time: ',                   timer_blas%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
+        call write_line('       MV blas time per iteration: ', timer_blas%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         call timer_comm%reset()
         call timer_blas%reset()
 
         !call timer_dot%report('Dot time: ')
         !call timer_norm%report('Norm time: ')
-        call write_line('   Dot time: ',  timer_dot%elapsed(),  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
-        call write_line('   Norm time: ', timer_norm%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('   Dot time: ',  timer_dot%elapsed(),  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
+        call write_line('   Norm time: ', timer_norm%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
 
 
 

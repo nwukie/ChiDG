@@ -128,7 +128,8 @@ contains
 
         
         ! Compute number of lines 
-        nlines = nint(real(nelements,rk)/real(3,rk))
+        !nlines = nint(real(nelements,rk)/real(3,rk))
+        nlines = nint(real(nelements,rk)/real(2,rk))
 
 
         ! Loop through and count how many lines there will be
@@ -369,10 +370,11 @@ contains
     !!  @date   6/25/2018
     !!
     !-----------------------------------------------------------------------------
-    function apply_preconditioner(self,A,v) result(z)
+    function apply_preconditioner(self,A,v,z_old) result(z)
         class(precon_line_t),   intent(inout)   :: self
         type(chidg_matrix_t),   intent(in)      :: A
         type(chidg_vector_t),   intent(in)      :: v
+        type(chidg_vector_t),   intent(in), optional :: z_old
 
         type(chidg_vector_t)    :: z
 

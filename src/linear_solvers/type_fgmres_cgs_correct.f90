@@ -1,4 +1,4 @@
-module type_fgmres_cgs_boost
+module type_fgmres_cgs_correct
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
@@ -11,6 +11,9 @@ module type_fgmres_cgs_boost
     use type_linear_solver,     only: linear_solver_t 
     use type_preconditioner,    only: preconditioner_t
     use type_solver_controller, only: solver_controller_t
+    use type_fgmres_cgs,        only: fgmres_cgs_t
+    use precon_jacobi,          only: precon_jacobi_t
+    use type_chidg_data,        only: chidg_data_t
     use type_chidg_vector
     use type_chidg_matrix
 
@@ -20,7 +23,6 @@ module type_fgmres_cgs_boost
         
 
 
-    logical :: first_boost = .true.
 
 
 
@@ -31,15 +33,16 @@ module type_fgmres_cgs_boost
     !!  @date   5/11/2016
     !!
     !---------------------------------------------------------------------------------------------
-    type, public, extends(linear_solver_t) :: fgmres_cgs_boost_t
+    type, public, extends(linear_solver_t) :: fgmres_cgs_correct_t
 
-        integer(ik) :: m = 10
+        integer(ik) :: m = 2000
+        !integer(ik) :: m = 10
 
     contains
 
         procedure   :: solve
 
-    end type fgmres_cgs_boost_t
+    end type fgmres_cgs_correct_t
     !*********************************************************************************************
 
 
@@ -59,30 +62,52 @@ contains
     !!  @note   parallelization
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine solve(self,A,x,b,M,solver_controller)
-        class(fgmres_cgs_boost_t),        intent(inout)               :: self
-        type(chidg_matrix_t),       intent(inout)               :: A
-        type(chidg_vector_t),       intent(inout)               :: x
-        type(chidg_vector_t),       intent(inout)               :: b
-        class(preconditioner_t),    intent(inout), optional     :: M
-        class(solver_controller_t), intent(inout), optional     :: solver_controller
+    subroutine solve(self,A,x,b,M,solver_controller,data)
+        class(fgmres_cgs_correct_t),    intent(inout)               :: self
+        type(chidg_matrix_t),           intent(inout)               :: A
+        type(chidg_vector_t),           intent(inout)               :: x
+        type(chidg_vector_t),           intent(inout)               :: b
+        class(preconditioner_t),        intent(inout), optional     :: M
+        class(solver_controller_t),     intent(inout), optional     :: solver_controller
+        type(chidg_data_t),             intent(in),    optional     :: data
 
         type(timer_t)   :: timer_mv, timer_dot, timer_norm, timer_precon
 
 
-        type(chidg_vector_t)                :: r, r0, diff, xold, w, x0
+        type(chidg_vector_t)                :: r, r0, diff, xold, w, x0, zr, deltaz
         type(chidg_vector_t),   allocatable :: v(:), z(:)
         real(rk),               allocatable :: h(:,:), h_square(:,:), dot_tmp(:), htmp(:,:)
         real(rk),               allocatable :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
         real(rk)                            :: pj, pjp, h_ij, h_ipj, norm_before, norm_after, L_crit, crit
 
-        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem
+        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem, xstart, xend, icorrect, idom, itime, diag, ismooth
         integer(ik) :: i, j, k, l, ii, ih                 ! Loop counters
         real(rk)    :: res, err, r0norm, gam, delta 
 
         logical :: converged = .false.
         logical :: max_iter  = .false.
         logical :: reorthogonalize = .false.
+
+
+
+        type(fgmres_cgs_t) :: linear_solver
+!        type(precon_jacobi_t)   :: jacobi
+
+        linear_solver%m = 100
+        !linear_solver%tol = 1.e-1_rk
+        !linear_solver%rtol = 6.e-1_rk
+        linear_solver%tol = 1.e-1_rk
+        linear_solver%rtol = 1.e-1_rk
+        linear_solver%maxiter = 100
+
+        
+        !
+        !   BEGIN JACOBI Smoother
+        !
+!        call jacobi%init(data)
+!        call jacobi%update(A,b)
+
+
 
 
 
@@ -108,7 +133,7 @@ contains
         end if
 
 
-
+        
 
         !
         ! Allocate and initialize Krylov vectors V
@@ -157,11 +182,16 @@ contains
         ! Set initial solution x. ZERO
         !
         x0 = x
+        zr = x
+        deltaz = x
         call x0%clear()
         call x%clear()
+        call zr%clear()
+        call deltaz%clear()
 
 
         self%niter = 0
+
 
 
         !res = 1000000000000._rk
@@ -190,41 +220,43 @@ contains
             ! Compute initial residual r0, residual norm, and normalized r0
             !
             r0     = self%residual(A,x0,b)
-
-
-            if (self%niter == 0) then
-                r0 = boostconv(r0,.true.)
-            else
-                r0 = boostconv(r0,.false.)
-            end if
-
-
-
             r0norm = r0%norm(ChiDG_COMM)
             v(1)   = r0/r0norm
             p(1)   = r0norm
+
 
             !
             ! Inner GMRES restart loop
             !
             nvecs = 0
             do j = 1,self%m
-
-
                 nvecs = nvecs + 1
-           
+
+
                 !
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 !
                 call timer_precon%start()
                 z(j) = M%apply(A,v(j))
-
-                !if (self%niter == 0) then
-                !    z(j) = boostconv(z(j),.true.)
-                !else
-                !    z(j) = boostconv(z(j),.false.)
-                !end if
                 call timer_precon%stop()
+
+
+                !! Compute residual and use GMRES inner iterations to compute 
+                !! approximate correction
+                zr = v(j) - chidg_mv(A,z(j))
+                call linear_solver%solve(A,deltaz,zr,M,solver_controller)
+                z(j) = z(j) + deltaz
+
+!                do ismooth = 1,3
+!                    zr = v(j) - chidg_mv(A,z(j))
+!                    deltaz = jacobi%apply(A,zr)
+!                    z(j) = z(j) + 0.66_rk*deltaz
+!                end do
+
+
+
+
+
 
 
                 !
@@ -233,6 +265,7 @@ contains
                 call timer_mv%start()
                 w = chidg_mv(A,z(j))
                 call timer_mv%stop()
+
 
 
                 norm_before = w%norm(ChiDG_COMM)
@@ -504,134 +537,4 @@ contains
 
 
 
-
-
-
-    !>
-    !!
-    !!
-    !!
-    !!
-    !!
-    !-------------------------------------------------------------------------------------------
-    function boostconv(r,clear) result(z)
-        type(chidg_vector_t),   intent(in)  :: r
-        logical,                intent(in)  :: clear
-
-        integer(ik),    parameter   :: N = 100
-        integer(ik)                 :: i, m, k
-
-        type(chidg_vector_t)            :: z
-        type(chidg_vector_t),   save    :: w(N), v(N), r_nm1, z_nm1
-        real(rk),               save    :: D(N,N)
-        integer(ik),            save    :: startup
-        real(rk)                        :: t(N), c(N)
-        real(rk),       allocatable     :: Dinv(:,:)
-
-
-        if (clear) then
-            first_boost = .true.
-        end if
-
-
-
-
-        if (first_boost) then
-            w(:) = r
-            v(:) = r
-            r_nm1 = r
-            z_nm1 = r
-            call z_nm1%clear()
-            do i = 1,N
-                call w(i)%clear()
-                call v(i)%clear()
-            end do
-            D = ZERO
-            startup = 1
-            first_boost = .false.
-        end if
-
-        !
-        ! Discard oldest vectors
-        !
-        do i = 1,N-1
-            v(i) = v(i+1)
-            w(i) = w(i+1)
-        end do
-
-
-        !
-        ! Update vector basis
-        !
-        v(N) = r_nm1 - r
-        w(N) = z_nm1 - v(N)
-        
-
-        !
-        ! Shift rows up, top row goes into the bottom row, but will be replaced by the update just below here
-        !
-        D = cshift(D,1,1)
-        D = cshift(D,1,2)
-
-
-        !
-        ! Update least squares matrix
-        !
-        do m = 1,N
-            D(N,m) = dot(v(N),v(m),ChiDG_COMM)
-        end do
-        D(:,N) = D(N,:)
-
-
-        !
-        ! Build rhs
-        !
-        do k = 1,N
-            t(k) = dot(v(k),r,ChiDG_COMM)
-        end do
-
-
-        z = r
-        if (startup > N) then
-
-            Dinv = inv(D(1:N,1:N))
-            c(1:N) = matmul(Dinv,t(1:N))
-
-            !print*, 'C:'
-            !print*, c
-            do i = 1,N
-                z = z + c(i)*w(i)
-            end do
-        end if
-        
-
-        !
-        ! 
-        !
-        startup = startup + 1
-
-
-        r_nm1 = r
-        z_nm1 = z
-
-
-    end function boostconv
-    !****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-end module type_fgmres_cgs_boost
+end module type_fgmres_cgs_correct

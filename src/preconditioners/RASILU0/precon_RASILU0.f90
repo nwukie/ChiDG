@@ -408,10 +408,11 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    function apply(self,A,v) result(z)
+    function apply(self,A,v,z_old) result(z)
         class(precon_RASILU0_t),   intent(inout)   :: self
         type(chidg_matrix_t),    intent(in)      :: A
         type(chidg_vector_t),    intent(in)      :: v
+        type(chidg_vector_t),    intent(in), optional :: z_old
 
         type(chidg_vector_t) :: z
 

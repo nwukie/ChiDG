@@ -239,6 +239,9 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         u       = worker%get_field('u', 'value')
+        !grad1_u = worker%get_field('u', 'grad1',override_lift=.true.)
+        !grad2_u = worker%get_field('u', 'grad2',override_lift=.true.)
+        !grad3_u = worker%get_field('u', 'grad3',override_lift=.true.)
         grad1_u = worker%get_field('u', 'grad1')
         grad2_u = worker%get_field('u', 'grad2')
         grad3_u = worker%get_field('u', 'grad3')

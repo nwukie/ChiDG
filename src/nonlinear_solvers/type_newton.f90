@@ -113,7 +113,8 @@ contains
             ! NONLINEAR CONVERGENCE LOOP
             !
             !do while ( resid > self%tol )
-            do while( absolute_convergence .and. relative_convergence )
+            !do while( absolute_convergence .and. relative_convergence )
+            do while( absolute_convergence )
                 niter = niter + 1
 
 
@@ -171,7 +172,7 @@ contains
                 !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
                 !
-                call linear_solver%solve(lhs,dq,b,preconditioner,controller)
+                call linear_solver%solve(lhs,dq,b,preconditioner,controller,data)
 
                 call self%matrix_iterations%push_back(linear_solver%niter)
                 call self%matrix_time%push_back(linear_solver%timer%elapsed())

@@ -1,4 +1,4 @@
-module precon_ILU0
+module precon_ILU0_overset
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: DIAG, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, ONE
@@ -9,21 +9,22 @@ module precon_ILU0
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_data,        only: chidg_data_t
     use type_chidg_matrix,      only: chidg_matrix_t
-    use type_chidg_vector,      only: chidg_vector_t
+    use type_chidg_vector
     implicit none
 
 
 
 
 
-    !>  ILU0 preconditioner
+
+    !>  ILU0_overset preconditioner
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/24/2016
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    type, extends(preconditioner_t) :: precon_ILU0_t
+    type, extends(preconditioner_t) :: precon_ILU0_overset_t
 
         type(chidg_matrix_t)     :: LD
 
@@ -33,9 +34,9 @@ module precon_ILU0
         procedure   :: update
         procedure   :: apply
 
-        procedure   :: restrict
+!        procedure   :: restrict
 
-    end type precon_ILU0_t
+    end type precon_ILU0_overset_t
     !*******************************************************************************************
 
 
@@ -45,7 +46,7 @@ contains
 
 
 
-    !>  Initialize the ILU0 preconditioner. This is for allocating storage. In this case, 
+    !>  Initialize the ILU0_overset preconditioner. This is for allocating storage. In this case, 
     !!  we allocate a Lower-Diagonal block matrix for storing the LU decomposition.
     !!  
     !!  @author Nathan A. Wukie
@@ -56,14 +57,13 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine init(self,data)
-        class(precon_ILU0_t),    intent(inout)   :: self
+        class(precon_ILU0_overset_t),    intent(inout)   :: self
         type(chidg_data_t),         intent(in)      :: data
 
         call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
         call self%LD%clear()
 
         self%initialized = .true.
-
 
     end subroutine init
     !*******************************************************************************************
@@ -87,7 +87,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine update(self,A,b)
-        class(precon_ILU0_t),   intent(inout)   :: self
+        class(precon_ILU0_overset_t),   intent(inout)   :: self
         type(chidg_matrix_t),   intent(in)      :: A
         type(chidg_vector_t),   intent(in)      :: b
 
@@ -97,13 +97,13 @@ contains
                        eparent_g_lower
 
 
-        call write_line(' Computing ILU0 factorization', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line(' Computing ILU0_overset factorization', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
 
         !
         ! Test preconditioner initialization
         !
-        if ( .not. self%initialized ) call chidg_signal(FATAL,'ILU0%update: preconditioner has not yet been initialized.')
+        if ( .not. self%initialized ) call chidg_signal(FATAL,'ILU0_overset%update: preconditioner has not yet been initialized.')
 
        
         do itime = 1,size(A%dom(1)%lblks,2)
@@ -198,7 +198,7 @@ contains
 
         end do  ! itime
 
-        call write_line(' Done Computing ILU0 factorization', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line(' Done Computing ILU0_overset factorization', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
 
     end subroutine update
@@ -223,14 +223,14 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     function apply(self,A,v,z_old) result(z)
-        class(precon_ILU0_t),   intent(inout)   :: self
-        type(chidg_matrix_t),    intent(in)      :: A
-        type(chidg_vector_t),    intent(in)      :: v
-        type(chidg_vector_t),    intent(in), optional :: z_old
+        class(precon_ILU0_overset_t),   intent(inout)           :: self
+        type(chidg_matrix_t),           intent(in)              :: A
+        type(chidg_vector_t),           intent(in)              :: v
+        type(chidg_vector_t),           intent(in), optional    :: z_old
 
-        type(chidg_vector_t)         :: z
+        type(chidg_vector_t)         :: z, overset
 
-        integer(ik)             :: ielem, itime, idiag, eparent_l, idom, irow, icol, &
+        integer(ik)             :: ielem, itime, idiag, dparent_l, eparent_l, idom, irow, icol, &
                                    ilowerA, ilowerLD, iupper, dparent_g_lower, eparent_g_lower, &
                                    inner_time, precon_ntime
         real(rk),   allocatable :: temp(:)
@@ -239,10 +239,16 @@ contains
         call self%timer%start()
 
 
+
+
+
         !
         ! Initialize z for preconditioning
         !
         z = v
+
+
+
 
         !
         ! Set ntime for preconditioner computations
@@ -252,36 +258,22 @@ contains
 
 
         do itime = 1,precon_ntime
-
-
-            !
-            ! For each domain
-            !
             do idom = 1,size(A%dom)
 
 
-                !
                 ! Forward Solve - Local
-                !
-                !itime = 1
                 do irow = 1,size(self%LD%dom(idom)%lblks,1)
 
-
-                    !
                     ! Lower-Triangular blocks
-                    !
                     do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
 
                         ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
-
                         dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
                         eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
-                        
                         ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower,itime)
 
                         if ( A%dom(idom)%lblks(irow,itime)%parent_proc(ilowerA) == IRANK ) then
                                 
-                                ! Get associated parent block index
                                 eparent_l = self%LD%dom(idom)%lblks(irow,itime)%eparent_l(ilowerLD)
 
                                 if (allocated(temp)) deallocate(temp)
@@ -292,32 +284,23 @@ contains
 
                         end if
 
-
                     end do
-
 
                 end do ! irow
 
 
 
-
-                !
                 ! Backward Solve
-                !
                 do irow = size(A%dom(idom)%lblks,1),1,-1
 
-                    !
                     ! Upper-Triangular blocks
-                    !
                     do icol = 1,A%dom(idom)%local_upper_blocks(irow,itime)%size()
 
                         iupper = A%dom(idom)%local_upper_blocks(irow,itime)%at(icol)
 
                         if (A%dom(idom)%lblks(irow,itime)%parent_proc(iupper) == IRANK) then
 
-                                ! Get associated parent block index
                                 eparent_l = A%dom(idom)%lblks(irow,itime)%eparent_l(iupper)
-                                !z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,itime)%data_(iupper)%mat, z%dom(idom)%vecs(eparent_l)%vec)
 
                                 if (allocated(temp)) deallocate(temp)
                                 allocate(temp(size(z%dom(idom)%vecs(irow)%gettime(itime))))
@@ -331,11 +314,8 @@ contains
                     end do
 
 
-                    !
                     ! Diagonal block
-                    !
                     idiag = self%LD%dom(idom)%lblks(irow,itime)%get_diagonal()
-                    !z%dom(idom)%vecs(irow)%vec = matmul(self%LD%dom(idom)%lblks(irow,itime)%data_(idiag)%mat, z%dom(idom)%vecs(irow)%vec)
                     
                     if (allocated(temp)) deallocate(temp)
                     allocate(temp(size(z%dom(idom)%vecs(irow)%gettime(itime))))
@@ -347,11 +327,118 @@ contains
                 end do ! irow
 
 
+            end do ! idom
 
+        end do ! itime
+
+
+
+        ! Copy result from block-local solves
+        overset = v
+        call overset%clear()
+        
+        ! Compute O * z
+        do itime = 1,precon_ntime
+            do idom = 1,size(A%dom)
+                do ielem = 1,size(A%dom(idom)%chi_blks,1)
+                    do icol = 1,A%dom(idom)%chi_blks(ielem,itime)%size()
+
+                        dparent_l = A%dom(idom)%chi_blks(ielem,itime)%data_(icol)%dparent_l()
+                        eparent_l = A%dom(idom)%chi_blks(ielem,itime)%data_(icol)%eparent_l()
+        
+                        overset%dom(idom)%vecs(ielem)%vec = overset%dom(idom)%vecs(ielem)%vec + matmul(A%dom(idom)%chi_blks(ielem,itime)%data_(icol)%mat, v%dom(dparent_l)%vecs(eparent_l)%vec)
+
+                    end do !icol
+                end do !irow
+            end do !idom
+        end do !itime
+
+
+
+
+
+
+        !
+        ! OVERSET
+        !
+        do itime = 1,precon_ntime
+            do idom = 1,size(A%dom)
+
+                ! Forward Solve - Local
+                do irow = 1,size(self%LD%dom(idom)%lblks,1)
+
+                    ! Lower-Triangular blocks
+                    do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
+
+                        ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
+                        dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
+                        eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
+                        ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower,itime)
+
+                        if ( A%dom(idom)%lblks(irow,itime)%parent_proc(ilowerA) == IRANK ) then
+                                
+                                eparent_l = self%LD%dom(idom)%lblks(irow,itime)%eparent_l(ilowerLD)
+
+                                if (allocated(temp)) deallocate(temp)
+                                allocate(temp(size(overset%dom(idom)%vecs(irow)%gettime(itime))))
+
+                                temp = overset%dom(idom)%vecs(irow)%gettime(itime) - matmul(self%LD%dom(idom)%lblks(irow,itime)%data_(ilowerLD)%mat, overset%dom(idom)%vecs(eparent_l)%gettime(itime))
+                                call overset%dom(idom)%vecs(irow)%settime(itime,temp)
+
+                        end if
+
+                    end do
+
+                end do ! irow
+
+
+                ! Backward Solve
+                do irow = size(A%dom(idom)%lblks,1),1,-1
+
+                    ! Upper-Triangular blocks
+                    do icol = 1,A%dom(idom)%local_upper_blocks(irow,itime)%size()
+
+                        iupper = A%dom(idom)%local_upper_blocks(irow,itime)%at(icol)
+
+                        if (A%dom(idom)%lblks(irow,itime)%parent_proc(iupper) == IRANK) then
+
+                                ! Get associated parent block index
+                                eparent_l = A%dom(idom)%lblks(irow,itime)%eparent_l(iupper)
+
+                                if (allocated(temp)) deallocate(temp)
+                                allocate(temp(size(overset%dom(idom)%vecs(irow)%gettime(itime))))
+
+                                temp = overset%dom(idom)%vecs(irow)%gettime(itime) - matmul(A%dom(idom)%lblks(irow,itime)%data_(iupper)%mat, overset%dom(idom)%vecs(eparent_l)%gettime(itime))
+                                call overset%dom(idom)%vecs(irow)%settime(itime,temp)
+
+                        end if
+
+
+                    end do
+
+                    ! Diagonal block
+                    idiag = self%LD%dom(idom)%lblks(irow,itime)%get_diagonal()
+                    
+                    if (allocated(temp)) deallocate(temp)
+                    allocate(temp(size(overset%dom(idom)%vecs(irow)%gettime(itime))))
+
+                    temp = matmul(self%LD%dom(idom)%lblks(irow,itime)%data_(idiag)%mat, overset%dom(idom)%vecs(irow)%gettime(itime))
+                    call overset%dom(idom)%vecs(irow)%settime(itime,temp)
+
+
+                end do ! irow
 
             end do ! idom
 
         end do ! itime
+
+
+!        call overset%dom(1)%clear()
+!        call overset%dom(2)%clear()
+
+        ! Compute: U^-1 L^-1 y  -  U^-1 L^-1 overset
+        z = z - overset
+
 
 
 
@@ -367,26 +454,24 @@ contains
 
 
 
-    !>  Produce a restricted version of the current preconditioner.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   7/24/2017
-    !!
-    !!
-    !-----------------------------------------------------------------------------------------
-    function restrict(self,nterms_r) result(restricted)
-        class(precon_ILU0_t),   intent(in)  :: self
-        integer(ik),            intent(in)  :: nterms_r
-
-        type(precon_ILU0_t) :: restricted
-
-        restricted%LD = self%LD%restrict(nterms_r)
-        restricted%initialized = .true.
-
-    end function restrict
-    !****************************************************************************************
-
-
+!    !>  Produce a restricted version of the current preconditioner.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   7/24/2017
+!    !!
+!    !!
+!    !-----------------------------------------------------------------------------------------
+!    function restrict(self,nterms_r) result(restricted)
+!        class(precon_ILU0_overset_t),   intent(in)  :: self
+!        integer(ik),            intent(in)  :: nterms_r
+!
+!        type(precon_ILU0_overset_t) :: restricted
+!
+!        restricted%LD = self%LD%restrict(nterms_r)
+!        restricted%initialized = .true.
+!
+!    end function restrict
+!    !****************************************************************************************
 
 
 
@@ -394,4 +479,6 @@ contains
 
 
 
-end module precon_ILU0
+
+
+end module precon_ILU0_overset

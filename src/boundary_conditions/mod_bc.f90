@@ -115,6 +115,10 @@ module mod_bc
     ! Linearized Euler Eigen
     use bc_primlineuler_extrapolate,    only: primlineuler_extrapolate_t
     use bc_primlineuler_wall,           only: primlineuler_wall_t
+
+    ! Hyperbolized Poisson
+    use bc_state_HP_wall,               only: HP_wall_t
+    use bc_state_HP_extrapolate,        only: HP_extrapolate_t
     implicit none
 
 
@@ -235,6 +239,10 @@ contains
         type(primlineuler_extrapolate_t)    :: PRIMLINEULER_EXTRAPOLATE
         type(primlineuler_wall_t)           :: PRIMLINEULER_WALL
 
+        ! Hyperbolized Poisson
+        type(HP_wall_t)                     :: HP_WALL
+        type(HP_extrapolate_t)              :: HP_EXTRAPOLATE
+
         if ( .not. initialized ) then
             !
             ! Register in global vector
@@ -325,6 +333,9 @@ contains
 
             call registered_bcs%push_back(PRIMLINEULER_EXTRAPOLATE)
             call registered_bcs%push_back(PRIMLINEULER_WALL)
+
+            call registered_bcs%push_back(HP_WALL)
+            call registered_bcs%push_back(HP_EXTRAPOLATE)
 
 
             !

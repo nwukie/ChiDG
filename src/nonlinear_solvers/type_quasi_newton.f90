@@ -108,6 +108,7 @@ contains
             !
             ! NONLINEAR CONVERGENCE INNER LOOP
             !
+            !do while ( absolute_convergence .and. relative_convergence .and. (.not. stop_run))
             do while ( absolute_convergence .and. relative_convergence .and. (.not. stop_run))
                 niter = niter + 1
 
@@ -246,7 +247,7 @@ contains
                 !linear_solver%tol = max(1.e-8_rk, forcing_term)
 
                 ! Solve system for newton step, dq
-                call linear_solver%solve(lhs,dq,b,preconditioner,controller)
+                call linear_solver%solve(lhs,dq,b,preconditioner,controller,data)
                 call self%matrix_iterations%push_back(linear_solver%niter)
                 call self%matrix_time%push_back(linear_solver%timer%elapsed())
 

@@ -12,6 +12,7 @@ add_subdirectory(gradient_based_demo)
 add_subdirectory(pgrad_test)
 add_subdirectory(linearized_euler_eigen)
 add_subdirectory(auxiliary_gradient_bc)
+add_subdirectory(hyperbolized_poisson)
 
 
 #add_subdirectory(PrimitiveLinearizedEuler)

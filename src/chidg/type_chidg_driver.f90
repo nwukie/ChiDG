@@ -153,10 +153,10 @@ contains
         !
         ! Set ChiDG components
         !
-        call wall_distance%set('Time Integrator' , algorithm='Steady'                        )
+        call wall_distance%set('Time Integrator' , algorithm='Steady')
         call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
-        call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
-        call wall_distance%set('Preconditioner'  , algorithm='RASILU0'                       )
+        call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs_correct', options=loptions)
+        call wall_distance%set('Preconditioner'  , algorithm='RASILU0')
 
         order = chidg%nterms_s_1d
         call wall_distance%set('Solution Order', integer_input=order)
@@ -262,7 +262,7 @@ contains
             call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
             call loptions%set('tol',1.e-5_rk)   ! Set linear solver options
             call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
-            call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
+            call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs_correct', options=loptions)
 !            wall_distance%nonlinear_solver%norders_reduction = 3
             do p = 2,6,2
                 call write_line('Wall Distance Driver : Loop 1 : p = ', p)
@@ -340,7 +340,7 @@ contains
             call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
             call loptions%set('tol',1.e-8_rk)   ! Set linear solver options
             call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
-            call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
+            call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs_correct', options=loptions)
 
 !            wall_distance%nonlinear_solver%norders_reduction = 8
 !            wall_distance%nonlinear_solver%norders_reduction = 30

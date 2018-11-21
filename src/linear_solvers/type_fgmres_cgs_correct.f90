@@ -241,8 +241,8 @@ contains
                 call timer_precon%stop()
 
 
-                !! Compute residual and use GMRES inner iterations to compute 
-                !! approximate correction
+                ! Compute residual and use GMRES inner iterations to compute 
+                ! approximate correction
                 zr = v(j) - chidg_mv(A,z(j))
                 call linear_solver%solve(A,deltaz,zr,M,solver_controller)
                 z(j) = z(j) + deltaz

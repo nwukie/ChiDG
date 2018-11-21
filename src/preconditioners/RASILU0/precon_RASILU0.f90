@@ -464,23 +464,19 @@ contains
                 !
                 do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
 
-                    ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
-
+                    ilowerA         = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
                     dparent_g_lower = A%dom(idom)%lblks(irow,1)%dparent_g(ilowerA)
                     eparent_g_lower = A%dom(idom)%lblks(irow,1)%eparent_g(ilowerA)
-
-                    ilowerLD = self%LD%dom(idom)%lblks(irow,1)%loc(dparent_g_lower,eparent_g_lower,itime)
+                    ilowerLD        = self%LD%dom(idom)%lblks(irow,1)%loc(dparent_g_lower,eparent_g_lower,itime)
 
                     if ( A%dom(idom)%lblks(irow,1)%parent_proc(ilowerA) == IRANK) then
                             ! Get associated parent block index
                             eparent_l = self%LD%dom(idom)%lblks(irow,1)%eparent_l(ilowerLD)
-                            !z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(self%LD%dom(idom)%lblks(irow,ilower)%mat, z%dom(idom)%vecs(eparent_l)%vec)
+                            z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat, z%dom(idom)%vecs(eparent_l)%vec)
 
-                            nrows = size(self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat,1)
-                            ncols = size(self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat,2)
-                            call DGEMV('N', nrows, ncols, -ONE, self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
-
-
+                            !nrows = size(self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat,1)
+                            !ncols = size(self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat,2)
+                            !call DGEMV('N', nrows, ncols, -ONE, self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
 
                     end if
                 end do
@@ -501,35 +497,58 @@ contains
                     recv_domain_diag  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_domain
                     recv_element_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_element
 
-
                     do iblk = 1,self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%size()
-                        ilower = self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%at(iblk)
 
+                        ilower      = self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%at(iblk)
                         parent_proc = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%parent_proc()
                         eparent_l   = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%eparent_l()
                     
-                        associate ( zvec_diag => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
-                                    lower     => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat )
-
                         if ( parent_proc == IRANK ) then
+ 
+                            z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec = z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec - matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,z%dom(idom)%vecs(eparent_l)%vec)
+                             !nrows = size(lower,1)
+                             !ncols = size(lower,2)
+                             !call DGEMV('N', nrows, ncols, -ONE, lower, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, zvec_diag,     1)
+ 
+                         else
+                             recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_comm
+                             recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_domain
+                             recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_element
+ 
+                             z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec = z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec - matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
+                             !nrows = size(lower,1)
+                             !ncols = size(lower,2)
+                             !call DGEMV('N', nrows, ncols, -ONE, lower, nrows,                                                         z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, zvec_diag, 1)
+                         end if                        
 
-                            !zvec_diag = zvec_diag - matmul(lower,z%dom(idom)%vecs(eparent_l)%vec)
-                            nrows = size(lower,1)
-                            ncols = size(lower,2)
-                            call DGEMV('N', nrows, ncols, -ONE, lower, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, zvec_diag, 1)
 
-                        else
-                            recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_comm
-                            recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_domain
-                            recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_element
 
-                            !zvec_diag = zvec_diag - matmul(lower,z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
-                            nrows = size(lower,1)
-                            ncols = size(lower,2)
-                            call DGEMV('N', nrows, ncols, -ONE, lower, nrows, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, zvec_diag, 1)
-                        end if
 
-                        end associate
+
+
+
+!                        associate ( zvec_diag => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
+!                                    lower     => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat )
+!
+!                        if ( parent_proc == IRANK ) then
+!
+!                            !zvec_diag = zvec_diag - matmul(lower,z%dom(idom)%vecs(eparent_l)%vec)
+!                            nrows = size(lower,1)
+!                            ncols = size(lower,2)
+!                            call DGEMV('N', nrows, ncols, -ONE, lower, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, zvec_diag, 1)
+!
+!                        else
+!                            recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_comm
+!                            recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_domain
+!                            recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_element
+!
+!                            !zvec_diag = zvec_diag - matmul(lower,z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
+!                            nrows = size(lower,1)
+!                            ncols = size(lower,2)
+!                            call DGEMV('N', nrows, ncols, -ONE, lower, nrows, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, zvec_diag, 1)
+!                        end if
+!
+!                        end associate
 
 
                     end do !icol
@@ -561,17 +580,19 @@ contains
                         recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_domain
                         recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_element
 
-                        associate ( zvec_diag  => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
-                                    upper      => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%mat,                  &
-                                    zvec_upper => z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec )
+                        z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec = z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec - matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%mat,z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
 
-
-                            !zvec_diag = zvec_diag - matmul(upper, zvec_upper)
-                            nrows = size(upper,1)
-                            ncols = size(upper,2)
-                            call DGEMV('N', nrows, ncols, -ONE, upper, nrows, zvec_upper, 1, ONE, zvec_diag, 1)
-
-                        end associate
+!                        associate ( zvec_diag  => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
+!                                    upper      => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%mat,                  &
+!                                    zvec_upper => z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec )
+!
+!
+!                            !zvec_diag = zvec_diag - matmul(upper, zvec_upper)
+!                            nrows = size(upper,1)
+!                            ncols = size(upper,2)
+!                            call DGEMV('N', nrows, ncols, -ONE, upper, nrows, zvec_upper, 1, ONE, zvec_diag, 1)
+!
+!                        end associate
 
                     end do !iblk
 
@@ -579,9 +600,10 @@ contains
                     !
                     ! Diagonal block
                     !
-                    associate ( zvec_diag  => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec )
-                        zvec_diag = matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat, zvec_diag)
-                    end associate
+!                    associate ( zvec_diag  => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec )
+!                        zvec_diag = matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat, zvec_diag)
+!                    end associate
+                    z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec = matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat,z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec)
 
 
                 end do !ielem
@@ -610,10 +632,11 @@ contains
 
                         ! Get associated parent block index
                         eparent_l = A%dom(idom)%lblks(irow,1)%eparent_l(iupper)
-                        !z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,iupper)%mat, z%dom(idom)%vecs(eparent_l)%vec)
-                        nrows = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,1)
-                        ncols = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,2)
-                        call DGEMV('N', nrows, ncols, -ONE, A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
+                        z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, z%dom(idom)%vecs(eparent_l)%vec)
+
+                        !nrows = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,1)
+                        !ncols = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,2)
+                        !call DGEMV('N', nrows, ncols, -ONE, A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
 
                     else
 
@@ -621,11 +644,11 @@ contains
                         recv_comm    = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_comm
                         recv_domain  = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_domain
                         recv_element = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_element
-                        !z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,iupper)%mat, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
+                        z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
 
-                        nrows = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,1)
-                        ncols = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,2)
-                        call DGEMV('N', nrows, ncols, -ONE, A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, nrows, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
+                        !nrows = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,1)
+                        !ncols = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,2)
+                        !call DGEMV('N', nrows, ncols, -ONE, A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, nrows, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
 
                     end if
 

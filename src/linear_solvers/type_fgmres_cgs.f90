@@ -411,10 +411,7 @@ contains
             !
             ! Solve upper-triangular system y = hinv * p
             !
-            if (allocated(h_square)) then
-                deallocate(h_square,p_dim,y_dim)
-            end if
-            
+            if (allocated(h_square)) deallocate(h_square,p_dim,y_dim)
             allocate(h_square(nvecs,nvecs), &
                      p_dim(nvecs),          &
                      y_dim(nvecs), stat=ierr)

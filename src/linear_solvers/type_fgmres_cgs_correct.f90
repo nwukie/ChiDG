@@ -99,6 +99,7 @@ contains
         linear_solver%tol = 1.e-1_rk
         linear_solver%rtol = 1.e-1_rk
         linear_solver%maxiter = 100
+        linear_solver%silence = -10
 
         
         !

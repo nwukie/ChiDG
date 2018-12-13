@@ -1,0 +1,95 @@
+Description of the Restricted Additive Schwarz(RAS) preconditioner.
+
+
+Before detailing the RAS-type preconditioner, first consider a simpler concept; the Parallel Block-Jacobi
+preconditioner. In the Parallel Block-Jacobi preconditioner, each process solves its local portion of the
+global matrix(using Block-Jacobi, Block-ILU0, etc.) and applies the result as a preconditioner to the local
+portion of the global vector. This requires no communication, however as the number of parallel processes
+increases, the local preconditioner on each process has a smaller and smaller portion of the original problem
+to solve. So, the preconditioner becomes less and less effective because it has less and less information to work with.
+In domain decomposition terminology, this is called Block-Jacobi since each domain is being solved independent of the 
+other domains(even though the local solve could be something else like Block ILU0, etc.).
+
+
+
+
+The Restricted Additive Schwarz(RAS) preconditioner includes the standard local problem information in addition to 
+an overlap of elements from neighboring domains. In the present implementation, we only include one element of overlap.
+Now, the preconditioning matrix includes the local problem in addition to overlap data from neighboring domains and this
+is solved here using Block-ILU0. The result is only applied to the local portion of the global vector and so requires no
+communication on updating the vector.
+
+The standard Additive Schwarz(AS) preconditioner uses the same preconditioning matrix, but distributes the local solve back
+to the neighboring processes as well, which requires extra communication in distributing the result. RAS is preferred 
+because of the lower communication and it also has better convergence than that standard AS preconditioner.
+
+
+Most of the extra files here are just containers for storing finer and finer types of data on what is being received from
+overlapping domains and what is being sent to other domains.
+
+
+Files:
+precon_RASILU0.f90                  ! Primary preconditioner module, calling the initialization, defining the update and apply procedures.
+type_RASILU0_recv.f90               ! Container for receiving overlapping element data
+type_RASILU0_recv_dom.f90           ! Container for receiving overlapping element data for a particular domain
+type_RASILU0_recv_dom_comm.f90      ! Container for receiving overlapping element data for a particular domain from a particular processor
+type_RASILU0_recv_dom_comm_elem.f90 ! Container for receiving overlapping element data for a particular domain from a particular processor for a particular element
+type_RASILU0_send.f90               ! Container of information about what elements to send to other processors as overlapping data
+type_RASILU0_send_comm.f90          ! Container of information for each processor we are sending data to
+type_RASILU0_send_comm_dom.f90      ! Container of information for each processor including the domain/element information being sent to that processor
+
+
+!>  Restricted Additive Schwarz(RAS) preconditioner. ILU0 local solve.
+!!
+!!
+!!  Legend:
+!!  =================================================================
+!!  local = The current processor's local elements and their coupling
+!!  proc# = Another processor's elements
+!!  cpl   = Coupling between the elements of neighboring processors
+!!
+!!
+!!  In a domain decomposition block-Jacobi preconditioner, the processor-local problem is solved without
+!!  taking the inter-processor coupling of the problem into account.
+!!
+!!  |--------|---------|--------|
+!!  |        |         |        |
+!!  | proc 0 |   cpl   |  cpl   |
+!!  |        |         |        |
+!!  |--------|---------|--------|                                      |---------|  |-|     |-|
+!!  |        |         |        |           block-Jacobi               |         |  | |     | |
+!!  |  cpl   |  local  |  cpl   |           ----------->               |  local  |  |x|  =  |b|
+!!  |        |         |        |                                      |         |  | |     | |
+!!  |--------|---------|--------|                                      |---------|  |-|     |-|
+!!  |        |         |        |
+!!  |  cpl   |   cpl   | proc 2 |
+!!  |        |         |        |
+!!  |--------|---------|--------|
+!!
+!!
+!!
+!!  The RAS preconditioner considers the local problem and also includes a 1-element overlap with the
+!!  neighboring processors and their coupling. The implementation here rearranges the problem so that
+!!  all overlap data is put at the end of the preconditioning matrix. The restricted part of the
+!!  preconditioner means that the solution of the preconditioning matrix is only applied to the 
+!!  processor-local portion of the global vector. This is why only a portion of the x-vector is shown
+!!  here in the diagram.
+!!
+!!  |--------|---------|--------|
+!!  |        |         |        |
+!!  | proc 0 |   cpl   |  cpl   |
+!!  |        |         |        |
+!!  |--------|---------|--------|                                   |---------|--------| |-|    |-|
+!!  |        |         |        |   Restricted Additive Schwarz     |         |        | | |    | |
+!!  |  cpl   |  local  |  cpl   |           ----------->            |  local  |  cpl   | |x|    | |
+!!  |        |         |        |                                   |         |        | | |    | |
+!!  |--------|---------|--------|                                   |---------|--------| |-|  = |b|
+!!  |        |         |        |                                   |         | proc#  |        | |
+!!  |  cpl   |   cpl   | proc 2 |                                   |  cpl    | overlap|        | |
+!!  |        |         |        |                                   |---------|--------|        |-|
+!!  |--------|---------|--------|
+!!
+!!
+!!
+!!
+!---------------------------------------------------------------------------------------------------------------

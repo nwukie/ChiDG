@@ -119,14 +119,12 @@ contains
                 ! Store diagonal blocks of A
                 !
                 do ielem = 1,size(A%dom(idom)%lblks,1)
-                    !do itime = 1,size(A%dom(idom)%lblks,2)
 
-                        idiagA = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
-                        idiagLD = self%LD%dom(idom)%lblks(ielem,itime)%get_diagonal()
+                    idiagA = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
+                    idiagLD = self%LD%dom(idom)%lblks(ielem,itime)%get_diagonal()
 
-                        self%LD%dom(idom)%lblks(ielem,itime)%data_(idiagLD)%mat = A%dom(idom)%lblks(ielem,itime)%data_(idiagA)%mat
+                    self%LD%dom(idom)%lblks(ielem,itime)%data_(idiagLD)%mat = A%dom(idom)%lblks(ielem,itime)%data_(idiagA)%mat
 
-                    !end do !itime
                 end do !ielem
 
 
@@ -141,7 +139,6 @@ contains
                 !
                 ! Loop through all Proc-Local rows
                 !
-                !itime = 1
                 do irow = 2,size(A%dom(idom)%lblks,1)
 
 

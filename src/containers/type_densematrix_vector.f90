@@ -727,8 +727,8 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     function get_recv_comm(self,index) result(recv_comm)
-        class(densematrix_vector_t),    intent(inout)   :: self
-        integer(ik),                    intent(in)      :: index
+        class(densematrix_vector_t),    intent(in)  :: self
+        integer(ik),                    intent(in)  :: index
 
         integer(ik) :: recv_comm
 
@@ -754,8 +754,8 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     function get_recv_domain(self,index) result(recv_domain)
-        class(densematrix_vector_t),    intent(inout)   :: self
-        integer(ik),                    intent(in)      :: index
+        class(densematrix_vector_t),    intent(in)  :: self
+        integer(ik),                    intent(in)  :: index
 
         integer(ik) :: recv_domain
 
@@ -782,8 +782,8 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     function get_recv_element(self,index) result(recv_element)
-        class(densematrix_vector_t),    intent(inout)   :: self
-        integer(ik),                    intent(in)      :: index
+        class(densematrix_vector_t),    intent(in)  :: self
+        integer(ik),                    intent(in)  :: index
 
         integer(ik) :: recv_element
 

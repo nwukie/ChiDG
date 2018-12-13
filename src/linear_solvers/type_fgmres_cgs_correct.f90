@@ -239,7 +239,6 @@ contains
                 !
                 call timer_precon%start()
                 z(j) = M%apply(A,v(j))
-                call timer_precon%stop()
 
 
                 ! Compute residual and use GMRES inner iterations to compute 
@@ -247,6 +246,8 @@ contains
                 zr = v(j) - chidg_mv(A,z(j))
                 call linear_solver%solve(A,deltaz,zr,M,solver_controller)
                 z(j) = z(j) + deltaz
+
+                call timer_precon%stop()
 
 !                do ismooth = 1,3
 !                    zr = v(j) - chidg_mv(A,z(j))

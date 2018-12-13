@@ -41,9 +41,6 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 #-----------------------------------------------------------------------------------
 #                               Set default options
 #-----------------------------------------------------------------------------------
-
-# Set default options 
-
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build. Options are: Debug Release" FORCE)
 endif()
@@ -81,9 +78,12 @@ elseif (CMAKE_Fortran_COMPILER_ID MATCHES GNU)
                                      -ffree-line-length-none -fbacktrace \
                                      -fstack-protector -fcheck=bounds \
                                      -p -g")    
+    #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form \
+    #                                 -ffree-line-length-none -fexternal-blas \
+    #                                 -funroll-loops")
     set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form \
                                      -ffree-line-length-none -fexternal-blas \
-                                     -funroll-loops")
+                                     -funroll-loops -fopenmp")
                                      #-march=native -funroll-loops")
 
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-O0 --coverage")

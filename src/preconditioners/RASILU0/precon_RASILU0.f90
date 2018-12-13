@@ -427,66 +427,43 @@ contains
         call self%timer%start()
 
 
-
-        !
         ! Initialize z for preconditioning
-        !
         z = v
 
 
-
-        !
         ! Exchange boundary vector data
-        !
         call z%comm_send()
         call z%comm_recv()
-        call z%comm_wait()
+        call z%comm_wait() 
 
 
 
-
-        !
         ! For each domain
-        !
         ndom = size(A%dom)
         itime = 1
         do idom = 1,ndom
 
-
-            !
             ! Forward Solve - Local
-            !
-            do irow = 1,size(self%LD%dom(idom)%lblks,1)
+            do irow = 1,size(self%LD%dom(idom)%lblks,itime)
 
-
-                !
                 ! Lower-Triangular blocks
-                !
                 do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
 
                     ilowerA         = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
-                    dparent_g_lower = A%dom(idom)%lblks(irow,1)%dparent_g(ilowerA)
-                    eparent_g_lower = A%dom(idom)%lblks(irow,1)%eparent_g(ilowerA)
-                    ilowerLD        = self%LD%dom(idom)%lblks(irow,1)%loc(dparent_g_lower,eparent_g_lower,itime)
+                    dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
+                    eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
+                    ilowerLD        = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower,itime)
 
-                    if ( A%dom(idom)%lblks(irow,1)%parent_proc(ilowerA) == IRANK) then
-                            ! Get associated parent block index
-                            eparent_l = self%LD%dom(idom)%lblks(irow,1)%eparent_l(ilowerLD)
-                            z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat, z%dom(idom)%vecs(eparent_l)%vec)
-
-                            !nrows = size(self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat,1)
-                            !ncols = size(self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat,2)
-                            !call DGEMV('N', nrows, ncols, -ONE, self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
-
+                    if ( A%dom(idom)%lblks(irow,itime)%parent_proc(ilowerA) == IRANK) then
+                        eparent_l = self%LD%dom(idom)%lblks(irow,itime)%eparent_l(ilowerLD)
+                        z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(self%LD%dom(idom)%lblks(irow,itime)%data_(ilowerLD)%mat, z%dom(idom)%vecs(eparent_l)%vec)
                     end if
                 end do
 
             end do ! irow
 
 
-            !
             ! Forward Solve - Overlap
-            !
             do icomm = 1,size(self%recv%dom(idom)%comm)
 
                 do ielem = 1,size(self%recv%dom(idom)%comm(icomm)%elem)
@@ -504,52 +481,14 @@ contains
                         eparent_l   = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%eparent_l()
                     
                         if ( parent_proc == IRANK ) then
- 
                             z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec = z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec - matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,z%dom(idom)%vecs(eparent_l)%vec)
-                             !nrows = size(lower,1)
-                             !ncols = size(lower,2)
-                             !call DGEMV('N', nrows, ncols, -ONE, lower, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, zvec_diag,     1)
- 
                          else
                              recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_comm
                              recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_domain
                              recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_element
  
                              z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec = z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec - matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
-                             !nrows = size(lower,1)
-                             !ncols = size(lower,2)
-                             !call DGEMV('N', nrows, ncols, -ONE, lower, nrows,                                                         z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, zvec_diag, 1)
                          end if                        
-
-
-
-
-
-
-
-!                        associate ( zvec_diag => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
-!                                    lower     => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat )
-!
-!                        if ( parent_proc == IRANK ) then
-!
-!                            !zvec_diag = zvec_diag - matmul(lower,z%dom(idom)%vecs(eparent_l)%vec)
-!                            nrows = size(lower,1)
-!                            ncols = size(lower,2)
-!                            call DGEMV('N', nrows, ncols, -ONE, lower, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, zvec_diag, 1)
-!
-!                        else
-!                            recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_comm
-!                            recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_domain
-!                            recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_element
-!
-!                            !zvec_diag = zvec_diag - matmul(lower,z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
-!                            nrows = size(lower,1)
-!                            ncols = size(lower,2)
-!                            call DGEMV('N', nrows, ncols, -ONE, lower, nrows, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, zvec_diag, 1)
-!                        end if
-!
-!                        end associate
-
 
                     end do !icol
                 end do !irow
@@ -560,10 +499,7 @@ contains
 
 
 
-
-            !
             ! Backward solve - Overlap
-            !
             do icomm = size(self%recv%dom(idom)%comm),1,-1
                 do ielem = size(self%recv%dom(idom)%comm(icomm)%elem),1,-1
 
@@ -572,103 +508,53 @@ contains
                     recv_domain_diag  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_domain
                     recv_element_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_element
 
-
                     do iblk = 1,self%recv%dom(idom)%comm(icomm)%elem(ielem)%upper%size()
-                        iupper = self%recv%dom(idom)%comm(icomm)%elem(ielem)%upper%at(iblk)
-
+                        iupper       = self%recv%dom(idom)%comm(icomm)%elem(ielem)%upper%at(iblk)
                         recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_comm
                         recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_domain
                         recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_element
 
                         z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec = z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec - matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%mat,z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
 
-!                        associate ( zvec_diag  => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
-!                                    upper      => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%mat,                  &
-!                                    zvec_upper => z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec )
-!
-!
-!                            !zvec_diag = zvec_diag - matmul(upper, zvec_upper)
-!                            nrows = size(upper,1)
-!                            ncols = size(upper,2)
-!                            call DGEMV('N', nrows, ncols, -ONE, upper, nrows, zvec_upper, 1, ONE, zvec_diag, 1)
-!
-!                        end associate
-
                     end do !iblk
 
-
-                    !
                     ! Diagonal block
-                    !
-!                    associate ( zvec_diag  => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec )
-!                        zvec_diag = matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat, zvec_diag)
-!                    end associate
                     z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec = matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat,z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec)
-
 
                 end do !ielem
             end do !icomm
 
 
 
-
-            !
             ! Backward Solve - Local
-            !
             itime = 1
             do irow = size(A%dom(idom)%lblks,1),1,-1
 
-                !
                 ! Upper-Triangular blocks
-                !
                 do icol = 1,A%dom(idom)%local_upper_blocks(irow,itime)%size()
 
-                    iupper = A%dom(idom)%local_upper_blocks(irow,itime)%at(icol)
-
-
+                    iupper         = A%dom(idom)%local_upper_blocks(irow,itime)%at(icol)
                     interior_block = (A%dom(idom)%lblks(irow,1)%parent_proc(iupper) == IRANK)
 
                     if (interior_block) then
-
-                        ! Get associated parent block index
                         eparent_l = A%dom(idom)%lblks(irow,1)%eparent_l(iupper)
                         z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, z%dom(idom)%vecs(eparent_l)%vec)
-
-                        !nrows = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,1)
-                        !ncols = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,2)
-                        !call DGEMV('N', nrows, ncols, -ONE, A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
-
                     else
-
-                        ! Get associated parent block index
                         recv_comm    = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_comm
                         recv_domain  = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_domain
                         recv_element = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_element
                         z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
-
-                        !nrows = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,1)
-                        !ncols = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,2)
-                        !call DGEMV('N', nrows, ncols, -ONE, A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, nrows, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
-
                     end if
-
 
                 end do
 
-
-                !
                 ! Diagonal block
-                !
                 diag_irow = self%LD%dom(idom)%lblks(irow,1)%get_diagonal()
                 z%dom(idom)%vecs(irow)%vec = matmul(self%LD%dom(idom)%lblks(irow,1)%data_(diag_irow)%mat, z%dom(idom)%vecs(irow)%vec)
 
             end do ! irow
 
-
-
-
         end do ! idom
-
 
 
         call self%timer%stop()
@@ -743,11 +629,8 @@ contains
                 end do !ielem
 
 
-
             end do !idom_send
         end do !icomm
-
-
 
 
     end subroutine comm_send
@@ -779,29 +662,20 @@ contains
         call write_line('       RAS: receiving...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
         do idom_recv = 1,size(self%recv%dom)
-
             do icomm = 1,size(self%recv%dom(idom_recv)%comm)
                 proc = self%recv%dom(idom_recv)%comm(icomm)%proc
-
                 do ielem_recv = 1,size(self%recv%dom(idom_recv)%comm(icomm)%elem)
-                
                     do iblk_recv = 1,size(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks)
+
                         nrows     = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%nrows_
                         ncols     = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%ncols_
                         idomain_g = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%dparent_g_
-
                         call MPI_Recv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                        !call MPI_IRecv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, request, ierr)
-                        !call self%mpi_requests%push_back(request)
 
                     end do !iblk_recv
-
                 end do !ielem_recv
-
             end do !icomm
-
         end do !idom_recv
-
 
 
     end subroutine comm_recv
@@ -819,9 +693,6 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/10/2016
     !!
-    !!
-    !!
-    !!
     !------------------------------------------------------------------------------------------
     subroutine comm_wait(self)
         class(precon_RASILU0_t),    intent(inout)   :: self
@@ -838,29 +709,8 @@ contains
 
         end if
 
-
     end subroutine comm_wait
     !******************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

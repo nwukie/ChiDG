@@ -80,7 +80,7 @@ contains
         type(chidg_vector_t),   allocatable :: v(:), z(:)
         real(rk),               allocatable :: h(:,:), h_square(:,:), dot_tmp(:), htmp(:,:)
         real(rk),               allocatable :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
-        real(rk)                            :: pj, pjp, h_ij, h_ipj, norm_before, norm_after, L_crit, crit
+        real(rk)                            :: pj, pjp, h_ij, h_ipj, norm_before, L_crit, crit
 
         integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem, xstart, xend
         integer(ik) :: i, j, k, l, ii, ih                 ! Loop counters
@@ -233,39 +233,29 @@ contains
                 call timer_mv%start()
                 w = chidg_mv(A,z(j))
                 call timer_mv%stop()
-
-
-
                 norm_before = w%norm(ChiDG_COMM)
 
 
 
-                call timer_dot%start()
+
+
+
                 !
                 ! Orthogonalize once. Classical Gram-Schmidt
                 !
+                call timer_dot%start()
                 do i = 1,j
-                    ! Compute the local dot product
                     dot_tmp(i) = dot(w,v(i))
                 end do
 
                 ! Reduce local dot-product values across processors, distribute result back to all
-                !call MPI_AllReduce(dot_tmp,h(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
                 call MPI_AllReduce(dot_tmp,h(1:j,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                call timer_dot%stop()
                 
 
                 do i = 1,j
                     w = w - h(i,j)*v(i)
                 end do
-                call timer_dot%stop()
-
-
-
-
-                call timer_norm%start()
-                h(j+1,j) = w%norm(ChiDG_COMM)
-                norm_after = h(j+1,j)
-                call timer_norm%stop()
                 !
                 ! End Orthogonalize once.
                 !
@@ -289,39 +279,29 @@ contains
                 !
                 reorthogonalize = (crit >= L_crit) 
                 if (reorthogonalize) then
+
                     do i = 1,j
-                        ! Compute the local dot product
                         dot_tmp(i) = dot(w,v(i))
                     end do
 
-
                     ! Reduce local dot-product values across processors, distribute result back to all
-                    !call MPI_AllReduce(dot_tmp,htmp(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
                     call MPI_AllReduce(dot_tmp,htmp(1:j,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 
                     h(:,j) = h(:,j) + htmp(:,j)
-                    !h = htmp + h
-
-                    !do ih = 1,size(h,2)
-                    !    h(:,ih) = h(:,ih) + htmp(:,ih)
-                    !end do
-
 
                     do i = 1,j
                         w = w - htmp(i,j)*v(i)
                     end do
 
-
-
-                    call timer_norm%start()
-                    h(j+1,j) = w%norm(ChiDG_COMM)
-                    call timer_norm%stop()
                 end if
                 !
                 ! End Orthogonalize twice.
                 !
                 
 
+                call timer_norm%start()
+                h(j+1,j) = w%norm(ChiDG_COMM)
+                call timer_norm%stop()
 
 
                 !
@@ -364,7 +344,8 @@ contains
 
 
                 !
-                ! Givens rotation on p. Need temp values here so we aren't directly overwriting the p(j) value until we want to
+                ! Givens rotation on p. 
+                ! Need temp values here so we aren't directly overwriting the p(j) value until we want to
                 !
                 pj  =  c(j)*p(j)
                 pjp = -s(j)*p(j)

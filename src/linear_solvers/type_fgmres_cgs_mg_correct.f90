@@ -401,16 +401,8 @@ contains
                     ! Reduce local dot-product values across processors, distribute result back to all
                     !call MPI_AllReduce(dot_tmp,htmp(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
                     call MPI_AllReduce(dot_tmp,htmp(1:j,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
-                    !h(:,j) = h(:,j) + htmp(:,j)
 
-
-                    !htmp(1,1) = 5.0
-
-                    h = htmp + h
-                    !do ih = 1,size(h,2)
-                    !    h(:,ih) = h(:,ih) + htmp(:,ih)
-                    !end do
-
+                    h(:,j) = h(:,j) + htmp(:,j)
 
                     do i = 1,j
                         w = w - htmp(i,j)*v(i)

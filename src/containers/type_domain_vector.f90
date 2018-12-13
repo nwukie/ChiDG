@@ -447,6 +447,11 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !! !$OMP PARALLEL num_threads(2)
+    !! !$OMP  PARALLEL DO 
+    !! !$OMP& DEFAULT(SHARED) PRIVATE(ielem) 
+    !! !$OMP& SCHEDULE(STATIC,CHUNK) 
+    !! !$OMP& REDUCTION(+:res)
     !!
     !----------------------------------------------------------------------------------------
     function sumsqr(self) result(res)
@@ -457,12 +462,17 @@ contains
 
         res = ZERO
 
+! !$OMP PARALLEL num_threads(2)
+! !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(ielem) SCHEDULE(STATIC,CHUNK) REDUCTION(+:res)
+! !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(ielem) REDUCTION(+:res)
+
         ! Loop through block vectors and compute contribution to sum of squared entries
         do ielem = 1,size(self%vecs)
             ! Square vector values and sum
             res = res + sum( self%vecs(ielem)%vec ** TWO )
         end do
 
+! !$OMP END PARALLEL DO
 
     end function sumsqr
     !*****************************************************************************************

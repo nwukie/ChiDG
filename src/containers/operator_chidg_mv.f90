@@ -131,8 +131,7 @@ contains
                         matrix_proc = IRANK
                         vector_proc = A%dom(idom)%lblks(ielem,itime)%parent_proc(imat)
 
-                        local_multiply    = ( matrix_proc == vector_proc )
-                        parallel_multiply = ( matrix_proc /= vector_proc )
+                        local_multiply = ( matrix_proc == vector_proc )
 
         
                         if ( local_multiply ) then
@@ -146,8 +145,6 @@ contains
                             associate ( resvec => res%dom(idom)%vecs(ielem)%vec(res_istart:res_iend),   &
                                         xvec   => x%dom(dparent_l)%vecs(eparent_l)%vec(x_istart:x_iend),     &
                                         Amat   => A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat )
-
-                               
 
                                 nonconforming = ( size(Amat,2) /= size(xvec) )
                                 if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Local m-v operation")
@@ -180,8 +177,6 @@ contains
                             vector_proc = A%dom(idom)%chi_blks(ielem,itime)%parent_proc(imat)
 
                             local_multiply    = ( matrix_proc == vector_proc )
-                            parallel_multiply = ( matrix_proc /= vector_proc )
-
 
                             if ( local_multiply ) then
                                 dparent_l = A%dom(idom)%chi_blks(ielem,itime)%dparent_l(imat)
@@ -230,13 +225,10 @@ contains
                             vector_proc = A%dom(idom)%bc_blks(ielem,itime)%parent_proc(imat)
 
                             local_multiply    = ( matrix_proc == vector_proc )
-                            parallel_multiply = ( matrix_proc /= vector_proc )
-
 
                             if ( local_multiply ) then
                                 dparent_l = A%dom(idom)%bc_blks(ielem,itime)%dparent_l(imat)
                                 eparent_l = A%dom(idom)%bc_blks(ielem,itime)%eparent_l(imat)
-
 
                                 res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
                                 res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
@@ -276,8 +268,6 @@ contains
                             vector_proc = A%dom(idom)%hb_blks(ielem,itime)%parent_proc(imat)
 
                             local_multiply    = ( matrix_proc == vector_proc )
-                            parallel_multiply = ( matrix_proc /= vector_proc )
-
 
                             if ( local_multiply ) then
                                 dparent_l = A%dom(idom)%hb_blks(ielem,itime)%dparent_l(imat)
@@ -404,14 +394,9 @@ contains
                         matrix_proc = IRANK
                         vector_proc = A%dom(idom)%lblks(ielem,itime)%parent_proc(imat)
 
-                        local_multiply    = ( matrix_proc == vector_proc )
                         parallel_multiply = ( matrix_proc /= vector_proc )
-
         
                         if ( parallel_multiply ) then
-                            dparent_l = A%dom(idom)%lblks(ielem,itime)%dparent_l(imat)
-                            eparent_l = A%dom(idom)%lblks(ielem,itime)%eparent_l(imat)
-
                             recv_comm    = A%dom(idom)%lblks(ielem,itime)%get_recv_comm(imat)
                             recv_domain  = A%dom(idom)%lblks(ielem,itime)%get_recv_domain(imat)
                             recv_element = A%dom(idom)%lblks(ielem,itime)%get_recv_element(imat)
@@ -443,18 +428,11 @@ contains
                     do ielem = 1,size(A%dom(idom)%chi_blks,1)
                         do imat = 1,A%dom(idom)%chi_blks(ielem,itime)%size()
 
-
                             matrix_proc = IRANK
                             vector_proc = A%dom(idom)%chi_blks(ielem,itime)%parent_proc(imat)
-
-                            local_multiply    = ( matrix_proc == vector_proc )
                             parallel_multiply = ( matrix_proc /= vector_proc )
 
-
                             if ( parallel_multiply ) then
-                                dparent_l = A%dom(idom)%chi_blks(ielem,itime)%dparent_l(imat)
-                                eparent_l = A%dom(idom)%chi_blks(ielem,itime)%eparent_l(imat)
-
                                 recv_comm    = A%dom(idom)%chi_blks(ielem,itime)%get_recv_comm(imat)
                                 recv_domain  = A%dom(idom)%chi_blks(ielem,itime)%get_recv_domain(imat)
                                 recv_element = A%dom(idom)%chi_blks(ielem,itime)%get_recv_element(imat)
@@ -497,17 +475,12 @@ contains
                     do ielem = 1,size(A%dom(idom)%bc_blks,1)
                         do imat = 1,A%dom(idom)%bc_blks(ielem,itime)%size()
 
-
                             matrix_proc = IRANK
                             vector_proc = A%dom(idom)%bc_blks(ielem,itime)%parent_proc(imat)
 
-                            local_multiply    = ( matrix_proc == vector_proc )
                             parallel_multiply = ( matrix_proc /= vector_proc )
 
-
                             if ( parallel_multiply ) then
-                                dparent_l = A%dom(idom)%bc_blks(ielem,itime)%dparent_l(imat)
-                                eparent_l = A%dom(idom)%bc_blks(ielem,itime)%eparent_l(imat)
 
                                 recv_comm    = A%dom(idom)%bc_blks(ielem,itime)%get_recv_comm(imat)
                                 recv_domain  = A%dom(idom)%bc_blks(ielem,itime)%get_recv_domain(imat)
@@ -522,10 +495,6 @@ contains
                                             xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec(x_istart:x_iend),  &
                                             Amat   => A%dom(idom)%bc_blks(ielem,itime)%data_(imat)%mat )
 
-
-                                    !
-                                    ! Test matrix vector sizes
-                                    !
                                     nonconforming = ( size(Amat,2) /= size(xvec) )
                                     if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Boundary m-v operation")
 
@@ -551,16 +520,10 @@ contains
 
                             matrix_proc = IRANK
                             vector_proc = A%dom(idom)%hb_blks(ielem,itime)%parent_proc(imat)
-
-                            local_multiply    = ( matrix_proc == vector_proc )
                             parallel_multiply = ( matrix_proc /= vector_proc )
 
-
                             if ( parallel_multiply ) then
-                                dparent_l = A%dom(idom)%hb_blks(ielem,itime)%dparent_l(imat)
-                                eparent_l = A%dom(idom)%hb_blks(ielem,itime)%eparent_l(imat)
-                                tparent   = A%dom(idom)%hb_blks(ielem,itime)%tparent(imat)
-
+                                tparent      = A%dom(idom)%hb_blks(ielem,itime)%tparent(imat)
                                 recv_comm    = A%dom(idom)%hb_blks(ielem,itime)%get_recv_comm(imat)
                                 recv_domain  = A%dom(idom)%hb_blks(ielem,itime)%get_recv_domain(imat)
                                 recv_element = A%dom(idom)%hb_blks(ielem,itime)%get_recv_element(imat)

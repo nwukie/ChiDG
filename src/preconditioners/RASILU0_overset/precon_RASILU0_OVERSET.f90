@@ -600,34 +600,32 @@ contains
 
 
 
-!        ! Handle Block-local PARALLEL coupling in an explicit manner
-!        do itime = 1,precon_ntime
-!            do idom = 1,size(A%dom)
-!                do ielem = 1,size(A%dom(idom)%lblks,1)
-!                    do icol = 1,A%dom(idom)%lblks(ielem,itime)%size()
-!
-!                        matrix_proc = IRANK
-!                        vector_proc = A%dom(idom)%lblks(ielem,itime)%parent_proc(icol)
-!                        local_multiply = (matrix_proc == vector_proc)
-!
-!                        if ( local_multiply ) then
-!                            ! local coupling was already handled in ILU decomposition
-!                        else
-!                            ! handling parallel block-local coupling in explicit manner
-!                            recv_comm    = A%dom(idom)%lblks(ielem,itime)%get_recv_comm(icol)
-!                            recv_domain  = A%dom(idom)%lblks(ielem,itime)%get_recv_domain(icol)
-!                            recv_element = A%dom(idom)%lblks(ielem,itime)%get_recv_element(icol)
-!                            associate ( ovec => overset%dom(idom)%vecs(ielem)%vec, &
-!                                        Amat => A%dom(idom)%lblks(ielem,itime)%data_(icol)%mat, &
-!                                        zvec => z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec )
-!                                ovec = ovec + matmul(Amat,zvec)
-!                            end associate
-!                        end if 
-!
-!                    end do !icol
-!                end do !irow
-!            end do !idom
-!        end do !itime
+        ! Handle Block-local PARALLEL coupling in an explicit manner
+        do idom = 1,size(A%dom)
+            do ielem = 1,size(A%dom(idom)%lblks,1)
+                do icol = 1,A%dom(idom)%lblks(ielem,itime)%size()
+
+                    matrix_proc = IRANK
+                    vector_proc = A%dom(idom)%lblks(ielem,itime)%parent_proc(icol)
+                    local_multiply = (matrix_proc == vector_proc)
+
+                    if ( local_multiply ) then
+                        ! local coupling was already handled in ILU decomposition
+                    else
+                        ! handling parallel block-local coupling in explicit manner
+                        recv_comm    = A%dom(idom)%lblks(ielem,itime)%get_recv_comm(icol)
+                        recv_domain  = A%dom(idom)%lblks(ielem,itime)%get_recv_domain(icol)
+                        recv_element = A%dom(idom)%lblks(ielem,itime)%get_recv_element(icol)
+                        associate ( ovec => overset%dom(idom)%vecs(ielem)%vec, &
+                                    Amat => A%dom(idom)%lblks(ielem,itime)%data_(icol)%mat, &
+                                    zvec => z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec )
+                            ovec = ovec + matmul(Amat,zvec)
+                        end associate
+                    end if 
+
+                end do !icol
+            end do !irow
+        end do !idom
 
 
         
@@ -704,85 +702,87 @@ contains
             end do ! irow
 
 
-!            ! Forward Solve - Overlap
-!            do icomm = 1,size(self%recv%dom(idom)%comm)
-!
-!                do ielem = 1,size(self%recv%dom(idom)%comm(icomm)%elem)
-!                    iblk_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
-!
-!                    ! Location in comm vector
-!                    recv_comm_diag    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_comm
-!                    recv_domain_diag  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_domain
-!                    recv_element_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_element
-!
-!                    do iblk = 1,self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%size()
-!
-!                        ilower      = self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%at(iblk)
-!                        parent_proc = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%parent_proc()
-!                        eparent_l   = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%eparent_l()
-!                    
-!                        if ( parent_proc == IRANK ) then
-!                            associate ( ovec     => overset%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
-!                                        coupling => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat, &
-!                                        neighbor => overset%dom(idom)%vecs(eparent_l)%vec )
-!                                ovec = ovec - matmul(coupling,neighbor)
-!                            end associate
-!
-!                        else
-!                            recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_comm
-!                            recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_domain
-!                            recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_element
-! 
-!                            associate ( ovec     => overset%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
-!                                        coupling => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat, &
-!                                        neighbor => overset%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec )
-!                                ovec = ovec - matmul(coupling,neighbor)
-!                            end associate
-!
-!
-!                         end if                        
-!
-!                    end do !icol
-!                end do !irow
-!
-!            end do !icomm
+!!!!
+            ! Forward Solve - Overlap
+            do icomm = 1,size(self%recv%dom(idom)%comm)
+
+                do ielem = 1,size(self%recv%dom(idom)%comm(icomm)%elem)
+                    iblk_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
+
+                    ! Location in comm vector
+                    recv_comm_diag    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_comm
+                    recv_domain_diag  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_domain
+                    recv_element_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_element
+
+                    do iblk = 1,self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%size()
+
+                        ilower      = self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%at(iblk)
+                        parent_proc = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%parent_proc()
+                        eparent_l   = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%eparent_l()
+                    
+                        if ( parent_proc == IRANK ) then
+                            associate ( ovec     => overset%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
+                                        coupling => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat, &
+                                        neighbor => overset%dom(idom)%vecs(eparent_l)%vec )
+                                ovec = ovec - matmul(coupling,neighbor)
+                            end associate
+
+                        else
+                            recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_comm
+                            recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_domain
+                            recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_element
+ 
+                            associate ( ovec     => overset%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
+                                        coupling => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat, &
+                                        neighbor => overset%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec )
+                                ovec = ovec - matmul(coupling,neighbor)
+                            end associate
+
+
+                         end if                        
+
+                    end do !icol
+                end do !irow
+
+            end do !icomm
 
 
 
 
 
-!            ! Backward solve - Overlap
-!            do icomm = size(self%recv%dom(idom)%comm),1,-1
-!                do ielem = size(self%recv%dom(idom)%comm(icomm)%elem),1,-1
-!
-!                    iblk_diag         = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
-!                    recv_comm_diag    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_comm
-!                    recv_domain_diag  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_domain
-!                    recv_element_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_element
-!
-!                    do iblk = 1,self%recv%dom(idom)%comm(icomm)%elem(ielem)%upper%size()
-!                        iupper       = self%recv%dom(idom)%comm(icomm)%elem(ielem)%upper%at(iblk)
-!                        recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_comm
-!                        recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_domain
-!                        recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_element
-!
-!                        associate ( ovec     => overset%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
-!                                    coupling => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%mat, &
-!                                    neighbor => overset%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec )
-!                            ovec = ovec - matmul(coupling,neighbor)
-!                        end associate
-!
-!                    end do !iblk
-!
-!                    ! Diagonal block
-!                    associate (ovec     => overset%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
-!                               coupling => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat, &
-!                               neighbor => overset%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec )
-!                        ovec = matmul(coupling,neighbor)
-!                    end associate
-!                        
-!                end do !ielem
-!            end do !icomm
+            ! Backward solve - Overlap
+            do icomm = size(self%recv%dom(idom)%comm),1,-1
+                do ielem = size(self%recv%dom(idom)%comm(icomm)%elem),1,-1
+
+                    iblk_diag         = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
+                    recv_comm_diag    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_comm
+                    recv_domain_diag  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_domain
+                    recv_element_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_element
+
+                    do iblk = 1,self%recv%dom(idom)%comm(icomm)%elem(ielem)%upper%size()
+                        iupper       = self%recv%dom(idom)%comm(icomm)%elem(ielem)%upper%at(iblk)
+                        recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_comm
+                        recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_domain
+                        recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_element
+
+                        associate ( ovec     => overset%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
+                                    coupling => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%mat, &
+                                    neighbor => overset%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec )
+                            ovec = ovec - matmul(coupling,neighbor)
+                        end associate
+
+                    end do !iblk
+
+                    ! Diagonal block
+                    associate (ovec     => overset%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
+                               coupling => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat, &
+                               neighbor => overset%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec )
+                        ovec = matmul(coupling,neighbor)
+                    end associate
+                        
+                end do !ielem
+            end do !icomm
+!!!
 
 
 

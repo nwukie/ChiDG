@@ -496,7 +496,7 @@ contains
         !
         user_msg = "face%interpolate_metrics: Negative element &
                     volume detected. Check element quality and orientation."
-        if (any(self%jinv < ZERO)) call chidg_signal(FATAL,user_msg)
+        if (any(self%jinv < ZERO)) call chidg_signal_three(FATAL,user_msg,self%idomain_g,self%iparent_g,self%iface)
 
 
 

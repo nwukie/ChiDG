@@ -72,8 +72,6 @@ module mod_models
 
     use type_artificial_viscosity_jump_sensor,          only: artificial_viscosity_jump_sensor_t
     use type_artificial_viscosity_resolution_sensor,    only: artificial_viscosity_resolution_sensor_t
-
-
     implicit none
 
 

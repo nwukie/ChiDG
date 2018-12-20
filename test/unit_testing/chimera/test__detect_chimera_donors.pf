@@ -58,22 +58,20 @@ subroutine test__detect_chimera_donors()
     !
     ! Read 2-Domain overlapping grid
     !
-    call chidg%read_mesh_grids(filename)
-    call chidg%read_mesh_boundary_conditions(filename)
-
-
-
-    call chidg%init('domains')
-    call chidg%init('comm - interior')
+    call chidg%read_mesh(filename)
+!    call chidg%read_mesh_grids(filename)
+!    call chidg%read_mesh_boundary_conditions(filename)
+!    call chidg%init('domains')
+!    call chidg%init('comm - interior')
 
 
 
 
-    call detect_chimera_faces(chidg%data%mesh)
+!    call detect_chimera_faces(chidg%data%mesh)
     !
     ! Detect Chimera donors. THIS IS BEING TESTED
     !
-    call detect_chimera_donors(chidg%data%mesh)
+!    call detect_chimera_donors(chidg%data%mesh)
 
 
 

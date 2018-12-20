@@ -85,7 +85,12 @@ contains
 
 
 
-                call rans_rstm_eqns%add_model('RSTM Turbulence Kinetic Energy')
+! NATHAN COMMENTED THIS OUT DURING MERGE, BECAUSE IT WASN'T INCLUDED IN RSTM DIRECTORY
+!                call rans_rstm_eqns%add_model('RSTM Turbulence Kinetic Energy')
+!
+
+
+
                 call rans_rstm_eqns%add_model('Ideal Gas RSTM')
                 !call rans_rstm_eqns%add_model('Ideal Gas')
                 !call rans_rstm_eqns%add_model('Constant Viscosity')

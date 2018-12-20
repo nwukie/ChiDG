@@ -14,6 +14,8 @@ module mod_gridgen_blocks_pmm
     use type_bc_state_wrapper,  only: bc_state_wrapper_t
 
     use mod_hdf_utilities
+    use mod_prescribed_mesh_motion_function,    only: create_prescribed_mesh_motion_function   
+    use type_prescribed_mesh_motion_function,   only: prescribed_mesh_motion_function_t
     use hdf5
     implicit none
 
@@ -82,7 +84,7 @@ contains
         character(:),                   allocatable :: user_msg
         class(bc_state_t),              allocatable :: bc_state
         character(len=10)                           :: patch_names(6)
-        integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id
+        integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id, mmgroup_id
         integer(ik)                                 :: mapping, bcface, ierr, igroup, istate
         real(rk),                       allocatable :: nodes(:,:)
         integer(ik),                    allocatable :: elements(:,:) 
@@ -90,6 +92,7 @@ contains
         real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords
         character(len=8)                            :: bc_face_strings(6)
         character(:),   allocatable                 :: bc_face_string
+        class(prescribed_mesh_motion_function_t), allocatable    :: pmmf
 
 
         ! Create/initialize file
@@ -200,10 +203,14 @@ contains
         !
 
         !Add pmm group
-        call create_pmm_group_hdf(file_id,'static','static')
+        call create_mm_group_hdf(file_id,'static','PMM')
+        mmgroup_id = open_mm_group_hdf(file_id, 'static')
+        call create_prescribed_mesh_motion_function(pmmf, 'static')
+        call add_pmmf_hdf(mmgroup_id, pmmf)
+        call close_mm_group_hdf(mmgroup_id)
 
         !Assign pmm to domain
-        call set_pmm_domain_group_hdf(dom_id,'static')
+        call set_mm_domain_group_hdf(dom_id,'static')
 
         ! Set 'Contains Grid'
         call set_contains_grid_hdf(file_id,'True')
@@ -243,7 +250,7 @@ contains
         character(:),                   allocatable :: user_msg
         class(bc_state_t),              allocatable :: bc_state
         character(len=10)                           :: patch_names(6)
-        integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id
+        integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id, mmgroup_id
         integer(ik)                                 :: mapping, bcface, ierr, igroup, istate
         !type(point_t),                  allocatable :: nodes(:)
         real(rk),                       allocatable :: nodes(:,:)
@@ -252,6 +259,7 @@ contains
         real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords
         character(len=8)                            :: bc_face_strings(6)
         character(:),   allocatable                 :: bc_face_string
+        class(prescribed_mesh_motion_function_t), allocatable    :: pmmf
 
 
         ! Create/initialize file
@@ -362,13 +370,16 @@ contains
         !
 
         !Add pmm group
-        call create_pmm_group_hdf(file_id,'sin_pmm')
-        call set_pmmf_name_hdf(file_id, 'sin_pmm','sinusoidal')
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','L_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','L_X',1.5_rk)
+        call create_mm_group_hdf(file_id,'sin_pmm','PMM')
+        mmgroup_id = open_mm_group_hdf(file_id, 'sin_pmm')
+        call create_prescribed_mesh_motion_function(pmmf, 'sinusoidal')
+        call add_pmmf_hdf(mmgroup_id, pmmf)
+        call close_mm_group_hdf(mmgroup_id)
+
+
 
         !Assign pmm to domain
-        call set_pmm_domain_group_hdf(dom_id,'sin_pmm')
+        call set_mm_domain_group_hdf(dom_id,'sin_pmm')
 
         ! Set 'Contains Grid'
         call set_contains_grid_hdf(file_id,'True')

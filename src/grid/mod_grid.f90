@@ -18,6 +18,7 @@ module mod_grid
     integer(ik),         parameter      :: NFACE_CORNERS = 4
     integer(ik),         save           :: FACE_CORNERS(NFACES,NFACE_CORNERS,NMAP)    !< array of indices for element corners
 
+    integer(ik),         save           :: ELEMENT_VERTEX_INDICES(8, NMAP)
 
 
     logical :: uninitialized = .true.
@@ -42,6 +43,7 @@ contains
             call compute_element_mappings(TWO_DIM)
             call compute_element_mappings(THREE_DIM)
             call compute_face_corner_indices()
+            call find_element_vertex_indices(THREE_DIM)
         end if
 
         uninitialized = .false.
@@ -324,6 +326,145 @@ contains
 
     end subroutine compute_face_corner_indices
     !**********************************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Eric Wolf
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine find_element_vertex_indices(spacedim) 
+        integer(ik),    intent(in)  :: spacedim
+
+        
+
+        real(rk),       allocatable :: xi(:),eta(:),zeta(:)
+        integer(ik)                 :: npts_1d(7), npts_2d(7), npts_3d(7)
+        integer(ik)                 :: ierr, imap, iterm, inode, ipt
+        integer(ik)                 :: ixi,  ieta, izeta
+
+        !
+        ! Mapping order
+        ! [linear, quadratic, cubic, quartic]
+        !
+        npts_1d = [2,3,4,5,6,7,8]           ! Number of points defining an edge
+        npts_2d = npts_1d*npts_1d           ! Number of points defining an element in 2D
+        npts_3d = npts_1d*npts_1d*npts_1d   ! Number of points defining an element in 3D
+
+
+        !
+        ! Loop through and compute mapping for different element types
+        !
+        do imap = 1,nmap
+
+            
+
+            !
+            ! Allocate storage for nodes and coordinates.
+            !
+            if ( spacedim == THREE_DIM ) then
+                allocate(  &
+                         xi(npts_1d(imap)),     &
+                         eta(npts_1d(imap)),    &
+                         zeta(npts_1d(imap)), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+            else if ( spacedim == TWO_DIM ) then
+                allocate(  &
+                         xi(npts_1d(imap)),     &
+                         eta(npts_1d(imap)),    &
+                         zeta(npts_1d(imap)), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+            end if
+
+
+            !
+            ! Compute 1d point coordinates in each direction
+            !
+            do ipt = 1,npts_1d(imap)
+                xi(ipt)   = -ONE + (real(ipt,rk)-ONE)*(TWO/(real(npts_1d(imap),rk)-ONE))
+                eta(ipt)  = -ONE + (real(ipt,rk)-ONE)*(TWO/(real(npts_1d(imap),rk)-ONE))
+                zeta(ipt) = -ONE + (real(ipt,rk)-ONE)*(TWO/(real(npts_1d(imap),rk)-ONE))
+            end do
+
+
+            !
+            ! Set up reference mesh nodes in each direction
+            !
+            inode = 1
+            if ( spacedim == THREE_DIM ) then
+
+                do izeta = 1,npts_1d(imap)
+                    do ieta = 1,npts_1d(imap)
+                        do ixi = 1,npts_1d(imap)
+
+                            ! Detect corner nodes
+                            if (abs(xi(ixi)-(-1.0_rk))<1.0e-6_rk) then
+                                if (abs(eta(ieta)-(-1.0_rk))<1.0e-6_rk) then
+                                    if (abs(zeta(izeta)-(-1.0_rk))<1.0e-6_rk) then
+                                        element_vertex_indices(1,imap) = inode
+                                    else if (abs(zeta(izeta)-(1.0_rk))<1.0e-6_rk) then
+                                        element_vertex_indices(2,imap) = inode
+                                    end if
+                                else if (abs(eta(ieta)-(1.0_rk))<1.0e-6_rk) then
+                                    if (abs(zeta(izeta)-(-1.0_rk))<1.0e-6_rk) then
+                                        element_vertex_indices(3,imap) = inode
+                                    else if (abs(zeta(izeta)-(1.0_rk))<1.0e-6_rk) then
+                                        element_vertex_indices(4,imap) = inode
+                                    end if
+                                end if
+                            else if (abs(xi(ixi)-(1.0_rk))<1.0e-6_rk) then
+                                if (abs(eta(ieta)-(-1.0_rk))<1.0e-6_rk) then
+                                    if (abs(zeta(izeta)-(-1.0_rk))<1.0e-6_rk) then
+                                        element_vertex_indices(5,imap) = inode
+                                    else if (abs(zeta(izeta)-(1.0_rk))<1.0e-6_rk) then
+                                        element_vertex_indices(6,imap) = inode
+                                    end if
+                                else if (abs(eta(ieta)-(1.0_rk))<1.0e-6_rk) then
+                                    if (abs(zeta(izeta)-(-1.0_rk))<1.0e-6_rk) then
+                                        element_vertex_indices(7,imap) = inode
+                                    else if (abs(zeta(izeta)-(1.0_rk))<1.0e-6_rk) then
+                                        element_vertex_indices(8,imap) = inode
+                                    end if
+                                end if
+                            end if
+
+
+
+                            inode = inode + 1
+                        end do
+                    end do
+                end do
+
+            else if ( spacedim == TWO_DIM ) then
+                call chidg_signal(FATAL,"mod_grid::find_element_vertex_indices - Invalid spacedim")
+
+            else
+                call chidg_signal(FATAL,"mod_grid::find_element_vertex_indices - Invalid spacedim")
+
+            end if
+
+
+            !
+            ! Dellocate variables for next iteration in loop
+            !
+            deallocate(xi, eta, zeta)
+
+        end do
+
+
+    end subroutine find_element_vertex_indices
+    !**********************************************************************************************************
+
+
+
+
+
+
+
 
 
 

@@ -23,6 +23,9 @@ module mod_equations
     use eqn_euler,                          only: euler 
     use eqn_euler_outlet,                   only: euler_outlet
     use eqn_euler_aux,                      only: euler_aux
+    use eqn_euler_av,                       only: euler_av
+    use eqn_euler_ani_av,                   only: euler_ani_av
+
     use eqn_filtered_euler,                 only: filtered_euler 
     use eqn_filtered_euler_FP0,             only: filtered_euler_FP0
     use eqn_filtered_euler_FP1,             only: filtered_euler_FP1
@@ -30,6 +33,9 @@ module mod_equations
     use eqn_navier_stokes,                  only: navier_stokes
     use eqn_rans,                           only: rans
     use eqn_rans_cv,                        only: rans_cv
+    use eqn_rans_sst,                       only: rans_sst
+    use eqn_rans_rstm,                      only: rans_rstm
+
     use eqn_rae,                            only: rae
     use eqn_rac,                            only: rac
     use eqn_tm,                             only: tm
@@ -130,6 +136,8 @@ contains
         type(euler)                         :: euler_builder
         type(euler_outlet)                  :: euler_outlet_builder
         type(euler_aux)                     :: euler_aux_builder
+        type(euler_av)                      :: euler_av_builder
+        type(euler_ani_av)                  :: euler_ani_av_builder
         type(filtered_euler)                :: filtered_euler_builder
         type(filtered_euler_FP0)            :: filtered_euler_FP0_builder
         type(filtered_euler_FP1)            :: filtered_euler_FP1_builder
@@ -137,6 +145,8 @@ contains
         type(navier_stokes)                 :: navier_stokes_builder
         type(rans)                          :: rans_builder
         type(rans_cv)                       :: rans_cv_builder
+        type(rans_sst)                      :: rans_sst_builder
+        type(rans_rstm)                     :: rans_rstm_builder
         type(rae)                           :: rae_builder
         type(rac)                           :: rac_builder
         type(tm)                            :: tm_builder
@@ -164,6 +174,8 @@ contains
             call equation_set_factory%register(euler_builder%build('default'))
             call equation_set_factory%register(euler_outlet_builder%build('default'))
             call equation_set_factory%register(euler_aux_builder%build('default'))
+            call equation_set_factory%register(euler_av_builder%build('default'))
+            call equation_set_factory%register(euler_ani_av_builder%build('default'))
             call equation_set_factory%register(filtered_euler_builder%build('default'))
             call equation_set_factory%register(filtered_euler_FP0_builder%build('default'))
             call equation_set_factory%register(filtered_euler_FP1_builder%build('default'))
@@ -171,6 +183,8 @@ contains
             call equation_set_factory%register(navier_stokes_builder%build('default'))
             call equation_set_factory%register(rans_builder%build('default'))
             call equation_set_factory%register(rans_cv_builder%build('default'))
+            call equation_set_factory%register(rans_sst_builder%build('default'))
+            call equation_set_factory%register(rans_rstm_builder%build('default'))
             call equation_set_factory%register(rae_builder%build('default'))
             call equation_set_factory%register(rac_builder%build('default'))
             call equation_set_factory%register(tm_builder%build('default'))

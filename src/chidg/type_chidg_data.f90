@@ -1,7 +1,8 @@
 module type_chidg_data
 #include <messenger.h>
     use mod_kinds,                      only: rk,ik
-    use mod_constants,                  only: NO_ID
+    use mod_constants,                  only: NO_ID, NO_MM_ASSIGNED, ZERO, NO_ELEMENT, &
+                                              MAX_ELEMENTS_PER_NODE
     use mod_chidg_mpi,                  only: IRANK, NRANK
     use type_domain_connectivity,       only: domain_connectivity_t
     use type_boundary_connectivity,     only: boundary_connectivity_t
@@ -12,6 +13,7 @@ module type_chidg_data
     use type_bc_state,                  only: bc_state_t
     use type_bc_state_group,            only: bc_state_group_t
     use type_svector,                   only: svector_t
+    use type_ivector,                   only: ivector_t
     use mod_string,                     only: string_t
     use type_equation_set,              only: equation_set_t
     use type_solverdata,                only: solverdata_t
@@ -21,11 +23,12 @@ module type_chidg_data
     use mod_string,                     only: string_t
 
     ! Factory methods
-    use mod_equations,                      only: equation_set_factory
+    use mod_equations,                  only: equation_set_factory
 
     !Mesh motion
-    use type_prescribed_mesh_motion,        only: prescribed_mesh_motion_t
-    use type_prescribed_mesh_motion_group,  only: prescribed_mesh_motion_group_t
+    use type_mesh_motion,               only: mesh_motion_t
+    use type_mesh_motion_wrapper,       only: mesh_motion_wrapper_t
+    use type_mesh_motion_group,         only: mesh_motion_group_t
     implicit none
 
 
@@ -61,8 +64,8 @@ module type_chidg_data
         ! An object containing time information
         type(time_manager_t)                        :: time_manager
 
-        ! For each domain, a mesh motion type
-        type(prescribed_mesh_motion_t),            allocatable :: pmm(:)
+        ! Note: mesh_motion_t is abstract, so it needs a wrapper (I think...) 
+        type(mesh_motion_wrapper_t),    allocatable :: mesh_motion(:)
 
     contains
 
@@ -88,10 +91,22 @@ module type_chidg_data
         procedure   :: initialize_postcomm_bc
 
         ! Mesh Motion
-        procedure   :: new_pmm
-        procedure   :: add_pmm_domain
-        procedure   :: add_pmm_group
-        procedure   :: npmm_groups
+        procedure   :: new_mm
+        procedure   :: add_mm_domain
+        procedure   :: add_mm_group
+        procedure   :: nmm_groups
+
+
+        procedure   :: update_grid
+
+
+        ! RBF
+        procedure   :: construct_rbf_arrays
+        procedure   :: node_index_u_to_g
+        procedure   :: domain_index_global_to_local
+        procedure   :: node_touch_elements 
+        procedure   :: register_rbf_with_elements
+        procedure   :: record_mesh_size
 
 
         ! Release allocated memory
@@ -124,8 +139,6 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!
-    !!
     !---------------------------------------------------------------------------------------
     subroutine initialize_solution_solver(self)
         class(chidg_data_t),     intent(inout)   :: self
@@ -136,34 +149,25 @@ contains
 
 
         call write_line("Initialize: matrix/vector allocation...", io_proc=GLOBAL_MASTER)
-        !
         ! Assemble array of function_data from the eqnset array to pass to the solver data 
         ! structure for initialization
-        !
         ndom = self%mesh%ndomains()
         allocate(function_data(ndom), stat=ierr)
         if ( ierr /= 0 ) call AllocationError
 
         do idom = 1,self%mesh%ndomains()
-            !
             ! Assume that each element has the same eqn_ID
-            !
             eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
             function_data(idom) = self%eqnset(eqn_ID)%function_data
         end do
 
 
-        !
         ! Initialize solver data 
-        !
         call self%sdata%init(self%mesh, function_data)
 
 
     end subroutine initialize_solution_solver
     !***************************************************************************************
-
-
-
 
 
 
@@ -211,13 +215,10 @@ contains
         integer(ik) :: bc_ID
 
 
-        
-        !
         ! Set override boundary condition states if they were passed in:
         !   if overriding:
         !       - clear state group
         !       - add overriding bc_state
-        !
         if ( present(bc_wall) .and. (trim(bc_state_group%family) == 'Wall') ) then
             call bc_state_group%remove_states()
             call bc_state_group%add_bc_state(bc_wall)
@@ -249,26 +250,16 @@ contains
         end if
 
 
-
-        !
         ! Assign:
         !   - Create new boundary condition state group
         !   - Set newly allocated object
-        !
         bc_ID = self%new_bc_state_group()
         bc_state_group%bc_ID = bc_ID
         self%bc_state_group(bc_ID) = bc_state_group
                                                                             
 
-
     end subroutine add_bc_state_group
     !***************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -282,7 +273,6 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/27/2017
     !!
-    !!
     !---------------------------------------------------------------------------------------
     function new_bc_state_group(self) result(bc_ID)
         class(chidg_data_t),    intent(inout)   :: self
@@ -291,33 +281,24 @@ contains
         integer(ik)                             :: bc_ID, ierr
 
 
-        !
         ! Allocate number of boundary conditions
-        !
         allocate(temp_bcs(self%nbc_state_groups() + 1), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-        !
         ! Copy any previously allocated boundary conditions to new array
-        !
         if ( self%nbc_state_groups() > 0) then
             temp_bcs(1:size(self%bc_state_group)) = self%bc_state_group(1:size(self%bc_state_group))
         end if
 
 
-        !
         ! Set ID of new bc and store to array
-        !
         bc_ID = size(temp_bcs)
         temp_bcs(bc_ID)%bc_ID = bc_ID
 
 
-        !
         ! Attach extended allocation to chidg_data%bc
-        !
         call move_alloc(temp_bcs,self%bc_state_group)
-
 
 
     end function new_bc_state_group
@@ -327,13 +308,10 @@ contains
 
 
 
-
-
     !>  Return the number of boundary conditions state groups on the chidg_data_t instance.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/7/2017
-    !!
     !!
     !-------------------------------------------------------------------------------------
     function nbc_state_groups(self) result(n)
@@ -349,8 +327,6 @@ contains
 
     end function nbc_state_groups
     !*************************************************************************************
-
-
 
 
 
@@ -396,9 +372,6 @@ contains
 
 
 
-
-
-
     !>  Add a new equation set to the data instance.
     !!
     !!  @author Nathan A. Wukie
@@ -413,20 +386,14 @@ contains
         logical     :: already_added
         integer(ik) :: ieqn, eqn_ID
 
-
-        !
         ! Check if equation set has already been added.
-        !
         already_added = .false.
         do ieqn = 1,self%nequation_sets()
             already_added = (trim(self%eqnset(ieqn)%name) == trim(eqn_name)) 
             if (already_added) exit
         end do
         
-
-        !
         ! Add new equation set if it doesn't already exist and get new eqn_ID
-        !
         if (.not. already_added) then
             eqn_ID = self%new_equation_set()
             self%eqnset(eqn_ID) = equation_set_factory%produce(eqn_name, 'default')
@@ -442,13 +409,10 @@ contains
 
 
 
-
-
-
-
     !
     !   Mesh Motion
     !------------------------------------------------------------------------------------------
+
 
     !> 
     !!  @author Eric Wolf
@@ -456,21 +420,21 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_pmm_group(self,pmm_group)
+    subroutine add_mm_group(self,mm_group)
         class(chidg_data_t),            intent(inout)           :: self
-        type(prescribed_mesh_motion_group_t),               intent(inout)              :: pmm_group
+        type(mesh_motion_group_t),               intent(inout)              :: mm_group
 
-        integer(ik)                         :: pmm_ID
+        integer(ik)                         :: mm_ID
 
         ! Create a new boundary condition
-        pmm_ID = self%new_pmm()
+        mm_ID = self%new_mm()
 
+        ! Initialize mm from mm_group. Note that, since mm_group contains mm,
+        ! we must pass the mm info instead of mm_group to avoid a circular dependency.
+        allocate(self%mesh_motion(mm_ID)%mm, source=mm_group%mm)
+        self%mesh_motion(mm_ID)%mm%mm_ID = mm_ID
 
-        ! Initialize pmm from pmm_group. Note that, since pmm_group contains pmm,
-        ! we must pass the pmm info instead of pmm_group to avoid a circular dependency.
-        call self%pmm(pmm_ID)%init_pmm_group(pmm_group%pmm)
-
-    end subroutine add_pmm_group
+    end subroutine add_mm_group
     !******************************************************************************************
 
 
@@ -482,25 +446,19 @@ contains
     !!  @date   7/14/2018
     !!
     !------------------------------------------------------------------------------------------
-    function npmm_groups(self) result(npmm)
+    function nmm_groups(self) result(nmm)
         class(chidg_data_t),    intent(in)  :: self
 
-        integer(ik) :: npmm
+        integer(ik) :: nmm
 
-        if (allocated(self%pmm)) then
-            npmm = size(self%pmm)
+        if (allocated(self%mesh_motion)) then
+            nmm = size(self%mesh_motion)
         else
-            npmm = 0
+            nmm = 0
         end if
 
-    end function npmm_groups
+    end function nmm_groups
     !******************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -520,37 +478,32 @@ contains
         integer(ik)                         :: eqn_ID, ierr
 
 
-        !
         ! Allocate number of boundary conditions
-        !
         allocate(temp_eqnset(self%nequation_sets() + 1), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-        !
         ! Copy any previously allocated boundary conditions to new array
-        !
         if ( self%nequation_sets() > 0) then
             temp_eqnset(1:size(self%eqnset)) = self%eqnset(1:size(self%eqnset))
         end if
 
 
-        !
         ! Set ID of new bc and store to array
-        !
         eqn_ID = size(temp_eqnset)
         temp_eqnset(eqn_ID)%eqn_ID = eqn_ID
 
 
-        !
         ! Attach extended allocation to chidg_data%eqnset
-        !
         call move_alloc(temp_eqnset,self%eqnset)
-
 
 
     end function new_equation_set
     !***************************************************************************************
+
+
+
+
     !>  Given an equation set name, return its index identifier in chidg_data.
     !!
     !!  Returns eqn_ID such that data%eqnset(eqn_ID) is valid and corresponds to the
@@ -567,7 +520,6 @@ contains
         integer(ik)                 :: ieqn, eqn_ID
         character(:),   allocatable :: user_msg
         logical                     :: names_match
-
 
         eqn_ID = 0
         do ieqn = 1,self%nequation_sets()
@@ -587,65 +539,57 @@ contains
     end function get_equation_set_id
     !**************************************************************************************
 
+
+
+
     !> 
     !!  @author Eric Wolf
     !!  @date   4/3/2017
     !!
-    !!
     !------------------------------------------------------------------------------------------
-    subroutine add_pmm_domain(self, domain_name, domain_pmm_name)
+    subroutine add_mm_domain(self, domain_name, domain_mm_name)
         class(chidg_data_t),            intent(inout)   :: self
         character(*),                   intent(in)      :: domain_name
-        character(*),                   intent(in)      :: domain_pmm_name
+        character(*),                   intent(in)      :: domain_mm_name
 
-        character(:),   allocatable :: pmm_name, user_msg
-        integer(ik)                 :: pmm_ID, ipmm, idom
-        logical                     :: found_pmm
+        character(:),   allocatable :: mm_name, user_msg
+        integer(ik)                 :: mm_ID, imm, idom
+        logical                     :: found_mm
 
-        
-        !
         ! Find the correct boundary condition to add bc_patch to
-        !
-        do ipmm = 1,size(self%pmm)
+        do imm = 1,size(self%mesh_motion)
 
-            pmm_name = self%pmm(ipmm)%get_name()
-            found_pmm = (trim(domain_pmm_name) == trim(pmm_name))
+            mm_name = self%mesh_motion(imm)%mm%get_name()
+            found_mm = (trim(domain_mm_name) == trim(mm_name))
 
-            if (found_pmm) pmm_ID = ipmm
-            if (found_pmm) exit
+            if (found_mm) mm_ID = imm
+            if (found_mm) exit
 
         end do
 
-        !
-        ! Once pmm is found, initialize pmm_patch on pmm
-        !
-        if (found_pmm) then
-            
-            !
+        ! Once mm is found, initialize mm_patch on mm
+        if (found_mm) then
             ! Find domain index in mesh(:) from domain_name
-            !
             idom = self%get_domain_index(domain_name)
-
-            call self%pmm(pmm_ID)%init_pmm_domain(self%mesh%domain(idom))
-
+            call self%mesh_motion(mm_ID)%mm%init_mm_domain(self%mesh%domain(idom))
         else
 
-
-            user_msg = "chidg_data%add_pmm_domain: It looks like we didn't find a prescribed mesh motion  &
-                        group that matches with the string indicated in a pmm domain. Make &
-                        sure that a pmm group with the correct name exists. Also make &
-                        sure that the name set on the pmm domain corresponds to one of the &
-                        pmm groups that exists."
-            if ( (trim(domain_pmm_name) /= 'empty') .and. &
-                (trim(domain_pmm_name) /= 'Empty') ) &
-                call chidg_signal_one(FATAL,user_msg,trim(domain_pmm_name))
+            user_msg = "chidg_data%add_mm_domain: It looks like we didn't find a mesh motion  &
+                        group that matches with the string indicated in a mm domain. Make &
+                        sure that a mm group with the correct name exists. Also make &
+                        sure that the name set on the mm domain corresponds to one of the &
+                        mm groups that exists."
+            if ( (trim(domain_mm_name) /= 'empty') .and. &
+                (trim(domain_mm_name) /= 'Empty') ) &
+                call chidg_signal_one(FATAL,user_msg,trim(domain_mm_name))
 
         end if
 
 
-    end subroutine add_pmm_domain
+    end subroutine add_mm_domain
     !*******************************************************************************************
-   
+
+
 
     !>
     !!  @author Eric Wolf
@@ -653,57 +597,96 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    function new_pmm(self) result(pmm_ID)
+    function new_mm(self) result(mm_ID)
         class(chidg_data_t),    intent(inout)   :: self
 
-        type(prescribed_mesh_motion_t), allocatable :: temp_pmms(:)
-        integer(ik)             :: pmm_ID, ierr, npmm
+        type(mesh_motion_wrapper_t), allocatable :: temp_mms(:)
+        integer(ik)             :: mm_ID, ierr, nmm
 
-
-        !
         ! Get number of boundary conditions
-        !
-        if (allocated(self%pmm)) then
-            npmm = size(self%pmm)
+        if (allocated(self%mesh_motion)) then
+            nmm = size(self%mesh_motion)
         else
-            npmm = 0
+            nmm = 0
         end if
 
-                !
         ! Increment number of boundary conditions
-        !
-        npmm = npmm + 1
+        nmm = nmm + 1
 
-
-        !
         ! Allocate number of boundary conditions
-        !
-        allocate(temp_pmms(npmm), stat=ierr)
+        allocate(temp_mms(nmm), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
-        !
         ! Copy any previously allocated boundary conditions to new array
-        !
-        if ( npmm > 1) then
-            temp_pmms(1:size(self%pmm)) = self%pmm(1:size(self%pmm))
+        if ( nmm > 1) then
+            temp_mms(1:size(self%mesh_motion)) = self%mesh_motion(1:size(self%mesh_motion))
         end if
 
 
-        !
-        ! Set ID of new pmm and store to array
-        !
-        pmm_ID = npmm
-        temp_pmms(pmm_ID)%pmm_ID = pmm_ID
+        ! Set ID of new mm and store to array
+        mm_ID = nmm
 
+        ! Attach extended allocation to chidg_data%mm
+        call move_alloc(temp_mms,self%mesh_motion)
 
-        !
-        ! Attach extended allocation to chidg_data%pmm
-        !
-        call move_alloc(temp_pmms,self%pmm)
-
-    end function new_pmm
+    end function new_mm
     !******************************************************************************************
+
+
+
+
+    !>  Spatial loop through domains, elements, and faces. Functions get called for each element/face.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/15/2016
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/16/2016
+    !!  @note   Improved layout, added computation of diffusion terms.
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------------------
+    subroutine update_grid(self,timing,info)
+        class(chidg_data_t), intent(inout)   :: self 
+        real(rk),           optional        :: timing
+        integer(ik),        optional        :: info
+
+        integer(ik) :: inode, mm_ID, idom, ierr, imm
+
+
+        call write_line('Updating to mesh motion...', io_proc=GLOBAL_MASTER)
+
+        ! Update mesh motion objects
+        do imm = 1, size(self%mesh_motion) 
+            call self%mesh_motion(imm)%mm%update(self%mesh, self%time_manager%t)
+            call self%mesh_motion(imm)%mm%apply(self%mesh, self%time_manager%t)
+        end do
+
+        ! Loop through domains and apply mesh motions
+        do idom = 1,self%mesh%ndomains()
+            associate ( mesh => self%mesh)
+            mm_ID = mesh%domain(idom)%mm_ID
+
+            if (mm_ID /= NO_MM_ASSIGNED) then
+
+                call mesh%domain(idom)%set_displacements_velocities(mesh%domain(idom)%dnodes, mesh%domain(idom)%vnodes)
+                call mesh%domain(idom)%update_interpolations_ale()
+            end if
+            end associate
+        end do  ! idom
+
+
+        call self%mesh%comm_send()
+        call self%mesh%comm_recv()
+        call self%mesh%comm_wait()
+
+
+    end subroutine update_grid
+    !******************************************************************************************************************
+
+    
+
+   
 
     !>  Given an equation set name, return its index identifier in chidg_data.
     !!
@@ -720,18 +703,12 @@ contains
 
         character(:),   allocatable :: eqn_name, user_msg
 
-        !
         ! Check if eqn_ID is within bounds
-        !
         if ( eqn_ID > self%nequation_sets() ) call chidg_signal(FATAL,"chidg_data%get_equation_set_name: eqn_ID is out of bounds.")
         if ( eqn_ID < 1 )                     call chidg_signal(FATAL,"chidg_data%get_equation_set_name: eqn_ID is out of bounds.")
 
-        
-        !
         ! Get name
-        !
         eqn_name = self%eqnset(eqn_ID)%name
-
 
     end function get_equation_set_name
     !**************************************************************************************
@@ -744,9 +721,6 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/11/2016
-    !!
-    !!
-    !!
     !!
     !---------------------------------------------------------------------------------------
     subroutine initialize_solution_domains(self,interpolation,level,nterms_s)
@@ -762,9 +736,7 @@ contains
         call write_line("Initialize: domain equation space...", io_proc=GLOBAL_MASTER)
 
         do idomain = 1,self%mesh%ndomains()
-            !
             ! Assume each element has the same eqn_ID
-            !
             eqn_ID = self%mesh%domain(idomain)%elems(1)%eqn_ID
             nfields = self%eqnset(eqn_ID)%prop%nprimary_fields()
 
@@ -773,11 +745,8 @@ contains
             call self%mesh%domain(idomain)%update_interpolations_ale()
         end do
 
-
     end subroutine initialize_solution_domains
     !***************************************************************************************
-
-
 
 
 
@@ -829,16 +798,12 @@ contains
 
         call write_line("Initialize: bc specializations...", io_proc=GLOBAL_MASTER)
         do ibc = 1,self%nbc_state_groups()
-
             ! Call bc-specific specialized routine. Default does nothing
             call self%bc_state_group(ibc)%init_postcomm(self%mesh)
-
         end do
 
     end subroutine initialize_postcomm_bc
     !***************************************************************************************
-
-
 
 
 
@@ -917,11 +882,6 @@ contains
 
 
 
-
-
-
-
-
     !>  Return a vector of auxiliary fields that are required.
     !!
     !!
@@ -937,11 +897,8 @@ contains
         character(:),   allocatable :: field_name
 
 
-
         do idom = 1,self%mesh%ndomains()
-            !
             ! Assume each element has the same eqn_ID
-            !
             eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
             do ifield = 1,self%eqnset(eqn_ID)%prop%nauxiliary_fields()
 
@@ -950,7 +907,6 @@ contains
 
             end do !ifield
         end do !idom
-
 
 
     end function get_auxiliary_field_names
@@ -981,13 +937,264 @@ contains
 
 
 
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    07/16/2018 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine construct_rbf_arrays(self)
+        class(chidg_data_t),    intent(inout)      :: self
+
+        integer(ik)     :: idom, ielem, rbf_index, idir
+
+
+        self%sdata%rbf_center = ZERO
+        self%sdata%rbf_radius = ZERO
+        do idom = 1, self%mesh%ndomains()
+            do ielem = 1, self%mesh%domain(idom)%nelem
+                
+                rbf_index = sum(self%sdata%nelems_per_domain(1:self%mesh%domain(idom)%elems(ielem)%idomain_g-1)) + &
+                            self%mesh%domain(idom)%elems(ielem)%ielement_g
+
+                do idir = 1,3
+                    self%sdata%rbf_center(rbf_index,idir) = self%mesh%domain(idom)%elems(ielem)%centroid(idir)
+                    self%sdata%rbf_radius(rbf_index,idir) = self%mesh%domain(idom)%elems(ielem)%h(idir)
+                end do
+
+            end do
+        end do
+
+
+    end subroutine construct_rbf_arrays
+    !***************************************************************************************
+
+
+
+
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    09/13/2018 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine node_index_u_to_g(self, inode_u, idomain_g, inode_g) 
+        class(chidg_data_t),    intent(in)  :: self
+        integer(ik),              intent(in)  :: inode_u
+        integer(ik),              intent(inout)  :: idomain_g, inode_g
+
+
+        integer(ik) :: nnodes_old, nnodes, idom, ndoms
+
+        ndoms = self%mesh%ndomains()
+        nnodes_old = 0
+        nnodes = 0
+        do idom = 1, ndoms
+            nnodes = nnodes_old + self%sdata%nnodes_per_domain(idom)
+
+            if ((nnodes_old<inode_u) .and. (inode_u<=nnodes)) then
+                ! Node located in the present domain
+                idomain_g = idom
+
+                inode_g = inode_u - nnodes_old
+                exit
+
+            end if
+            nnodes_old = nnodes
+
+        end do
+
+
+
+    end subroutine node_index_u_to_g
+    !****************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    09/13/2018 
+    !!
+    !--------------------------------------------------------------------------------
+    function domain_index_global_to_local(self, idomain_g) result(idomain_l)
+        class(chidg_data_t),        intent(in)      :: self
+        integer(ik),                intent(in)      :: idomain_g
+
+        integer(ik)                                 :: idomain_l
+
+        integer(ik) :: idom, ndoms
+        logical     :: domain_found
+
+        domain_found = .false.
+        ndoms = self%mesh%ndomains()
+        idomain_l = -1
+
+        do idom = 1, ndoms
+            if (idomain_g == self%mesh%domain(idom)%idomain_g) then
+                idomain_l = idom
+                domain_found = .true.
+                exit
+            end if
+
+        end do
+
+    end function domain_index_global_to_local
+    !********************************************************************************
+
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    09/13/2018 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine node_touch_elements(self, inode_u)
+        class(chidg_data_t),        intent(inout)   :: self
+        integer(ik),                intent(in)      :: inode_u
+
+        integer(ik) :: idomain_g, inode_g, idomain_l, nelems, ielem, test_elem
+        
+        call self%node_index_u_to_g(inode_u, idomain_g, inode_g) 
+
+        idomain_l = self%domain_index_global_to_local(idomain_g)
+
+        nelems = 0
+        do ielem = 1, MAX_ELEMENTS_PER_NODE
+            test_elem = self%mesh%domain(idomain_l)%nodes_elems(inode_g, ielem)
+
+            if (test_elem /= NO_ELEMENT) then
+                nelems = nelems + 1
+            end if
+
+        end do
+    
+    end subroutine node_touch_elements 
+    !********************************************************************************
+
+
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    09/13/2018 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine register_rbf_with_elements(self, center, radius, rbf_ID, rbf_set_ID)
+        class(chidg_data_t),                intent(inout) :: self
+        real(rk),                           intent(in)      :: center(3), radius(3)
+        integer(ik),                        intent(in)      :: rbf_ID, rbf_set_ID
+
+        integer(ik)     :: inode, inode_u, idomain_g, inode_g, idomain_l, ielem, nelems, test_elem
+        type(ivector_t) :: hit_list
+
+        ! Perform radius neighbor search
+        call self%mesh%octree%radius_search(self%sdata%global_nodes,self%mesh%octree%root_box_ID,center, radius, hit_list)
+
+        do inode = 1, hit_list%size()
+            inode_u = hit_list%at(inode)
+            call self%node_index_u_to_g(inode_u, idomain_g, inode_g) 
+
+            idomain_l = self%domain_index_global_to_local(idomain_g)
+
+            nelems = 0
+            do ielem = 1, MAX_ELEMENTS_PER_NODE
+                test_elem = self%mesh%domain(idomain_l)%nodes_elems(inode_g, ielem)
+
+                if (test_elem /= NO_ELEMENT) then
+                    call self%mesh%domain(idomain_l)%elems(test_elem)%register_rbf(rbf_set_ID, rbf_ID)
+                end if
+
+            end do
+
+        end do
+    
+
+    end subroutine register_rbf_with_elements
+    !********************************************************************************
+
+
+
+
+
+    !>  Record mesh size
+    !!
+    !!  @author Eric M. Wolf 
+    !!  @date   09/18/2018
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine record_mesh_size(self)
+        class(chidg_data_t),    intent(inout)   :: self
+
+        integer(ik) :: idomain, ielem, idomain_g, idomain_l, ielement_g, ielement_l, ii, inode_loc, inode_global, idir
+        real(rk)    :: h_loc(3)
+
+
+        self%sdata%mesh_size_elem = ZERO
+        self%sdata%mesh_size_vertex = ZERO
+        self%sdata%min_mesh_size_vertex = ZERO
+        self%sdata%avg_mesh_size_vertex = ZERO
+        self%sdata%sum_mesh_size_vertex = ZERO
+        self%sdata%num_elements_touching_vertex = 0
+        do idomain = 1,self%mesh%ndomains()
+            do ielem = 1, self%mesh%domain(idomain)%nelem
+                idomain_g  = self%mesh%domain(idomain)%elems(ielem)%idomain_g
+                idomain_l  = self%mesh%domain(idomain)%elems(ielem)%idomain_l
+                ielement_g = self%mesh%domain(idomain)%elems(ielem)%ielement_g
+                ielement_l = self%mesh%domain(idomain)%elems(ielem)%ielement_l
+                ii = sum(self%sdata%nelems_per_domain(1:idomain_g-1))+ielement_g
+                h_loc = self%mesh%domain(idomain)%elems(ielem)%h
+
+                ! Record the present elements mesh size
+                self%sdata%mesh_size_elem(ii, :) = h_loc
+                self%sdata%min_mesh_size_elem(ii) = minval(h_loc)
+
+                ! Loop over the nodes belonging to the element and overwrite if the new value is larger than the previous value
+                do inode_loc = 1, size(self%mesh%domain(idomain)%elems(ielem)%connectivity)
+                    ! Get the nodes index
+                    inode_global = sum(self%sdata%nnodes_per_domain(1:idomain_g-1))+self%mesh%domain(idomain)%elems(ielem)%connectivity(inode_loc)
+                    if (inode_global > sum(self%sdata%nnodes_per_domain)) print *, 'av node out of bounds'
+
+                    ! Compare with the current nodal value, overwrite if larger
+                    do idir = 1, 3
+                        if (self%sdata%mesh_size_vertex(inode_global, idir) < h_loc(idir)) self%sdata%mesh_size_vertex(inode_global, idir) = h_loc(idir) 
+                        if (self%sdata%min_mesh_size_vertex(inode_global) < h_loc(idir)) self%sdata%min_mesh_size_vertex(inode_global) = h_loc(idir) 
+                    end do
+                    self%sdata%sum_mesh_size_vertex(inode_global) = self%sdata%sum_mesh_size_vertex(inode_global) + minval(h_loc)
+                    self%sdata%num_elements_touching_vertex(inode_global) = self%sdata%num_elements_touching_vertex(inode_global) + 1
+
+
+                end do
+
+
+            end do
+        end do
+
+
+    end subroutine record_mesh_size
+    !***************************************************************************************
+
+
+
+
 
 
     !>  Release allocated memory.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   3/3/2017
-    !!
     !!
     !---------------------------------------------------------------------------------------
     subroutine release(self)
@@ -1005,12 +1212,11 @@ contains
 
 
 
+
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/7/2016
-    !!
-    !!
     !!
     !----------------------------------------------------------------------------------------
     subroutine report(self,selection)
@@ -1026,22 +1232,12 @@ contains
                 call write_line('Domain ', idom, '  :  ', self%mesh%domain(idom)%nelem, ' Elements', io_proc=IRANK)
             end do
 
-
         else
-
 
         end if
 
-
-
     end subroutine report
     !****************************************************************************************
-
-
-
-
-
-
 
 
 

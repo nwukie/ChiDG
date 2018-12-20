@@ -1,3 +1,6 @@
+add_subdirectory(octree)
+add_subdirectory(radial_basis_functions)
+
 add_lib_sources(
                 type_point.f90 
                 type_element.f90 

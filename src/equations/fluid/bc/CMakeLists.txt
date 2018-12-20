@@ -23,6 +23,7 @@ add_lib_sources(
                 bc_state_outlet_steady_1dchar.f90
                 bc_state_outlet_3dgiles.f90
                 bc_state_outlet_3dgiles_innerproduct.f90
+                bc_state_supersonic_inlet.f90
 #                bc_state_inlet_giles_quasi3d_steady.f90
 #                bc_state_outlet_giles_quasi3d_steady.f90
 #                bc_state_outlet_giles_quasi3d_steady_extrapolate_average.f90

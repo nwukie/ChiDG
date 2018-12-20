@@ -118,7 +118,7 @@
 
 MODULE DNAD_D
     use mod_kinds,      only: rsingle,rdouble,ishort,ilong,rk
-    use mod_constants,  only: ZERO, ONE
+    use mod_constants,  only: ZERO, ONE, PI
 
 IMPLICIT NONE
 
@@ -1394,6 +1394,35 @@ CONTAINS
 
     END FUNCTION ABS_D_D
 
+    !---------------------------------------------------
+    ! Smooth ABS of dual numbers
+    ! ABS<u,up>=<ABS(u),up SIGN(u)>
+    !----------------------------------------------------
+    ELEMENTAL FUNCTION SABS_D_D(u,b_in) RESULT(res)
+         TYPE (AD_D), INTENT(IN)::u
+         REAL(DBL_AD),INTENT(IN),OPTIONAL:: b_in
+         TYPE (AD_D)::res
+         REAL(DBL_AD) :: b, c
+         TYPE (AD_D):: max_u_0, min_u_0
+         allocate(res%xp_ad_(size(u%xp_ad_)))
+
+
+        IF (present(b_in)) THEN
+            b = b_in
+        ELSE
+            b = 100.0D0
+        ENDIF
+
+        
+        c = 0.5D0 - atan(b)/PI
+        max_u_0 = u*(atan(b*u)/PI+0.5D0)+c
+        min_u_0 = u*(atan(-b*u)/PI+0.5D0)-c
+
+        res = max_u_0 - min_u_0
+
+    END FUNCTION SABS_D_D
+
+
 
     !-----------------------------------------
     ! ACOS of dual numbers
@@ -1919,6 +1948,31 @@ CONTAINS
 
     END FUNCTION MAX_DD_D
 
+    !-----------------------------------------
+    ! Obtain the smoothed max of 2 dual numbers
+    !----------------------------------------    
+    ELEMENTAL FUNCTION SMAX_DD_D(val1, val2, b_in) RESULT(res)
+        TYPE (AD_D), INTENT(IN)::val1, val2
+        REAL(DBL_AD),INTENT(IN),OPTIONAL::b_in
+        TYPE (AD_D)::res
+
+        REAL(DBL_AD) :: b
+
+        allocate(res%xp_ad_(size(val1%xp_ad_)))
+
+        IF (present(b_in)) THEN
+            b = b_in
+        ELSE
+            b = 100.0D0
+        ENDIF
+
+        res = (val1 + val2 + SABS_D_D(val1 - val2, b))/2.0D0
+   
+
+    END FUNCTION SMAX_DD_D
+
+
+
 
     !-----------------------------------------
     ! Obtain the max of a dual number and an integer
@@ -2031,6 +2085,33 @@ CONTAINS
         ENDIF
 
     END FUNCTION MIN_DD_D
+
+    !-----------------------------------------
+    ! Obtain the smoothed min of 2 dual numbers
+    !----------------------------------------    
+    ELEMENTAL FUNCTION SMIN_DD_D(val1, val2, b_in) RESULT(res)
+        TYPE (AD_D), INTENT(IN)::val1, val2
+        REAL(DBL_AD),INTENT(IN),OPTIONAL::b_in
+        TYPE (AD_D)::res
+
+        REAL(DBL_AD) :: b
+
+        allocate(res%xp_ad_(size(val1%xp_ad_)))
+
+        IF (present(b_in)) THEN
+            b = b_in
+        ELSE
+            b = 100.0D0
+        ENDIF
+
+        res = (val1 + val2 - SABS_D_D(val1 - val2, b))/2.0D0
+   
+
+    END FUNCTION SMIN_DD_D
+
+
+
+
 
     !-----------------------------------------
     ! Obtain the min of a dual number and a single
@@ -2147,6 +2228,34 @@ CONTAINS
 
 
     !-----------------------------------------
+    ! SIN of dual numbers
+    ! SIN<u,up>=<SIN(u),up COS(u)>
+    !----------------------------------------
+    ELEMENTAL FUNCTION SIN_RAMP_D_D(u,xs,xe) RESULT(res)
+         TYPE (AD_D), INTENT(IN)::u
+         REAL (DBL_AD), INTENT(IN):: xs, xe
+         TYPE (AD_D)::res, theta
+         REAL (DBL_AD):: tmp
+         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(theta%xp_ad_(size(u%xp_ad_)))
+
+
+         IF (u%x_ad_ < xs) THEN
+            res = 0.0d0
+         ELSEIF ((xs .le. u%x_ad_) .AND. (u%x_ad_ .le. xe)) THEN
+            theta = (PI/2.0d0)*(2.0d0*u - (xs+xe))/(xs-xe)
+            res = 0.5d0*(SIN_D_D(theta) + 1.0d0)
+         ELSE
+            res = 1.0d0
+         END IF
+
+    END FUNCTION SIN_RAMP_D_D
+
+
+
+
+
+    !-----------------------------------------
     ! SQRT of dual numbers
     ! SQRT<u,up>=<SQRT(u),up/2/sqrt(u) >
     !----------------------------------------
@@ -2169,6 +2278,39 @@ CONTAINS
          ENDIF
 
     END FUNCTION SQRT_D_D
+
+
+
+    !-----------------------------------------
+    ! SQRT of dual numbers
+    ! SQRT<u,up>=<SQRT(u),up/2/sqrt(u) >
+    !----------------------------------------
+    !IMPURE ELEMENTAL FUNCTION SQRT_D_D(u) RESULT(res)
+    ELEMENTAL FUNCTION MY_SQRT_D_D(u) RESULT(res)
+         TYPE (AD_D), INTENT(IN)::u
+         REAL(DBL_AD):: tmp
+         TYPE (AD_D)::res
+         allocate(res%xp_ad_(size(u%xp_ad_)))
+
+         tmp=SQRT(u%x_ad_) 
+  
+         res%x_ad_ = tmp
+         !IF(tmp==0.0d0) THEN
+         IF(u%x_ad_ < REAL(1.0e-14,DBL_AD)) THEN
+            !res%xp_ad_ = Set_NaN_D()
+            res%xp_ad_ = 0.0d0
+         ELSE
+            tmp= 0.5D0/tmp
+            res%xp_ad_ = u%xp_ad_*tmp
+         ENDIF
+
+    END FUNCTION MY_SQRT_D_D
+
+
+
+
+
+
 
 
  

@@ -216,9 +216,27 @@ module mod_constants
     
     !integer(ik),    parameter   :: NO_EQUATION_SET = 0
 
+!    !
+!    !   Prescribed mesh Motion
+!    !
+!    integer(ik), parameter         :: NO_PMM_ASSIGNED = -1
+
+
     !
     !   Prescribed mesh Motion
     !
 
-    integer(ik), parameter         :: NO_PMM_ASSIGNED = -1
+    integer(ik), parameter         :: NO_MM_ASSIGNED = -1
+
+
+    !
+    ! Node-Element registration
+    !
+    
+    integer(ik), parameter          :: MAX_ELEMENTS_PER_NODE = 8
+    integer(ik), parameter          :: NO_ELEMENT = -1
+
+
+
+
 end module mod_constants

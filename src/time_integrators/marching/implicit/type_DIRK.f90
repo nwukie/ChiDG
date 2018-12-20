@@ -32,7 +32,7 @@ module type_DIRK
     use mod_kinds,                      only: rk, ik
     use mod_constants,                  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, NO_ID
     use mod_spatial,                    only: update_space
-    use mod_update_grid,                only: update_grid
+!    use mod_update_grid,                only: update_grid
     use mod_io,                         only: verbosity
     use mod_force,                      only: report_aerodynamics
 
@@ -297,7 +297,8 @@ contains
                 ! Solve assembled nonlinear system, the nonlinear update is the stagewise update
                 ! System assembled in subroutine assemble
                 !
-                call update_grid(data)
+                !call update_grid(data)
+                call data%update_grid()
                 call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner,solver_controller)
 
 

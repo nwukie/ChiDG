@@ -4,7 +4,7 @@ module type_face
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX,                 &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR,    &
                                       NO_INTERIOR_NEIGHBOR, NO_PROC,                    &
-                                      ZERO, ONE, TWO, ORPHAN, NO_PMM_ASSIGNED, CARTESIAN, CYLINDRICAL
+                                      ZERO, ONE, TWO, ORPHAN, NO_MM_ASSIGNED, CARTESIAN, CYLINDRICAL
     use type_reference_element, only: reference_element_t
     use type_element,           only: element_t
     use type_densevector,       only: densevector_t
@@ -43,7 +43,7 @@ module type_face
         integer(ik)             :: group_ID = 0     ! Index for bc patch group mesh%bc_patch_group(group_ID)
         integer(ik)             :: patch_ID = 0     ! Index for bc patch 
         integer(ik)             :: face_ID  = 0     ! Index for bc patch face
-        integer(ik)             :: pmm_ID   = NO_PMM_ASSIGNED
+        integer(ik)             :: mm_ID   = NO_MM_ASSIGNED
 
         ! Owner-element information
         integer(ik)             :: face_location(5)! [idomain_g, idomain_l, iparent_g, iparent_l, iface]

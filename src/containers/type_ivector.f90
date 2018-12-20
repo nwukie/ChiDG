@@ -29,6 +29,7 @@ module type_ivector
         ! Data modifiers
         procedure, public   :: push_back
         procedure, public   :: push_back_unique
+        procedure, public   :: remove
         procedure, public   :: clear
         procedure, private  :: increase_capacity
 
@@ -65,9 +66,6 @@ contains
 
 
 
-
-
-
     !> This function returns the total capacity of the container to store elements
     !!
     !!  @author Nathan A. Wukie
@@ -84,10 +82,6 @@ contains
 
     end function capacity
     !*****************************************************************************************
-
-
-
-
 
 
 
@@ -119,12 +113,10 @@ contains
 
 
 
-
     !> Store element at end of vector
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
-    !!
     !!
     !-------------------------------------------------------------------------------------------
     subroutine push_back(self,element)
@@ -134,35 +126,21 @@ contains
         logical     :: capacity_reached
         integer(ik) :: size
 
-
-        !
         ! Test if container has storage available. If not, then increase capacity
-        !
         capacity_reached = (self%size() == self%capacity())
         if (capacity_reached) then
             call self%increase_capacity()
         end if
 
-
-        !
         ! Add element to end of vector
-        !
         size = self%size()
         self%data_(size + 1) = element
 
-
-        !
         ! Increment number of stored elements
-        !
         self%size_ = self%size_ + 1
-
 
     end subroutine push_back
     !********************************************************************************************
-
-
-
-
 
 
 
@@ -172,7 +150,6 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/22/2016
     !!
-    !!
     !-------------------------------------------------------------------------------------------
     subroutine push_back_unique(self,element)
         class(ivector_t),   intent(inout)   :: self
@@ -181,17 +158,11 @@ contains
         integer(ik) :: loc
         logical     :: already_added
 
-
-        !
         ! Check if element was already added
-        !
         loc = self%loc(element)
         already_added = (loc /= 0)
 
-
-        !
         ! If not already in the list, push back
-        !
         if ( .not. already_added ) call self%push_back(element)
 
     end subroutine push_back_unique
@@ -200,9 +171,51 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Eric Wolf
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine remove(self,element)
+        class(ivector_t),   intent(inout)   :: self
+        integer(ik),        intent(in)      :: element
+
+        integer(ik) :: loc, newsize, ierr
+        integer(ik), allocatable    :: temp(:)
+        logical     :: element_found
+
+        ! Check if element was already added
+        loc = self%loc(element)
+        element_found = (loc /= 0)
+
+        ! If not already in the list, push back
+        if ( element_found ) then
+
+            if ( allocated(self%data_) ) then
+                newsize = ubound(self%data_,1) 
+            else
+                newsize = self%buffer_
+            end if
+
+            allocate(temp(newsize),stat=ierr)
+            if (ierr /= 0) call AllocationError
 
 
+            ! Copy any current data to temporary vector
+            if (allocated(self%data_)) then
+                temp(lbound(self%data_,1):lbound(self%data_,1)+loc-2)  =  self%data_(lbound(self%data_,1):lbound(self%data_,1)+loc-2)
+                temp(lbound(self%data_,1)+loc-1:ubound(self%data_,1)-1)  =  self%data_(lbound(self%data_,1)+loc:ubound(self%data_,1))
+            end if
 
+            ! Move alloc to move data back to self%data and deallocate temp
+            call move_alloc(FROM=temp,TO=self%data_)
+
+            self%size_ = self%size_ - 1
+            
+        end if 
+
+    end subroutine remove
+    !********************************************************************************************
 
 
 
@@ -228,18 +241,10 @@ contains
 
 
 
-
-
-
-
-
-
-
     !> Access element at index location
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
-    !!
     !!
     !----------------------------------------------------------------------------------------
     function at(self,index) result(res)
@@ -249,18 +254,13 @@ contains
         integer(ik) :: res
         logical     :: out_of_bounds
 
-        !
         ! Check vector bounds
-        !
         out_of_bounds = (index > self%size())
         if (out_of_bounds) then
             call chidg_signal(FATAL,"vector_t%at: out of bounds access")
         end if
 
-
-        !
         ! Allocate result
-        !
         res = self%data_(index)
 
     end function at
@@ -283,14 +283,10 @@ contains
         integer(ik), allocatable    :: res(:)
         integer(ik)                 :: size_, ierr
         
-        !
         ! Get number of stored elements
-        !
         size_ = self%size()
 
-        !
         ! Allocate result
-        !
         if (size_ > 0) then
             res = self%data_(1:size_)
         else
@@ -298,18 +294,8 @@ contains
             if (ierr /= 0) call AllocationError
         end if
 
-
     end function data
     !*****************************************************************************************
-
-
-
-
-
-
-
-
-
 
 
 
@@ -327,10 +313,7 @@ contains
         integer(ik), allocatable    :: temp(:)
         integer(ik)                 :: newsize, ierr
 
-
-        !
         ! Allocate temporary vector of current size plus a buffer
-        !
         if ( allocated(self%data_) ) then
             newsize = ubound(self%data_,1) + self%buffer_
         else
@@ -341,40 +324,21 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        !
         ! Copy any current data to temporary vector
-        !
         if (allocated(self%data_)) then
             temp(lbound(self%data_,1):ubound(self%data_,1))  =  self%data_
         end if
 
 
-        !
         ! Move alloc to move data back to self%data and deallocate temp
-        !
         call move_alloc(FROM=temp,TO=self%data_)
 
 
-        !
         ! Reset capacity info
-        !
         self%capacity_ = newsize
-
 
     end subroutine increase_capacity
     !*****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

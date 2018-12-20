@@ -44,21 +44,23 @@ module type_oscillator_model
 
 contains
 
-    subroutine init(self, mass_in, damping_coeff_in, stiffness_coeff_in, initial_velocity_in)
+    subroutine init(self, mass_in, damping_coeff_in, stiffness_coeff_in, initial_displacement_in, initial_velocity_in)
         class(oscillator_model_t), intent(inout)    :: self
         real(rk),intent(in),optional         :: mass_in
         real(rk),intent(in),optional         :: damping_coeff_in(3)
         real(rk),intent(in),optional         :: stiffness_coeff_in(3)
+        real(rk),intent(in),optional         :: initial_displacement_in(3)
         real(rk),intent(in),optional         :: initial_velocity_in(3)
 
         real(rk) :: tol
-        real(rk) :: mass, damping_coeff(3), stiffness_coeff(3), initial_velocity(3)
-        integer             :: unit, msg
-        logical             :: file_exists
+        real(rk) :: mass, damping_coeff(3), stiffness_coeff(3), initial_displacement(3), initial_velocity(3), external_forces(3),t0
+        integer(ik)             :: unit, msg, myunit
+        logical             :: file_exists, exists
 
         namelist /viv_cylinder/    mass,&
                                     damping_coeff, &
                                     stiffness_coeff, &
+                                    initial_displacement, &
                                     initial_velocity
 
 
@@ -82,6 +84,9 @@ contains
         if (present(stiffness_coeff_in)) then
             self%stiffness_coeff = stiffness_coeff_in 
         end if
+        if (present(initial_displacement_in)) then
+            self%disp(1,:) = initial_displacement_in 
+        end if
         if (present(initial_velocity_in)) then
             self%vel(1,:) = initial_velocity_in 
         end if
@@ -90,13 +95,14 @@ contains
         !   1: if available, read and set self%mu
         !   2: if not available, do nothing and mu retains default value
         !
-        inquire(file='models.nml', exist=file_exists)
+        inquire(file='structural_models.nml', exist=file_exists)
         if (file_exists) then
-            open(newunit=unit,form='formatted',file='models.nml')
+            open(newunit=unit,form='formatted',file='structural_models.nml')
             read(unit,nml=viv_cylinder,iostat=msg)
             if (msg == 0) self%mass = mass
             if (msg == 0) self%damping_coeff = damping_coeff 
             if (msg == 0) self%stiffness_coeff = stiffness_coeff 
+            if (msg == 0) self%disp(1,:) = initial_displacement
             if (msg == 0) self%vel(1,:) = initial_velocity 
             close(unit)
         end if
@@ -120,18 +126,40 @@ contains
         else
             self%damping_type = 'critically damped'
         end if
-        
-        print *, 'Oscillator mass'
-        print *, self%mass
-        print *, 'Oscillator damping coefficients'
-        print *, self%damping_coeff
-        print *, 'Oscillator stiffness coefficients'
-        print *, self%stiffness_coeff
-        print *, 'Oscillaing cylinder damping type:'
-        print *, self%damping_type
+!        print *, 'Oscillator mass'
+!        print *, self%mass
+!        print *, 'Oscillator damping coefficients'
+!        print *, self%damping_coeff
+!        print *, 'Oscillator stiffness coefficients'
+!        print *, self%stiffness_coeff
+!        print *, 'Oscillaing cylinder damping type:'
+!        print *, self%damping_type
+!
+!        print *, 'Oscillating cylinder minimum stable time step size:'
+!        print *, self%minimum_stable_timestep
 
-        print *, 'Oscillating cylinder minimum stable time step size:'
-        print *, self%minimum_stable_timestep
+        rigid_body_motion_disp_new = self%disp(1,:)
+        rigid_body_motion_vel = self%vel(1,:)
+
+        external_forces = ZERO
+        t0 = ZERO
+
+!        ! Write initial state to file to files
+!        !
+!        if (IRANK == GLOBAL_MASTER) then
+!        inquire(file="viv_output.txt", exist=exists)
+!        if (exists) then
+!            open(newunit=myunit, file="viv_output.txt", status="old", position="append",action="write")
+!        else
+!            open(newunit=myunit, file="viv_output.txt", status="new",action="write")
+!        end if
+!        write(myunit,*) t0, rigid_body_motion_disp_new(1), rigid_body_motion_disp_new(2),  &
+!                                 rigid_body_motion_vel(1), rigid_body_motion_vel(2), &
+!                                 external_forces(1),external_forces(2)
+!        close(myunit)
+!        end if
+
+
     end subroutine init
 
     subroutine set_external_forces(self, external_forces)
@@ -202,20 +230,20 @@ contains
 
         integer(ik) :: myunit
         logical :: exists
-        !
-        ! Write to files
-        !
-        if (IRANK == GLOBAL_MASTER) then
-        inquire(file="viv_output.txt", exist=exists)
-        if (exists) then
-            open(newunit=myunit, file="viv_output.txt", status="old", position="append",action="write")
-        else
-            open(newunit=myunit, file="viv_output.txt", status="new",action="write")
-        end if
-        write(myunit,*) t0_in, rigid_body_motion_disp_new(1), rigid_body_motion_disp_new(2),external_forces(1),external_forces(2)
-        close(myunit)
-        end if
 
+        integer(ik)             :: unit, msg
+        logical             :: file_exists
+
+
+        real(rk)                :: mass
+        real(rk), dimension(3)  :: damping_coeff, stiffness_coeff, initial_displacement, initial_velocity
+        namelist /viv_cylinder/    mass,&
+                                    damping_coeff, &
+                                    stiffness_coeff, &
+                                    initial_displacement, &
+                                    initial_velocity
+
+        
         !
         ! Perform update
         !
@@ -249,6 +277,42 @@ contains
         rigid_body_motion_disp_new = self%disp(1,:)
         rigid_body_motion_vel = self%vel(1,:)
 
-        
+        !
+        ! Write to files
+        !
+        if (IRANK == GLOBAL_MASTER) then
+        inquire(file="viv_output.txt", exist=exists)
+        if (exists) then
+            open(newunit=myunit, file="viv_output.txt", status="old", position="append",action="write")
+        else
+            open(newunit=myunit, file="viv_output.txt", status="new",action="write")
+        end if
+        write(myunit,*) t0_in, rigid_body_motion_disp_new(1), rigid_body_motion_disp_new(2),  &
+                                 rigid_body_motion_vel(1), rigid_body_motion_vel(2), &
+                                 external_forces(1),external_forces(2)
+        close(myunit)
+        end if
+
+
+        !
+        ! Write the new position and velocity to models.nml for restart purposes
+        !
+
+        mass                    = self%mass
+        damping_coeff           = self%damping_coeff(1:3)
+        stiffness_coeff         = self%stiffness_coeff(1:3)
+        initial_displacement    = self%disp(1,:) 
+        initial_velocity        = self%vel(1,:) 
+
+        if (IRANK == GLOBAL_MASTER) then
+        inquire(file='structural_models.nml', exist=file_exists)
+        if (file_exists) then
+            open(newunit=unit,form='formatted',file='structural_models.nml')
+            write(unit,nml=viv_cylinder,iostat=msg)
+            close(unit)
+        end if
+        end if
+
+       
     end subroutine update_oscillator_step
 end module type_oscillator_model

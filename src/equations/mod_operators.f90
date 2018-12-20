@@ -46,7 +46,22 @@ module mod_operators
     use fluid_viscous_bc_operator,                  only: fluid_viscous_bc_operator_t
     use fluid_viscous_volume_cylindrical_source,    only: fluid_viscous_volume_cylindrical_source_t
 
+    ! Fluid Laplacian AV Operators
+    use fluid_laplacian_av_volume_operator,              only: fluid_laplacian_av_volume_operator_t
+    use fluid_laplacian_av_boundary_average_operator,    only: fluid_laplacian_av_boundary_average_operator_t
+    use fluid_laplacian_av_bc_operator,                  only: fluid_laplacian_av_bc_operator_t
+
+    ! Fluid Laplacian Anisotropic AV Operators
+    use fluid_laplacian_anisotropic_av_volume_operator,              only: fluid_laplacian_anisotropic_av_volume_operator_t
+    use fluid_laplacian_anisotropic_av_boundary_average_operator,    only: fluid_laplacian_anisotropic_av_boundary_average_operator_t
+    use fluid_laplacian_anisotropic_av_bc_operator,                  only: fluid_laplacian_anisotropic_av_bc_operator_t
+
+
+
+
+
     ! Fluid Turbulence Operators
+    ! Spalart-Allmaras
     use spalart_allmaras_source,                        only: spalart_allmaras_source_operator_t
     use spalart_allmaras_advection_boundary_average,    only: spalart_allmaras_advection_boundary_average_operator_t
     use spalart_allmaras_laxfriedrichs,                 only: spalart_allmaras_laxfriedrichs_operator_t
@@ -55,6 +70,36 @@ module mod_operators
     use spalart_allmaras_boundary_diffusion,            only: spalart_allmaras_boundary_diffusion_operator_t
     use spalart_allmaras_volume_diffusion,              only: spalart_allmaras_volume_diffusion_operator_t
     use spalart_allmaras_bc_diffusion,                  only: spalart_allmaras_bc_diffusion_operator_t
+
+    !! SST
+    use sst_source,                                 only: sst_source_operator_t
+    use sst_roe_operator,                           only: sst_roe_operator_t
+    use sst_advection_boundary_average,             only: sst_advection_boundary_average_operator_t
+    use sst_laxfriedrichs,                          only: sst_laxfriedrichs_operator_t
+    use sst_volume_advection,                       only: sst_volume_advection_operator_t
+    use sst_bc_advection,                           only: sst_bc_advection_operator_t
+    use sst_boundary_diffusion,                     only: sst_boundary_diffusion_operator_t
+    use sst_volume_diffusion,                       only: sst_volume_diffusion_operator_t
+    use sst_bc_diffusion,                           only: sst_bc_diffusion_operator_t
+    use sst_artificial_viscosity_operator,                          only: sst_artificial_viscosity_operator_t
+    use sst_artificial_viscosity_bc_operator,                       only: sst_artificial_viscosity_bc_operator_t
+    use sst_artificial_viscosity_boundary_average_operator,         only: sst_artificial_viscosity_boundary_average_operator_t
+
+    !! RSTM SSG-LRR-w operators
+    use rstm_ssglrrw_source,                        only: rstm_ssglrrw_source_operator_t
+    use rstm_ssglrrw_advection_boundary_average,    only: rstm_ssglrrw_advection_boundary_average_operator_t
+    use rstm_ssglrrw_laxfriedrichs,                 only: rstm_ssglrrw_laxfriedrichs_operator_t
+    use rstm_ssglrrw_volume_advection,              only: rstm_ssglrrw_volume_advection_operator_t
+    use rstm_ssglrrw_bc_advection,                  only: rstm_ssglrrw_bc_advection_operator_t
+    use rstm_ssglrrw_boundary_diffusion,            only: rstm_ssglrrw_boundary_diffusion_operator_t
+    use rstm_ssglrrw_volume_diffusion,              only: rstm_ssglrrw_volume_diffusion_operator_t
+    use rstm_ssglrrw_bc_diffusion,                  only: rstm_ssglrrw_bc_diffusion_operator_t
+
+
+
+
+
+
 
 
     !! RANS Low-Cache operators
@@ -292,7 +337,21 @@ contains
         type(fluid_viscous_bc_operator_t)                   :: fluid_viscous_bc_operator
         type(fluid_viscous_volume_cylindrical_source_t)     :: fluid_viscous_volume_cylindrical_source
 
+        ! Fluid Laplacian AV Operators
+        type(fluid_laplacian_av_volume_operator_t)               :: fluid_laplacian_av_volume_operator
+        type(fluid_laplacian_av_boundary_average_operator_t)     :: fluid_laplacian_av_boundary_average_operator
+        type(fluid_laplacian_av_bc_operator_t)                   :: fluid_laplacian_av_bc_operator
+        
+        ! Fluid Laplacian Anisotropic AV Operators
+        type(fluid_laplacian_anisotropic_av_volume_operator_t)               :: fluid_laplacian_anisotropic_av_volume_operator
+        type(fluid_laplacian_anisotropic_av_boundary_average_operator_t)     :: fluid_laplacian_anisotropic_av_boundary_average_operator
+        type(fluid_laplacian_anisotropic_av_bc_operator_t)                   :: fluid_laplacian_anisotropic_av_bc_operator
+
+
+
+
         ! Fluid Turbulence Operators
+        !! Spalart-Allmaras
         type(spalart_allmaras_source_operator_t)                        :: spalart_allmaras_source_operator
         type(spalart_allmaras_advection_boundary_average_operator_t)    :: spalart_allmaras_advection_boundary_average_operator
         type(spalart_allmaras_laxfriedrichs_operator_t)                 :: spalart_allmaras_laxfriedrichs_operator
@@ -301,6 +360,35 @@ contains
         type(spalart_allmaras_boundary_diffusion_operator_t)            :: spalart_allmaras_boundary_diffusion_operator
         type(spalart_allmaras_volume_diffusion_operator_t)              :: spalart_allmaras_volume_diffusion_operator
         type(spalart_allmaras_bc_diffusion_operator_t)                  :: spalart_allmaras_bc_diffusion_operator
+
+
+        !! SST
+        type(sst_source_operator_t)                        :: sst_source_operator
+        type(sst_advection_boundary_average_operator_t)    :: sst_advection_boundary_average_operator
+        type(sst_roe_operator_t)                           :: sst_roe_operator
+        type(sst_laxfriedrichs_operator_t)                 :: sst_laxfriedrichs_operator
+        type(sst_volume_advection_operator_t)              :: sst_volume_advection_operator
+        type(sst_bc_advection_operator_t)                  :: sst_bc_advection_operator
+        type(sst_boundary_diffusion_operator_t)            :: sst_boundary_diffusion_operator
+        type(sst_volume_diffusion_operator_t)              :: sst_volume_diffusion_operator
+        type(sst_bc_diffusion_operator_t)                  :: sst_bc_diffusion_operator
+        type(sst_artificial_viscosity_operator_t)          :: sst_artificial_viscosity_operator
+        type(sst_artificial_viscosity_bc_operator_t)          :: sst_artificial_viscosity_bc_operator
+        type(sst_artificial_viscosity_boundary_average_operator_t)          :: sst_artificial_viscosity_boundary_average_operator
+
+
+        !! Reynolds-Stress 
+        type(rstm_ssglrrw_source_operator_t)                        :: rstm_ssglrrw_source_operator
+        type(rstm_ssglrrw_advection_boundary_average_operator_t)    :: rstm_ssglrrw_advection_boundary_average_operator
+        type(rstm_ssglrrw_laxfriedrichs_operator_t)                 :: rstm_ssglrrw_laxfriedrichs_operator
+        type(rstm_ssglrrw_volume_advection_operator_t)              :: rstm_ssglrrw_volume_advection_operator
+        type(rstm_ssglrrw_bc_advection_operator_t)                  :: rstm_ssglrrw_bc_advection_operator
+        type(rstm_ssglrrw_boundary_diffusion_operator_t)            :: rstm_ssglrrw_boundary_diffusion_operator
+        type(rstm_ssglrrw_volume_diffusion_operator_t)              :: rstm_ssglrrw_volume_diffusion_operator
+        type(rstm_ssglrrw_bc_diffusion_operator_t)                  :: rstm_ssglrrw_bc_diffusion_operator
+
+
+
 
         !type(RANS_volume_advection_t)                           :: rans_volume_advection
         !type(RANS_boundary_advection_t)                         :: rans_boundary_advection
@@ -423,9 +511,19 @@ contains
             call operator_factory%register(fluid_viscous_volume_operator)
             call operator_factory%register(fluid_viscous_volume_cylindrical_source)
 
+            ! Register Fluid Laplacian AV
+            call operator_factory%register(fluid_laplacian_av_boundary_average_operator)
+            call operator_factory%register(fluid_laplacian_av_bc_operator)
+            call operator_factory%register(fluid_laplacian_av_volume_operator)
+
+            ! Register Fluid Laplacian Anisotropic AV
+            call operator_factory%register(fluid_laplacian_anisotropic_av_boundary_average_operator)
+            call operator_factory%register(fluid_laplacian_anisotropic_av_bc_operator)
+            call operator_factory%register(fluid_laplacian_anisotropic_av_volume_operator)
 
 
             ! Register Fluid Turbulence
+            ! Spalart Allmaras
             call operator_factory%register(spalart_allmaras_source_operator)
             call operator_factory%register(spalart_allmaras_advection_boundary_average_operator)
             call operator_factory%register(spalart_allmaras_laxfriedrichs_operator)
@@ -435,6 +533,30 @@ contains
             call operator_factory%register(spalart_allmaras_volume_diffusion_operator)
             call operator_factory%register(spalart_allmaras_bc_diffusion_operator)
 
+            !! SST
+            call operator_factory%register(sst_source_operator)
+            call operator_factory%register(sst_roe_operator)
+            call operator_factory%register(sst_advection_boundary_average_operator)
+            call operator_factory%register(sst_laxfriedrichs_operator)
+            call operator_factory%register(sst_volume_advection_operator)
+            call operator_factory%register(sst_bc_advection_operator)
+            call operator_factory%register(sst_boundary_diffusion_operator)
+            call operator_factory%register(sst_volume_diffusion_operator)
+            call operator_factory%register(sst_bc_diffusion_operator)
+            call operator_factory%register(sst_artificial_viscosity_operator)
+            call operator_factory%register(sst_artificial_viscosity_bc_operator)
+            call operator_factory%register(sst_artificial_viscosity_boundary_average_operator)
+
+
+            !! Reynolds-Stress
+            call operator_factory%register(rstm_ssglrrw_source_operator)
+            call operator_factory%register(rstm_ssglrrw_advection_boundary_average_operator)
+            call operator_factory%register(rstm_ssglrrw_laxfriedrichs_operator)
+            call operator_factory%register(rstm_ssglrrw_volume_advection_operator)
+            call operator_factory%register(rstm_ssglrrw_bc_advection_operator)
+            call operator_factory%register(rstm_ssglrrw_boundary_diffusion_operator)
+            call operator_factory%register(rstm_ssglrrw_volume_diffusion_operator)
+            call operator_factory%register(rstm_ssglrrw_bc_diffusion_operator)
 
             !! Register RANS Low-Cache operators
             !call operator_factory%register(rans_volume_advection)

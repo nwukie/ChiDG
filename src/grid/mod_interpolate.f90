@@ -1747,6 +1747,43 @@ contains
     !*****************************************************************************************
 
 
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    07/27/2018 
+    !!
+    !--------------------------------------------------------------------------------
+    function interpolate_from_vertices(vert_vals,node) result(val)
+        real(rk) :: vert_vals(8), node(3)
+        real(rk) :: val
+
+
+        !if (abs(node(1)>1.0_rk)) print *, 'node(1) out of bounds'
+        !if (abs(node(2)>1.0_rk)) print *, 'node(2) out of bounds'
+        !if (abs(node(3)>1.0_rk)) print *, 'node(3) out of bounds'
+
+        ! Corresponding (xi, eta, zeta) for each vertex:
+        ! 1: (-1,-1,-1), 2: (-1,-1,1), 3: (-1,1,-1), 4: (-1,1,1), 5: (1,-1,-1), 6: (1, -1, 1), 7: (1,1,-1), 8: (1,1,1)
+        val =   vert_vals(1)*(1.0_rk-node(1))*(1.0_rk-node(2))*(1.0_rk-node(3))/8.0_rk + &
+                vert_vals(2)*(1.0_rk-node(1))*(1.0_rk-node(2))*(node(3)+1.0_rk)/8.0_rk + &
+                vert_vals(3)*(1.0_rk-node(1))*(node(2)+1.0_rk)*(1.0_rk-node(3))/8.0_rk + &
+                vert_vals(4)*(1.0_rk-node(1))*(node(2)+1.0_rk)*(node(3)+1.0_rk)/8.0_rk + &
+                vert_vals(5)*(node(1)+1.0_rk)*(1.0_rk-node(2))*(1.0_rk-node(3))/8.0_rk + &
+                vert_vals(6)*(node(1)+1.0_rk)*(1.0_rk-node(2))*(node(3)+1.0_rk)/8.0_rk + &
+                vert_vals(7)*(node(1)+1.0_rk)*(node(2)+1.0_rk)*(1.0_rk-node(3))/8.0_rk + &
+                vert_vals(8)*(node(1)+1.0_rk)*(node(2)+1.0_rk)*(node(3)+1.0_rk)/8.0_rk 
+
+
+
+    end function interpolate_from_vertices
+    !*****************************************************************************************
+
+
+
+
+
+
 
 end module mod_interpolate
 

@@ -120,25 +120,25 @@ contains
         !
         ! Interpolate gradient to quadrature nodes
         !
-        grad1_density    = worker%get_field('Density'   , 'grad1', override_lift=.true.)
-        grad2_density    = worker%get_field('Density'   , 'grad2', override_lift=.true.)
-        grad3_density    = worker%get_field('Density'   , 'grad3', override_lift=.true.)
+        grad1_density = worker%get_field('Density'   , 'grad1', override_lift=.true.)
+        grad2_density = worker%get_field('Density'   , 'grad2', override_lift=.true.)
+        grad3_density = worker%get_field('Density'   , 'grad3', override_lift=.true.)
 
-        grad1_mom1       = worker%get_field('Momentum-1', 'grad1', override_lift=.true.)
-        grad2_mom1       = worker%get_field('Momentum-1', 'grad2', override_lift=.true.)
-        grad3_mom1       = worker%get_field('Momentum-1', 'grad3', override_lift=.true.)
+        grad1_mom1    = worker%get_field('Momentum-1', 'grad1', override_lift=.true.)
+        grad2_mom1    = worker%get_field('Momentum-1', 'grad2', override_lift=.true.)
+        grad3_mom1    = worker%get_field('Momentum-1', 'grad3', override_lift=.true.)
 
-        grad1_mom2       = worker%get_field('Momentum-2', 'grad1', override_lift=.true.)
-        grad2_mom2       = worker%get_field('Momentum-2', 'grad2', override_lift=.true.)
-        grad3_mom2       = worker%get_field('Momentum-2', 'grad3', override_lift=.true.)
+        grad1_mom2    = worker%get_field('Momentum-2', 'grad1', override_lift=.true.)
+        grad2_mom2    = worker%get_field('Momentum-2', 'grad2', override_lift=.true.)
+        grad3_mom2    = worker%get_field('Momentum-2', 'grad3', override_lift=.true.)
 
-        grad1_mom3       = worker%get_field('Momentum-3', 'grad1', override_lift=.true.)
-        grad2_mom3       = worker%get_field('Momentum-3', 'grad2', override_lift=.true.)
-        grad3_mom3       = worker%get_field('Momentum-3', 'grad3', override_lift=.true.)
+        grad1_mom3    = worker%get_field('Momentum-3', 'grad1', override_lift=.true.)
+        grad2_mom3    = worker%get_field('Momentum-3', 'grad2', override_lift=.true.)
+        grad3_mom3    = worker%get_field('Momentum-3', 'grad3', override_lift=.true.)
 
-        grad1_energy     = worker%get_field('Energy    ', 'grad1', override_lift=.true.)
-        grad2_energy     = worker%get_field('Energy    ', 'grad2', override_lift=.true.)
-        grad3_energy     = worker%get_field('Energy    ', 'grad3', override_lift=.true.)
+        grad1_energy  = worker%get_field('Energy    ', 'grad1', override_lift=.true.)
+        grad2_energy  = worker%get_field('Energy    ', 'grad2', override_lift=.true.)
+        grad3_energy  = worker%get_field('Energy    ', 'grad3', override_lift=.true.)
         
 
 

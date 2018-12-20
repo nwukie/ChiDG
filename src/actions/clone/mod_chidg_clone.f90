@@ -11,6 +11,7 @@ module mod_chidg_clone
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
     use mod_hdf_utilities,  only: copy_bc_state_groups_hdf, copy_patches_attributes_hdf, &
+                                  copy_mm_domains_hdf, copy_mm_groups_hdf, &
                                   open_file_hdf, close_file_hdf
     use hdf5
     implicit none
@@ -57,8 +58,14 @@ contains
         call write_line("Mode", "Description", columns=.true.,column_width=42,color='blue')
         call write_line("-------------------------------------------------------------------------------------------")
         call write_line("1", "Copy all.",columns=.true.,column_width=42)
-        call write_line("2", "Copy only boundary condition state groups.",column_width=42,columns=.true.)
-        call write_line("3", "Copy only patch attributes.",column_width=42,columns=.true.)
+        call write_line("2", "Copy all - BC only.",columns=.true.,column_width=42)
+        call write_line("3", "Copy only boundary condition state groups.",column_width=42,columns=.true.)
+        call write_line("4", "Copy only patch attributes.",column_width=42,columns=.true.)
+        call write_line("5", "Copy all - MM only.",column_width=42,columns=.true.)
+        call write_line("6", "Copy only mesh motion groups.",column_width=42,columns=.true.)
+        call write_line("7", "Copy only mesh motion domain attributes.",column_width=42,columns=.true.)
+!        call write_line("2", "Copy only boundary condition state groups.",column_width=42,columns=.true.)
+!        call write_line("3", "Copy only patch attributes.",column_width=42,columns=.true.)
         call write_line("0", "Exit", column_width=42, columns=.true.)
         call write_line("-------------------------------------------------------------------------------------------")
         call write_line("Enter mode: ")
@@ -83,12 +90,40 @@ contains
             case(1)
                 call copy_bc_state_groups_hdf(fid_a,fid_b)
                 call copy_patches_attributes_hdf(fid_a,fid_b)
+                call copy_mm_groups_hdf(fid_a, fid_b)
+                call copy_mm_domains_hdf(fid_a, fid_b)
 
             case(2)
                 call copy_bc_state_groups_hdf(fid_a,fid_b)
+                call copy_patches_attributes_hdf(fid_a,fid_b)
 
             case(3)
+                call copy_bc_state_groups_hdf(fid_a,fid_b)
+
+            case(4)
                 call copy_patches_attributes_hdf(fid_a,fid_b)
+
+            case(5)
+                call copy_mm_groups_hdf(fid_a, fid_b)
+                call copy_mm_domains_hdf(fid_a, fid_b)
+
+            case(6)
+                call copy_mm_groups_hdf(fid_a, fid_b)
+
+            case(7)
+                call copy_mm_domains_hdf(fid_a, fid_b)
+
+
+!            ! OLD
+!            case(1)
+!                call copy_bc_state_groups_hdf(fid_a,fid_b)
+!                call copy_patches_attributes_hdf(fid_a,fid_b)
+!
+!            case(2)
+!                call copy_bc_state_groups_hdf(fid_a,fid_b)
+!
+!            case(3)
+!                call copy_patches_attributes_hdf(fid_a,fid_b)
 
         end select
                 

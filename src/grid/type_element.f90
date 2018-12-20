@@ -5,9 +5,9 @@ module type_element
                                       ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO,THIRD, &
                                       DIR_1, DIR_2, DIR_3, DIR_THETA, XI_DIR,   &
                                       ETA_DIR, ZETA_DIR, TWO_DIM, THREE_DIM,    &
-                                      RKTOL, VALID_POINT, INVALID_POINT, NO_PMM_ASSIGNED, &
+                                      RKTOL, VALID_POINT, INVALID_POINT, NO_MM_ASSIGNED, &
                                       ZERO, TWO, CARTESIAN, CYLINDRICAL, DIR_R, NO_ID
-    use mod_grid,               only: get_element_mapping, face_corners
+    use mod_grid,               only: get_element_mapping, face_corners, element_vertex_indices
     use mod_reference_elements, only: get_reference_element, ref_elems
     use mod_polynomial,         only: polynomial_val, dpolynomial_val
     use mod_inv,                only: inv, inv_3x3
@@ -20,6 +20,8 @@ module type_element
     use type_function,              only: function_t
     use type_element_connectivity,  only: element_connectivity_t
     use type_reference_element,     only: reference_element_t
+    use type_ivector,               only: ivector_t
+    use type_rbf_address_book,      only: rbf_address_book_t
     use DNAD_D
     use ieee_arithmetic,            only: ieee_value, ieee_quiet_nan, ieee_is_nan
     implicit none
@@ -93,6 +95,9 @@ module type_element
         real(rk),       allocatable :: node_coords_def(:,:) ! Node coordinates, deformed element,   local element ordering
         real(rk),       allocatable :: node_coords_vel(:,:) ! Node velocities,  deformed element,   local element ordering
 
+        real(rk)                    :: vertex_indices(8)    ! Indices of the element vertices
+
+
         ! Element geometry at interpolation nodes
         real(rk),       allocatable :: interp_coords(:,:)       ! Undeformed coordinates at element interpolation nodes
         real(rk),       allocatable :: interp_coords_def(:,:)   ! Deformed coordinates at element interpolation nodes
@@ -107,7 +112,7 @@ module type_element
         !   : This defines a mapping from some deformed element back to the original
         !   : undeformed element with the idea that the governing equations are transformed
         !   : and solved on the undeformed element.
-        integer(ik)                 :: pmm_ID = NO_PMM_ASSIGNED
+        integer(ik)                 :: mm_ID = NO_MM_ASSIGNED
         real(rk),       allocatable :: ale_Dinv(:,:,:)          ! Deformation gradient: deformed element/undeformed element
         real(rk),       allocatable :: ale_g(:)                 ! Differential volume ratio: Deformed Volume/Undeformed Volume
         real(rk),       allocatable :: ale_g_grad1(:)
@@ -135,7 +140,7 @@ module type_element
         ! Element volume, approx. size of bounding box
         real(rk)                    :: vol
         real(rk)                    :: vol_ale
-        real(rk)                    :: h(3)     
+        real(rk)                    :: h(3), centroid(3)
         real(rk),       allocatable :: dtau(:)              ! a pseudo-timestep for each equation. Used in the nonlinear solver.
 
         ! Reference element and interpolators
@@ -145,6 +150,14 @@ module type_element
         ! Logical tests
         logical :: geom_initialized = .false.
         logical :: numInitialized   = .false.
+
+        ! Tree box indicator
+        integer(ik), allocatable    :: node_box_ID(:)
+        type(ivector_t)               :: box_ID
+
+        ! RBF information
+        type(rbf_address_book_t)       :: rbf_address_book
+
 
         real(rk),   allocatable :: bc(:,:)
         logical                 :: bc_initialized = .false.
@@ -192,6 +205,7 @@ module type_element
 
         ! Get connected face
         procedure, public   :: get_face_from_corners
+        procedure           :: register_rbf
 
 
 
@@ -295,6 +309,15 @@ contains
             nodes_l(ipt,:) = nodes(inode,:)
         end do !ipt
 
+        !
+        ! Accumulate vertex indices
+        !
+        ! Corresponding (xi, eta, zeta) for each vertex:
+        ! 1: (-1,-1,-1), 2: (-1,-1,1), 3: (-1,1,-1), 4: (-1,1,1), 5: (1,-1,-1), 6: (1, -1, 1), 7: (1,1,-1), 8: (1,1,1)
+        !
+        do ipt = 1, 8
+            self%vertex_indices(ipt) = connectivity(element_vertex_indices(ipt, mapping))
+        end do
 
 
 
@@ -317,6 +340,15 @@ contains
         allocate(self%node_coords(self%nterms_c,3),stat=ierr)
         call self%coords%init(self%nterms_c,self%spacedim,self%ntime,self%idomain_g,self%idomain_l,self%ielement_g,self%ielement_l)
         self%node_coords = nodes_l
+
+
+        !
+        ! Compute element centroid
+        !
+        self%centroid(1) = sum(self%node_coords(:,1))/self%nterms_c
+        self%centroid(2) = sum(self%node_coords(:,2))/self%nterms_c
+        self%centroid(3) = sum(self%node_coords(:,3))/self%nterms_c
+
 
         
         !
@@ -2307,6 +2339,30 @@ contains
 
     end function get_face_from_corners
     !******************************************************************************************
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    09/14/2018 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine register_rbf(self, rbf_set_ID, rbf_ID)
+        class(element_t),       intent(inout)   :: self
+        integer(ik),            intent(in)      :: rbf_set_ID, rbf_ID
+
+        call self%rbf_address_book%rbf_addresses(rbf_set_ID)%registered_rbf_indices%push_back_unique(rbf_ID)
+
+    end subroutine register_rbf 
+    !********************************************************************************
+
+
+
+
+
+
+
 
 
 

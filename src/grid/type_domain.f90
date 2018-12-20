@@ -4,7 +4,8 @@ module type_domain
     use mod_constants,              only: XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
                                           ORPHAN, INTERIOR, BOUNDARY, CHIMERA, TWO_DIM, &
                                           THREE_DIM, NO_NEIGHBOR_FOUND, NEIGHBOR_FOUND, &
-                                          NO_PROC, NFACES, ZERO, NO_PMM_ASSIGNED
+                                          NO_PROC, NFACES, ZERO, NO_MM_ASSIGNED,        &
+                                          MAX_ELEMENTS_PER_NODE, NO_ELEMENT
     use mod_grid,                   only: FACE_CORNERS
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use mpi_f08
@@ -62,8 +63,7 @@ module type_domain
         integer(ik)                     :: nelements_g = 0     ! Number of elements in the global domain
         integer(ik)                     :: nelem       = 0     ! Number of total elements
         integer(ik)                     :: ntime       = 0     ! Number of time instances
-        !integer(ik)                     :: eqn_ID      = NO_EQUATION_SET
-        integer(ik)                     :: pmm_ID      = NO_PMM_ASSIGNED
+        integer(ik)                     :: mm_ID      = NO_MM_ASSIGNED
         character(:),   allocatable     :: coordinate_system   ! 'Cartesian' or 'Cylindrical'
 
         
@@ -73,6 +73,8 @@ module type_domain
         real(rk),           allocatable :: nodes(:,:)      ! Nodes of the reference domain.                 Proc-global. (nnodes, 3-coords)
         real(rk),           allocatable :: dnodes(:,:)     ! Node displacements: node_ale = nodes + dnodes. Proc-global. (nnodes, 3-coords)
         real(rk),           allocatable :: vnodes(:,:)     ! Node velocities:                               Proc-global. (nnodes, 3-coords)
+        integer(ik),        allocatable :: nodes_elems(:,:) ! Local element indices associated with each node (nnodes, MAX_ELEMENTS_PER_NODE)
+
         type(element_t),    allocatable :: elems(:)        ! Element storage (1:nelem)
         type(face_t),       allocatable :: faces(:,:)      ! Face storage (1:nelem,1:nfaces)
         
@@ -187,6 +189,13 @@ contains
         self%vnodes = nodes
         self%dnodes = ZERO
         self%vnodes = ZERO
+
+
+        ! Allocate the storage for registering elements with nodes
+        allocate(self%nodes_elems(size(nodes(:,1)), MAX_ELEMENTS_PER_NODE))
+        ! Initialize so that each node has no element registered
+        self%nodes_elems = NO_ELEMENT
+
 
 
         !
@@ -387,8 +396,10 @@ contains
 
         type(element_connectivity_t)    :: element_connectivity
         integer(ik)                     :: ierr, nelem, location(5), etype,             &
-                                           idomain_g, ielement_g, idomain_l, ielement_l
+                                           idomain_g, ielement_g, idomain_l, ielement_l, &  
+                                           inode, inode_elem, ireg
         integer(ik),    allocatable     :: connectivity(:)
+        logical                         :: node_reg_failed
 
 
         !
@@ -415,11 +426,44 @@ contains
             connectivity = element_connectivity%get_element_nodes()
             idomain_g    = element_connectivity%get_domain_index()
             ielement_g   = element_connectivity%get_element_index()
-            !location     = [idomain_g, idomain_l, ielement_g, ielement_l]
             location     = [idomain_g, idomain_l, ielement_g, ielement_l, IRANK]
             etype        = element_connectivity%get_element_mapping()
 
             call self%elems(ielement_l)%init_geom(nodes,connectivity,etype,location,coord_system)
+
+
+            ! Now, loop over the nodes in the connectivity and register the element with these nodes
+            do inode_elem = 1, size(connectivity)
+                
+                inode = connectivity(inode_elem)
+                node_reg_failed = .false.
+                do ireg = 1, MAX_ELEMENTS_PER_NODE
+                    if (self%nodes_elems(inode, ireg) == NO_ELEMENT) then
+                        ! We have found the first unused entry, which we overwrite, then exit the ireg loop
+                        self%nodes_elems(inode, ireg) = ielement_l
+                        exit  
+                    else
+                        ! Check if we have already filled out the node registration storage,
+                        ! so that we are unable to register the present element.
+                        ! This should only happen if, somehow, a node belongs to more than
+                        ! MAX_ELEMENT_PER_NODE number of elements.
+                        ! For hexahedral meshes, we expect a node to belong to 
+                        ! 1 elems - interior
+                        ! 2 elems - face (not edge)
+                        ! 4 elems - face edge (not vertex)
+                        ! 8 elems - vertex
+                        ! with fewer on boundaries. 
+                        ! Hence, we set MAX_ELEMENTS_PER_NODE = 8 in mod_constants.
+                        if (ireg == MAX_ELEMENTS_PER_NODE) node_reg_failed = .true.
+                        ! Add some signalling here...
+                    end if
+
+                end do
+
+            end do
+
+
+
 
         end do ! ielem
 

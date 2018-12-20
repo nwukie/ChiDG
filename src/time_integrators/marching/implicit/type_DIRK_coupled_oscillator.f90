@@ -34,7 +34,7 @@ module type_DIRK_coupled_oscillator
     use mod_spatial,                    only: update_space
     use mod_oscillating_cylinder_1,     only: oscillating_cylinder
     use mod_force,                      only: report_aerodynamics
-    use mod_update_grid,                only: update_grid
+!    use mod_update_grid,                only: update_grid
     use mod_io,                         only: verbosity
 
     use type_time_integrator_marching,  only: time_integrator_marching_t
@@ -261,7 +261,6 @@ contains
                         end select
                         q_temp = q_n
                         data%time_manager%t = t_n + alpha*dt
-                        call update_grid(data)
                     case(2)
                         select type(an => self%system)
                             type is (assemble_DIRK_coupled_oscillator_t)
@@ -270,7 +269,6 @@ contains
                         end select
                         q_temp = q_n + (tau - alpha)*dq(1)
                         data%time_manager%t = t_n + tau*dt
-                        call update_grid(data)
                     case(3)
                         select type(an => self%system)
                             type is (assemble_DIRK_coupled_oscillator_t)
@@ -279,7 +277,6 @@ contains
                         end select
                         q_temp = q_n + b1*dq(1) + b2*dq(2)
                         data%time_manager%t = t_n + dt
-                        call update_grid(data)
 
                 end select
 
@@ -287,6 +284,7 @@ contains
                 ! Solve assembled nonlinear system, the nonlinear update is the stagewise update
                 ! System assembled in subroutine assemble
                 !
+                call data%update_grid()
                 call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner,solver_controller)
 
 

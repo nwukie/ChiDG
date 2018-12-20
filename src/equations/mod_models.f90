@@ -6,6 +6,10 @@ module mod_models
     use type_model,             only: model_t
 
     use model_ideal_gas,                                only: ideal_gas_t
+    use model_ideal_gas_sst,                            only: ideal_gas_sst_t
+    use model_ideal_gas_rstm,                           only: ideal_gas_rstm_t
+
+    use model_reynolds_shear_stress,                    only: reynolds_shear_stress_t
     use model_shear_stress,                             only: shear_stress_t
     use model_vorticity,                                only: vorticity_t
     use model_temperature_gradient,                     only: temperature_gradient_t
@@ -16,6 +20,9 @@ module mod_models
     use model_stokes_hypothesis,                        only: stokes_hypothesis_t
     use model_reynolds_analogy,                         only: reynolds_analogy_t
     use model_zero_turbulent_model_fields,              only: zero_turbulent_model_fields_t
+    use model_zero_reynolds_stress,                     only: zero_reynolds_stress_t
+    use model_critical_sound_speed,                     only: critical_sound_speed_t
+
     use model_spalart_allmaras_turbulent_model_fields,  only: spalart_allmaras_turbulent_model_fields_t
     use model_fluid_wave_speed,                         only: fluid_wave_speed_t
     use model_rae,                                      only: rae_t
@@ -23,6 +30,45 @@ module mod_models
     use model_tm,                                       only: tm_t
 
     use model_wall_distance,                            only: wall_distance_m
+
+
+    use model_strain_rate,                              only: strain_rate_t
+    use model_rotation_rate,                            only: rotation_rate_t
+    use model_velocity_gradient,                        only: velocity_gradient_t
+    use model_velocity_div_curl,                        only: velocity_div_curl_t
+
+    use model_modified_ducros_sensor,                   only: modified_ducros_sensor_t
+    use model_artificial_viscosity,                     only: artificial_viscosity_t
+    use model_zero_artificial_viscosity,                     only: zero_artificial_viscosity_t
+    use model_unsmoothed_artificial_viscosity,                     only: unsmoothed_artificial_viscosity_t
+    use model_rbf_smoothed_artificial_viscosity,        only: rbf_smoothed_artificial_viscosity_t
+    use model_vertex_smoothed_artificial_viscosity,        only: vertex_smoothed_artificial_viscosity_t
+    use model_pde_smoothed_artificial_viscosity,        only: pde_smoothed_artificial_viscosity_t
+
+    use model_mnp_shock_sensor,                         only: mnp_shock_sensor_t
+    use model_mnp_artificial_viscosity,                     only: mnp_artificial_viscosity_t
+    use model_vertex_smoothed_mnp_artificial_viscosity,        only: vertex_smoothed_mnp_artificial_viscosity_t
+
+    use model_mnph_shock_sensor,                        only: mnph_shock_sensor_t
+    use model_mnph_artificial_viscosity,                only: mnph_artificial_viscosity_t
+    
+    use model_mnpha_artificial_viscosity,                only: mnpha_artificial_viscosity_t
+
+    use model_sst_turbulence_kinetic_energy,            only: sst_turbulence_kinetic_energy_t
+    use model_sst_turbulence_quantities,                only: sst_turbulence_quantities_t
+    use model_sst_blended_coefficients,                 only: sst_blended_coefficients_t
+    use model_sst_source_terms,                 only: sst_source_terms_t
+
+    use model_rstm_ssglrrw_blended_coefficients,        only: rstm_ssglrrw_blended_coefficients_t
+    use model_rstm_ssglrrw_generalized_diffusion,       only: rstm_ssglrrw_generalized_diffusion_t
+    use model_rstm_ssglrrw_simple_diffusion,            only: rstm_ssglrrw_simple_diffusion_t
+    use model_rstm_ssglrrw_isotropic_dissipation,       only: rstm_ssglrrw_isotropic_dissipation_t
+    use model_rstm_ssglrrw_pressure_strain_correlation, only: rstm_ssglrrw_pressure_strain_correlation_t
+    use model_rstm_ssglrrw_production,                  only: rstm_ssglrrw_production_t
+!    use model_rstm_ssglrrw_reynolds_stress,             only: rstm_ssglrrw_reynolds_stress_t
+    use model_rstm_ssglrrw_turbulence_quantities,       only: rstm_ssglrrw_turbulence_quantities_t
+!    use model_rstm_ssglrrw_turbulence_kinetic_energy,       only: rstm_ssglrrw_turbulence_kinetic_energy_t
+
 
     use type_artificial_viscosity_jump_sensor,          only: artificial_viscosity_jump_sensor_t
     use type_artificial_viscosity_resolution_sensor,    only: artificial_viscosity_resolution_sensor_t
@@ -257,6 +303,10 @@ contains
         ! Fluid models
         !
         type(ideal_gas_t)                               :: IDEAL_GAS
+        type(ideal_gas_sst_t)                           :: IDEAL_GAS_SST
+        type(ideal_gas_rstm_t)                          :: IDEAL_GAS_RSTM
+        type(reynolds_shear_stress_t)                   :: REYNOLDS_SHEAR_STRESS
+
         type(shear_stress_t)                            :: SHEAR_STRESS
         type(vorticity_t)                               :: VORTICITY
         type(temperature_gradient_t)                    :: TEMPERATURE_GRADIENT
@@ -267,8 +317,50 @@ contains
         type(stokes_hypothesis_t)                       :: STOKES_HYPOTHESIS
         type(reynolds_analogy_t)                        :: REYNOLDS_ANALOGY
         type(zero_turbulent_model_fields_t)             :: ZERO_TURBULENT_MODEL_FIELDS
+        type(zero_reynolds_stress_t)                    :: ZERO_REYNOLDS_STRESS
+
         type(spalart_allmaras_turbulent_model_fields_t) :: SPALART_ALLMARAS_TURBULENT_MODEL_FIELDS
         type(fluid_wave_speed_t)                        :: FLUID_WAVE_SPEED
+        type(critical_sound_speed_t)                    :: CRITICAL_SOUND_SPEED
+
+        type(strain_rate_t)                             :: STRAIN_RATE
+        type(rotation_rate_t)                           :: ROTATION_RATE
+
+        type(velocity_div_curl_t)                       :: VEL_DIV_CURL
+        type(velocity_gradient_t)                       :: VEL_GRAD
+
+        type(modified_ducros_sensor_t)                  :: MOD_DUCROS
+        type(artificial_viscosity_t)                    :: ART_VISC
+        type(zero_artificial_viscosity_t)               :: ZERO_ART_VISC
+        type(unsmoothed_artificial_viscosity_t)         :: UNS_ART_VISC
+        type(rbf_smoothed_artificial_viscosity_t)       :: RBF_ART_VISC
+        type(vertex_smoothed_artificial_viscosity_t)    :: VERTEX_ART_VISC
+        type(pde_smoothed_artificial_viscosity_t)       :: PDE_ART_VISC
+
+        type(mnp_shock_sensor_t)                        :: MNP_SHOCK_SENSOR
+        type(mnp_artificial_viscosity_t)                :: MNP_ARTIFICIAL_VISCOSITY
+        type(vertex_smoothed_mnp_artificial_viscosity_t)    :: VERTEX_SMOOTHED_MNP_ARTIFICIAL_VISCOSITY
+
+        type(mnph_shock_sensor_t)                        :: MNPH_SHOCK_SENSOR
+        type(mnph_artificial_viscosity_t)                :: MNPH_ARTIFICIAL_VISCOSITY
+        type(mnpha_artificial_viscosity_t)               :: MNPHA_ARTIFICIAL_VISCOSITY
+
+        type(sst_turbulence_kinetic_energy_t)            :: SST_TKE
+        type(sst_turbulence_quantities_t)                :: SST_TQ
+        type(sst_blended_coefficients_t)                 :: SST_COEFF
+        type(sst_source_terms_t)                        :: SST_SRC
+
+
+        type(rstm_ssglrrw_blended_coefficients_t)       :: RSTM_SSGLRRW_BLENDED_COEFFICIENTS
+        type(rstm_ssglrrw_generalized_diffusion_t)      :: RSTM_SSGLRRW_GENERALIZED_DIFFUSION
+        type(rstm_ssglrrw_simple_diffusion_t)           :: RSTM_SSGLRRW_SIMPLE_DIFFUSION
+        type(rstm_ssglrrw_isotropic_dissipation_t)      :: RSTM_SSGLRRW_ISOTROPIC_DISSIPATION
+        type(rstm_ssglrrw_pressure_strain_correlation_t)  :: RSTM_SSGLRRW_PRESSURE_STRAIN_CORRELATION
+        type(rstm_ssglrrw_production_t)                 :: RSTM_SSGLRRW_PRODUCTION
+        !type(rstm_ssglrrw_reynolds_stress_t)            :: RSTM_SSGLRRW_REYNOLDS_STRESS
+        type(rstm_ssglrrw_turbulence_quantities_t)      :: RSTM_SSGLRRW_TURBULENCE_QUANTITIES
+!        type(rstm_ssglrrw_turbulence_kinetic_energy_t)      :: RSTM_SSGLRRW_TURBULENCE_KE
+
         type(rae_t)                                     :: RADIAL_ANGULAR_EQUILIBRIUM
         type(rac_t)                                     :: RADIAL_ANGULAR_COMBINED
         type(tm_t)                                      :: TANGENTIAL_MOMENTUM
@@ -291,6 +383,10 @@ contains
         if (.not. models_initialized) then
 
             call model_factory%register(IDEAL_GAS)
+            call model_factory%register(IDEAL_GAS_SST)
+            call model_factory%register(IDEAL_GAS_RSTM)
+            call model_factory%register(REYNOLDS_SHEAR_STRESS)
+
             call model_factory%register(SHEAR_STRESS)
             call model_factory%register(VORTICITY)
             call model_factory%register(TEMPERATURE_GRADIENT)
@@ -301,9 +397,55 @@ contains
             call model_factory%register(STOKES_HYPOTHESIS)
             call model_factory%register(REYNOLDS_ANALOGY)
             call model_factory%register(ZERO_TURBULENT_MODEL_FIELDS)
+            call model_factory%register(ZERO_REYNOLDS_STRESS)
             call model_factory%register(SPALART_ALLMARAS_TURBULENT_MODEL_FIELDS)
             call model_factory%register(WALL_DISTANCE_NORMALIZATION)
             call model_factory%register(FLUID_WAVE_SPEED)
+            call model_factory%register(CRITICAL_SOUND_SPEED)
+
+            call model_factory%register(STRAIN_RATE)
+            call model_factory%register(ROTATION_RATE)
+            call model_factory%register(VEL_DIV_CURL)
+            call model_factory%register(VEL_GRAD)
+
+
+            call model_factory%register(MOD_DUCROS)
+            call model_factory%register(ART_VISC)
+            call model_factory%register(ZERO_ART_VISC)
+            call model_factory%register(UNS_ART_VISC)
+            call model_factory%register(RBF_ART_VISC)
+            call model_factory%register(PDE_ART_VISC)
+            call model_factory%register(VERTEX_ART_VISC)
+
+            call model_factory%register(MNP_SHOCK_SENSOR)
+            call model_factory%register(MNP_ARTIFICIAL_VISCOSITY)
+            call model_factory%register(VERTEX_SMOOTHED_MNP_ARTIFICIAL_VISCOSITY)
+
+            call model_factory%register(MNPH_SHOCK_SENSOR)
+            call model_factory%register(MNPH_ARTIFICIAL_VISCOSITY)
+            call model_factory%register(MNPHA_ARTIFICIAL_VISCOSITY)
+
+            call model_factory%register(SST_TKE)
+            call model_factory%register(SST_TQ)
+            call model_factory%register(SST_COEFF)
+            call model_factory%register(SST_SRC)
+
+            call model_factory%register(RSTM_SSGLRRW_BLENDED_COEFFICIENTS)
+            call model_factory%register(RSTM_SSGLRRW_GENERALIZED_DIFFUSION)
+            call model_factory%register(RSTM_SSGLRRW_SIMPLE_DIFFUSION)
+            call model_factory%register(RSTM_SSGLRRW_ISOTROPIC_DISSIPATION)
+            call model_factory%register(RSTM_SSGLRRW_PRESSURE_STRAIN_CORRELATION)
+            call model_factory%register(RSTM_SSGLRRW_PRODUCTION)
+            !call model_factory%register(RSTM_SSGLRRW_REYNOLDS_STRESS)
+            call model_factory%register(RSTM_SSGLRRW_TURBULENCE_QUANTITIES)
+!            call model_factory%register(RSTM_SSGLRRW_TURBULENCE_KE)
+
+
+
+
+
+
+
             call model_factory%register(ARTIFICIAL_VISCOSITY_JUMP_SENSOR)
             call model_factory%register(ARTIFICIAL_VISCOSITY_RESOLUTION_SENSOR)
             call model_factory%register(RADIAL_ANGULAR_EQUILIBRIUM)

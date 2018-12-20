@@ -7,6 +7,8 @@ module type_chidg
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
     use mod_prescribed_mesh_motion_function, only: register_prescribed_mesh_motion_functions
+    use mod_radial_basis_function,  only: register_radial_basis_functions
+
     use mod_grid,                   only: initialize_grid
     use type_svector,               only: svector_t
     use mod_string,                 only: get_file_extension, string_t, get_file_prefix
@@ -46,8 +48,9 @@ module type_chidg
     use mod_io
 
 
-    use type_prescribed_mesh_motion_domain_data,        only: prescribed_mesh_motion_domain_data_t
-    use type_prescribed_mesh_motion_group_wrapper,        only: prescribed_mesh_motion_group_wrapper_t
+    use type_mesh_motion_domain_data,   only: mesh_motion_domain_data_t
+    use type_mesh_motion_group_wrapper, only: mesh_motion_group_wrapper_t
+    use type_octree,                    only: octree_t
     implicit none
 
 
@@ -119,7 +122,9 @@ module type_chidg
         procedure       :: read_mesh
         procedure       :: read_mesh_grids
         procedure       :: read_mesh_boundary_conditions
-        procedure       :: read_prescribedmeshmotions
+        procedure       :: read_mesh_motions
+        procedure       :: record_mesh_size
+        !procedure       :: read_prescribedmeshmotions
         procedure       :: write_mesh
         procedure       :: read_fields
         procedure       :: write_fields
@@ -661,14 +666,14 @@ contains
                                                            bc_periodic )
 
 
+        call self%read_mesh_motions(grid_file)
                                                       
-        call self%read_prescribedmeshmotions(grid_file)
-
         !
         ! Initialize data
         !
         call self%init('all',interpolation,level)
 
+        call self%record_mesh_size()
 
 
         call write_line('Done reading mesh.', io_proc=GLOBAL_MASTER)
@@ -711,7 +716,12 @@ contains
 
         character(:),       allocatable     :: domain_equation_set
         type(meshdata_t),   allocatable     :: meshdata(:)
-        integer(ik)                         :: idom, iread, ierr, ielem, eqn_ID
+        integer(ik)                         :: idom, iread, ierr, ielem, eqn_ID, ii, ndoms, nelems, nnodes
+
+        integer(ik), allocatable    :: nelems_per_domain(:),nnodes_per_domain(:)
+        real(rk),    allocatable    :: rbf_radius_recv(:,:), rbf_center_recv(:,:),rbf_radius_sendv(:,:), rbf_center_sendv(:,:), global_nodes(:,:)
+
+
 
 
         call write_line(' ',                           ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -738,13 +748,54 @@ contains
             call write_line("   partitioning...", ltrim=.false., io_proc=GLOBAL_MASTER)
             if ( IRANK == GLOBAL_MASTER ) then
 
+                !!!-------------------------  REVISIT  --------------------------------!!!
+                call read_global_nodes_hdf(grid_file,global_nodes)
+                nnodes = size(global_nodes(:,1))
+                !!!-------------------------  REVISIT  --------------------------------!!!
+
+
                 call read_global_connectivity_hdf(grid_file,connectivities)
                 call read_weights_hdf(grid_file,weights)
 
-                call partition_connectivity(connectivities, weights, partitions)
 
+                !!!-------------------------  REVISIT  --------------------------------!!!
+                ndoms = size(connectivities)
+                allocate(nelems_per_domain(size(connectivities)))
+                allocate(nnodes_per_domain(size(connectivities)))
+                do idom = 1, size(connectivities)
+                    nelems_per_domain(idom) = connectivities(idom)%nelements
+                    nnodes_per_domain(idom) = connectivities(idom)%nnodes
+                end do
+                !!!-------------------------  REVISIT  --------------------------------!!!
+
+
+                call partition_connectivity(connectivities, weights, partitions)
                 call send_partitions(partitions,ChiDG_COMM)
+
             end if
+
+
+
+
+            !!!-------------------------  REVISIT  --------------------------------!!!
+            call MPI_Bcast(ndoms,  1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
+            call MPI_Bcast(nnodes, 1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
+            if (IRANK /= GLOBAL_MASTER) then
+                allocate(nelems_per_domain(ndoms))
+                allocate(nnodes_per_domain(ndoms))
+                allocate(global_nodes(nnodes,3))
+            end if
+            call MPI_Bcast(nelems_per_domain, ndoms, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
+            call MPI_Bcast(nnodes_per_domain, ndoms, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
+            call MPI_Bcast(global_nodes, 3*nnodes, MPI_REAL8, GLOBAL_MASTER, ChiDG_COMM, ierr)
+
+            call self%data%sdata%set_nelems_per_domain(nelems_per_domain)
+            call self%data%sdata%set_nnodes_per_domain(nnodes_per_domain)
+            call self%data%sdata%set_global_nodes(global_nodes)
+            !!!-------------------------  REVISIT  --------------------------------!!!
+
+
+
 
 
             !
@@ -805,6 +856,39 @@ contains
 
 
         end do !idom
+
+
+
+
+        !!!-------------------------  REVISIT  --------------------------------!!!
+        call self%data%mesh%set_global_nodes(self%data%sdata%global_nodes)
+        call self%data%mesh%octree%init(32, 0.0_rk, (/1, 1, 1/), .true.)
+        call write_line("   building octree...", ltrim=.false., io_proc=GLOBAL_MASTER)
+        call self%data%mesh%octree%build_octree_depth_first(self%data%mesh%global_nodes)
+        call write_line("   building octree - completed...", ltrim=.false., io_proc=GLOBAL_MASTER)
+        call self%data%construct_rbf_arrays()
+
+        ! Wait for all processors to finish initializing their meshes, then communicate RBF info.
+        nelems = sum(nelems_per_domain)
+        allocate(rbf_center_recv(nelems,3))
+        allocate(rbf_radius_recv(nelems,3))
+
+        rbf_center_recv = ZERO
+        rbf_radius_recv = ZERO
+        rbf_center_sendv = self%data%sdata%rbf_center
+        rbf_radius_sendv = self%data%sdata%rbf_radius
+        call MPI_Allreduce(rbf_center_sendv, rbf_center_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
+        call MPI_Allreduce(rbf_radius_sendv, rbf_radius_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
+        self%data%sdata%rbf_center = rbf_center_recv
+        self%data%sdata%rbf_radius = rbf_radius_recv
+        !!!-------------------------  REVISIT  --------------------------------!!!
+
+
+
+
+
+
+
 
 
 
@@ -920,6 +1004,7 @@ contains
 
 
 
+
     !>  Read prescribed mesh motions from grid file.
     !!
     !!  @author Eric Wolf
@@ -928,15 +1013,15 @@ contains
     !!  @param[in]  grid_file    String specifying a grid_file, including extension.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine read_prescribedmeshmotions(self, grid_file)
+    subroutine read_mesh_motions(self, grid_file)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: grid_file
 
         character(5),           dimension(1)    :: extensions
         character(:),           allocatable     :: extension
-        type(prescribed_mesh_motion_domain_data_t),  allocatable     :: pmm_domain_data(:)
+        type(mesh_motion_domain_data_t),  allocatable     :: pmm_domain_data(:)
         type(string_t)                          :: pmm_group_name
-        type(prescribed_mesh_motion_group_wrapper_t)            :: pmm_group_wrapper
+        type(mesh_motion_group_wrapper_t)            :: pmm_group_wrapper
         type(string_t)                          :: group_name
         integer(ik)                                 :: idom, ndomains, iface, ibc, ierr, iread, npmm_groups
 
@@ -951,15 +1036,15 @@ contains
         !
         ! Call boundary condition reader based on file extension
         !
-        call write_line('Prescribed Mesh Motions: reading...', io_proc=GLOBAL_MASTER)
+        call write_line('Reading Mesh Motions...', io_proc=GLOBAL_MASTER)
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
 
                 if ( extension == '.h5' ) then
-                    call read_prescribedmeshmotion_hdf(grid_file,pmm_domain_data,pmm_group_wrapper,self%partition)
+                    call read_mesh_motion_hdf(grid_file,pmm_domain_data,pmm_group_wrapper,self%partition)
                 else
-                    call chidg_signal(FATAL,"chidg%read_prescribedmeshmotions: grid file extension not recognized")
+                    call chidg_signal(FATAL,"chidg%read_mesh_motions: grid file extension not recognized")
                 end if
 
 
@@ -971,29 +1056,29 @@ contains
 
 
 
-        call write_line('Prescribed Mesh Motions: processing...', io_proc=GLOBAL_MASTER)
+        call write_line('Processing Mesh Motions...', io_proc=GLOBAL_MASTER)
         !
-        ! Add all prescribed mesh motion groups
+        ! Add all boundary condition groups
         !
         npmm_groups = pmm_group_wrapper%ngroups
         if (npmm_groups>0) then
         do ibc = 1,npmm_groups
 
-            call self%data%add_pmm_group(pmm_group_wrapper%pmm_groups(ibc))
+            call self%data%add_mm_group(pmm_group_wrapper%mm_groups(ibc))
 
         end do !ibc
         end if
 
 
         !
-        ! Add prescribed mesh motion patches
+        ! Add boundary condition patches
         !
         if (npmm_groups>0) then
         ndomains = size(pmm_domain_data)
         do idom = 1,ndomains
             
-            call pmm_group_name%set(pmm_domain_data(idom)%pmm_group_name)
-            call self%data%add_pmm_domain(pmm_domain_data(idom)%domain_name,            &
+            call pmm_group_name%set(pmm_domain_data(idom)%mm_group_name)
+            call self%data%add_mm_domain(pmm_domain_data(idom)%domain_name,            &
                                         pmm_group_name%get())
 
         end do !ipatch
@@ -1002,8 +1087,11 @@ contains
 
 
 
-    end subroutine read_prescribedmeshmotions
+    end subroutine read_mesh_motions
     !*****************************************************************************************
+
+
+
 
 
 
@@ -1568,6 +1656,94 @@ contains
 
     end subroutine report
     !*****************************************************************************************
+
+
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    09/18/2018 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine record_mesh_size(self)
+        class(chidg_t),     intent(inout)   :: self
+
+        integer(ik) :: nelems, nnodes, ierr, inode
+
+        real(rk), allocatable :: sendv(:,:), recv(:,:)
+
+        real(rk), allocatable :: sendv_r(:), recv_r(:)
+        integer(ik), allocatable :: sendv_i(:), recv_i(:)
+
+        call self%data%record_mesh_size()
+        call MPI_Barrier(ChiDG_COMM,ierr)
+
+        nelems = sum(self%data%sdata%nelems_per_domain)
+        allocate(sendv(nelems,3))
+        allocate(recv(nelems,3))
+
+        recv = ZERO
+        sendv = self%data%sdata%mesh_size_elem
+        call MPI_Allreduce(sendv, recv, 3*nelems, MPI_REAL8, MPI_MAX,ChiDG_COMM, ierr)
+
+        self%data%sdata%mesh_size_elem = recv
+
+        nnodes = sum(self%data%sdata%nnodes_per_domain)
+        if (allocated(sendv)) deallocate(sendv)
+        if (allocated(recv)) deallocate(recv)
+        allocate(sendv(nnodes,3))
+        allocate(recv(nnodes,3))
+
+        recv = ZERO
+        sendv = self%data%sdata%mesh_size_vertex
+        call MPI_Allreduce(sendv, recv, 3*nnodes, MPI_REAL8, MPI_MAX,ChiDG_COMM, ierr)
+
+        self%data%sdata%mesh_size_vertex = recv
+
+        if (allocated(sendv_r)) deallocate(sendv_r)
+        if (allocated(recv_r)) deallocate(recv_r)
+        allocate(sendv_r(nnodes))
+        allocate(recv_r(nnodes))
+
+        recv_r = ZERO
+        sendv_r = self%data%sdata%min_mesh_size_vertex
+        call MPI_Allreduce(sendv_r, recv_r, nnodes, MPI_REAL8, MPI_MAX,ChiDG_COMM, ierr)
+
+        self%data%sdata%min_mesh_size_vertex = recv_r
+
+        recv_r = ZERO
+        sendv_r = self%data%sdata%sum_mesh_size_vertex
+        call MPI_Allreduce(sendv_r, recv_r, nnodes, MPI_REAL8, MPI_SUM, ChiDG_COMM, ierr)
+
+        self%data%sdata%sum_mesh_size_vertex = recv_r
+
+        if (allocated(sendv_i)) deallocate(sendv_i)
+        if (allocated(recv_i)) deallocate(recv_i)
+        allocate(sendv_i(nnodes))
+        allocate(recv_i(nnodes))
+
+        recv_i = 0
+        sendv_i = self%data%sdata%num_elements_touching_vertex
+        call MPI_Allreduce(sendv_i, recv_i, nnodes, MPI_INTEGER4, MPI_SUM,ChiDG_COMM, ierr)
+
+        self%data%sdata%num_elements_touching_vertex = recv_i
+
+        do inode = 1, size(recv_i)
+            if (self%data%sdata%num_elements_touching_vertex(inode) /= 0) then
+                self%data%sdata%avg_mesh_size_vertex(inode) = self%data%sdata%sum_mesh_size_vertex(inode)/real(self%data%sdata%num_elements_touching_vertex(inode), rk)
+            end if
+
+        end do
+
+    end subroutine record_mesh_size 
+    !********************************************************************************
+
+
+
+
 
 
 

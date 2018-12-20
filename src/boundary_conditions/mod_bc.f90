@@ -66,6 +66,7 @@ module mod_bc
     use bc_state_inlet_giles_quasi3d_unsteady_HB,   only: inlet_giles_quasi3d_unsteady_HB_t
     use bc_state_turbo_interface_steady,            only: turbo_interface_steady_t
     use bc_state_fluid_extrapolate,                 only: fluid_extrapolate_t
+    use bc_state_supersonic_inlet,                  only: supersonic_inlet_t
     use bc_state_momentum_inlet,                    only: momentum_inlet_t
     use bc_state_symmetry,                          only: symmetry_t
     use bc_state_slipwall,                          only: slipwall_t
@@ -78,12 +79,31 @@ module mod_bc
     use bc_state_inlet_nrbc_giles,              only: inlet_nrbc_giles_t
 
     ! Turbulence boundary conditions
+    !! Spalart-Allmaras
     use bc_state_spalart_allmaras_inlet,            only: spalart_allmaras_inlet_t
     use bc_state_spalart_allmaras_outlet,           only: spalart_allmaras_outlet_t
     use bc_state_spalart_allmaras_symmetry,         only: spalart_allmaras_symmetry_t
     use bc_state_spalart_allmaras_farfield,         only: spalart_allmaras_farfield_t
     use bc_state_spalart_allmaras_wall,             only: spalart_allmaras_wall_t
     use bc_state_spalart_allmaras_interface_steady, only: spalart_allmaras_interface_steady_t
+
+    !! SST
+    !use bc_state_sst_inlet,        only: sst_inlet_t
+    use bc_state_sst_outlet,       only: sst_outlet_t
+    use bc_state_sst_symmetry,     only: sst_symmetry_t
+    use bc_state_sst_farfield,     only: sst_farfield_t
+    use bc_state_sst_wall,         only: sst_wall_t
+
+    !! Reynolds-Stress
+    use bc_state_rstm_ssglrrw_outlet,       only: rstm_ssglrrw_outlet_t
+    use bc_state_rstm_ssglrrw_symmetry_x,   only: rstm_ssglrrw_symmetry_x_t
+    use bc_state_rstm_ssglrrw_symmetry_y,   only: rstm_ssglrrw_symmetry_y_t
+    use bc_state_rstm_ssglrrw_symmetry_z,   only: rstm_ssglrrw_symmetry_z_t
+    use bc_state_rstm_ssglrrw_farfield,     only: rstm_ssglrrw_farfield_t
+    use bc_state_rstm_ssglrrw_wall,         only: rstm_ssglrrw_wall_t
+
+
+
 
     ! Artificial Viscosity boundary conditions
     use bc_state_artificial_viscosity_wall,     only: artificial_viscosity_wall_t
@@ -193,6 +213,7 @@ contains
         type(turbo_interface_steady_t)          :: TURBO_INTERFACE_STEADY
         type(fluid_extrapolate_t)               :: FLUID_EXTRAPOLATE
         type(momentum_inlet_t)                  :: MOMENTUM_INLET
+        type(supersonic_inlet_t)                :: SUPERSONIC_INLET
         type(symmetry_t)                        :: SYMMETRY
         type(slipwall_t)                        :: SLIP_WALL
         type(farfield_t)                        :: FARFIELD
@@ -209,6 +230,24 @@ contains
         type(spalart_allmaras_farfield_t)           :: SPALART_ALLMARAS_FARFIELD
         type(spalart_allmaras_wall_t)               :: SPALART_ALLMARAS_WALL
         type(spalart_allmaras_interface_steady_t)   :: SPALART_ALLMARAS_INTERFACE_STEADY
+
+        !type(sst_inlet_t)          :: SST_INLET
+        type(sst_outlet_t)         :: SST_OUTLET
+        type(sst_symmetry_t)       :: SST_SYMMETRY
+        type(sst_farfield_t)       :: SST_FARFIELD
+        type(sst_wall_t)           :: SST_WALL
+
+        type(rstm_ssglrrw_outlet_t)             :: rstm_ssglrrw_OUTLET
+        type(rstm_ssglrrw_symmetry_x_t)         :: rstm_ssglrrw_SYMMETRY_x
+        type(rstm_ssglrrw_symmetry_y_t)         :: rstm_ssglrrw_SYMMETRY_y
+        type(rstm_ssglrrw_symmetry_z_t)         :: rstm_ssglrrw_SYMMETRY_z
+        type(rstm_ssglrrw_farfield_t)           :: rstm_ssglrrw_FARFIELD
+        type(rstm_ssglrrw_wall_t)               :: rstm_ssglrrw_WALL
+
+
+
+
+
 
         type(artificial_viscosity_wall_t)       :: ARTIFICIAL_VISCOSITY_WALL
         type(artificial_viscosity_inlet_t)      :: ARTIFICIAL_VISCOSITY_INLET
@@ -292,6 +331,7 @@ contains
             !call registered_bcs%push_back(OUTLET_WUKIE)
             call registered_bcs%push_back(FLUID_EXTRAPOLATE)
             call registered_bcs%push_back(MOMENTUM_INLET)
+            call registered_bcs%push_back(SUPERSONIC_INLET)
             call registered_bcs%push_back(SYMMETRY)
             call registered_bcs%push_back(SLIP_WALL)
             call registered_bcs%push_back(FARFIELD)
@@ -308,6 +348,22 @@ contains
             call registered_bcs%push_back(SPALART_ALLMARAS_FARFIELD)
             call registered_bcs%push_back(SPALART_ALLMARAS_WALL)
             call registered_bcs%push_back(SPALART_ALLMARAS_INTERFACE_STEADY)
+
+            !call registered_bcs%push_back(SST_INLET)
+            call registered_bcs%push_back(SST_OUTLET)
+            call registered_bcs%push_back(SST_SYMMETRY)
+            call registered_bcs%push_back(SST_FARFIELD)
+            call registered_bcs%push_back(SST_WALL)
+
+            call registered_bcs%push_back(rstm_ssglrrw_OUTLET)
+            call registered_bcs%push_back(rstm_ssglrrw_SYMMETRY_x)
+            call registered_bcs%push_back(rstm_ssglrrw_SYMMETRY_y)
+            call registered_bcs%push_back(rstm_ssglrrw_SYMMETRY_z)
+            call registered_bcs%push_back(rstm_ssglrrw_FARFIELD)
+            call registered_bcs%push_back(rstm_ssglrrw_WALL)
+
+
+
 
             call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_WALL)
             call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_INLET)

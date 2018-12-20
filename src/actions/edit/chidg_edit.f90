@@ -17,23 +17,11 @@ module mod_chidg_edit
     use type_chidg,                         only: chidg_t
     use mod_chidg_edit_domaininfo,          only: chidg_edit_domaininfo
     use mod_chidg_edit_boundaryconditions,  only: chidg_edit_boundaryconditions
+    use mod_chidg_edit_meshmotion,          only: chidg_edit_meshmotion
     use mod_chidg_edit_matrixsolver,        only: chidg_edit_matrixsolver
     use mod_chidg_edit_timescheme,          only: chidg_edit_timescheme
     use mod_chidg_edit_printoverview,       only: print_overview
     implicit none
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -126,6 +114,8 @@ contains
                     call chidg_edit_domaininfo(fid)
                 case (2)
                     call chidg_edit_boundaryconditions(fid)
+                case (3)
+                    call chidg_edit_meshmotion(fid)
                 !case (3)
                 !    call chidg_edit_timescheme(fid)
                 !case (4)

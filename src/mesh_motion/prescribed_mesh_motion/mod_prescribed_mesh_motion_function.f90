@@ -11,6 +11,8 @@ module mod_prescribed_mesh_motion_function
     use pmmf_sinusoidal,                        only: sinusoidal_pmmf
     use pmmf_sinusoidal_1d,                        only: sinusoidal_1d_pmmf
     use pmmf_sinusoidal_2d,                        only: sinusoidal_2d_pmmf
+    use pmmf_sinusoidal_uniform_flow,                        only: sinusoidal_uniform_flow_pmmf
+    use pmmf_sinusoidal_convecting_vortex,                        only: sinusoidal_convecting_vortex_pmmf
     use pmmf_isotropic_dilation,                only: isotropic_dilation_pmmf
     use pmmf_constant_motion_1d_x,              only: constant_motion_1d_x_pmmf
     use pmmf_hpaf_case1,                        only: hpaf_case1_pmmf
@@ -53,6 +55,8 @@ contains
         type(sinusoidal_pmmf)                           :: sinusoidal
         type(sinusoidal_1d_pmmf)                           :: sinusoidal_1d
         type(sinusoidal_2d_pmmf)                           :: sinusoidal_2d
+        type(sinusoidal_uniform_flow_pmmf)                           :: sinusoidal_uniform_flow
+        type(sinusoidal_convecting_vortex_pmmf)                           :: sinusoidal_convecting_vortex
         type(isotropic_dilation_pmmf)                   :: isotropic_dilation
         type(constant_motion_1d_x_pmmf)                 :: constant_motion_1d_x
         type(hpaf_case1_pmmf)                           :: hpaf_case1
@@ -71,6 +75,8 @@ contains
             call registered_pmmfs%push_back(sinusoidal)
             call registered_pmmfs%push_back(sinusoidal_1d)
             call registered_pmmfs%push_back(sinusoidal_2d)
+            call registered_pmmfs%push_back(sinusoidal_uniform_flow)
+            call registered_pmmfs%push_back(sinusoidal_convecting_vortex)
             call registered_pmmfs%push_back(isotropic_dilation)
             call registered_pmmfs%push_back(constant_motion_1d_x)
             call registered_pmmfs%push_back(hpaf_case1)
@@ -205,6 +211,29 @@ contains
 
 
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/1/2016
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------
+    function check_pmmf_registered(state_string) result(state_found)
+        character(len=*),   intent(in)  :: state_string
+
+        integer(ik) :: state_index
+        logical     :: state_found
+
+        ! Find boundary condition string in 'registered_bcs' vector
+        state_index = registered_pmmfs%index_by_name(trim(state_string))
+
+        ! Set status of state_found
+        state_found = (state_index /= 0)
+
+    end function check_pmmf_registered
+    !*******************************************************************************************************
 
 
 

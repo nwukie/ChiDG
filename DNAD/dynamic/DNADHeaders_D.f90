@@ -175,6 +175,10 @@
    INTERFACE ABS
         MODULE PROCEDURE ABS_D_D  ! obtain the absolute value of a dual number, ELEMENTAL
    END INTERFACE
+   PUBLIC SABS
+   INTERFACE SABS
+        MODULE PROCEDURE SABS_D_D  ! obtain the absolute value of a dual number, ELEMENTAL
+   END INTERFACE
  
    PUBLIC DABS
    INTERFACE DABS
@@ -253,6 +257,10 @@
        MODULE PROCEDURE MAX_DS_D ! obtain the max of from a dual number and a real in single precision, ELEMENTAL
        MODULE PROCEDURE MAX_RD_D ! obtain the max of from a real,and a dual number,  ELEMENTAL
    END INTERFACE
+   PUBLIC SMAX
+   INTERFACE SMAX
+        MODULE PROCEDURE SMAX_DD_D ! obtain the max of from two to four dual numbers, ELEMENTAL
+   END INTERFACE
 
    PUBLIC DMAX1
    INTERFACE DMAX1
@@ -269,6 +277,10 @@
         MODULE PROCEDURE MIN_DD_D ! obtain the min of from two to four dual numbers, ELEMENTAL
          MODULE PROCEDURE MIN_DR_D ! obtain the min of a dual and a real, ELEMENTAL
          MODULE PROCEDURE MIN_DS_D ! obtain the min of a dual and a single, ELEMENTAL
+   END INTERFACE
+   PUBLIC SMIN
+   INTERFACE SMIN
+        MODULE PROCEDURE SMIN_DD_D ! obtain the min of from two to four dual numbers, ELEMENTAL
    END INTERFACE
 
    PUBLIC DMIN1
@@ -292,6 +304,11 @@
      MODULE PROCEDURE  SIGN_RD_D ! SIGN(a,b) with a real and a dual, the result will be |a| if b%x>=0, -|a| if b%x<0,ELEMENTAL
    END INTERFACE
 
+   PUBLIC SIN_RAMP
+   INTERFACE SIN_RAMP
+        MODULE PROCEDURE SIN_RAMP_D_D ! obtain sine ramping of a dual number, ELEMENTAL
+   END INTERFACE
+
    PUBLIC SIN  
    INTERFACE SIN
         MODULE PROCEDURE SIN_D_D ! obtain sine of a dual number, ELEMENTAL
@@ -310,6 +327,11 @@
    PUBLIC SUM  
    INTERFACE SUM
         MODULE PROCEDURE SUM_D_D ! sum a dual array
+   END INTERFACE
+
+   PUBLIC MY_SQRT  
+   INTERFACE MY_SQRT
+        MODULE PROCEDURE MY_SQRT_D_D ! obtain the sqrt of a dual number, ELEMENTAL
    END INTERFACE
 
 

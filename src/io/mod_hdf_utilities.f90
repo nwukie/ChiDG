@@ -217,7 +217,7 @@
 module mod_hdf_utilities
 #include <messenger.h>
     use mod_kinds,              only: rk, ik, rdouble
-    use mod_constants,          only: ZERO, NFACES, TWO_DIM, THREE_DIM
+    use mod_constants,          only: ZERO, ONE, NFACES, TWO_DIM, THREE_DIM
     use mod_file_utilities,     only: delete_file
     use mod_bc,                 only: check_bc_state_registered, create_bc
     use mod_string,             only: string_t
@@ -232,10 +232,21 @@ module mod_hdf_utilities
     use hdf5
     use h5lt
 
-
-    use type_prescribed_mesh_motion,                only: prescribed_mesh_motion_t
-    use type_prescribed_mesh_motion_group,          only: prescribed_mesh_motion_group_t
-    use type_prescribed_mesh_motion_group_wrapper,  only: prescribed_mesh_motion_group_wrapper_t
+    use type_mesh_motion,                       only: mesh_motion_t
+    use type_mesh_motion_group,                 only: mesh_motion_group_t
+    use type_mesh_motion_group_wrapper,         only: mesh_motion_group_wrapper_t
+    use type_prescribed_mesh_motion,            only: prescribed_mesh_motion_t
+    use type_prescribed_mesh_motion_function,   only: prescribed_mesh_motion_function_t
+    use type_rbf_mesh_motion,                   only: rbf_mesh_motion_t
+    use type_rbf_source,                        only: rbf_source_t
+    use type_rbf_info,                          only: rbf_info_t
+    use type_rbf_mm_driver,                     only: rbf_mm_driver_t
+    use pmm_rbf_mm_driver,                      only: rbf_mm_driver_pmm
+    use mod_rbf_mm_driver
+    use mod_prescribed_mesh_motion_function
+!    use type_prescribed_mesh_motion,                only: prescribed_mesh_motion_t
+!    use type_prescribed_mesh_motion_group,          only: prescribed_mesh_motion_group_t
+!    use type_prescribed_mesh_motion_group_wrapper,  only: prescribed_mesh_motion_group_wrapper_t
     implicit none
 
     
@@ -896,59 +907,29 @@ contains
 
         type(file_properties_t)     :: prop
 
-
-        ! 
         !  Check file exists
-        !
         inquire(file=filename, exist=fileexists)
         if (.not. fileexists) then
             call chidg_signal(FATAL,'get_properties_hdf: Could not find grid file')
         end if
 
-
-        !
         !  Initialize Fortran interface.
-        !
         call open_hdf()
-
-
-
-        !
-        !  Open input file using default properties.
-        !
         fid = open_file_hdf(filename)
 
 
-
-        !
         ! Get number of domains
-        !
         prop%ndomains = get_ndomains_hdf(fid)
         call prop%set_ndomains(prop%ndomains)
 
-
-        !
-        ! Check for Grid and Solution contents
-        !
-        prop%contains_grid      = get_contains_grid_hdf(fid)
-        prop%contains_solution  = get_contains_solution_hdf(fid)
-
-
-        !
-        ! Get domain names
-        !
-        prop%domain_names = get_domain_names_hdf(fid)
-
-        
-        !
-        ! Get time_integrator name
-        !
-        prop%time_integrator = get_time_integrator_hdf(fid)
+        ! Check for Grid/Solution, domain names, and time integrator
+        prop%contains_grid     = get_contains_grid_hdf(fid)
+        prop%contains_solution = get_contains_solution_hdf(fid)
+        prop%domain_names      = get_domain_names_hdf(fid)
+        prop%time_integrator   = get_time_integrator_hdf(fid)
 
 
-        !
         ! Get order of coordinate and solution expansions
-        !
         if ( prop%contains_grid ) then
             prop%order_c = get_domain_coordinate_orders_hdf(fid,prop%domain_names)
         end if
@@ -959,51 +940,92 @@ contains
 
 
 
-
-        !
         ! Compute number of terms in the polynomial expansions for each domain
-        !
         do idom = 1,prop%ndomains
-            
-
             nterms_1d = (prop%order_c(idom) + 1)
             prop%nterms_c(idom) = nterms_1d * nterms_1d * nterms_1d
-            !if ( prop%spacedim(idom) == THREE_DIM ) then
-            !    prop%nterms_c(idom) = nterms_1d * nterms_1d * nterms_1d
-            !else if ( prop%spacedim(idom) == TWO_DIM ) then
-            !    prop%nterms_c(idom) = nterms_1d * nterms_1d
-            !end if
 
-
- 
             nterms_1d = (prop%order_s(idom) + 1)
             prop%nterms_s(idom) = nterms_1d * nterms_1d * nterms_1d
-            !if ( prop%spacedim(idom) == THREE_DIM ) then
-            !    prop%nterms_s(idom) = nterms_1d * nterms_1d * nterms_1d
-            !else if ( prop%spacedim(idom) == TWO_DIM ) then
-            !    prop%nterms_s(idom) = nterms_1d * nterms_1d
-            !end if
-
-
         end do ! idom
 
-
-        !
         ! Get equation set for each domain
-        !
         prop%eqnset = get_domain_equation_sets_hdf(fid)
 
-        
 
-        !
         ! Close file
-        !
         call close_file_hdf(fid)
         call close_hdf()
 
     end function get_properties_hdf
     !****************************************************************************************
 
+
+
+
+
+
+
+
+    !>  Return a properties instance containing information about an hdf file
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!
+    !!  @param[in]  filename    Character string containing a filename for a file that gets interrogated
+    !!  @result     prop        file_properties_t instance that gets returned with file information
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_nodes_per_element_hdf(filename) result(nodes_per_element)
+        character(*),   intent(in)  :: filename
+
+        integer(ik), allocatable    :: nodes_per_element(:)
+        integer(HID_T)              :: fid
+        integer(ik)                 :: ierr, idom
+        integer(ik)                 :: nterms_1d
+        logical                     :: fileexists = .false.
+        integer(HSIZE_T)            :: ntime, nfreq
+
+        type(file_properties_t)     :: prop
+
+        ! Check file exists
+        inquire(file=filename, exist=fileexists)
+        if (.not. fileexists) then
+            call chidg_signal(FATAL,'get_properties_hdf: Could not find grid file')
+        end if
+
+        ! Initialize Fortran interface.
+        call open_hdf()
+        fid = open_file_hdf(filename)
+
+        ! Get number of domains
+        prop%ndomains = get_ndomains_hdf(fid)
+        call prop%set_ndomains(prop%ndomains)
+
+        ! Check for Grid and Solution contents
+        prop%contains_grid = get_contains_grid_hdf(fid)
+
+        ! Get domain names
+        prop%domain_names = get_domain_names_hdf(fid)
+        
+        ! Get order of coordinate and solution expansions
+        if ( prop%contains_grid ) then
+            prop%order_c = get_domain_coordinate_orders_hdf(fid,prop%domain_names)
+        end if
+
+        ! Compute number of terms in the polynomial expansions for each domain
+        allocate(nodes_per_element(prop%ndomains))
+        do idom = 1,prop%ndomains
+            nodes_per_element(idom) = (prop%order_c(idom) + 1)*(prop%order_c(idom) + 1)*(prop%order_c(idom) + 1)
+        end do ! idom
+
+        ! Close file
+        call close_file_hdf(fid)
+        call close_hdf()
+
+    end function get_nodes_per_element_hdf
+    !****************************************************************************************
 
 
 
@@ -1503,29 +1525,19 @@ contains
 
         call check_attribute_exists_hdf(fid,"Contains Grid")
 
-
-        !
         ! Get attribute for 'Contains Grid
-        !
         call h5ltget_attribute_string_f(fid, "/", "Contains Grid", contains_grid_attr, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"check_contains_grid_hdf - h5ltget_attribute_int_f")
 
-
-        !
         ! Test grid attribute
-        !
         if (trim(contains_grid_attr) == "True" .or. trim(contains_grid_attr) == "true") then
             grid_status = .true.
         else
             grid_status = .false.
         end if
 
-
-
     end function get_contains_grid_hdf
     !****************************************************************************************
-
-
 
 
 
@@ -1578,24 +1590,16 @@ contains
         
         call check_attribute_exists_hdf(fid,"Contains Solution")
 
-
-
-        !
         ! Get attribute for "Contains Solution"
-        !
         call h5ltget_attribute_string_f(fid, "/", 'Contains Solution', contains_solution_attr, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"check_contains_solution - h5ltget_attribute_string_f")
 
-
-        !
         ! Test solution attribute
-        !
         if (trim(contains_solution_attr) == "True" .or. trim(contains_solution_attr) == "true") then
             solution_status = .true.
         else
             solution_status = .false.
         end if
-
 
 
     end function get_contains_solution_hdf
@@ -1627,9 +1631,7 @@ contains
         integer(ik)         :: ipt, ierr
         logical             :: exists
 
-        !
         ! Create a grid-group within the current block domain
-        !
         exists = check_link_exists_hdf(dom_id,"Grid")
         if (exists) then
             call h5gopen_f(dom_id,"Grid", grid_id,ierr)
@@ -1639,27 +1641,19 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5gcreate_f")
 
 
-
-        !
         ! Re-order coordinates to be linear arrays
-        !
         dims_rank_one = size(nodes,1)
 
 
         exists = check_link_exists_hdf(grid_id,"Coordinate1")
         if (exists) then
-            !
             ! Open 'Coordinate' data sets
-            !
             call h5dopen_f(grid_id, "Coordinate1", xset_id, ierr, H5P_DEFAULT_F)
             call h5dopen_f(grid_id, "Coordinate2", yset_id, ierr, H5P_DEFAULT_F)
             call h5dopen_f(grid_id, "Coordinate3", zset_id, ierr, H5P_DEFAULT_F)
 
         else
-
-            !
             ! Create dataspaces for grid coordinates
-            !
             call h5screate_simple_f(1, dims_rank_one, xspace_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
             call h5screate_simple_f(1, dims_rank_one, yspace_id, ierr)
@@ -1667,10 +1661,7 @@ contains
             call h5screate_simple_f(1, dims_rank_one, zspace_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
 
-
-            !
             ! Create datasets for grid coordinates
-            !
             call h5dcreate_f(grid_id, "Coordinate1", H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
             call h5dcreate_f(grid_id, "Coordinate2", H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
@@ -1678,10 +1669,7 @@ contains
             call h5dcreate_f(grid_id, "Coordinate3", H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
 
-
-            !
             ! Close dataspaces
-            !
             call h5sclose_f(xspace_id,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
             call h5sclose_f(yspace_id,ierr)
@@ -1689,13 +1677,9 @@ contains
             call h5sclose_f(zspace_id,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
 
-
-
         end if
 
-        !
         ! Write coordinates to datasets
-        !
         call h5dwrite_f(xset_id, H5T_NATIVE_DOUBLE, nodes(:,1), dims_rank_one, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dwrite_f")
         call h5dwrite_f(yset_id, H5T_NATIVE_DOUBLE, nodes(:,2), dims_rank_one, ierr)
@@ -1703,10 +1687,7 @@ contains
         call h5dwrite_f(zset_id, H5T_NATIVE_DOUBLE, nodes(:,3), dims_rank_one, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dwrite_f")
 
-
-        !
         ! Close datasets
-        !
         call h5dclose_f(xset_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dclose_f")
         call h5dclose_f(yset_id,ierr)
@@ -1714,10 +1695,7 @@ contains
         call h5dclose_f(zset_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dclose_f")
 
-
-        !
         ! Close Grid group
-        !
         call h5gclose_f(grid_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5gclose_f")
 
@@ -1761,9 +1739,7 @@ contains
         integer(ik)         :: ipt, ierr
         logical             :: exists
 
-        !
         ! Create a grid-group within the current block domain
-        !
         exists = check_link_exists_hdf(dom_id,"Grid")
         if (exists) then
             call h5gopen_f(dom_id,"Grid", grid_id,ierr)
@@ -1774,27 +1750,19 @@ contains
 
 
 
-
-        !
         ! Re-order coordinates to be linear arrays
-        !
         dims_rank_one = size(nodes,1)
 
 
         exists = check_link_exists_hdf(grid_id,"DCoordinate1")
         if (exists) then
-            !
             ! Open 'Coordinate' data sets
-            !
             call h5dopen_f(grid_id, "DCoordinate1", xset_id, ierr, H5P_DEFAULT_F)
             call h5dopen_f(grid_id, "DCoordinate2", yset_id, ierr, H5P_DEFAULT_F)
             call h5dopen_f(grid_id, "DCoordinate3", zset_id, ierr, H5P_DEFAULT_F)
 
         else
-
-            !
             ! Create dataspaces for grid coordinates
-            !
             call h5screate_simple_f(1, dims_rank_one, xspace_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_displacements_hdf: h5screate_simple_f")
             call h5screate_simple_f(1, dims_rank_one, yspace_id, ierr)
@@ -1802,10 +1770,7 @@ contains
             call h5screate_simple_f(1, dims_rank_one, zspace_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_displacements_hdf: h5screate_simple_f")
 
-
-            !
             ! Create datasets for grid coordinates
-            !
             call h5dcreate_f(grid_id, "DCoordinate1", H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_displacements_hdf: h5dcreate_f")
             call h5dcreate_f(grid_id, "DCoordinate2", H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
@@ -1813,10 +1778,7 @@ contains
             call h5dcreate_f(grid_id, "DCoordinate3", H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_displacements_hdf: h5dcreate_f")
 
-
-            !
             ! Close dataspaces
-            !
             call h5sclose_f(xspace_id,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_displacements_hdf: h5sclose_f")
             call h5sclose_f(yspace_id,ierr)
@@ -1824,13 +1786,9 @@ contains
             call h5sclose_f(zspace_id,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_displacements_hdf: h5sclose_f")
 
-
-
         end if
 
-        !
         ! Write coordinates to datasets
-        !
         call h5dwrite_f(xset_id, H5T_NATIVE_DOUBLE, nodes(:,1), dims_rank_one, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_displacements_hdf: h5dwrite_f")
         call h5dwrite_f(yset_id, H5T_NATIVE_DOUBLE, nodes(:,2), dims_rank_one, ierr)
@@ -1838,10 +1796,7 @@ contains
         call h5dwrite_f(zset_id, H5T_NATIVE_DOUBLE, nodes(:,3), dims_rank_one, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_displacements_hdf: h5dwrite_f")
 
-
-        !
         ! Close datasets
-        !
         call h5dclose_f(xset_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinate_displacements_hdf: h5dclose_f")
         call h5dclose_f(yset_id,ierr)
@@ -1849,10 +1804,7 @@ contains
         call h5dclose_f(zset_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinate_displacements_hdf: h5dclose_f")
 
-
-        !
         ! Close Grid group
-        !
         call h5gclose_f(grid_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinate_displacements_hdf: h5gclose_f")
 
@@ -1894,9 +1846,7 @@ contains
         integer(ik)         :: ipt, ierr
         logical             :: exists
 
-        !
         ! Create a grid-group within the current block domain
-        !
         exists = check_link_exists_hdf(dom_id,"Grid")
         if (exists) then
             call h5gopen_f(dom_id,"Grid", grid_id,ierr)
@@ -1906,28 +1856,19 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_velocities_hdf: h5gcreate_f")
 
 
-
-
-        !
         ! Re-order coordinates to be linear arrays
-        !
         dims_rank_one = size(nodes,1)
 
 
         exists = check_link_exists_hdf(grid_id,"VCoordinate1")
         if (exists) then
-            !
             ! Open 'Coordinate' data sets
-            !
             call h5dopen_f(grid_id, "VCoordinate1", xset_id, ierr, H5P_DEFAULT_F)
             call h5dopen_f(grid_id, "VCoordinate2", yset_id, ierr, H5P_DEFAULT_F)
             call h5dopen_f(grid_id, "VCoordinate3", zset_id, ierr, H5P_DEFAULT_F)
 
         else
-
-            !
             ! Create dataspaces for grid coordinates
-            !
             call h5screate_simple_f(1, dims_rank_one, xspace_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_velocities_hdf: h5screate_simple_f")
             call h5screate_simple_f(1, dims_rank_one, yspace_id, ierr)
@@ -1935,10 +1876,7 @@ contains
             call h5screate_simple_f(1, dims_rank_one, zspace_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_velocities_hdf: h5screate_simple_f")
 
-
-            !
             ! Create datasets for grid coordinates
-            !
             call h5dcreate_f(grid_id, "VCoordinate1", H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_velocities_hdf: h5dcreate_f")
             call h5dcreate_f(grid_id, "VCoordinate2", H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
@@ -1946,10 +1884,7 @@ contains
             call h5dcreate_f(grid_id, "VCoordinate3", H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_velocities_hdf: h5dcreate_f")
 
-
-            !
             ! Close dataspaces
-            !
             call h5sclose_f(xspace_id,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_velocities_hdf: h5sclose_f")
             call h5sclose_f(yspace_id,ierr)
@@ -1957,13 +1892,9 @@ contains
             call h5sclose_f(zspace_id,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_velocities_hdf: h5sclose_f")
 
-
-
         end if
 
-        !
         ! Write coordinates to datasets
-        !
         call h5dwrite_f(xset_id, H5T_NATIVE_DOUBLE, nodes(:,1), dims_rank_one, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_velocities_hdf: h5dwrite_f")
         call h5dwrite_f(yset_id, H5T_NATIVE_DOUBLE, nodes(:,2), dims_rank_one, ierr)
@@ -1971,10 +1902,7 @@ contains
         call h5dwrite_f(zset_id, H5T_NATIVE_DOUBLE, nodes(:,3), dims_rank_one, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinate_velocities_hdf: h5dwrite_f")
 
-
-        !
         ! Close datasets
-        !
         call h5dclose_f(xset_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinate_velocities_hdf: h5dclose_f")
         call h5dclose_f(yset_id,ierr)
@@ -1982,10 +1910,7 @@ contains
         call h5dclose_f(zset_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinate_velocities_hdf: h5dclose_f")
 
-
-        !
         ! Close Grid group
-        !
         call h5gclose_f(grid_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinate_velocities_hdf: h5gclose_f")
 
@@ -2027,10 +1952,7 @@ contains
         real(rdouble), dimension(:), allocatable, target    :: pts1, pts2, pts3
         type(c_ptr)                                         :: cp_pts, cp_conn
 
-
-        !
         ! Create a grid-group within the current block domain
-        !
         exists = check_link_exists_hdf(dom_id,"Grid")
         if (exists) then
             call h5gopen_f(dom_id,"Grid", grid_id,ierr)
@@ -2039,29 +1961,20 @@ contains
             call chidg_signal(FATAL,"get_domain_coordinates_hdf: The current domain does not contain a 'Grid'.")
         end if
 
-
-        !
-        !  Open the Coordinate datasets
-        !
+        ! Open the Coordinate datasets
         call h5dopen_f(grid_id, "Coordinate1", did_1, ierr, H5P_DEFAULT_F)
         call h5dopen_f(grid_id, "Coordinate2", did_2, ierr, H5P_DEFAULT_F)
         call h5dopen_f(grid_id, "Coordinate3", did_3, ierr, H5P_DEFAULT_F)
 
-
-        !
-        !  Get the dataspace id and dimensions
-        !
+        ! Get the dataspace id and dimensions
         call h5dget_space_f(did_1, sid, ierr)
         call h5sget_simple_extent_dims_f(sid, rank_one_dims, maxdims, ierr)
         npts = rank_one_dims(1)
 
 
-        !
-        !  Read points 1,2,3
-        !
+        ! Read points 1,2,3
         allocate(pts1(npts), pts2(npts), pts3(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
-
 
         cp_pts = c_loc(pts1(1))
         call h5dread_f(did_1, H5T_NATIVE_DOUBLE, cp_pts, ierr)
@@ -2077,19 +1990,14 @@ contains
 
 
 
-        !
-        !  Accumulate pts into a single points_t matrix to initialize domain
-        !
+        ! Accumulate pts into a single points_t matrix to initialize domain
         allocate(nodes(npts,3), stat=ierr)
         if (ierr /= 0) call AllocationError
-            
-
         do ipt = 1,rank_one_dims(1)
             nodes(ipt,1) = real(pts1(ipt),rk)
             nodes(ipt,2) = real(pts2(ipt),rk)
             nodes(ipt,3) = real(pts3(ipt),rk)
         end do
-
 
         ! Close the Coordinate datasets
         call h5dclose_f(did_1,ierr)
@@ -2143,10 +2051,7 @@ contains
         real(rdouble), dimension(:), allocatable, target    :: pts1, pts2, pts3
         type(c_ptr)                                         :: cp_pts, cp_conn
 
-
-        !
         ! Create a grid-group within the current block domain
-        !
         exists = check_link_exists_hdf(dom_id,"Grid")
         if (exists) then
             call h5gopen_f(dom_id,"Grid", grid_id,ierr)
@@ -2156,28 +2061,21 @@ contains
         end if
 
 
-        !
-        !  Open the Coordinate datasets
-        !
+        ! Open the Coordinate datasets
         call h5dopen_f(grid_id, "DCoordinate1", did_1, ierr, H5P_DEFAULT_F)
         call h5dopen_f(grid_id, "DCoordinate2", did_2, ierr, H5P_DEFAULT_F)
         call h5dopen_f(grid_id, "DCoordinate3", did_3, ierr, H5P_DEFAULT_F)
 
 
-        !
-        !  Get the dataspace id and dimensions
-        !
+        ! Get the dataspace id and dimensions
         call h5dget_space_f(did_1, sid, ierr)
         call h5sget_simple_extent_dims_f(sid, rank_one_dims, maxdims, ierr)
         npts = rank_one_dims(1)
 
 
-        !
-        !  Read points 1,2,3
-        !
+        ! Read points 1,2,3
         allocate(pts1(npts), pts2(npts), pts3(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
-
 
         cp_pts = c_loc(pts1(1))
         call h5dread_f(did_1, H5T_NATIVE_DOUBLE, cp_pts, ierr)
@@ -2193,13 +2091,9 @@ contains
 
 
 
-        !
-        !  Accumulate pts into a single points_t matrix to initialize domain
-        !
+        ! Accumulate pts into a single points_t matrix to initialize domain
         allocate(nodes(npts,3), stat=ierr)
         if (ierr /= 0) call AllocationError
-            
-
         do ipt = 1,rank_one_dims(1)
             nodes(ipt,1) = real(pts1(ipt),rk)
             nodes(ipt,2) = real(pts2(ipt),rk)
@@ -2258,10 +2152,7 @@ contains
         real(rdouble), dimension(:), allocatable, target    :: pts1, pts2, pts3
         type(c_ptr)                                         :: cp_pts, cp_conn
 
-
-        !
         ! Create a grid-group within the current block domain
-        !
         exists = check_link_exists_hdf(dom_id,"Grid")
         if (exists) then
             call h5gopen_f(dom_id,"Grid", grid_id,ierr)
@@ -2271,28 +2162,21 @@ contains
         end if
 
 
-        !
-        !  Open the Coordinate datasets
-        !
+        ! Open the Coordinate datasets
         call h5dopen_f(grid_id, "VCoordinate1", did_1, ierr, H5P_DEFAULT_F)
         call h5dopen_f(grid_id, "VCoordinate2", did_2, ierr, H5P_DEFAULT_F)
         call h5dopen_f(grid_id, "VCoordinate3", did_3, ierr, H5P_DEFAULT_F)
 
 
-        !
-        !  Get the dataspace id and dimensions
-        !
+        ! Get the dataspace id and dimensions
         call h5dget_space_f(did_1, sid, ierr)
         call h5sget_simple_extent_dims_f(sid, rank_one_dims, maxdims, ierr)
         npts = rank_one_dims(1)
 
 
-        !
-        !  Read points 1,2,3
-        !
+        ! Read points 1,2,3
         allocate(pts1(npts), pts2(npts), pts3(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
-
 
         cp_pts = c_loc(pts1(1))
         call h5dread_f(did_1, H5T_NATIVE_DOUBLE, cp_pts, ierr)
@@ -2307,20 +2191,14 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinate_velocities_hdf: h5dread_f")
 
 
-
-        !
-        !  Accumulate pts into a single points_t matrix to initialize domain
-        !
+        ! Accumulate pts into a single points_t matrix to initialize domain
         allocate(nodes(npts,3), stat=ierr)
         if (ierr /= 0) call AllocationError
-            
-
         do ipt = 1,rank_one_dims(1)
             nodes(ipt,1) = real(pts1(ipt),rk)
             nodes(ipt,2) = real(pts2(ipt),rk)
             nodes(ipt,3) = real(pts3(ipt),rk)
         end do
-
 
         ! Close the Coordinate datasets
         call h5dclose_f(did_1,ierr)
@@ -2337,9 +2215,6 @@ contains
 
     end function get_domain_coordinate_velocities_hdf
     !***************************************************************************************
-
-
-
 
 
 
@@ -2368,24 +2243,17 @@ contains
         integer(ik)                 :: ierr
         logical                     :: cartesian, cylindrical
 
-
-
-        !
         ! Check valid input
-        !
         cartesian   = (coord_system == 'Cartesian')
         cylindrical = (coord_system == 'Cylindrical')
-        user_msg = "set_domain_coordinate_system_hdf: Invalid coordinate system. Valid systems are 'Cartesian' or 'Cylindrical'."
+        user_msg = "set_domain_coordinate_system_hdf: Invalid coordinate system. &
+                    Valid systems are 'Cartesian' or 'Cylindrical'."
         if (.not. (cartesian .or. cylindrical)) call chidg_signal_one(FATAL,user_msg,coord_system)
 
-
-        !
         ! Set 'Coordinate System' attribute
-        !
         call h5ltset_attribute_string_f(dom_id,".","Coordinate System",coord_system,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinate_system_hdf: Error setting 'Coordinate System' attribute.")
-
-
+        user_msg = "set_domain_coordinate_system_hdf: Error setting 'Coordinate System' attribute."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
 
     end subroutine set_domain_coordinate_system_hdf
     !***************************************************************************************
@@ -2407,11 +2275,12 @@ contains
         integer(HID_T), intent(in)  :: dom_id
 
         character(1024)             :: coord_system
-        character(:),   allocatable :: coord_system_trim
+        character(:),   allocatable :: coord_system_trim, user_msg
         integer(ik)                 :: ierr
 
         call h5ltget_attribute_string_f(dom_id,".","Coordinate System",coord_system,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinate_system_hdf: Error getting 'Coordinate System' attribute.")
+        user_msg = "get_domain_coordinate_system_hdf: Error getting 'Coordinate System' attribute."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
         
         ! Trim blanks
         coord_system_trim = trim(coord_system)
@@ -2491,26 +2360,19 @@ contains
         integer                     :: ierr, idom, mapping
         integer, dimension(1)       :: buf
 
-
-        !
         ! Allocate storage for orders
-        !
         allocate(orders(size(dnames)), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-        !
-        !  Loop through groups and read domains
-        !
+        ! Loop through groups and read domains
         do idom = 1,size(dnames)
-
-            !  Get coordinate mapping
+            ! Get coordinate mapping
             call h5ltget_attribute_int_f(fid, "D_"//trim(dnames(idom)), "Coordinate Order", buf, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinate_orders_hdf: h5ltget_attribute_int_f")
 
             ! Compute number of terms in coordinate expansion
             mapping = buf(1)
             orders(idom) = int(mapping, kind=ik)
-
         end do
 
     end function get_domain_coordinate_orders_hdf
@@ -2599,142 +2461,23 @@ contains
         integer                             :: ierr, idom
         character(len=1024), allocatable    :: domain_names(:)
 
-
-        !
         ! Get domains
-        !
         domain_names = get_domain_names_hdf(fid)
 
-
-        !
         ! Allocate storage for orders
-        !
         allocate(orders(size(domain_names)), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
-        !
-        !  Loop through groups and read domains
-        !
+        ! Loop through groups and read domains
         do idom = 1,size(domain_names)
-
-            !
             ! Open domain group, get solution order, close domain group
-            !
             did = open_domain_hdf(fid,trim(domain_names(idom)))
-
             orders(idom) = get_domain_field_order_hdf(did)
-
             call close_domain_hdf(did)
-
         end do
 
     end function get_domain_field_orders_hdf
     !****************************************************************************************
-
-
-
-
-
-
-!    !>  
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   4/11/2016
-!    !!
-!    !!  DEPRECATED: Nathan A. Wukie
-!    !!
-!    !---------------------------------------------------------------------------------------
-!    subroutine set_domain_dimensionality_hdf(dom_id,dimensionality)
-!        integer(HID_T), intent(in)  :: dom_id
-!        integer(ik),    intent(in)  :: dimensionality
-!
-!        integer(ik)         :: ierr
-!
-!        !  Get coordinate mapping
-!        call h5ltset_attribute_int_f(dom_id,".","Dimensionality",[dimensionality],SIZE_ONE,ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dimensionality_hdf: h5ltset_attribute_int_f")
-!
-!    end subroutine set_domain_dimensionality_hdf
-!    !****************************************************************************************
-!
-!
-!
-!
-!    !>  
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   4/11/2016
-!    !!
-!    !!  DEPRECATED: Nathan A. Wukie
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    function get_domain_dimensionality_hdf(dom_id) result(dimensionality)
-!        integer(HID_T), intent(in)  :: dom_id
-!
-!        integer(ik) :: dimensionality, ierr
-!        integer, dimension(1)   :: buf
-!
-!        !  Get coordinate mapping
-!        call h5ltget_attribute_int_f(dom_id,".","Dimensionality",buf,ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_dimensionality_hdf: h5ltget_attribute_int_f")
-!
-!        dimensionality = int(buf(1),kind=ik)
-!
-!    end function get_domain_dimensionality_hdf
-!    !****************************************************************************************
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!    !>  Returns an array of integers that specifies the number of spatial dimensions to use 
-!    !!  for every domain.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   4/11/2016
-!    !!
-!    !!  DEPRECATED: Nathan A. Wukie
-!    !!
-!    !!  @param[in]  fid         HDF file identifier.
-!    !!  @param[in]  dnames(:)   List of domain names to be interrogated. 
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    function get_domain_dimensionalities_hdf(fid, dnames) result(dimensionalities)
-!        integer(HID_T),         intent(in)  :: fid
-!        character(len=1024),    intent(in)  :: dnames(:)
-!
-!        integer(ik), allocatable    :: dimensionalities(:)
-!        integer(ik)                 :: ierr, idom
-!        integer, dimension(1)       :: dimensionality
-!
-!
-!        !
-!        ! Allocate storage for orders
-!        !
-!        allocate(dimensionalities(size(dnames)), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!        !
-!        !  Loop through groups and read domains
-!        !
-!        do idom = 1,size(dnames)
-!
-!            call h5ltget_attribute_int_f(fid, "D_"//trim(dnames(idom)), "Dimensionality", dimensionality, ierr)
-!            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_dimensionalities_hdf: Error h5ltget_attribute_int_f")
-!
-!            dimensionalities(idom) = dimensionality(1)
-!
-!        end do
-!
-!    end function get_domain_dimensionalities_hdf
-!    !****************************************************************************************
-
 
 
 
@@ -2808,66 +2551,39 @@ contains
         character(len=1024), allocatable    :: eqnsets(:)
         integer                             :: ierr, idom
 
-
-        !
         ! Get domain names
-        !
         dnames = get_domain_names_hdf(fid)
 
-
-        !
         ! Allocate storage for eqnsets
-        !
         allocate(eqnsets(size(dnames)), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-        !
-        !  Loop through groups and read domains
-        !
+        ! Loop through groups and read domains
         do idom = 1,size(dnames)
-            !
             ! Open domain
-            !
             call h5gopen_f(fid, "D_"//trim(dnames(idom)), did, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_domain_equation_sets_hdf: error opening domain group.")
 
-
-            !
             ! Check eqnset attribute exists.
-            !
             call h5aexists_f(did, "Equation Set", eqnset_exists, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_domain_equation_sets_hdf: error checking if 'Equation Set' exists.")
 
-
-            !
             ! If eqnset doesn't exists, create attribute and set to 'empty'
-            !
             if ( .not. eqnset_exists ) then
                 call h5ltset_attribute_string_f(did, ".", "Equation Set", 'empty', ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,"get_domain_equation_sets_hdf: error setting empty 'Equation Set' attribute.")
             end if
 
-
-            !
-            !  Get eqnset string from hdf attribute.
-            !
+            ! Get eqnset string from hdf attribute.
             call h5ltget_attribute_string_f(did, ".", "Equation Set", eqnsets(idom), ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_domain_equation_sets_hdf - h5ltget_attribute_int_f.")
 
-
             call h5gclose_f(did,ierr)
-
         end do
 
     end function get_domain_equation_sets_hdf
     !****************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -2894,16 +2610,11 @@ contains
         integer(HSIZE_T)    :: dims_rank_two(2)
         logical             :: exists
 
-        !
         ! Size element connectivities
-        !
         dims_rank_two(1) = size(elements,1)
         dims_rank_two(2) = size(elements,2)
 
-
-        !
         ! Create a grid-group within the current block domain
-        !
         exists = check_link_exists_hdf(dom_id,"Grid")
         if (exists) then
             call h5gopen_f(dom_id, "Grid", grid_id, ierr)
@@ -2913,17 +2624,13 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5gcreate_f/h5gopen_f")
 
 
-        !
         ! Create dataset for element connectivity: element_set_id
-        !
         exists = check_link_exists_hdf(grid_id,"Elements")
         if (exists) then
             call h5dopen_f(grid_id,"Elements", element_set_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5dopen_f")
 
-            !
             ! Write element connectivities
-            !
             call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, elements, dims_rank_two, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5dwrite_f")
 
@@ -2935,10 +2642,7 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5dcreate_f")
 
 
-
-            !
             ! Write element connectivities
-            !
             call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, elements, dims_rank_two, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5dwrite_f")
 
@@ -2947,16 +2651,11 @@ contains
 
         end if
 
-
-        !
         ! Close dataset, dataspace, Grid group
-        !
         call h5dclose_f(element_set_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5dclose_f")
         call h5gclose_f(grid_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5gclose_f")
-
-
 
     end subroutine set_domain_connectivity_hdf
     !****************************************************************************************
@@ -2997,22 +2696,15 @@ contains
         integer(ik),  allocatable, target :: var(:,:)
         type(c_ptr)                       :: cp_var
 
-
-        !
         ! Get number of nodes in element connectivity
-        !
         connectivity_size = size(elements,2)
 
-        !
         ! Size element connectivities
-        !
         dims_rank_two(1) = nelements_g
         dims_rank_two(2) = connectivity_size
 
 
-        !
         ! Create a grid-group within the current block domain
-        !
         exists = check_link_exists_hdf(dom_id,"Grid")
         if (exists) then
             call h5gopen_f(dom_id, "Grid", grid_id, ierr)
@@ -3022,9 +2714,7 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5gcreate_f/h5gopen_f")
 
 
-        !
         ! Open/Create dataset for element connectivity: element_set_id
-        !
         exists = check_link_exists_hdf(grid_id,"Elements")
         if (exists) then
             call h5dopen_f(grid_id,"Elements", element_set_id, ierr, H5P_DEFAULT_F)
@@ -3043,45 +2733,34 @@ contains
         end if
 
 
-        !
         ! Get data space
-        !
         call h5dget_space_f(element_set_id, element_space_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL, "set_domain_connectivity_partition_hdf: h5dget_space_f.")
 
 
-
-        !
         ! Allocate buffer
-        !
         allocate(var(1,connectivity_size), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-        !
+
         ! Write element connectivities:
         !   - one at a time taking ielement_g from the connectivity since they might 
         !     not be in order after partitioning
         !
         do ielem = 1,size(elements,1)
 
-
-            !
             ! get domain-global element index
-            !
             ielement_g = elements(ielem,2)
             start = [ielement_g-1,1-1]   ! 0-based
             count = [1, connectivity_size]
 
 
-            !
             ! Select subset of dataspace - sid
-            !
             call h5sselect_hyperslab_f(element_space_id, H5S_SELECT_SET_F, start, count, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'set_domain_connectivity_partition_hdf: h5sselect_hyperslab_f')
 
-            !
+
             ! Create a memory dataspace
-            !
             ndims = 2
             dimsm(1) = 1
             dimsm(2) = connectivity_size
@@ -3089,26 +2768,18 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL,'set_domain_connectivity_partition_hdf: h5screate_simple_f')
 
 
-            !
             ! Write modes
-            !
             var(1,:) = elements(ielem,:)
             cp_var = c_loc(var(1,1))
             call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, cp_var, ierr, memspace, element_space_id)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5dwrite_f")
 
-
             call h5sclose_f(memspace,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5sclose_f")
 
-
-
         end do
 
-
-        !
         ! Close dataset, dataspace, Grid group
-        !
         call h5dclose_f(element_set_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5dclose_f")
         call h5sclose_f(element_space_id,ierr)
@@ -3116,17 +2787,8 @@ contains
         call h5gclose_f(grid_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5gclose_f")
 
-
-
     end subroutine set_domain_connectivity_partition_hdf
     !****************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -3161,9 +2823,7 @@ contains
         type(c_ptr)                         :: cp_conn
 
 
-        !
         ! Open 'Grid' group for the current domain
-        !
         exists = check_link_exists_hdf(dom_id,'Grid')
         if (exists) then
             call h5gopen_f(dom_id, 'Grid', grid_id, ierr)
@@ -3173,17 +2833,13 @@ contains
         end if
 
 
-        !
         ! Open Elements connectivity dataset
-        !
         call h5dopen_f(grid_id, 'Elements', did_e, ierr, H5P_DEFAULT_F)
         user_msg = "get_domain_connectivity_hdf: h5dopen_f did not open 'Elements' dataset propertly."
         if (ierr /= 0) call chidg_signal(FATAL,user_msg)
 
 
-        !
-        !  Get the dataspace id and dimensions. (nelem, connectivity size)
-        !
+        ! Get the dataspace id and dimensions. (nelem, connectivity size)
         call h5dget_space_f(did_e, sid, ierr)
         user_msg = "get_domain_connectivity_hdf: h5dget_space_f did not return 'Elements' dataspace propertly."
         if (ierr /= 0) call chidg_signal(FATAL,user_msg)
@@ -3192,10 +2848,7 @@ contains
         user_msg = "get_domain_connectivity_hdf: h5sget_simple_extent_dims_f did not return extent propertly."
         if (ierr == -1) call chidg_signal(FATAL,user_msg)
 
-
-        !
         ! Allocate/Read connectivity
-        ! 
         allocate(connectivity(rank_two_dims(1),rank_two_dims(2)), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -3204,7 +2857,6 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"get_domain_connectivity_hdf5: h5dread_f")
 
 
-        !
         ! Convert to ChiDG integer type
         !
         !   Explicit allocation to handle GCC bug:
@@ -3214,14 +2866,10 @@ contains
         if (ierr /= 0) call AllocationError
         connectivity_ik = int(connectivity, ik)
 
-
-        !
         ! Close identifiers
-        !
         call h5dclose_f(did_e,  ierr)
         call h5sclose_f(sid,    ierr)
         call h5gclose_f(grid_id,ierr)
-
 
     end function get_domain_connectivity_hdf
     !****************************************************************************************
@@ -3322,10 +2970,7 @@ contains
         logical                     :: grid_exists
         integer(ik)                 :: ierr, nnodes
 
-
-        !
         ! Check file has a node set 
-        !
         grid_exists = check_link_exists_hdf(domain_id,'Grid/Coordinate1')
         user_msg = "get_domain_nelements_hdf: Trying to determine the number of elements in a &
                     domain without a 'Grid/Elements' group. This file probably doesn't contain &
@@ -3333,25 +2978,19 @@ contains
         if (.not. grid_exists) call chidg_signal(FATAL,user_msg)
 
 
-        !
         ! Open the Grid group
-        !
         call h5gopen_f(domain_id, 'Grid', grid_id, ierr, H5P_DEFAULT_F)
         user_msg = "get_domain_nnodes_hdf: Domain/Grid group did not open properly."
         if (ierr /= 0) call chidg_signal(FATAL,user_msg)
 
 
-        !
         ! Get number of nodes in the domain
-        !
         call h5dopen_f(grid_id, 'Coordinate1', did, ierr, H5P_DEFAULT_F)
         user_msg = "get_domain_nnodes_hdf: Domain/Grid/Coordinate1 group did not open properly."
         if (ierr /= 0) call chidg_signal(FATAL,user_msg)
 
 
-        !
-        !  Get the dataspace id and dimensions
-        !
+        ! Get the dataspace id and dimensions
         call h5dget_space_f(did, sid, ierr)
         user_msg = "get_domain_nnodes_hdf: h5dget_space_f did not return 'Coordinate1' dataspace properly."
         if (ierr /= 0) call chidg_signal(FATAL,user_msg)
@@ -3360,16 +2999,11 @@ contains
         user_msg = "get_domain_nnodes_hdf: h5sget_simple_extent_dims_f did not return extent propertly."
         if (ierr == -1) call chidg_signal(FATAL,user_msg)
 
-        
-        !
+
         ! Get node count from size of coordinate dataset in file
-        !
         nnodes = int(rank_one_dims(1), ik)
 
-
-        !
         ! Close identifiers
-        !
         call h5sclose_f(sid,ierr)
         call h5dclose_f(did,ierr)
         call h5gclose_f(grid_id,ierr)
@@ -3377,12 +3011,6 @@ contains
 
     end function get_domain_nnodes_hdf
     !***************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -3462,13 +3090,9 @@ contains
         integer(HID_T)              :: patch_id
         integer(ik)                 :: ierr
 
-
-        !
         ! Create empty group for boundary condition
-        !
         call h5gcreate_f(dom_id,"Patches/"//"P_"//patch_name,patch_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"create_patch_hdf: h5gcreate_f")
-        
 
     end function create_patch_hdf
     !*****************************************************************************************
@@ -3488,7 +3112,6 @@ contains
         integer(ik)     :: nmembers, ierr, igrp, type, npatches
         character(1024) :: gname
 
-
         !  Get number of groups linked to the current bc_face
         call h5gn_members_f(dom_id, "Patches", nmembers, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"get_npatches_hdf: error h5gn_members_f")
@@ -3502,7 +3125,7 @@ contains
 
                 ! Test if group is a patch: 'P_'
                 if (gname(1:2) == 'P_') npatches = npatches + 1
-            end do  ! igrp
+            end do
         end if
         
 
@@ -3661,10 +3284,8 @@ contains
             
         exists = check_link_exists_hdf(patch_id,"Faces")
 
-        !
         ! : already exists, just open data set.
         ! : doesn't exists, create data set
-        !
         if (exists) then
             call h5dopen_f(patch_id,"Faces",patch_set_id, ierr, H5P_DEFAULT_F)
 
@@ -3681,17 +3302,11 @@ contains
 
         end if
 
-
-        !
         ! Write patch connectivity
-        !
         call h5dwrite_f(patch_set_id, H5T_NATIVE_INTEGER, patch, dims, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_patch_hdf: h5dwrite_f")
 
-
-        !
         ! Close groups
-        !
         call h5dclose_f(patch_set_id, ierr)
 
         ! If dataset didn't already exists, then a dataspace was created and needs closed also.
@@ -3774,7 +3389,6 @@ contains
         call h5ltset_attribute_string_f(patch_id, ".", "Boundary State Group", trim(group), ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_patch_group_hdf: error setting the attribute 'Boundary State Group'")
 
-
     end subroutine set_patch_group_hdf
     !***************************************************************************************
 
@@ -3802,7 +3416,6 @@ contains
         character(:),   allocatable :: group_trim
         integer(ik)                 :: ierr
         integer(ik)                 :: exists
-
 
         call check_attribute_exists_hdf(patch_id,"Boundary State Group","Soft Fail",exists)
 
@@ -3857,9 +3470,7 @@ contains
         if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(group_name))
 
 
-        !
         ! Create a new group for the bc_state_t
-        !
         call h5gcreate_f(fid, "BCSG_"//trim(group_name), bcgroup_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'create_bc_state_group_hdf: error creating new group for bc_state.')
 
@@ -3879,14 +3490,10 @@ contains
 
 
 
-
-
     !>
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/8/2016
-    !!
-    !!
     !!
     !-----------------------------------------------------------------------------------------
     function get_bc_state_group_family_hdf(bcgroup_id) result(family_trimmed)
@@ -3909,13 +3516,10 @@ contains
 
 
 
-
     !>
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/8/2016
-    !!
-    !!
     !!
     !-----------------------------------------------------------------------------------------
     subroutine set_bc_state_group_family_hdf(bcgroup_id,group_family)
@@ -3924,17 +3528,11 @@ contains
 
         integer(ik)                 :: ierr
 
-
         call h5ltset_attribute_string_f(bcgroup_id, ".", "Family", trim(adjustl(group_family)), ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_bc_state_group_family_hdf: h5ltget_attribute_int_f")
-        
 
     end subroutine set_bc_state_group_family_hdf
     !*****************************************************************************************
-
-
-
-
 
 
 
@@ -3955,9 +3553,7 @@ contains
         integer(ik)     :: ngroups
         type(svector_t) :: bc_state_group_names
 
-
         bc_state_group_names = get_bc_state_group_names_hdf(fid)
-
         ngroups = bc_state_group_names%size()
 
     end function get_nbc_state_groups_hdf
@@ -3970,7 +3566,6 @@ contains
     
     !>  Return a vector of the names for each boundary condition state group.
     !!
-    !!
     !!  @author Nathan A. Wukie
     !!  @date   11/8/2016
     !!
@@ -3981,7 +3576,6 @@ contains
         integer(ik)     :: nmembers, ierr, igrp, type
         character(1024) :: gname
         type(svector_t) :: bc_state_group_names
-
 
         !  Get number of groups linked to the current bc_face
         call h5gn_members_f(fid, ".", nmembers, ierr)
@@ -4024,8 +3618,6 @@ contains
         type(svector_t) :: bc_state_group_names
         type(string_t)  :: group_name
 
-
-        !
         ! Copy BCSG configuration
         !   - copy entire BCSG groups from file_a to file_b
         !
@@ -4214,18 +3806,14 @@ contains
 
         if ( (bc_state%get_name() == 'empty') .or. &
              (bc_state%get_name() == 'Empty') ) then
-            !
             ! If 'empty' do not allocate new bc
-            !
             
         else
 
             ! Check to make sure the bc_state wasn't previously added
             link_exists = check_link_exists_hdf(bcgroup_id,"BCS_"//bc_state%get_name())
 
-
             if (.not. link_exists) then
-
                 ! Check bc_state exists in the register. 
                 ! If not, user probably entered the wrong string, so do nothing
                 state_found = check_bc_state_registered(bc_state%get_name())
@@ -4245,36 +3833,7 @@ contains
                     ! Close function group
                     call h5gclose_f(state_id,ierr)
 
-
-                    !! Get bcgroup family
-                    !current_family = get_bc_state_group_family_hdf(bcgroup_id)
-
-                    !!
-                    !! Check if new bc_state is of same family
-                    !!
-                    !if ( (trim(current_family) == 'none') .or. &
-                    !     (trim(current_family) == trim(bc_state%get_family())) ) then
-
-                    !    ! Set group 'Family'
-                    !    call set_bc_state_group_family_hdf(bcgroup_id, bc_state%get_family())
-
-                    !    ! Create a new group for the bc_state_t
-                    !    call h5gcreate_f(bcgroup_id, "BCS_"//bc_state%get_name(), state_id, ierr)
-                    !    if (ierr /= 0) call chidg_signal(FATAL,"add_bc_state_hdf: error creating new group for bc_state")
-
-                    !    ! Add bc_state properties to the group that was created
-                    !    call add_bc_properties_hdf(state_id,bc_state)
-
-                    !    ! Close function group
-                    !    call h5gclose_f(state_id,ierr)
-
-                    !else
-                    !    user_msg = "add_bc_state_hdf: Boundary condition state functions in a group &
-                    !                must be of the same family"
-                    !    call chidg_signal_one(FATAL,user_msg,bc_state%get_family())
-                    !end if
                 end if
-
             end if
 
         end if
@@ -4288,16 +3847,10 @@ contains
 
 
 
-
-
-
-
-
     !>  Return the number of bc_state's attached to a boundary condition face group.
     !!
     !!  @author Nathan A. Wukie 
     !!  @date   10/17/2016
-    !!
     !!
     !----------------------------------------------------------------------------------------
     function get_nbc_states_hdf(bcgroup_id) result(nbc_states)
@@ -4315,16 +3868,12 @@ contains
 
 
 
-
-
-
     
 
     !>  Return the names of bc_state's attached to a boundary condition state group.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   10/17/2016
-    !!
     !!
     !---------------------------------------------------------------------------------------
     function get_bc_state_names_hdf(bcgroup_id) result(bc_state_names)
@@ -4470,9 +4019,6 @@ contains
 
 
 
-
-
-
     !>  Add properties to a bc_state on a boundary for a particular domain.
     !!
     !!  /D_domainname/Patches/"face"/BCS_bc_state/BCP_bc_property
@@ -4499,15 +4045,11 @@ contains
         real(rk)                        :: option_value
 
 
-        !
         ! Get number of functions in the boundary condition
-        !
         nprop = bc_state%get_nproperties()
 
 
-        !
         ! Loop through and add properties
-        !
         do iprop = 1,nprop
 
             ! Get string the property is associated with
@@ -4520,15 +4062,10 @@ contains
             ! Set property function attribute
             call set_bc_property_function_hdf(prop_id, bc_state%bcproperties%bcprop(iprop)%fcn)
 
-
-            !
             ! Get number of options available for the current property
-            !
             nopt = bc_state%get_noptions(iprop)
-
             if (nopt > 0 ) then
                 do iopt = 1,nopt
-
                     ! Get the current option and default value.
                     option_key   = bc_state%get_option_key(iprop,iopt)
                     option_value = bc_state%get_option_value(iprop,option_key)
@@ -4536,10 +4073,8 @@ contains
                     ! Set the option as a real attribute
                     adim = 1
                     call h5ltset_attribute_double_f(prop_id, ".", option_key, [real(option_value,rdouble)], adim, ierr)
-
                 end do
             end if
-
 
             ! Close function group
             call h5gclose_f(prop_id,ierr)
@@ -4577,47 +4112,27 @@ contains
         integer(ik)                     :: nopt, iopt
         integer                         :: ierr
         
-
-        !
         ! Delete bcproperty attributes
-        !
         call delete_group_attributes_hdf(bcprop_id)
 
-
-        !
         ! Set 'Function' attribute
-        !
         call h5ltset_attribute_string_f(bcprop_id, ".", "Function", trim(fcn%get_name()), ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_bc_property_function_hdf: error setting function name")
 
-
-        !
         ! Set function options
-        !
         nopt = fcn%get_noptions()
-
         do iopt = 1,nopt
-
             option = fcn%get_option_key(iopt)
             val    = fcn%get_option_value(option)
-            !
+
             ! Set option
-            !
             adim = 1
             call h5ltset_attribute_double_f(bcprop_id, ".", trim(option), [real(val,rdouble)], adim, ierr)
 
         end do ! iopt
 
-
     end subroutine set_bc_property_function_hdf
     !***********************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -4651,27 +4166,20 @@ contains
         type(h5o_info_t), target                :: h5_info
 
 
-
         ! Open the bc_state group
         call h5gopen_f(bcgroup_id, "BCS_"//trim(state_string), bc_state, ierr)
 
-
         ! Delete overall boundary condition face attributes
         call delete_group_attributes_hdf(bc_state)
-
 
         !  Get number of groups linked to the current bc_state
         call h5gn_members_f(bc_state, ".", nmembers, ierr)
 
 
-        !
-        !  Loop through groups and delete properties
-        !
+        ! Loop through groups and delete properties
         if ( nmembers > 0 ) then
 
-            !
             ! First get number of states. This could be different than number of groups.
-            !
             nprop = 0
             do igrp = 0,nmembers-1
 
@@ -4687,9 +4195,7 @@ contains
             end do  ! igrp
 
 
-            !
             ! Second, get all state names
-            !
             allocate(pnames(nprop), stat=ierr)
             if (ierr /= 0) call AllocationError
             iprop = 1
@@ -4708,13 +4214,10 @@ contains
             end do ! igrp
 
 
-
-            !
             ! Now, go about deleting them all.
             ! Previously, we were deleting them one at a time, but then the index
             ! traversal call get_obj_info_idx was failing for more than one property
             ! because the index was screwed up.
-            !
             do iprop = 1,nprop
                 call remove_bc_property_hdf(bc_state,pnames(iprop))
             end do
@@ -4722,35 +4225,20 @@ contains
 
         end if ! nmembers
 
-
-        !
         ! Close the bc_state group
-        !
         call h5gclose_f(bc_state,ierr)
 
-        !
         ! Unlink the bc_state group
-        !
         call h5gunlink_f(bcgroup_id,"BCS_"//trim(state_string),ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_state_hdf: error unlinking bc_state group")
 
-
-
-        !
         ! If no bc_state's are left attached, clear group family.
-        !
         if (get_nbc_states_hdf(bcgroup_id) == 0) then
             call set_bc_state_group_family_hdf(bcgroup_id,'none')
         end if
 
-
-
     end subroutine remove_bc_state_hdf
     !****************************************************************************************************
-
-
-
-
 
 
 
@@ -4776,38 +4264,23 @@ contains
         integer(HID_T)  :: bcprop
         integer(ik)     :: ierr
 
-        !
         ! Open bcproperty group
-        !
         call h5gopen_f(bc_state, trim(adjustl(pname)), bcprop, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_property_hdf: error opening bcproperty group")
 
-
-        !
         ! Delete bcproperty attributes
-        !
         call delete_group_attributes_hdf(bcprop)
 
-
-        !
         ! Close bcproperty group
-        !
         call h5gclose_f(bcprop, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_property_hdf: error closing bcproperty group")
 
-
-        !
         ! Now that the data in bcproperty has been removed, unlink the bcproperty group.
-        !
         call h5gunlink_f(bc_state,trim(pname),ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"delete_bcfunction_hdf: error unlinking bcproperty group")
 
-
     end subroutine remove_bc_property_hdf
     !******************************************************************************************************
-
-
-
 
 
 
@@ -4819,8 +4292,6 @@ contains
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/15/2016
-    !!
-    !!
     !!
     !--------------------------------------------------------------------------------------------
     function check_bc_state_exists_hdf(bcface_id,bc_state) result(exist_status)
@@ -4834,11 +4305,8 @@ contains
         call h5lexists_f(bcface_id, "BCS_"//trim(bc_state), exist_status, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"check_bc_state_exists: Error in call to h5lexists_f")
 
-
     end function check_bc_state_exists_hdf
     !*********************************************************************************************
-
-
 
 
 
@@ -4855,7 +4323,6 @@ contains
     !!  @date   9/1/2016
     !!  @note   Modified to include bc_states
     !!
-    !!
     !-------------------------------------------------------------------------------------------
     function check_bc_property_exists_hdf(bcface_id,pname) result(exist_status)
         integer(HID_T),     intent(in)  :: bcface_id
@@ -4868,10 +4335,7 @@ contains
         type(svector_t)         :: bc_state_strings
         type(string_t)          :: string
 
-        
-        !
-        !  Loop through groups and detect bc_state's that could contain property
-        !
+        ! Loop through groups and detect bc_state's that could contain property
         call h5gn_members_f(bcface_id, ".", nmembers, ierr)
         if ( nmembers > 0 ) then
 
@@ -4891,10 +4355,7 @@ contains
         end if
 
 
-
-        !
         ! Find the state with the property
-        !
         exist_status = .false.
         do iop = 1,bc_state_strings%size()
 
@@ -4904,8 +4365,6 @@ contains
 
             ! Check if it contains a link to the property group
             call h5lexists_f(bc_state, "BCP_"//trim(pname), exist_status, ierr)
-
-
 
             if (exist_status) then
                 ! Close state
@@ -4919,13 +4378,8 @@ contains
         end do !iop
 
 
-
     end function check_bc_property_exists_hdf
     !********************************************************************************************
-
-
-
-
 
 
 
@@ -4953,8 +4407,6 @@ contains
 
     end subroutine set_time_integrator_hdf
     !****************************************************************************************
-
-
 
 
 
@@ -5028,10 +4480,8 @@ contains
         if (ntime == 0) call chidg_signal(FATAL,"set_times_hdf: ntimes == 0.")
 
 
-        !
         ! Modify dataset creation properties, i.e. enable chunking in order to append
         ! dataspace, if needed.
-        !
         dimsc = [1]  ! Chunk size
 
         call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
@@ -5042,11 +4492,8 @@ contains
 
 
 
-
-        !
         ! : Open 'Times'
         ! : If 'Times' doesn't exist, create new 'Times' data set
-        !
         exists = check_link_exists_hdf(fid,'Times')
         if (exists) then
             call h5dopen_f(fid,"Times",time_id, ierr, H5P_DEFAULT_F)
@@ -5059,7 +4506,6 @@ contains
             ! Update existing dataspace ID since it may have been expanded
             call h5dget_space_f(time_id, space_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL, "set_times_hdf: h5dget_space_f.")
-
 
 
         else
@@ -5279,15 +4725,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
     !>  Given a file identifier, set time step in a hdf5 file
     !!  Used in type_time_integrator_marching
     !!
@@ -5310,10 +4747,6 @@ contains
 
     end subroutine set_time_step_hdf
     !****************************************************************************************
-
-
-
-
 
 
 
@@ -5349,12 +4782,6 @@ contains
 
 
 
-
-
-
-
-
-
     !>  Given a file identifier, set number of time steps in a hdf5 file
     !!  Used in type_time_integrator_marching
     !!
@@ -5377,9 +4804,6 @@ contains
 
     end subroutine set_nsteps_hdf
     !****************************************************************************************
-
-
-
 
 
 
@@ -5411,11 +4835,6 @@ contains
 
     end function get_nsteps_hdf
     !***************************************************************************************
-
-
-
-
-
 
 
 
@@ -5484,144 +4903,6 @@ contains
 
 
 
-
-
-
-
-
-!    !>  Given a file identifier, set frequency data in a hdf5 file
-!    !!  Used in type_time_integrator_spectral
-!    !!
-!    !!  @author Mayank Sharma
-!    !!  @date   4/12/2017
-!    !!
-!    !!  @param[in]  fid     HDF file identifier
-!    !!  @param[in]  freq    Frequency data
-!    !!  @param[in]  nfreq   Number of frequencies
-!    !1
-!    !----------------------------------------------------------------------------------------
-!    subroutine set_frequencies_hdf(fid,freq,nfreq)
-!        integer(HID_T),     intent(in)  :: fid
-!        real(rk),           intent(in)  :: freq(:)
-!        integer(HSIZE_T),   intent(in)  :: nfreq
-!
-!        integer(ik)         :: ierr
-!
-!        call h5ltset_attribute_double_f(fid, "/", "Frequencies", freq, nfreq, ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"set_frequencies_hdf: Error h5ltget_attribute_double_f")
-!
-!
-!    end subroutine set_frequencies_hdf
-!    !****************************************************************************************
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!    !>  Given a file identifier, return frequency data from a hdf5 file
-!    !!  Used in type_time_integrator_spectral
-!    !!
-!    !!  @author Mayank Sharma
-!    !!  @date   4/12/2017
-!    !!
-!    !!  @param[in]  fid     HDF file identifier
-!    !!  @param[in]  nfreq   Number of frequencies
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    function get_frequencies_hdf(fid,nfreq) result(freq)
-!        integer(HID_T),     intent(in)  :: fid
-!        integer(HSIZE_T),   intent(in)  :: nfreq
-!        
-!        integer                 :: ierr
-!        real(rk)                :: freq(nfreq)
-!
-!        call h5ltget_attribute_double_f(fid, "/", "Frequencies", freq, ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"get_frequencies_hdf: h5ltget_attribute_double_f had a &
-!                                        problem getting frequencies")
-!
-!
-!    end function get_frequencies_hdf
-!    !***************************************************************************************
-
-
-
-
-
-
-!    !>  Given a file identifier, set time level data in a hdf5 file
-!    !!  Used in type_time_integrator_spectral
-!    !!
-!    !!  @author Mayank Sharma
-!    !!  @date   4/12/2017
-!    !!
-!    !!  @param[in]  fid         HDF file identifier
-!    !!  @param[in]  time_lev    Time level data
-!    !!  @param[in]  ntime       Number of time levels
-!    !1
-!    !----------------------------------------------------------------------------------------
-!    subroutine set_time_levels_hdf(fid,time_lev,ntime)
-!        integer(HID_T),     intent(in)  :: fid
-!        real(rk),           intent(in)  :: time_lev(:)
-!        integer(HSIZE_T),   intent(in)  :: ntime
-!
-!        integer(ik)         :: ierr
-!
-!        call h5ltset_attribute_double_f(fid, "/", "Times", time_lev, ntime, ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"set_time_levels_hdf: Error h5ltget_attribute_double_f")
-!
-!
-!    end subroutine set_time_levels_hdf
-!    !****************************************************************************************
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!    !>  Given a file identifier, return time level data from a hdf5 file
-!    !!  Used in type_time_integrator_spectral
-!    !!
-!    !!  @author Mayank Sharma
-!    !!  @date   4/12/2017
-!    !!
-!    !!  @param[in]  fid     HDF file identifier
-!    !!  @param[in]  ntime   Number of time levels
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    function get_time_levels_hdf(fid,ntime) result(time_lev)
-!        integer(HID_T),     intent(in)  :: fid
-!        integer(HSIZE_T),   intent(in)  :: ntime
-!        
-!        integer                 :: ierr
-!        real(rk)                :: time_lev(ntime)
-!
-!        call h5ltget_attribute_double_f(fid, "/", "Times", time_lev, ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"get_time_levels_hdf: h5ltget_attribute_double_f had a &
-!                                        problem getting time levels")
-!
-!
-!    end function get_time_levels_hdf
-!    !***************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
     !>  Create an equation group on the ChiDG HDF file root.
     !!
     !!  If group already exists, no need to do anything, exit routine.
@@ -5642,22 +4923,15 @@ contains
         integer(ik)                 :: ierr
         logical                     :: group_exists
 
-        !
         ! Check if bc_state group exists
-        !
         group_exists = check_link_exists_hdf(fid,"EQN_"//trim(group_name))
 
-
-        !
         ! Create a new group for the equation set
         !   - if already exists, do nothing.
-        !
         if (.not. group_exists) then
-
             call h5gcreate_f(fid, "EQN_"//trim(group_name), eqn_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'create_eqn_group_hdf: error creating new group for equation set.')
             call h5gclose_f(eqn_id,ierr)
-
         end if
 
     end subroutine create_eqn_group_hdf
@@ -5686,18 +4960,14 @@ contains
 
         group_exists = check_eqn_group_exists_hdf(fid,trim(group_name))
 
+        ! Unlink the bc_state group if it exists
         if (group_exists) then
-
-            ! Unlink the bc_state group
             call h5gunlink_f(fid,"EQN_"//trim(group_name),ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"remove_eqn_group_hdf: error unlinking eqn group")
-
         end if
 
     end subroutine remove_eqn_group_hdf
     !***********************************************************************************************
-
-
 
 
 
@@ -5710,7 +4980,6 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   4/5/2017
     !!
-    !!
     !----------------------------------------------------------------------------------------
     function get_eqn_group_names_hdf(fid) result(eqn_group_names)
         integer(HID_T), intent(in)  :: fid
@@ -5719,17 +4988,11 @@ contains
         character(1024) :: gname
         type(svector_t) :: eqn_group_names
 
-
-        !
-        !  Get number of groups linked to the file root:
-        !
+        ! Get number of groups linked to the file root:
         call h5gn_members_f(fid, ".", nmembers, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"get_eqn_group_names_hdf: error h5gn_members_f")
 
-
-        !
         ! Loop through groups and detect "EQN_" groups:
-        !
         if ( nmembers > 0 ) then
             do igrp = 0,nmembers-1
                 ! Get group name
@@ -5740,18 +5003,11 @@ contains
                 if (gname(1:4) == 'EQN_') then
                     call eqn_group_names%push_back(string_t(trim(gname(5:))))
                 end if
-            end do  ! igrp
+            end do
         end if
-
 
     end function get_eqn_group_names_hdf
     !***************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -5778,11 +5034,8 @@ contains
         call h5lexists_f(fid, "EQN_"//trim(group_name), exist_status, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"check_eqn_group_exists_hdf: Error in call to h5lexists_f")
 
-
     end function check_eqn_group_exists_hdf
     !***************************************************************************************
-
-
 
 
 
@@ -5811,15 +5064,10 @@ contains
         ! Get equation groups
         eqn_groups = get_eqn_group_names_hdf(fid)
         
-        !
         ! Loop through equation groups in the file, if they 
-        !
         do igroup = 1,eqn_groups%size()
-            
-
             ! Get group name
             group_string = eqn_groups%at(igroup)
-
 
             ! Check if any domain is associated with the group
             has_domain = .false.
@@ -5828,13 +5076,9 @@ contains
                 if (has_domain) exit
             end do
 
-
             ! If group not associated with any domain, remove
             if (.not. has_domain) call remove_eqn_group_hdf(fid,group_string%get())
-
-
         end do
-
 
     end subroutine prune_eqn_groups_hdf
     !***************************************************************************************
@@ -5864,32 +5108,20 @@ contains
         integer(HSIZE_T)                        :: iattr, idx
         type(h5o_info_t), target                :: h5_info
 
-
-        !
         ! Get number of attributes attached to the group id
-        !
         call h5oget_info_f(gid, h5_info, ierr)
         nattr = h5_info%num_attrs
         if (ierr /= 0) call chidg_signal(FATAL,"delete_group_attributes_hdf: error getting current number of attributes.")
 
-
-        !
         ! Delete any existing attributes
-        !
         if ( nattr > 0 ) then
-
-            !
             ! Delete by index. h5adelete_by_idx_f returns idx with the next index so it doesn't need manually updated.
-            !
             idx = 0
             do iattr = 1,nattr
                 call h5adelete_by_idx_f(gid, ".", H5_INDEX_CRT_ORDER_F, H5_ITER_NATIVE_F, idx, ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,"delete_group_attributes_hdf: error deleting attribute")
             end do
-
-
         end if ! nattr
-
 
     end subroutine delete_group_attributes_hdf
     !****************************************************************************************
@@ -5924,21 +5156,14 @@ contains
         character(len=:), allocatable   :: msg
         integer(ik)                     :: ierr
 
-
-        !
         ! Query attribute existence
-        !
         call h5aexists_f(id,trim(attribute),attribute_exists,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"check_attribute_exists_hdf: Error checking if attribute exists")
 
-        !
         ! Default error mode
-        !
         hard_stop = .true.
 
-        !
         ! Check if failure type was specified
-        !
         if (present(fail_type)) then
 
             if (trim(fail_type) == "Soft Fail") then
@@ -5951,9 +5176,7 @@ contains
 
         end if
 
-        !
         ! Handle error if necessary
-        !
         msg = "Attribute "//trim(attribute)//" not found in the file. Maybe the file was generated &
                with an old version of the ChiDG library. Try regenerating the HDF grid file with an &
                updated version of the ChiDG library to make sure the file is formatted properly"
@@ -6005,13 +5228,8 @@ contains
         call h5lexists_f(id, trim(linkname), exist_status, ierr)
         if (ierr /= 0) call chidg_signal_one(FATAL,"check_link_exists_hdf: Error in call to h5lexists_f", trim(linkname) )
 
-
     end function check_link_exists_hdf
     !*********************************************************************************************
-
-
-
-
 
 
 
@@ -6027,10 +5245,8 @@ contains
 
         logical :: exist_status
 
-
         ! Check file exists
         inquire(file=filename, exist=exist_status)
-
 
     end function check_file_exists_hdf
     !*********************************************************************************************
@@ -6039,29 +5255,73 @@ contains
     !
     !   Mesh Motion
     !
+    !
+    ! Mesh motion is encoded in the gridfile in a way similar to boundary conditions.
+    !
+    ! Mesh motion groups, named according to the convention, GROUP "MM_mmname", are
+    ! stored in the root level. They are then associated with a domain by adding an
+    ! attribute, "Mesh Motion Group", with value "mmname", to the domain group.
+    ! Each mesh motion group must have a "Family" attribute that specifies the kind
+    ! of mesh motion, e.g. Prescribed Mesh Motion, RBF, etc. The "Family" attribute
+    ! is used to select the appropriate procedures for reading in the necessary
+    ! information from the MM group, which will be different in each Family of MM.
+    !
+    ! MM groups of the Prescribed Mesh Motion family have an attribute, "Function",
+    ! with value "pmmfname", which is the name of a Prescribed Mesh Motion Function group.
+    !
+    ! Prescribed mesh motion function groups, named according to the convention, 
+    ! GROUP "PMMF_pmmfname", are stored in the root level. They possess an attribute,
+    ! "function", with value "fname", which must be the name of a registered PMMF.
+    ! It may also contain one or more Prescribed Mesh Motion Function Option groups, 
+    ! named according to the convention, "PMMFO_oname", where "oname" must be the name
+    ! of one of the options of the registered PMMF of the group.
+    !
+    ! MM groups of the RBF family have a more complicated structure. Such a group may possess a
+    ! GROUP "RBF Function" that defines the kind of RBF (via ATTRIBUTE "RBF Type", which must be
+    ! the name of a registerd RBF, compactly supportd or not)
+    ! and the radius (via ATTRIBUTE "RBF Radius-1" {, -2, -3}) 
+    ! associated the RBF. 
+    ! (If the "RBF Function" group does not exist, default values will be used.)
+    ! It may also possess a GROUP "RBF Function Explicit", which is needed for the MS-RBF algorithm.
+    ! The group has an ATTRIBUTE "RBF Type Explicit", which must be the name of a compactly supported,
+    ! registered RBF, and an ATTRIBUTE "RBF Base Fraction", which is the fraction of source nodes 
+    ! to be used as base nodes (~0.05-0.1) associated with the RBF defined by the "RBF Function" group.
+    ! 
+    ! The RBF MM group must also contain one or more GROUP "RBF_SRC_srcname", defining the source nodes
+    ! used by the RBF. An "RBF_SRC_srcname" group contains an ATTRIBUTE "Patch Name" with value "patch_name",
+    ! which is the name of a boundary patch group whose nodes will be source nodes and a GROUP "RBF Driver",
+    ! which defines how the values of displacement and velocity will be provided at the source nodes of the patch.
+    ! GROUP "RBF Driver" has ATTRIBUTE "Family", whose value determines how the source values will provided.
+    ! For now can only be "PMMF", but later, this could be used to define/point to an interface to an external
+    ! structural solver.
+    ! A GROUP "RBF Driver" of "Family" "PMMF" contain an ATTRIBUTE "Prescribed Mesh Motion Function" with
+    ! value "pmmfname" associated with a GROUP "PMMF_pmmfname" in the root level. The PMMF will be evaluated
+    ! at the source nodes to provide source values for the RBF.
 
-    !   Prescribed Mesh Motion
+    !
+    ! Basic MM_ group procedures. 
+    !
 
-
-    !>  Return the number of pmm groups are in the HDF file.
+    !>  Return the number of mm groups are in the HDF file.
     !!
-    !!  Boundary condition state groups: 'PMM_'
+    !!  Boundary condition state groups: 'MM_'
     !!
     !!  @author Eric Wolf 
     !!  @date   4/4/2017 
     !!
+    !!
     !----------------------------------------------------------------------------------------
-    function get_npmm_groups_hdf(fid) result(ngroups)
+    function get_nmm_groups_hdf(fid) result(ngroups)
         integer(HID_T)  :: fid
         
         integer(ik)     :: ngroups
-        type(svector_t) :: pmm_group_names
+        type(svector_t) :: mm_group_names
 
-        pmm_group_names = get_pmm_group_names_hdf(fid)
+        mm_group_names = get_mm_group_names_hdf(fid)
 
-        ngroups = pmm_group_names%size()
+        ngroups = mm_group_names%size()
 
-    end function get_npmm_groups_hdf
+    end function get_nmm_groups_hdf
     !****************************************************************************************
 
 
@@ -6069,163 +5329,295 @@ contains
 
 
     
-    !>  Return a vector of the names for each pmm group.
+    !>  Return a vector of the names for each mm group.
     !!
     !!  @author Eric Wolf 
     !!  @date   4/4/2017
     !!
-    !!
-    !!
     !----------------------------------------------------------------------------------------
-    function get_pmm_group_names_hdf(fid) result(pmm_group_names)
+    function get_mm_group_names_hdf(fid) result(mm_group_names)
         integer(HID_T), intent(in)  :: fid
 
         integer(ik)     :: nmembers, ierr, igrp, type
         character(1024) :: gname
-        type(svector_t) :: pmm_group_names
+        type(svector_t) :: mm_group_names
 
 
         !  Get number of groups linked to the current bc_face
         call h5gn_members_f(fid, ".", nmembers, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_group_names_hdf: error h5gn_members_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"get_mm_group_names_hdf: error h5gn_members_f")
 
         if ( nmembers > 0 ) then
             do igrp = 0,nmembers-1
                 ! Get group name
                 call h5gget_obj_info_idx_f(fid, ".", igrp, gname, type, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_group_names_hdf: error h5gget_obj_info_idx_f")
+                if (ierr /= 0) call chidg_signal(FATAL,"get_mm_group_names_hdf: error h5gget_obj_info_idx_f")
 
                 ! Test if group is a boundary condition state. 'BCSG_'
-                if (gname(1:4) == 'PMM_') then
-                    call pmm_group_names%push_back(string_t(trim(gname(5:))))
+                if (gname(1:3) == 'MM_') then
+                    call mm_group_names%push_back(string_t(trim(gname(4:))))
                 end if
             end do  ! igrp
         end if
 
-    end function get_pmm_group_names_hdf
+    end function get_mm_group_names_hdf
+    !***************************************************************************************
+
+    !>  Open a MM group and return HDF group identifier.
+    !!
+    !!  @author Eric Wolf 
+    !!  @date  4/25/2017 
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function open_mm_group_hdf(fid,mmname) result(mmgroup_id)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: mmname
+
+        integer(HID_T)  :: mmgroup_id
+        integer(ik)     :: ierr
+        logical         :: exists
+
+        ! Check exists
+        exists = check_link_exists_hdf(fid,"MM_"//trim(mmname))
+        if (.not. exists) call chidg_signal_one(FATAL,"open_mm_hdf: Couldn't find MM in file.","MM_"//trim(mmname))
+
+        ! If so, open.
+        call h5gopen_f(fid,"MM_"//trim(mmname), mmgroup_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"open_mm_hdf: Error in h5gopen_f")
+
+    end function open_mm_group_hdf
+    !****************************************************************************************
+
+
+
+    !>  Close a boundary condition state.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine close_mm_group_hdf(state_id)
+        integer(HID_T), intent(in)  :: state_id
+
+        integer(ik)     :: ierr
+
+        call h5gclose_f(state_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"close_mm_hdf: Error closing MM group.")
+
+    end subroutine close_mm_group_hdf
     !***************************************************************************************
 
 
 
-
-    !>  Open a PMM group and return HDF group identifier.
+    !>  Construct a mesh_motion 0bject from a mesh motion group.
     !!
     !!  @author Eric Wolf 
     !!  @date  4/25/2017 
     !!
     !----------------------------------------------------------------------------------------
-    function open_pmm_hdf(fid,pmmname) result(pmmgroup_id)
+    function get_mm_family_hdf(mmgroup_id) result(fname)
+        integer(HID_T), intent(in)  :: mmgroup_id
+
+        character(:),   allocatable :: fname
+        integer(ik)                 :: ierr
+
+        allocate(character(1024) :: fname)
+        call h5ltget_attribute_string_f(mmgroup_id, ".", "Family", fname, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_mm_family_hdf: error getting function name.")
+
+    end function get_mm_family_hdf
+    !*****************************************************************************************
+
+
+
+
+    !>  Construct a mesh_motion 0bject from a mesh motion group.
+    !!
+    !!  @author Eric Wolf 
+    !!  @date  4/25/2017 
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+
+    subroutine get_mm_hdf(fid,mmgroup_id,mm_name, mm)
         integer(HID_T), intent(in)  :: fid
-        character(*),   intent(in)  :: pmmname
-
-        integer(HID_T)  :: pmmgroup_id
-        integer(ik)     :: ierr
-        logical         :: exists
+        integer(HID_T), intent(inout)  :: mmgroup_id
+        character(*),   intent(in)  :: mm_name
+        class(mesh_motion_t), allocatable, intent(inout)  :: mm
 
 
-        ! Check exists
-        exists = check_link_exists_hdf(fid,"PMM_"//trim(pmmname))
-        if (.not. exists) call chidg_signal_one(FATAL,"open_pmm_hdf: Couldn't find PMM in file.","PMM_"//trim(pmmname))
-
-
-        ! If so, open.
-        call h5gopen_f(fid,"PMM_"//trim(pmmname), pmmgroup_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"open_pmm_hdf: Error in h5gopen_f")
-
-
-    end function open_pmm_hdf
-    !****************************************************************************************
-
-
-    subroutine get_pmm_hdf_test(pmmgroup_id,pmm_name, pmm)
-        integer(HID_T), intent(in)  :: pmmgroup_id
-        character(*),   intent(in)  :: pmm_name
-        class(prescribed_mesh_motion_t), allocatable, intent(inout)  :: pmm
-
-
-        character(:),       allocatable :: pmmname, pname, oname
-        !character(1024)                 :: fname
+        class(mesh_motion_t), allocatable  :: mmtmp
+        character(:),       allocatable :: mmname, pname, oname
         character(:),   allocatable     :: fname
-        integer(HID_T)                  :: pmm_id, pmmfo_id
+        integer(HID_T)                  :: mm_id, mmfo_id
         integer(ik)                     :: ierr, iprop, nprop, iopt, noptions
         real(rdouble), dimension(1)     :: buf
         real(rk)                        :: ovalue
         logical                         :: group_exists, function_exists
 
+        !  Mesh motion group structure
+        ! /MM_mmname/...
+        !   ATTRIBUTE "Family"    -  the type of MM, used to select the proper procedure
+        !   ...                     - more, depending on the family
+        if (mm_name(1:3) == "MM_") then
+            mmname = trim(mm_name(4:))
+        else
+            mmname = trim(mm_name)
+        end if
+
+
+        allocate(character(1024) :: fname)
+        call h5ltget_attribute_string_f(mmgroup_id, ".", "Family", fname, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_mm_hdf: error getting function name.")
+        call close_mm_group_hdf(mmgroup_id)
 
         !
-        !   Prescribed mesh motion group structure
-        ! /PMM_pmm_name/...
-        !   ATTRIBUTE "Function"    - name of a registered pmmf
-        !   /PMMFO_oname/...        - oname is the name of an option for this pmmf
-        !       ATTRIBUTE "val"     - value of this option
-        !   ...                     - more options
+        ! Now, based on the family, call an initialization procedure to obtain the mesh_motion_t
+        !
+        ! Current options:
+        ! PMM - simple prescribed mesh motion
+        ! RBF-PMM - RBF mesh motion driven by boundary values specified by prescribed mesh motion functions
+        !
+        ! Future options:
+        ! RBF-external - RBF MM driven by boundary values from an external source (e.g. structural solver)
+        ! 
 
-!        ! Open pmmf group 
-!               
-        ! Get boundary condition name string
-        if (pmm_name(1:4) == "PMM_") then
-            pmmname = trim(pmm_name(5:))
+        !Should these use an "allocate(mm, src = mm_tmp)" construct?
+        if (trim(fname) == "PMM") then
+            !mmtmp = get_pmm_hdf(fid, mmname)
+            allocate(mmtmp,source=get_pmm_hdf(fid,mmname),stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+        else if (trim(fname) == "RBF") then
+            !mmtmp = get_rbf_mm_hdf(fid, mmname)
+            allocate(mmtmp,source=get_rbf_mm_hdf(fid,mmname),stat=ierr)
+            if (ierr /= 0) call AllocationError
+            
         else
-            pmmname = trim(pmm_name)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_mm_hdf: MM Family not recoginized.")
         end if
 
+        allocate(mm, source=mmtmp)
+        call mm%set_name(mmname)
+        mmgroup_id = open_mm_group_hdf(fid, mmname)
 
-        ! Create boundary condition state and get number of properties
-
-        allocate(pmm, stat=ierr)
-        if (ierr /=0) call AllocationError
-        call pmm%set_name(pmmname)
-       
-
-        ! Read the function name set for the property.
-        !fname = ''
-        allocate(character(1024) :: fname)
-        call h5ltget_attribute_string_f(pmmgroup_id, ".", "Function", fname, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting function name.")
-
-        
-        ! Set/Create the function for the current property
-        call pmm%add_pmmf(trim(fname))
-
-        
-        ! Get number of options for the function
-        noptions = pmm%pmmf%get_noptions()
-
-
-
-        ! Get each option value
-        if (noptions>0) then
-        do iopt = 1,noptions
-            ! Get option name
-            oname = pmm%pmmf%get_option_key(iopt)
-
-            ! Get option value from file
-            group_exists = check_link_exists_hdf(pmmgroup_id,"PMMFO_"//trim(oname))
-            if (group_exists) then
-                call h5gopen_f(pmmgroup_id, "PMMFO_"//trim(oname), pmmfo_id, ierr)
-                call h5ltget_attribute_double_f(pmmfo_id,".", "val", buf, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting option value")
-                ovalue = real(buf(1),rk)
-
-                ! Set boundary condition option
-                call pmm%pmmf%set_option(trim(oname), ovalue)
-
-                ! Close current property group
-                call h5gclose_f(pmmfo_id,ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: h5gclose")
-            end if
-        end do ! iopt
-        end if
-
-
-    end subroutine get_pmm_hdf_test
+    end subroutine get_mm_hdf
     !*****************************************************************************************
 
 
 
 
     
+    !>
+    !!
+    !!  @author Eric Wolf
+    !!  @date  3/30/2017 
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine set_mm_domain_group_hdf(domain_id,group)
+        integer(HID_T), intent(in)  :: domain_id
+        character(*),   intent(in)  :: group
+
+        integer(ik) :: ierr
+
+        ! Set 'Mesh Motion Group'
+        call h5ltset_attribute_string_f(domain_id, ".", "Mesh Motion Group", trim(group), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_mm_domain_group_hdf: error setting the attribute 'Mesh Motion Group'")
+
+    end subroutine set_mm_domain_group_hdf
+    !***************************************************************************************
+
+
+
+    
+    !>  Return 'Mesh Motion Group' attribute for a given Domain.
+    !!
+    !!
+    !!  If found, returns the group attribute.
+    !!  If not found, returns 'empty'.
+    !!
+    !!
+    !!  @author Eric Wolf 
+    !!  @date   3/30/2017
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_mm_domain_group_hdf(patch_id) result(group_trim)
+        integer(HID_T), intent(in)  :: patch_id
+
+        character(1024)             :: group
+        character(:),   allocatable :: group_trim
+        integer(ik)                 :: ierr
+        integer(ik)                 :: exists
+
+
+        call check_attribute_exists_hdf(patch_id,"Mesh Motion Group","Soft Fail",exists)
+
+        ! Get 'Prescribed Mesh Motion Group'
+        if (exists==0) then
+            call h5ltget_attribute_string_f(patch_id, ".", "Mesh Motion Group", group, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_mm_domain_group_hdf: error setting the attribute 'Prescribed Mesh Motion Group'")
+            group_trim = trim(group)
+        else
+            group_trim = 'empty'
+        end if
+            
+    end function get_mm_domain_group_hdf
+    !***************************************************************************************
+
+
+
+
+    !>  Add a mm group to the ChiDG HDF file.
+    !!
+    !!  @author Eric Wolf
+    !!  @date   4/21/2017 
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  group_name      Unique name for the new boundary condition state group.
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine create_mm_group_hdf(fid,group_name,fname)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: group_name
+        character(*),   intent(in),optional  :: fname
+
+        integer(HID_T)              :: mmgroup_id
+        integer(ik)                 :: ierr
+        logical                     :: group_exists
+
+
+        ! Check if bc_state group exists
+        group_exists = check_link_exists_hdf(fid,"MM_"//trim(group_name))
+
+        !
+        ! Create a new group for the bc_state_t
+        !
+        if (.not. group_exists) then
+            call h5gcreate_f(fid, "MM_"//trim(group_name), mmgroup_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'create_mm_group_hdf: error creating new group for MM_.')
+        else
+            call h5gopen_f(fid, "MM_"//trim(group_name), mmgroup_id, ierr)
+        end if
+
+
+        ! Set 'Family'
+        if (present(fname)) then
+            call h5ltset_attribute_string_f(mmgroup_id, ".", "Family", fname, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_mm_group_hdf: error setting the attribute 'Family'")
+        end if
+
+
+        call h5gclose_f(mmgroup_id,ierr)
+
+    end subroutine create_mm_group_hdf
+    !****************************************************************************************
+
+
+
+    !   Prescribed Mesh Motion
+
 
     !>  Given the name of a bc_state on a face, return an initialized bc_state instance.
     !!
@@ -6238,34 +5630,35 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function get_pmm_hdf(pmmgroup_id,pmm_name) result(pmm)
-        integer(HID_T), intent(in)  :: pmmgroup_id
+    function get_pmm_hdf(fid,pmm_name) result(pmm)
+        integer(HID_T), intent(in)  :: fid 
         character(*),   intent(in)  :: pmm_name
 
 
         class(prescribed_mesh_motion_t),  allocatable :: pmm
+        class(prescribed_mesh_motion_function_t), allocatable :: pmmf_in
         character(:),       allocatable :: pmmname, pname, oname
         character(:), allocatable                 :: fname
-        integer(HID_T)                  :: pmm_id, pmmfo_id
+        integer(HID_T)                  :: pmmgroup_id, pmm_id, pmmfo_id
         integer(ik)                     :: ierr, iprop, nprop, iopt, noptions
         real(rdouble), dimension(1)     :: buf
         real(rk)                        :: ovalue
         logical                         :: group_exists, function_exists
 
+        type(svector_t) :: pmmf_names
+        integer(ik)     :: npmmfs
 
         !
         !   Prescribed mesh motion group structure
-        ! /PMM_pmm_name/...
-        !   ATTRIBUTE "Function"    - name of a registered pmmf
-        !   /PMMFO_oname/...        - oname is the name of an option for this pmmf
-        !       ATTRIBUTE "val"     - value of this option
-        !   ...                     - more options
+        ! /MM_pmm_name/...
+        !   ATTRIBUTE "Family"      - this has already been used to select this function 
+        !       "PMM"
+        !   ATTRIBUTE "Prescribed Mesh Motion Function Group"    - name of a PMMF group in the gridfile
+        !       "name"             
 
-!        ! Open pmmf group 
-!               
-        ! Get boundary condition name string
-        if (pmm_name(1:4) == "PMM_") then
-            pmmname = trim(pmm_name(5:))
+        ! Just in case  the full name was passed, strip the "MM_" prefix if necessary
+        if (pmm_name(1:3) == "MM_") then
+            pmmname = trim(pmm_name(4:))
         else
             pmmname = trim(pmm_name)
         end if
@@ -6278,112 +5671,594 @@ contains
         call pmm%set_name(pmmname)
        
 
-        ! Read the function name set for the property.
-        !fname = ''
-        allocate(character(1024) :: fname) 
-        call h5ltget_attribute_string_f(pmmgroup_id, ".", "Function", fname, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting function name.")
 
-        
-        ! Set/Create the function for the current property
-        call pmm%add_pmmf(trim(fname))
+        ! Open the  MM group, get the PMMFG name and use it to get the PMMF
+        pmmgroup_id = open_mm_group_hdf(fid,pmmname)
 
-        
-        ! Get number of options for the function
-        noptions = pmm%pmmf%get_noptions()
+        ! Get the PMMF
+        pmmf_names  = get_pmmf_names_hdf(pmmgroup_id)
+        npmmfs = get_npmmfs_hdf(pmmgroup_id)
 
+        if (npmmfs>1) then
+            call chidg_signal(FATAL,"get_rbf_mm_hdf: multiple PMMF groups present in one driver!")
+        else if (npmmfs == 0) then
 
+            call chidg_signal(FATAL,"get_rbf_mm_hdf: PMMF group is expected but not present in a driver!")
+        else
+            !pmmf_in = get_pmmf_hdf(pmmgroup_id, pmmf_names%data_(1)%get())
+            allocate(pmmf_in, source=get_pmmf_hdf(pmmgroup_id, pmmf_names%data_(1)%get()), stat=ierr)
+            if (ierr /=0) call AllocationError
 
-        ! Get each option value
-        if (noptions>0) then
-        do iopt = 1,noptions
-            ! Get option name
-            oname = pmm%pmmf%get_option_key(iopt)
-
-            ! Get option value from file
-            group_exists = check_link_exists_hdf(pmmgroup_id,"PMMFO_"//trim(oname))
-            if (group_exists) then
-                call h5gopen_f(pmmgroup_id, "PMMFO_"//trim(oname), pmmfo_id, ierr)
-                call h5ltget_attribute_double_f(pmmfo_id,".", "val", buf, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting option value")
-                ovalue = real(buf(1),rk)
-
-                ! Set boundary condition option
-                call pmm%pmmf%set_option(trim(oname), ovalue)
-
-                ! Close current property group
-                call h5gclose_f(pmmfo_id,ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: h5gclose")
-            end if
-        end do ! iopt
         end if
 
 
+        
+        ! Set/Create the function for the current property
+        allocate(pmm%pmmf, source = pmmf_in)
+
+        call h5gclose_f(pmmgroup_id,ierr)
     end function get_pmm_hdf
     !*****************************************************************************************
 
 
+    
 
-    !>
+
+    !
+    ! RBF
+    !
+
+
+    !>  Return the number of mm groups are in the HDF file.
     !!
-    !!  @author Eric Wolf
-    !!  @date  3/30/2017 
+    !!  Boundary condition state groups: 'MM_'
     !!
-    !--------------------------------------------------------------------------------------
-    subroutine set_pmm_domain_group_hdf(patch_id,group)
-        integer(HID_T), intent(in)  :: patch_id
-        character(*),   intent(in)  :: group
+    !!  @author Eric Wolf 
+    !!  @date   4/4/2017 
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_nrbf_src_groups_hdf(fid) result(ngroups)
+        integer(HID_T)  :: fid
+        
+        integer(ik)     :: ngroups
+        type(svector_t) :: mm_group_names
 
-        integer(ik) :: ierr
+        mm_group_names = get_rbf_src_group_names_hdf(fid)
+        ngroups = mm_group_names%size()
 
-        ! Set 'Prescribed Mesh Motion Group'
-        call h5ltset_attribute_string_f(patch_id, ".", "Prescribed Mesh Motion Group", trim(group), ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_pmm_domain_group_hdf: error setting the attribute 'Boundary State Group'")
+    end function get_nrbf_src_groups_hdf
+    !****************************************************************************************
 
-
-    end subroutine set_pmm_domain_group_hdf
-    !***************************************************************************************
 
 
     
-    !>  Return 'Boundary State Group' attribute for a given patch.
-    !!
-    !!
-    !!  If found, returns the group attribute.
-    !!  If not found, returns 'empty'.
-    !!
+    !>  Return a vector of the names for each mm group.
     !!
     !!  @author Eric Wolf 
-    !!  @date   3/30/2017
+    !!  @date   4/4/2017
     !!
     !!
-    !--------------------------------------------------------------------------------------
-    function get_pmm_domain_group_hdf(patch_id) result(group_trim)
-        integer(HID_T), intent(in)  :: patch_id
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_rbf_src_group_names_hdf(fid) result(mm_group_names)
+        integer(HID_T), intent(in)  :: fid
 
-        character(1024)             :: group
-        character(:),   allocatable :: group_trim
-        integer(ik)                 :: ierr
-        integer(ik)                 :: exists
+        integer(ik)     :: nmembers, ierr, igrp, type
+        character(1024) :: gname
+        type(svector_t) :: mm_group_names
 
 
-        call check_attribute_exists_hdf(patch_id,"Prescribed Mesh Motion Group","Soft Fail",exists)
+        !  Get number of groups linked to the current bc_face
+        call h5gn_members_f(fid, ".", nmembers, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_rbf_src_group_names_hdf: error h5gn_members_f")
 
-        ! Get 'Prescribed Mesh Motion Group'
-        if (exists==0) then
-            call h5ltget_attribute_string_f(patch_id, ".", "Prescribed Mesh Motion Group", group, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_pmm_domain_group_hdf: error setting the attribute 'Prescribed Mesh Motion Group'")
-            group_trim = trim(group)
-        else
-            group_trim = 'empty'
+        if ( nmembers > 0 ) then
+            do igrp = 0,nmembers-1
+                ! Get group name
+                call h5gget_obj_info_idx_f(fid, ".", igrp, gname, type, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_rbf_src_group_names_hdf: error h5gget_obj_info_idx_f")
+
+                ! Test if group is a boundary condition state. 'BCSG_'
+                if (gname(1:8) == 'RBF_SRC_') then
+                    call mm_group_names%push_back(string_t(trim(gname(9:))))
+                end if
+            end do  ! igrp
         end if
-            
-    end function get_pmm_domain_group_hdf
+
+    end function get_rbf_src_group_names_hdf
     !***************************************************************************************
 
 
 
-    !>  Add a pmm group to the ChiDG HDF file.
+
+
+    !>  Open a domain group and return HDF group identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function open_rbf_src_hdf(fid,domainname) result(dom_id)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: domainname
+
+        integer(HID_T)  :: dom_id
+        integer(ik)     :: ierr
+        logical         :: exists
+
+        ! Check exists
+        exists = check_link_exists_hdf(fid,"RBF_SRC_"//trim(domainname))
+        if (.not. exists) call chidg_signal_one(FATAL,"open_rbf_src_hdf: Couldn't find domain in file.","D_"//trim(domainname))
+
+        ! If so, open.
+        call h5gopen_f(fid,"RBF_SRC_"//trim(domainname), dom_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"open_rbf_src_hdf: Error in h5gopen_f")
+
+
+    end function open_rbf_src_hdf
+    !****************************************************************************************
+
+
+
+
+    !>  Close a domain group from an HDF identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine close_rbf_src_hdf(dom_id)
+        integer(HID_T), intent(in)  :: dom_id
+
+        integer(ik) :: ierr
+
+        call h5gclose_f(dom_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL, "close_rbf_src_hdf: Error in h5gclose_f.")
+
+    end subroutine close_rbf_src_hdf
+    !****************************************************************************************
+
+
+
+
+    !>  Construct a mesh_motion 0bject from a mesh motion group.
+    !!
+    !!  @author Eric Wolf 
+    !!  @date  4/25/2017 
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_rbf_src_family_hdf(mmgroup_id) result(fname)
+        integer(HID_T), intent(in)  :: mmgroup_id
+
+        character(:), allocatable   :: fname
+
+        character(:),       allocatable :: mmname, pname, oname
+        integer(HID_T)                  :: driver_id
+        integer(ik)                     :: ierr, iprop, nprop, iopt, noptions, family_exists
+        real(rdouble), dimension(1)     :: buf
+        real(rk)                        :: ovalue
+        logical                         :: group_exists, driver_exists
+
+
+        driver_exists = check_rbf_mm_driver_exists_hdf(mmgroup_id)
+        allocate(character(1024) :: fname)
+        if (driver_exists) then
+            driver_id = open_rbf_mm_driver_hdf(mmgroup_id)
+            call check_attribute_exists_hdf(driver_id,"Family","Soft Fail",family_exists)
+            if (family_exists==0) then
+                call h5ltget_attribute_string_f(driver_id, ".", "Family", fname, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_rbf_src_family_hdf: error getting family name.")
+            else
+                fname = "empty"
+            end if
+            call close_rbf_mm_driver_hdf(driver_id)
+        else
+            fname = "empty"
+        end if
+
+    end function get_rbf_src_family_hdf
+    !*****************************************************************************************
+
+
+
+
+    !>  Construct a mesh_motion 0bject from a mesh motion group.
+    !!
+    !!  @author Eric Wolf 
+    !!  @date  4/25/2017 
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_rbf_src_patch_name_hdf(mmgroup_id) result(fname)
+        integer(HID_T), intent(in)  :: mmgroup_id
+
+        character(:), allocatable   :: fname
+        character(:),       allocatable :: mmname, pname, oname
+        integer(HID_T)                  :: mm_id, mmfo_id
+        integer(ik)                     :: ierr, iprop, nprop, iopt, noptions
+        real(rdouble), dimension(1)     :: buf
+        real(rk)                        :: ovalue
+        logical                         :: group_exists, function_exists
+
+        allocate(character(1024) :: fname)
+        call h5ltget_attribute_string_f(mmgroup_id, ".", "Patch Name", fname, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_mm_hdf: error getting function name.")
+
+    end function get_rbf_src_patch_name_hdf
+    !*****************************************************************************************
+
+
+
+
+    !>  Construct a mesh_motion 0bject from a mesh motion group.
+    !!
+    !!  @author Eric Wolf 
+    !!  @date  4/25/2017 
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_rbf_src_comment_hdf(mmgroup_id) result(src_comment)
+        integer(HID_T), intent(in)  :: mmgroup_id
+
+        character(:), allocatable   :: src_comment 
+        character(:),       allocatable :: mmname, pname, oname
+        character(1024)                 :: fname
+        type(svector_t)                   :: pmmf_names
+        type(string_t)                  :: src_comment_str
+        integer(HID_T)                  :: driver_id
+        integer(ik)                     :: ierr, iprop, nprop, iopt, noptions, family_exists
+        real(rdouble), dimension(1)     :: buf
+        real(rk)                        :: ovalue
+        logical                         :: group_exists, driver_exists
+
+        fname = get_rbf_src_family_hdf(mmgroup_id)
+
+        select case(trim(fname))
+        case ('empty')
+            src_comment = 'empty'
+
+        case ('PMM')
+            driver_id = open_rbf_mm_driver_hdf(mmgroup_id)
+            pmmf_names  = get_pmmf_names_hdf(driver_id)
+            if (pmmf_names%size()>0) then
+                src_comment_str = pmmf_names%at(1)
+                src_comment = trim(src_comment_str%get())
+            else
+                src_comment = 'empty'
+            end if
+            call close_rbf_mm_driver_hdf(driver_id)
+        end select
+
+    end function get_rbf_src_comment_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+    !>  Open a domain group and return HDF group identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function open_rbf_function_hdf(fid) result(dom_id)
+        integer(HID_T), intent(in)  :: fid
+
+        integer(HID_T)  :: dom_id
+        integer(ik)     :: ierr
+        logical         :: exists
+
+
+        ! Check exists
+        exists = check_link_exists_hdf(fid,"RBF Function")
+        if (.not. exists) then
+
+            dom_id = create_rbf_function_hdf(fid) 
+        else
+            call h5gopen_f(fid,"RBF Function", dom_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"open_rbf_function_hdf: Error in h5gopen_f")
+
+        end if
+
+
+    end function open_rbf_function_hdf
+    !****************************************************************************************
+
+
+
+    !>  Open a domain group and return HDF group identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function create_rbf_function_hdf(fid) result(dom_id)
+        integer(HID_T), intent(in)  :: fid
+
+        integer(HID_T)  :: dom_id
+        integer(ik)     :: ierr
+        logical         :: exists
+
+        integer(HSIZE_T)                :: adim
+
+        ! Check exists
+        exists = check_link_exists_hdf(fid,"RBF Function")
+        if (.not. exists) then
+
+            call h5gcreate_f(fid, "RBF Function", dom_id, ierr)
+            call h5ltset_attribute_string_f(dom_id, ".", "RBF Type", "empty", ierr)
+            adim=1
+            call h5ltset_attribute_double_f(dom_id, ".", "RBF Radius-1", [real(0,rdouble)], adim, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_rbf_base_radius_hdf: error setting RBF Radius-1.")
+
+            call h5ltset_attribute_double_f(dom_id, ".", "RBF Radius-2", [real(0,rdouble)], adim, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_rbf_base_radius_hdf: error setting RBF Radius-1.")
+
+            call h5ltset_attribute_double_f(dom_id, ".", "RBF Radius-3", [real(0,rdouble)], adim, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_rbf_base_radius_hdf: error setting RBF Radius-1.")
+
+
+        else
+            call h5gopen_f(fid,"RBF Function", dom_id, ierr)
+
+        end if
+        if (ierr /= 0) call chidg_signal(FATAL,"open_rbf_function_hdf: Error in h5gopen_f")
+
+
+    end function create_rbf_function_hdf
+    !****************************************************************************************
+
+
+
+
+
+    !>  Close a domain group from an HDF identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine close_rbf_function_hdf(dom_id)
+        integer(HID_T), intent(in)  :: dom_id
+
+        integer(ik) :: ierr
+
+        call h5gclose_f(dom_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL, "close_rbf_function_hdf: Error in h5gclose_f.")
+
+    end subroutine close_rbf_function_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Open a domain group and return HDF group identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function open_rbf_function_exp_hdf(fid) result(dom_id)
+        integer(HID_T), intent(in)  :: fid
+
+        integer(HID_T)  :: dom_id
+        integer(ik)     :: ierr
+        logical         :: exists
+
+
+        ! Check exists
+        exists = check_link_exists_hdf(fid,"RBF Function Explicit")
+        if (.not. exists) then
+
+            dom_id =  create_rbf_function_exp_hdf(fid)
+        else
+            call h5gopen_f(fid,"RBF Function Explicit", dom_id, ierr)
+
+            if (ierr /= 0) call chidg_signal(FATAL,"open_rbf_function_exp_hdf: Error in h5gopen_f")
+        end if
+
+
+
+    end function open_rbf_function_exp_hdf
+    !****************************************************************************************
+
+
+
+
+    !>  Open a domain group and return HDF group identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function create_rbf_function_exp_hdf(fid) result(dom_id)
+        integer(HID_T), intent(in)  :: fid
+
+        integer(HID_T)  :: dom_id
+        integer(ik)     :: ierr
+        logical         :: exists
+
+        integer(HSIZE_T)                :: adim
+
+        ! Check exists
+        exists = check_link_exists_hdf(fid,"RBF Function Explicit")
+        if (.not. exists) then
+
+            call h5gcreate_f(fid, "RBF Function Explicit", dom_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_rbf_function_exp_hdf: Error in h5gcreate_f")
+            call h5ltset_attribute_string_f(dom_id, ".", "RBF Type Explicit", "empty", ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_rbf_function_exp_hdf: Error in h5ltset_attribute_string_f")
+            adim=1
+            call h5ltset_attribute_double_f(dom_id, ".", "RBF Base Fraction", [real(1,rdouble)], adim, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_rbf_base_radius_hdf: error setting RBF Base Fraction.")
+
+        else
+            call h5gopen_f(fid,"RBF Function Explicit", dom_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"open_rbf_function_hdf: Error in h5gopen_f")
+
+        end if
+
+
+    end function create_rbf_function_exp_hdf
+    !****************************************************************************************
+
+
+
+
+
+    !>  Close a domain group from an HDF identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine close_rbf_function_exp_hdf(dom_id)
+        integer(HID_T), intent(in)  :: dom_id
+
+        integer(ik) :: ierr
+
+        call h5gclose_f(dom_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL, "close_rbf_function_exp_hdf: Error in h5gclose_f.")
+
+    end subroutine close_rbf_function_exp_hdf
+    !****************************************************************************************
+
+
+
+
+
+    !>  Open a domain group and return HDF group identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_rbf_type_hdf(rbfgroup_id, rbfname)
+        integer(HID_T), intent(in)  :: rbfgroup_id
+        character(*),   intent(in)  :: rbfname
+
+        integer(ik)     :: ierr
+        integer(HID_T)  :: rbffcn_id
+
+        rbffcn_id = open_rbf_function_hdf(rbfgroup_id)
+        call h5ltset_attribute_string_f(rbffcn_id, ".", "RBF Type", rbfname, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_rbf_type_hdf: error getting RBF Type.")
+        call close_rbf_function_hdf(rbffcn_id)
+
+    end subroutine set_rbf_type_hdf
+    !****************************************************************************************
+
+
+
+
+
+    !>  Open a domain group and return HDF group identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_rbf_type_explicit_hdf(rbfgroup_id, rbfname)
+        integer(HID_T), intent(in)  :: rbfgroup_id
+        character(*),   intent(in)  :: rbfname
+
+        integer(ik)     :: ierr
+        integer(HID_T)  :: rbffcn_id
+
+        rbffcn_id = open_rbf_function_exp_hdf(rbfgroup_id)
+        call h5ltset_attribute_string_f(rbffcn_id, ".", "RBF Type Explicit", rbfname, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_rbf_type_explicit_hdf: error setting RBF Type.")
+        
+        call close_rbf_function_exp_hdf(rbffcn_id)
+
+    end subroutine set_rbf_type_explicit_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Open a domain group and return HDF group identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_rbf_base_radius_hdf(rbfgroup_id, radius)
+        integer(HID_T), intent(in)  :: rbfgroup_id
+        real(rk)    ,   intent(in)  :: radius(3)
+
+        integer(HID_T)  :: rbffcn_id
+        integer(HSIZE_T)                :: adim
+        integer(ik)     :: ierr
+
+        rbffcn_id = open_rbf_function_hdf(rbfgroup_id)
+        adim=1
+        call h5ltset_attribute_double_f(rbffcn_id, ".", "RBF Radius-1", [real(radius(1),rdouble)], adim, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_rbf_base_radius_hdf: error setting RBF Radius-1.")
+
+        call h5ltset_attribute_double_f(rbffcn_id, ".", "RBF Radius-2", [real(radius(2),rdouble)], adim, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_rbf_base_radius_hdf: error setting RBF Radius-1.")
+
+        call h5ltset_attribute_double_f(rbffcn_id, ".", "RBF Radius-3", [real(radius(3),rdouble)], adim, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_rbf_base_radius_hdf: error setting RBF Radius-1.")
+
+        call close_rbf_function_hdf(rbffcn_id)
+    end subroutine set_rbf_base_radius_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Open a domain group and return HDF group identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_rbf_base_fraction_hdf(rbfgroup_id, base_fraction)
+        integer(HID_T), intent(in)  :: rbfgroup_id
+        real(rk)    ,   intent(in)  :: base_fraction 
+
+        integer(HID_T)  :: rbffcn_id
+        integer(HSIZE_T)                :: adim
+        integer(ik)     :: ierr
+
+        rbffcn_id = open_rbf_function_exp_hdf(rbfgroup_id)
+        adim=1
+        call h5ltset_attribute_double_f(rbffcn_id, ".", "RBF Base Fraction", [real(base_fraction,rdouble)], adim, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_rbf_base_fraction_hdf: error setting RBF Base Fraction.")
+
+        call close_rbf_function_exp_hdf(rbffcn_id)
+    end subroutine set_rbf_base_fraction_hdf
+    !****************************************************************************************
+
+
+
+
+
+    !>  Add a mm group to the ChiDG HDF file.
     !!
     !!  
     !!      
@@ -6395,209 +6270,1338 @@ contains
     !!  @param[in]  group_name      Unique name for the new boundary condition state group.
     !!
     !----------------------------------------------------------------------------------------
-    subroutine create_pmm_group_hdf(fid,group_name,fname)
+    subroutine create_rbf_src_group_hdf(fid,source_name)
         integer(HID_T), intent(in)  :: fid
-        character(*),   intent(in)  :: group_name
-        character(*),   intent(in),optional  :: fname
+        character(*),   intent(in)  :: source_name
 
         character(:),   allocatable :: user_msg
-        integer(HID_T)              :: pmmgroup_id
+        integer(HID_T)              :: mmgroup_id
         integer(ik)                 :: ierr
         logical                     :: group_exists
 
 
         ! Check if bc_state group exists
-        group_exists = check_link_exists_hdf(fid,"PMM_"//trim(group_name))
+        group_exists = check_link_exists_hdf(fid,"RBF_SRC_"//trim(source_name))
 
-        user_msg = "create_pmm_group_hdf: Boundary condition state group already exists. &
+        user_msg = "create_rbf_src_group_hdf: RBF source group already exists. &
                     Cannot have two groups with the same name"
-!        if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(group_name))
+        !if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(group_name))
 
 
         !
         ! Create a new group for the bc_state_t
         !
         if (.not. group_exists) then
-            call h5gcreate_f(fid, "PMM_"//trim(group_name), pmmgroup_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,'create_pmm_group_hdf: error creating new group for bc_state.')
+            call h5gcreate_f(fid, "RBF_SRC_"//trim(source_name), mmgroup_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'create_rbf_src_group_hdf: error creating new group for RBF_SRC_'//trim(source_name))
         else
-            call h5gopen_f(fid, "PMM_"//trim(group_name), pmmgroup_id, ierr)
+            call h5gopen_f(fid, "RBF_SRC_"//trim(source_name), mmgroup_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'create_rbf_src_group_hdf: error opening existing group for RBF_SRC_'//trim(source_name))
         end if
 
-
-        ! Set 'Family'
-        if (present(fname)) then
-            call h5ltset_attribute_string_f(pmmgroup_id, ".", "Function", fname, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"create_pmm_group_hdf: error setting the attribute 'Function'")
-        end if
+        call set_rbf_src_patchname_hdf(mmgroup_id, 'empty')
 
 
-        call h5gclose_f(pmmgroup_id,ierr)
+        call create_rbf_mm_driver_hdf(mmgroup_id, 'empty')
 
-    end subroutine create_pmm_group_hdf
+        call h5gclose_f(mmgroup_id,ierr)
+
+    end subroutine create_rbf_src_group_hdf
     !****************************************************************************************
 
 
 
 
-
-
-
-
-    !>  Sets pmmf name attribute to the ChiDG HDF file.
+    !>  Remove a bc_state from the HDF file.
     !!
-    !!  
-    !!      
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
     !!
-    !!  @author Eric Wolf
-    !!  @date   4/25/2017 
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/1/2016
+    !!  @note   Modified to include bc_states
     !!
-    !!  @param[in]  fid             HDF file identifier
-    !!  @param[in]  pmmname         Unique name for the pmm group.
-    !!  @param[in]  fname           Unique name for the pmmf name - must be the name of a registered pmmf!.
+    !----------------------------------------------------------------------------------------------------
+    subroutine remove_rbf_src_group_hdf(bcgroup_id,state_string)
+        integer(HID_T),     intent(in)  :: bcgroup_id
+        character(len=*),   intent(in)  :: state_string
+
+        integer(HID_T)                          :: bc_state
+
+        integer(HSIZE_T)                        :: iattr, idx
+        integer(ik)                             :: nattr
+        integer                                 :: nmembers, igrp, type, ierr, iter, iprop, nprop
+        character(len=10)                       :: faces(NFACES)
+        character(len=1024),    allocatable     :: anames(:), pnames(:)
+        character(len=1024)                     :: gname
+        type(h5o_info_t), target                :: h5_info
+
+
+
+        ! Open the bc_state group
+        call h5gopen_f(bcgroup_id, "RBF_SRC_"//trim(state_string), bc_state, ierr)
+
+
+        ! Delete overall boundary condition face attributes
+        call delete_group_attributes_hdf(bc_state)
+
+
+!        !  Get number of groups linked to the current bc_state
+!        call h5gn_members_f(bc_state, ".", nmembers, ierr)
+!
+
+!        !
+!        !  Loop through groups and delete properties
+!        !
+!        if ( nmembers > 0 ) then
+!
+!            !
+!            ! First get number of states. This could be different than number of groups.
+!            !
+!            nprop = 0
+!            do igrp = 0,nmembers-1
+!
+!                ! Get group name
+!                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
+!
+!                ! Test if group is a boundary condition function. 'BCP_'
+!                if (gname(1:4) == 'BCP_') then
+!                    ! increment nprop
+!                    nprop = nprop + 1
+!                end if
+!
+!            end do  ! igrp
+!
+!
+!            !
+!            ! Second, get all state names
+!            !
+!            allocate(pnames(nprop), stat=ierr)
+!            if (ierr /= 0) call AllocationError
+!            iprop = 1
+!            do igrp = 0,nmembers-1
+!
+!                ! Get group name
+!                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
+!
+!                ! Test if group is a boundary condition function. 'BCP_'
+!                if (gname(1:4) == 'BCP_') then
+!                    ! Store name
+!                    pnames(iprop) = gname
+!                    iprop = iprop + 1
+!                end if
+!
+!            end do ! igrp
+!
+!
+!
+!            !
+!            ! Now, go about deleting them all.
+!            ! Previously, we were deleting them one at a time, but then the index
+!            ! traversal call get_obj_info_idx was failing for more than one property
+!            ! because the index was screwed up.
+!            !
+!            do iprop = 1,nprop
+!                call remove_bc_property_hdf(bc_state,pnames(iprop))
+!            end do
+!
+!
+!        end if ! nmembers
+
+
+        !
+        ! Close the bc_state group
+        !
+        call h5gclose_f(bc_state,ierr)
+
+        !
+        ! Unlink the bc_state group
+        !
+        call h5gunlink_f(bcgroup_id,"RBF_SRC_"//trim(state_string),ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"remove_rbf_src_group_hdf: error unlinking bc_state group")
+
+
+
+!        !
+!        ! If no bc_state's are left attached, clear group family.
+!        !
+!        if (get_nbc_states_hdf(bcgroup_id) == 0) then
+!            call set_bc_state_group_family_hdf(bcgroup_id,'none')
+!        end if
+
+
+
+    end subroutine remove_rbf_src_group_hdf
+    !****************************************************************************************************
+
+
+
+
+    !>  Open a domain group and return HDF group identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine set_pmmf_name_hdf(fid,pmmname,fname)
-        integer(HID_T), intent(in)  :: fid
-        character(*),   intent(in)  :: pmmname 
-        character(*),   intent(in)  :: fname
+    subroutine set_rbf_src_patchname_hdf(rbfgroup_id, patchname)
+        integer(HID_T), intent(in)  :: rbfgroup_id
+        character(*),   intent(in)  :: patchname
 
-        character(:),   allocatable :: user_msg
-        integer(HID_T)              :: pmmgroup_id
-        integer(ik)                 :: ierr
-        real(rdouble), dimension(1)     :: buf
-        logical                     :: group_exists
+        integer(ik)     :: ierr
+        integer(HID_T)  :: rbffcn_id
 
-        group_exists = check_link_exists_hdf(fid,"PMM_"//trim(pmmname))
+        call h5ltset_attribute_string_f(rbfgroup_id, ".", "Patch Name", patchname, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_rbf_type_explicit_hdf: error setting RBF Type.")
+        
 
-        user_msg = "set_pmmf_name_hdf: PMM group does not exist. &
-                    Create the pmm before trying to set the function name."
-        if (.not. group_exists) call chidg_signal_one(FATAL,user_msg,trim(fname))
-
-
-
-        pmmgroup_id = open_pmm_hdf(fid, pmmname)
-
-        call h5ltset_attribute_string_f(pmmgroup_id, ".", "Function", fname, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_pmmf_name_hdf: error setting the attribute 'Function'")
-
-
-        call h5gclose_f(pmmgroup_id,ierr)
-
-    end subroutine set_pmmf_name_hdf
+    end subroutine set_rbf_src_patchname_hdf
     !****************************************************************************************
 
 
 
 
-    !>  Add a pmm group to the ChiDG HDF file.
-    !!
-    !!  
-    !!      
+    !>  Add a mm group to the ChiDG HDF file.
     !!
     !!  @author Eric Wolf
-    !!  @date   4/25/2017 
+    !!  @date   4/21/2017 
     !!
     !!  @param[in]  fid             HDF file identifier
     !!  @param[in]  group_name      Unique name for the new boundary condition state group.
     !!
     !----------------------------------------------------------------------------------------
-    subroutine create_pmmfo_group_hdf(fid,pmmname,oname,val)
+    subroutine create_rbf_mm_driver_hdf(fid,fname)
         integer(HID_T), intent(in)  :: fid
-        character(*),   intent(in)  :: pmmname 
-        character(*),   intent(in)  :: oname
-        real(rk),       intent(in),optional  :: val
+        character(*),   intent(in),optional  :: fname
 
-        character(:),   allocatable :: user_msg
-        integer(HSIZE_T)                :: adim
-        integer(HID_T)              :: pmmgroup_id, pmmfo_id
+        integer(HID_T)              :: mmgroup_id
         integer(ik)                 :: ierr
-        real(rdouble), dimension(1)     :: buf
         logical                     :: group_exists
 
 
-        pmmgroup_id = open_pmm_hdf(fid, pmmname)
-
         ! Check if bc_state group exists
-        group_exists = check_link_exists_hdf(pmmgroup_id,"PMMFO_"//trim(oname))
+        group_exists = check_link_exists_hdf(fid,"RBF Driver")
 
-        user_msg = "create_pmmfo_group_hdf: PMMF option group already exists. &
-                    Cannot have two groups with the same name"
-        if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(oname))
 
-        !
-        ! Create a new group for the option
-        !
-        call h5gcreate_f(pmmgroup_id, "PMMFO_"//trim(oname), pmmfo_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'create_pmmfo_group_hdf: error creating new group for PMMF option.')
-        if (present(val)) then
-            adim = 1
-            call h5ltset_attribute_double_f(pmmfo_id, ".", "val", [real(val,rdouble)], adim, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"create_pmmfo_group_hdf: error setting option value")
+        ! Create a new group for the bc_state_t
+        if (.not. group_exists) then
+            call h5gcreate_f(fid, "RBF Driver", mmgroup_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'create_mm_group_hdf: error creating new group for MM_.')
+        else
+            call h5gopen_f(fid, "RBF Driver", mmgroup_id, ierr)
         end if
 
-        
 
-        call h5gclose_f(pmmfo_id,ierr)
-        call h5gclose_f(pmmgroup_id,ierr)
+        ! Set 'Family'
+        if (present(fname)) then
+            call h5ltset_attribute_string_f(mmgroup_id, ".", "Family", fname, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_mm_group_hdf: error setting the attribute 'Family'")
+        end if
 
-    end subroutine create_pmmfo_group_hdf
+
+        call h5gclose_f(mmgroup_id,ierr)
+
+    end subroutine create_rbf_mm_driver_hdf
     !****************************************************************************************
 
-
-    !>  Sets pmmf option value attribute to the ChiDG HDF file.
+    !>  Open a domain group and return HDF group identifier.
     !!
-    !!  
-    !!      
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
     !!
-    !!  @author Eric Wolf
-    !!  @date   4/25/2017 
-    !!
-    !!  @param[in]  fid             HDF file identifier
-    !!  @param[in]  pmmname         Unique name for the pmm group.
-    !!  @param[in]  oname           Unique name for the pmmfo group.
-    !!  @param[in]  val             Option value
     !!
     !----------------------------------------------------------------------------------------
-    subroutine set_pmmfo_val_hdf(fid,pmmname,oname,val)
+    function open_rbf_mm_driver_hdf(fid) result(dom_id)
         integer(HID_T), intent(in)  :: fid
-        character(*),   intent(in)  :: pmmname 
-        character(*),   intent(in)  :: oname
-        real(rk),       intent(in)  :: val
 
-        character(:),   allocatable :: user_msg
-        integer(HSIZE_T)                :: adim
-        integer(HID_T)              :: pmmgroup_id, pmmfo_id
-        integer(ik)                 :: ierr
+        integer(HID_T)  :: dom_id
+        integer(ik)     :: ierr
+        logical         :: exists
+
+        ! Check exists
+        exists = check_link_exists_hdf(fid,"RBF Driver")
+        if (.not. exists) call chidg_signal(FATAL,"open_rbf_src_hdf: Couldn't find domain in file.")
+
+        ! If so, open.
+        call h5gopen_f(fid,"RBF Driver", dom_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"open_rbf_src_hdf: Error in h5gopen_f")
+
+
+    end function open_rbf_mm_driver_hdf
+    !****************************************************************************************
+
+
+
+
+    !>  Close a domain group from an HDF identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine close_rbf_mm_driver_hdf(dom_id)
+        integer(HID_T), intent(in)  :: dom_id
+
+        integer(ik) :: ierr
+
+        call h5gclose_f(dom_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL, "close_rbf_src_hdf: Error in h5gclose_f.")
+
+    end subroutine close_rbf_mm_driver_hdf
+    !****************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/15/2016
+    !!
+    !--------------------------------------------------------------------------------------------
+    function check_any_rbf_mm_driver_exists_hdf(group_id) result(exist_status)
+        integer(HID_T),     intent(in)  :: group_id 
+
+        integer(ik) :: ierr, nmembers, igrp, type
+        logical     :: exist_status
+        character(len=1024)                     :: gname
+
+        !  Get number of groups linked to the current bc_state
+        call h5gn_members_f(group_id, ".", nmembers, ierr)
+
+        !  Loop through groups and delete properties
+        exist_status = .false.
+        if ( nmembers > 0 ) then
+
+            ! First get number of states. This could be different than number of groups.
+            do igrp = 0,nmembers-1
+
+                ! Get group name
+                call h5gget_obj_info_idx_f(group_id, ".", igrp, gname, type, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"check_pmmf_exists: Error in call to h5lexists_f")
+
+                ! Test if group is a boundary condition function. 'BCP_'
+                if (trim(gname) == 'RBF Driver') then
+                    ! increment nprop
+                    exist_status = .true.
+                end if
+
+            end do
+        end if
+
+
+    end function check_any_rbf_mm_driver_exists_hdf
+    !*********************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/15/2016
+    !!
+    !--------------------------------------------------------------------------------------------
+    function check_rbf_mm_driver_exists_hdf(bcface_id) result(exist_status)
+        integer(HID_T),     intent(in)  :: bcface_id
+
+        integer(ik) :: ierr
+        logical     :: exist_status
+
+        ! Check if face contains the bc_state
+        call h5lexists_f(bcface_id, "RBF Driver", exist_status, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_pmmf_exists: Error in call to h5lexists_f")
+
+
+    end function check_rbf_mm_driver_exists_hdf
+    !*********************************************************************************************
+
+
+
+    
+    !>  Remove a bc_state from the HDF file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/1/2016
+    !!  @note   Modified to include bc_states
+    !!
+    !----------------------------------------------------------------------------------------------------
+    subroutine remove_rbf_mm_driver_hdf(bcgroup_id)
+        integer(HID_T),     intent(in)  :: bcgroup_id
+
+        integer(HID_T)                          :: bc_state
+
+        integer(HSIZE_T)                        :: iattr, idx
+        integer(ik)                             :: nattr
+        integer                                 :: nmembers, igrp, type, ierr, iter, iprop, nprop
+        character(len=10)                       :: faces(NFACES)
+        character(len=1024),    allocatable     :: anames(:), pnames(:)
+        character(len=1024)                     :: gname
+        type(h5o_info_t), target                :: h5_info
+
+
+
+        ! Open the bc_state group
+        call h5gopen_f(bcgroup_id, "RBF Driver", bc_state, ierr)
+
+
+        ! Delete overall boundary condition face attributes
+        call delete_group_attributes_hdf(bc_state)
+
+
+!        !  Get number of groups linked to the current bc_state
+!        call h5gn_members_f(bc_state, ".", nmembers, ierr)
+!
+
+!        !
+!        !  Loop through groups and delete properties
+!        !
+!        if ( nmembers > 0 ) then
+!
+!            !
+!            ! First get number of states. This could be different than number of groups.
+!            !
+!            nprop = 0
+!            do igrp = 0,nmembers-1
+!
+!                ! Get group name
+!                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
+!
+!                ! Test if group is a boundary condition function. 'BCP_'
+!                if (gname(1:4) == 'BCP_') then
+!                    ! increment nprop
+!                    nprop = nprop + 1
+!                end if
+!
+!            end do  ! igrp
+!
+!
+!            !
+!            ! Second, get all state names
+!            !
+!            allocate(pnames(nprop), stat=ierr)
+!            if (ierr /= 0) call AllocationError
+!            iprop = 1
+!            do igrp = 0,nmembers-1
+!
+!                ! Get group name
+!                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
+!
+!                ! Test if group is a boundary condition function. 'BCP_'
+!                if (gname(1:4) == 'BCP_') then
+!                    ! Store name
+!                    pnames(iprop) = gname
+!                    iprop = iprop + 1
+!                end if
+!
+!            end do ! igrp
+!
+!
+!
+!            !
+!            ! Now, go about deleting them all.
+!            ! Previously, we were deleting them one at a time, but then the index
+!            ! traversal call get_obj_info_idx was failing for more than one property
+!            ! because the index was screwed up.
+!            !
+!            do iprop = 1,nprop
+!                call remove_bc_property_hdf(bc_state,pnames(iprop))
+!            end do
+!
+!
+!        end if ! nmembers
+
+
+        !
+        ! Close the bc_state group
+        !
+        call h5gclose_f(bc_state,ierr)
+
+        !
+        ! Unlink the bc_state group
+        !
+        call h5gunlink_f(bcgroup_id,"RBF Driver",ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_state_hdf: error unlinking bc_state group")
+
+
+
+!        !
+!        ! If no bc_state's are left attached, clear group family.
+!        !
+!        if (get_nbc_states_hdf(bcgroup_id) == 0) then
+!            call set_bc_state_group_family_hdf(bcgroup_id,'none')
+!        end if
+
+
+
+    end subroutine remove_rbf_mm_driver_hdf
+    !****************************************************************************************************
+
+
+
+
+
+    !>  Given the name of a bc_state on a face, return an initialized bc_state instance.
+    !!
+    !!  You may consider calling 'get_bc_state_names_hdf' first to get a list of 
+    !!  available bc_state's on a face. Then the names could be passed into this routine
+    !!  to return the bc_state instance.
+    !!
+    !!  @author Eric Wolf
+    !!  @date   3/30/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_rbf_mm_hdf(fid,pmm_name) result(mm)
+        integer(HID_T), intent(in)  :: fid 
+        character(*),   intent(in)  :: pmm_name
+
+
+        integer(HID_T)                          :: rbfgroup_id, rbf_src_id
+        class(rbf_mesh_motion_t),  allocatable  :: mm
+        character(:),       allocatable         :: pmmname, pname, oname
+        character(:), allocatable               :: patchname, fname, rbfname, rbfexpname, dfamname
+        integer(HID_T)                          :: pmmgroup_id, pmm_id, pmmfo_id, driver_id
+        integer(ik)                             :: ierr, iprop, nprop, iopt, noptions
+        real(rdouble), dimension(1)             :: buf
+        real(rk)                                :: ovalue
+        logical                                 :: group_exists, function_exists
+        type(svector_t)                         :: rbf_src_group_names
+        integer(ik)                             :: isrc, nsrc
+        real(rk)                                :: radius(3), base_fraction
+
+        class(rbf_mm_driver_t), allocatable     :: mm_driver
+        class(rbf_mm_driver_pmm), allocatable     :: mm_driver_pmmf
+        type(rbf_source_t) :: rbf_source_temp
+        type(rbf_info_t)    :: rbf_info_temp
+        logical :: exists
+        type(svector_t)                         :: rbf_src_names
+        
+        allocate(character(1024) :: fname, pname) 
+        !
+        !   Prescribed mesh motion group structure
+        ! /MM_pmm_name/...
+        !   ATTRIBUTE "Family"      - this has already been used to select this function 
+        !       "RBF"
+        !   GROUP "RBF_SRC_1"       - RBF source surface
+        !       ATTRIBUTE "Patch Name" - name of a patch group to serve as a RBF source
+        !           "name1"
+        !       GROUP "RBF Driver"  - defines how RBF source values will be provided
+        !           ATTRIBUTE "Family" - now only "PMMF"; in the future, could point to interface w. struct. solver
+
+        ! Just in case  the full name was passed, strip the "MM_" prefix if necessary
+        if (pmm_name(1:3) == "MM_") then
+            pmmname = trim(pmm_name(4:))
+        else
+            pmmname = trim(pmm_name)
+        end if
+
+
+        ! Create boundary condition state and get number of properties
+        allocate(mm, stat=ierr)
+        if (ierr /=0) call AllocationError
+        call mm%set_name(pmmname)
+       
+
+        !
+        ! Loop over source node patches, get the patch name and PMMF assocatiated with each
+        !
+
+        ! Open the  MM group, get the PMMFG name and use it to get the PMMF
+        pmmgroup_id = open_mm_group_hdf(fid,pmmname)
+
+
+        ! RBF Function Data
+        exists = check_link_exists_hdf(pmmgroup_id,"RBF Function")
+        
+        if (exists) then
+            ! Open RBF Function Group
+            rbfgroup_id = open_rbf_function_hdf(pmmgroup_id)
+
+            ! Read RBF  settings
+            ! RBF Type (mandatory)
+            ! e.g. "tps" (not compactly supported), "wc6", etc 
+            call h5ltget_attribute_string_f(rbfgroup_id, ".", "RBF Type", rbfname, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_rbf_mm_hdf: error getting RBF Type.")
+
+            ! Get the RBF radius
+            ! To allow for ellipsoidal RBFs, we have three radii along each coordinate direction
+            ! This might be useful for 1D/2D problems that are slender in 2/1 directions,
+            ! where an isotropic RBF might lead to  an ill-conditioned linear system because 
+            ! the isotropic RBF would be close to constant in  the slender directions.
+            ! 
+            ! To avoid this issue, take the radius in the slender direction to be on the order
+            ! of the mesh length in the slender direction.
+            call h5ltget_attribute_double_f(rbfgroup_id, ".", "RBF Radius-1", buf, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_rbf_mm_hdf: error getting RBF Radius-1.")
+            radius(1) = real(buf(1), rk)
+
+            call h5ltget_attribute_double_f(rbfgroup_id, ".", "RBF Radius-2", buf, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_rbf_mm_hdf: error getting RBF Radius-2.")
+            radius(2) = real(buf(1), rk)
+
+            call h5ltget_attribute_double_f(rbfgroup_id, ".", "RBF Radius-3", buf, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_rbf_mm_hdf: error getting RBF Radius-3.")
+            radius(3) = real(buf(1), rk)
+
+            call h5gclose_f(rbfgroup_id,ierr)
+        else
+
+            !Otherwise, use default values
+            rbfname = "empty"
+            radius = ZERO
+
+        end if
+
+        ! Now, check if there is an RBF Explicit Group, which is used in the MS-RBF algorithm.
+        exists = check_link_exists_hdf(pmmgroup_id,"RBF Function Explicit")
+        if (exists) then
+            rbfgroup_id = open_rbf_function_exp_hdf(pmmgroup_id)
+
+            ! If so, read in parameters.
+
+            ! RBF Explicit type (optional, must be compactly supported!)
+            ! e.g. "wc6"
+            call h5ltget_attribute_string_f(rbfgroup_id, ".", "RBF Type Explicit", rbfexpname, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_rbf_mm_hdf: error getting RBF Base.")
+
+
+            ! Get the fraction of source nodes to be used as base nodes (expect ~0.05-0.1)
+            ! Optional
+            call h5ltget_attribute_double_f(rbfgroup_id, ".", "RBF Base Fraction", buf, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_rbf_mm_hdf: error getting RBF Base.")
+            base_fraction = real(buf(1), rk)
+
+            call h5gclose_f(rbfgroup_id,ierr)
+            
+            ! Set up the RBF
+
+        else
+
+            rbfexpname = 'empty'
+            base_fraction = ONE
+        end if
+
+
+
+        ! RBF Sources
+
+        ! Get the number and names of source node patches, then loop over the source groups
+        nsrc = get_nrbf_src_groups_hdf(pmmgroup_id)
+        rbf_src_names = get_rbf_src_group_names_hdf(pmmgroup_id) 
+
+        do isrc = 1, nsrc
+
+            ! Open RBF source group
+            call h5gopen_f(pmmgroup_id, "RBF_SRC_"//trim(rbf_src_names%data_(isrc)%get()), rbf_src_id, ierr)
+
+            ! Get patch name
+            call h5ltget_attribute_string_f(rbf_src_id, ".", "Patch Name", patchname, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_rbf_mm_hdf: error getting source patch name.")
+
+            ! Store patch name
+
+
+            ! Open RBF Source Driver group
+            call h5gopen_f(rbf_src_id, "RBF Driver", driver_id, ierr)
+
+            ! Get the type - PMMF, etc?
+            call h5ltget_attribute_string_f(driver_id, ".", "Family", dfamname, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_rbf_mm_hdf: error getting source patch driver Family.")
+
+            if (fname == "PMMF") then
+
+                !mm_driver_pmmf = get_rbf_mm_driver_pmmf_hdf(driver_id)
+
+                !allocate(mm_driver, source = mm_driver_pmmf)
+                allocate(mm_driver, source = get_rbf_mm_driver_pmmf_hdf(driver_id), stat=ierr)
+
+                call rbf_source_temp%init(patchname, mm_driver)
+            else
+                call chidg_signal(FATAL,"get_rbf_mm_hdf: invalid RBF source Driver Family - must be one of: 'PMMF'.")
+            end if
+            
+            call h5gclose_f(driver_id,ierr)
+            call h5gclose_f(rbf_src_id,ierr)
+
+            
+            call mm%rbf_sources%push_back(rbf_source_temp)
+        end do
+
+        call h5gclose_f(pmmgroup_id,ierr)
+        
+        call rbf_info_temp%init(rbfname, radius, rbfexpname, base_fraction)
+
+
+        call mm%add_rbf_info(rbf_info_temp)
+    end function get_rbf_mm_hdf
+    !*****************************************************************************************
+
+
+
+
+
+    function get_rbf_mm_driver_pmmf_hdf(driver_id) result(mm_driver)
+        integer(HID_T), intent(in)  :: driver_id
+
+        class(rbf_mm_driver_pmm), allocatable :: mm_driver
+
+        type(svector_t) :: pmmf_names, rbf_src_names
+        integer(ik)     :: npmmfs, ierr
+        class(prescribed_mesh_motion_function_t), allocatable :: pmmf_in
+ 
+        ! Get the PMMF
+        pmmf_names  = get_pmmf_names_hdf(driver_id)
+        npmmfs = get_npmmfs_hdf(driver_id)
+
+        if (npmmfs>1)  then
+            call chidg_signal(FATAL,"get_rbf_mm_hdf: multiple PMMF groups present in one driver!")
+        else if (npmmfs == 0) then
+
+            call chidg_signal(FATAL,"get_rbf_mm_hdf: PMMF group is expected but not present in a driver!")
+        else
+            !pmmf_in = get_pmmf_hdf(driver_id, pmmf_names%data_(1)%get())
+            allocate(pmmf_in, source = get_pmmf_hdf(driver_id, pmmf_names%data_(1)%get()), stat=ierr)
+
+        end if
+        ! Store the PMMF
+
+        !if (allocated(mm_driver)) deallocate(mm_driver)
+        !call create_rbf_mm_driver(mm_driver_in, 'pmm')
+        allocate(mm_driver)
+        call mm_driver%add_pmmf(pmmf_in)
+
+    end function get_rbf_mm_driver_pmmf_hdf
+    !*****************************************************************************************
+
+
+
+
+
+    !
+    ! Prescribed Mesh Motion Function Utitlies
+    !
+
+
+    !>  Open a boundary condition state, return identifier. "BCS_statename"
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    function open_pmmf_hdf(group_id,state_name) result(state_id)
+        integer(HID_T), intent(in)  :: group_id
+        character(*),   intent(in)  :: state_name
+
+        integer(HID_T)  :: state_id
+        integer(ik)     :: ierr
+
+
+        call h5gopen_f(group_id,"PMMF_"//trim(state_name), state_id, ierr)
+        if (ierr /= 0) call chidg_signal_one(FATAL,"open_pmmf_hdf: Error opening PMMF.",trim(state_name))
+
+
+    end function open_pmmf_hdf
+    !****************************************************************************************
+
+
+
+
+
+    !>  Close a boundary condition state.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine close_pmmf_hdf(state_id)
+        integer(HID_T), intent(in)  :: state_id
+
+        integer(ik)     :: ierr
+
+        call h5gclose_f(state_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"close_pmmf_hdf: Error closing PMMF.")
+
+    end subroutine close_pmmf_hdf
+    !***************************************************************************************
+
+
+
+
+
+    !>  Add bc_state function to a group of bc_states.
+    !!
+    !!  /BCSG_name/BCS_bc_state
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!  @date   11/8/2016   moved from domain to groups
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine add_pmmf_hdf(bcgroup_id,bc_state)
+        integer(HID_T),     intent(in)  :: bcgroup_id
+        class(prescribed_mesh_motion_function_t),  intent(in)  :: bc_state
+
+        integer(ik)                         :: ierr
+        integer(HID_T)                      :: state_id
+        character(:),   allocatable         :: current_family, user_msg
+        logical                             :: link_exists, state_found
+
+
+        if ( (bc_state%get_name() == 'empty') .or. &
+             (bc_state%get_name() == 'Empty') ) then
+            ! If 'empty' do not allocate new bc
+            
+        else
+
+            ! Check to make sure the bc_state wasn't previously added
+            link_exists = check_link_exists_hdf(bcgroup_id,"PMMF_"//bc_state%get_name())
+
+
+            if (.not. link_exists) then
+
+                ! Check bc_state exists in the register. 
+                ! If not, user probably entered the wrong string, so do nothing
+                state_found = check_pmmf_registered(bc_state%get_name())
+
+                if (state_found) then
+
+
+                    ! Create a new group for the bc_state_t
+                    call h5gcreate_f(bcgroup_id, "PMMF_"//trim(bc_state%get_name()), state_id, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"add_pmmf_hdf: error creating new group for bc_state")
+
+                    call h5ltset_attribute_string_f(state_id, ".", "Function", trim(bc_state%get_name()), ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"add_pmmf_hdf: error creating new group for bc_state")
+                    ! Add bc_state properties to the group that was created
+                    call add_pmmfo_groups_hdf(state_id,bc_state)
+
+                    ! Close function group
+                    call h5gclose_f(state_id,ierr)
+
+                end if
+
+            end if
+
+        end if
+
+
+    end subroutine add_pmmf_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+    !>  Return the number of bc_state's attached to a boundary condition face group.
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   10/17/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_npmmfs_hdf(bcgroup_id) result(nbc_states)
+        integer(HID_T), intent(in)  :: bcgroup_id
+
+        type(svector_t) :: bc_states
+        integer(ik)     :: nbc_states
+
+        bc_states = get_pmmf_names_hdf(bcgroup_id)
+        nbc_states = bc_states%size()
+
+    end function get_npmmfs_hdf
+    !****************************************************************************************
+
+
+
+    
+
+    !>  Return the names of bc_state's attached to a boundary condition state group.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    function get_pmmf_names_hdf(bcgroup_id) result(bc_state_names)
+        integer(HID_T), intent(in)  :: bcgroup_id
+
+        integer(ik)     :: nmembers, ierr, igrp, type
+        character(1024) :: gname
+        type(svector_t) :: bc_state_names
+
+
+        !  Get number of groups linked to the current bc_face
+        call h5gn_members_f(bcgroup_id, ".", nmembers, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_states_names_hdf: error h5gn_members_f")
+
+        if ( nmembers > 0 ) then
+            do igrp = 0,nmembers-1
+                ! Get group name
+                call h5gget_obj_info_idx_f(bcgroup_id, ".", igrp, gname, type, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_names_hdf: error h5gget_obj_info_idx_f")
+
+                ! Test if group is a boundary condition state. 'BCS_'
+                if (gname(1:5) == 'PMMF_') then
+                    call bc_state_names%push_back(string_t(trim(gname(6:))))
+                end if
+            end do  ! igrp
+        end if
+
+    end function get_pmmf_names_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+    
+
+    !>  Given the name of a bc_state on a face, return an initialized bc_state instance.
+    !!
+    !!  You may consider calling 'get_bc_state_names_hdf' first to get a list of 
+    !!  available bc_state's on a face. Then the names could be passed into this routine
+    !!  to return the bc_state instance.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_pmmf_hdf(bcgroup_id,bcstate_name) result(bc_state)
+        integer(HID_T), intent(in)  :: bcgroup_id
+        character(*),   intent(in)  :: bcstate_name
+
+
+        class(prescribed_mesh_motion_function_t),  allocatable :: bc_state 
+        character(:),       allocatable :: bcname, pname, oname
+        character(1024)                 :: fname
+        integer(HID_T)                  :: bcstate_id, bcprop_id
+        integer(ik)                     :: ierr, iprop, nprop, iopt, noptions
         real(rdouble), dimension(1)     :: buf
-        logical                     :: group_exists
+        real(rk)                        :: ovalue
+ 
+        ! Get boundary condition name string
+        if (bcstate_name(1:5) == "PMMF_") then
+            bcname = trim(bcstate_name(6:))
+        else
+            bcname = trim(bcstate_name)
+        end if
 
 
-        pmmgroup_id = open_pmm_hdf(fid, pmmname)
 
-        ! Check if bc_state group exists
-        group_exists = check_link_exists_hdf(pmmgroup_id,"PMMFO_"//trim(oname))
+        ! Open bc_state group
+        call h5gopen_f(bcgroup_id, "PMMF_"//trim(bcname), bcstate_id, ierr)
+        if (ierr /= 0) call chidg_signal_one(FATAL,"get_bc_state_hdf: error opening bc_state group.",trim(bcstate_name))
 
-        user_msg = "set_pmmfo_val_hdf: PMMF option group does not exist. &
-                    Create the pmmfo group before trying to set the value."
-        if (.not. group_exists) call chidg_signal_one(FATAL,user_msg,trim(oname))
+        call h5ltget_attribute_string_f(bcstate_id, ".", "Function", fname, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_pmmf_hdf: error getting function name.")
 
-        !
-        ! Create a new group for the option
-        !
-        call h5gopen_f(pmmgroup_id, "PMMFO_"//trim(oname), pmmfo_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'set_pmmfo_val_hdf: error opening group for PMMF option.')
-        adim = 1
-        call h5ltset_attribute_double_f(pmmfo_id, ".", "val", [real(val,rdouble)], adim, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_pmmfo_val_hdf: error setting option value")
+
+        ! Create boundary condition state and get number of properties
+        call create_prescribed_mesh_motion_function(bc_state,fname)
+        nprop = bc_state%get_noptions()
 
         
+        ! Loop through properties
+        if (nprop> 0 ) then
+            do iprop = 1,nprop
 
-        call h5gclose_f(pmmfo_id,ierr)
-        call h5gclose_f(pmmgroup_id,ierr)
+                ! Get property name + open HDF group
+                pname = bc_state%get_option_key(iprop)
 
-    end subroutine set_pmmfo_val_hdf
-    !****************************************************************************************
+                ! Read the function name set for the property.
+                call h5ltget_attribute_double_f(bcstate_id, ".", pname, buf, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: error getting function name.")
+                ovalue = real(buf(1),rk)
+                
+                ! Set/Create the function for the current property
+                call bc_state%set_option(trim(pname), ovalue)
+
+            end do !iprop
+        end if
+
+
+
+        ! Close boundary condition state group
+        call h5gclose_f(bcstate_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: h5gclose")
+
+
+    end function get_pmmf_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Add properties to a bc_state on a boundary for a particular domain.
+    !!
+    !!  /D_domainname/Patches/"face"/BCS_bc_state/BCP_bc_property
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !!  @param[in]      bcstate_id      HDF identifier of the bc_state group in the file to 
+    !!                                  be modified.
+    !!  @param[inout]   bc_state        bc_state class that can be queried for properties to 
+    !!                                  be set.
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine add_pmmfo_groups_hdf(bcstate_id, bc_state)
+        integer(HID_T),     intent(in)  :: bcstate_id
+        class(prescribed_mesh_motion_function_t),  intent(in)  :: bc_state
+
+        integer(HID_T)                  :: prop_id
+        integer(HSIZE_T)                :: adim
+        integer(ik)                     :: iprop, nprop, iopt, nopt, ierr
+        character(len=1024)             :: pstring
+        character(len=:),   allocatable :: option_key, fcn_name
+        real(rk)                        :: option_value
+
+        ! Get number of functions in the boundary condition
+        nopt = bc_state%get_noptions()
+        if (nopt > 0 ) then
+            do iopt = 1,nopt
+
+                ! Get the current option and default value.
+                option_key   = bc_state%get_option_key(iopt)
+                option_value = bc_state%get_option_value(option_key)
+
+                ! Set the option as a real attribute
+                adim = 1
+                call h5ltset_attribute_double_f(bcstate_id, ".", option_key, [real(option_value,rdouble)], adim, ierr)
+
+            end do
+        end if
+
+
+    end subroutine add_pmmfo_groups_hdf
+    !******************************************************************************************
+
+
+
+
+
+
+
+    !>  Remove a bc_state from the HDF file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/1/2016
+    !!  @note   Modified to include bc_states
+    !!
+    !----------------------------------------------------------------------------------------------------
+    subroutine remove_mm_group_hdf(bcgroup_id,state_string)
+        integer(HID_T),     intent(in)  :: bcgroup_id
+        character(len=*),   intent(in)  :: state_string
+
+        integer(HID_T)                          :: bc_state
+
+        integer(HSIZE_T)                        :: iattr, idx
+        integer(ik)                             :: nattr
+        integer                                 :: nmembers, igrp, type, ierr, iter, iprop, nprop
+        character(len=10)                       :: faces(NFACES)
+        character(len=1024),    allocatable     :: anames(:), pnames(:)
+        character(len=1024)                     :: gname
+        type(h5o_info_t), target                :: h5_info
+
+        logical                                 :: exists_status
+
+
+        call h5lexists_f(bcgroup_id, "MM_"//trim(state_string), exists_status, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_pmmf_exists: Error in call to h5lexists_f")
+        if (exists_status) then
+            ! Open the bc_state group
+            call h5gopen_f(bcgroup_id, "MM_"//trim(state_string), bc_state, ierr)
+
+
+            ! Delete overall boundary condition face attributes
+            call delete_group_attributes_hdf(bc_state)
+
+            ! Close the bc_state group
+            call h5gclose_f(bc_state,ierr)
+
+            ! Unlink the bc_state group
+            call h5gunlink_f(bcgroup_id,"MM_"//trim(state_string),ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_state_hdf: error unlinking bc_state group")
+
+        end if
+
+    end subroutine remove_mm_group_hdf
+    !****************************************************************************************************
+
+
+
+
+
+
+
+    !>  Remove a bc_state from the HDF file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/1/2016
+    !!  @note   Modified to include bc_states
+    !!
+    !----------------------------------------------------------------------------------------------------
+    subroutine remove_pmmf_hdf(bcgroup_id,state_string)
+        integer(HID_T),     intent(in)  :: bcgroup_id
+        character(len=*),   intent(in)  :: state_string
+
+        integer(HID_T)  :: bc_state
+        integer(ik)     :: ierr
+
+        ! Open the bc_state group
+        call h5gopen_f(bcgroup_id, "PMMF_"//trim(state_string), bc_state, ierr)
+
+        ! Delete overall boundary condition face attributes
+        call delete_group_attributes_hdf(bc_state)
+
+        ! Close the bc_state group
+        call h5gclose_f(bc_state,ierr)
+
+        ! Unlink the bc_state group
+        call h5gunlink_f(bcgroup_id,"PMMF_"//trim(state_string),ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_state_hdf: error unlinking bc_state group")
+
+    end subroutine remove_pmmf_hdf
+    !****************************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/15/2016
+    !!
+    !--------------------------------------------------------------------------------------------
+    function check_pmmf_exists_hdf(bcface_id,bc_state) result(exist_status)
+        integer(HID_T),     intent(in)  :: bcface_id
+        character(len=*),   intent(in)  :: bc_state
+
+        integer(ik) :: ierr
+        logical     :: exist_status
+
+        ! Check if face contains the bc_state
+        call h5lexists_f(bcface_id, "PMMF_"//trim(bc_state), exist_status, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_pmmf_exists: Error in call to h5lexists_f")
+
+
+    end function check_pmmf_exists_hdf
+    !*********************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/15/2016
+    !!
+    !--------------------------------------------------------------------------------------------
+    function check_any_pmmf_exists_hdf(group_id) result(exist_status)
+        integer(HID_T),     intent(in)  :: group_id 
+
+        integer(ik)         :: ierr, nmembers, igrp, type
+        logical             :: exist_status
+        character(len=1024) :: gname
+
+        !  Get number of groups linked to the current bc_state
+        call h5gn_members_f(group_id, ".", nmembers, ierr)
+
+        !  Loop through groups and delete properties
+        exist_status = .false.
+        if ( nmembers > 0 ) then
+
+            ! First get number of states. This could be different than number of groups.
+            do igrp = 0,nmembers-1
+
+                ! Get group name
+                call h5gget_obj_info_idx_f(group_id, ".", igrp, gname, type, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"check_pmmf_exists: Error in call to h5lexists_f")
+
+                ! Test if group is a boundary condition function. 'BCP_'
+                if (gname(1:5) == 'PMMF_') then
+                    ! increment nprop
+                    exist_status = .true.
+                end if
+
+            end do  ! igrp
+        end if
+
+
+    end function check_any_pmmf_exists_hdf
+    !*********************************************************************************************
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/15/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    function check_pmmfo_exists_hdf(bcface_id,pmmfoname) result(exist_status)
+        integer(HID_T),     intent(in)  :: bcface_id
+        character(len=*),   intent(in)  :: pmmfoname
+
+        integer(ik) :: ierr
+        logical     :: exist_status
+
+        ! Check if face contains the bc_state
+        call h5aexists_f(bcface_id, trim(pmmfoname), exist_status, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_pmmf_exists: Error in call to h5lexists_f")
+
+
+    end function check_pmmfo_exists_hdf
+    !*********************************************************************************************
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/15/2016
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine remove_any_pmmf_hdf(group_id) 
+        integer(HID_T),     intent(in)  :: group_id 
+
+        integer(ik)         :: ierr, nmembers, igrp, type
+        logical             :: exist_status
+        character(len=1024) :: gname
+
+        !  Get number of groups linked to the current bc_state
+        call h5gn_members_f(group_id, ".", nmembers, ierr)
+
+        ! Loop through groups and delete properties
+        if ( nmembers > 0 ) then
+
+            ! First get number of states. This could be different than number of groups.
+            do igrp = 0,nmembers-1
+
+                ! Get group name
+                call h5gget_obj_info_idx_f(group_id, ".", igrp, gname, type, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"check_pmmf_exists: Error in call to h5lexists_f")
+
+                ! Test if group is a boundary condition function. 'BCP_'
+                if (gname(1:5) == 'PMMF_') then
+                    ! increment nprop
+                    call remove_pmmf_hdf(group_id, gname(6:))
+                end if
+
+            end do  ! igrp
+        end if
+
+
+    end subroutine remove_any_pmmf_hdf
+    !*********************************************************************************************
+
+
+
+    !
+    ! chidg clone utilities for mesh motion
+    !
+
+
+
+    !>  Copy bc group association for all patches from file_a to file_b.
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/13/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine copy_mm_domains_hdf(fid_a,fid_b)
+        integer(HID_T), intent(in)  :: fid_a
+        integer(HID_T), intent(in)  :: fid_b
+
+        integer(HID_T)                  :: dom_id_a, dom_id_b, patch_id_a, patch_id_b
+        integer(ik)                     :: idom, ipatch
+        character(1024),    allocatable :: domain_names(:), patch_names(:)
+        character(:),       allocatable :: mm_group_name
+        logical                         :: exists
+
+        call write_line("Copying mesh motion domain associations...")
+        domain_names = get_domain_names_hdf(fid_a) 
+        do idom = 1,size(domain_names)
+
+            ! Check if there is a domain of the same name in 'fid_b'
+            exists = check_domain_exists_hdf(fid_b,trim(domain_names(idom)))
+
+            if (exists) then
+                
+                dom_id_a = open_domain_hdf(fid_a, trim(domain_names(idom)))
+                dom_id_b = open_domain_hdf(fid_b, trim(domain_names(idom)))
+                mm_group_name = get_mm_domain_group_hdf(dom_id_a)
+                call set_mm_domain_group_hdf(dom_id_b, trim(mm_group_name))
+
+                call close_domain_hdf(dom_id_a)
+                call close_domain_hdf(dom_id_b)
+
+            end if !exists
+
+        end do !idom
+
+
+    end subroutine copy_mm_domains_hdf
+    !*************************************************************************************
+
+    !>  Copy a boundary condition state group from one file to another file.
+    !!
+    !!  NOTE: if BCSG_ of same name already exists on fid_b, it is removed first.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/14/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine copy_mm_groups_hdf(fid_a,fid_b)
+        integer(HID_T), intent(in)  :: fid_a
+        integer(HID_T), intent(in)  :: fid_b
+
+        integer(ik) :: igroup, ierr
+
+        type(svector_t) :: bc_state_group_names
+        type(string_t)  :: group_name
+
+        ! Copy BCSG configuration
+        !   - copy entire BCSG groups from file_a to file_b
+        call write_line("Copying mesh motion groups...")
+        bc_state_group_names = get_mm_group_names_hdf(fid_a)
+        do igroup = 1,bc_state_group_names%size()
+            ! Get string of current group
+            group_name = bc_state_group_names%at(igroup)
+
+            ! Remove group in target if already exists
+            call remove_mm_group_hdf(fid_b,group_name%get())
+
+            ! Copy group from fid_a to fid_b
+            call h5ocopy_f(fid_a,"MM_"//trim(group_name%get()),fid_b,"MM_"//trim(group_name%get()),ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"copy_mm_groups_hdf: error copying mesh motion groups.")
+
+        end do !igroup
+
+
+    end subroutine copy_mm_groups_hdf
+    !***************************************************************************************
+
 
 
 

@@ -4,6 +4,9 @@ add_lib_sources(
                 mod_nonlinear_solver.f90
                 type_newton.f90
                 type_quasi_newton.f90
+                type_quasi_newton_sst.f90
+                type_quasi_newton_rs.f90
+                type_jfnk.f90
                 )
 
                 

@@ -13,6 +13,7 @@ module type_mesh
     use mpi_f08,                    only: mpi_isend, mpi_recv, mpi_integer4, mpi_real8, &
                                           mpi_waitall, mpi_request, mpi_status_ignore,  &
                                           mpi_statuses_ignore, mpi_character
+    use type_octree,                  only: octree_t
     implicit none
     private
 
@@ -40,6 +41,10 @@ module type_mesh
         type(element_t),        allocatable :: parallel_element(:)
         type(mpi_request_vector_t)          :: comm_requests
 
+        ! Tree data
+        real(rk), allocatable               :: global_nodes(:,:)
+        type(octree_t)                      :: octree
+
     contains
 
         ! Mesh procedures
@@ -62,6 +67,8 @@ module type_mesh
         ! Chimera
         procedure           :: assemble_chimera_data
 
+        ! Octree
+        procedure           :: set_global_nodes
 
         ! Resouce management
         procedure           :: release
@@ -596,6 +603,26 @@ contains
 
     end subroutine assemble_chimera_data
     !********************************************************************************
+
+
+
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    08/30/2018 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine set_global_nodes(self,global_nodes)
+        class(mesh_t),    intent(inout)           :: self
+        real(rk),           intent(in)              :: global_nodes(:,:)
+
+        if (allocated(self%global_nodes)) deallocate(self%global_nodes)
+        self%global_nodes = global_nodes
+
+    end subroutine set_global_nodes
+    !*****************************************************************************************
+
+
 
 
 

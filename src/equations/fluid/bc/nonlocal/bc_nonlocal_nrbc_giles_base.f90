@@ -446,13 +446,10 @@ contains
         do iradius = 1,nradius
             do itime = 1,ntime
 
-                if (itime == 1) then
-                    negate_dft = .false.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
-                    shift_sign = ONE
-                else if (itime > 1) then
-                    negate_dft = .true.     ! this is consistens with Lindblad's formulation, which is used for the unsteady modes(itime>1)
-                    shift_sign = -ONE
-                end if
+                ! this is consistent with Giles' formulation
+                negate_dft = .false.    
+                shift_sign = ONE
+
 
                 ! DFT in space
                 call dft(density_Ft_real( iradius,:,itime), density_Ft_imag( iradius,:,itime), density_real_tmp,  density_imag_tmp,  negate=negate_dft)
@@ -598,12 +595,7 @@ contains
         do igq = 1,size(coords)
             do itime = 1,size(density_hat_real,3)
 
-                if (itime == 1) then
-                    negate_dft = .false.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
-                else if (itime > 1) then
-                    negate_dft = .true.     ! this is consistent with Lindblad's formulation, which is used for the unsteady modes(itime>1)
-                end if
-
+                negate_dft = .false.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
 
                 theta_offset = coords(igq)%c2_ - self%theta_ref
                 ! **** WARNING: probably want ipdft_eval here ****

@@ -81,7 +81,7 @@ module integration_1D_nonlinear_diffusion_mod
     ! to test the nonlinear convergence between a case running on
     ! a different number of procs.
     !
-    ! Procs: 1, 2, 3, 7, 10
+    ! Procs: 1, 2, 3, 5, 8
     !
     real(rk)    :: error(5,2,3)         ! nprocs, ngrids, norders
     real(rk)    :: error_chimera(5,2,3) ! nprocs, ngrids, norders
@@ -230,8 +230,6 @@ contains
 
 
         u = worker%get_field('u', 'value')
-
-        ! mu(u) = exp(u)
         mu = exp(u)
 
         call worker%store_model_field('Scalar Diffusion Coefficient', 'value', mu)
@@ -431,17 +429,13 @@ contains
         type(test_nonlinear_diffusion_builder_t)        :: builder_test_nonlinear_diffusion
         type(testing_1D_nonlinear_diffusion_model_t)    :: diffusion_coefficient_model
 
-        !
         ! Get MPI communicator information from pFUnit
-        !
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
-        !
         ! Initialize ChiDG environment
-        !
         IO_DESTINATION   = 'file'
         call this%chidg%start_up('mpi',this%ChiDG_COMM)
         call this%chidg%start_up('core')
@@ -454,13 +448,11 @@ contains
         call model_factory%register(diffusion_coefficient_model)
 
 
-
         !-------------------------------------------------------------------------------
         !                 Initialize and register equation set builder
         !-------------------------------------------------------------------------------
         call builder_test_nonlinear_diffusion%init()
         call equation_set_factory%register(builder_test_nonlinear_diffusion%build('default'))
-
 
 
         !------------------------------------------------------------------------------
@@ -476,23 +468,18 @@ contains
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
-        !------------------------------------------------------------------------------
-
-
-
-        ! Set timescheme options to pass during initialization
-        !call toptions%set('dt', 0.1_rk) ! means nothing here
-        !call toptions%set('nsteps',100)
-        !call toptions%set('nwrite',0)
-
 
         ! Set linear solver options to pass during initialization
         call loptions%set('tol',1.e-15_rk)
+        call loptions%set('rtol',1.e-15_rk)
 
         ! Set nonlinear solver options
         call noptions%set('tol',1.e-8_rk)
+        call noptions%set("rtol",1.e-14_rk)
         call noptions%set('cfl0',0.01_rk)
         call noptions%set('nsteps',1000)
+        call noptions%set('ptc',.true.)
+        !------------------------------------------------------------------------------
 
 
 
@@ -584,16 +571,6 @@ contains
         ! Read grid
         call this%chidg%read_mesh(this%gridfile)
 
-        ! Need to enforce reorthogonalization in FGMRES because the vector 
-        ! norms get very small and easily become linearly dependent, particularlly
-        ! when running in parallel when the linear system becomes more difficult to solve
-        associate ( fgmres => this%chidg%linear_solver )
-            select type (fgmres)
-                type is (fgmres_t)
-                    fgmres%force_reorthogonalize = .true.
-            end select
-        end associate
-            
 
         ! Initialize solution. 
         !
@@ -632,7 +609,6 @@ contains
 
 
 
-
     !>  Run the simulation.
     !!
     !!      - compute the entropy error, test against the reference values.
@@ -644,18 +620,16 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    @Test(npes=[1,2,3,7,10])
+    @Test(npes=[1,2,3,5,8])
     subroutine run_calculations(self)
         class(nonlinear_diffusion_1D),  intent(inout)   :: self
 
         real(rk)    :: computed_error
         integer(ik) :: npes_index, grid_index, order_index
 
-
         npes_index  = get_npes_index(NRANK)
         grid_index  = get_grid_index(self%nelem_xi)
         order_index = get_order_index(self%order)
-
 
         ! Run ChiDG simulation
         call self%chidg%run(write_initial=.false., write_final=.false.)
@@ -694,7 +668,6 @@ contains
 
         tol = 0.1_rk
 
-
         do inpes = 1,5
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,3
@@ -712,7 +685,6 @@ contains
                 end do
             end do
         end do
-
 
     end subroutine test_err_conform
     !****************************************************************************************
@@ -895,9 +867,9 @@ contains
                 inpes = 2
             case(3)
                 inpes = 3
-            case(7)
+            case(5)
                 inpes = 4
-            case(10)
+            case(8)
                 inpes = 5
         end select
 

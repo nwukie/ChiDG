@@ -80,6 +80,7 @@ contains
 
         call self%set_name('Harmonic Balance')
 
+        if (allocated(self%system)) deallocate(self%system)
         allocate(self%system, source=assemble_harmonic_balance, stat=ierr)
         if (ierr /= 0) call AllocationError
 

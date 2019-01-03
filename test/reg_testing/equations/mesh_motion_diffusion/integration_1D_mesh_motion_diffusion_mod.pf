@@ -75,7 +75,6 @@ module integration_1D_mesh_motion_diffusion_mod
     ! a different number of procs.
     !
     ! Procs: 1, 2, 3
-    !
     type(ivector_t) :: nsteps_convergence(3,2,4)            ! nprocs, ngrids, norders
     type(ivector_t) :: nsteps_convergence_chimera(3,2,4)    ! nprocs, ngrids, norders
     real(rk)        :: error(3,2,4)                         ! nprocs, ngrids, norders
@@ -84,17 +83,10 @@ module integration_1D_mesh_motion_diffusion_mod
     public  :: mesh_motion_diffusion_1D
 
 
-
-
-
-
-
-
     !>  The diffusion coefficient model.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   12/3/2016
-    !!
     !!
     !---------------------------------------------------------------------------------------
     type, extends(model_t), public :: testing_1D_mesh_motion_diffusion_model_t
@@ -106,10 +98,6 @@ module integration_1D_mesh_motion_diffusion_mod
 
     end type testing_1D_mesh_motion_diffusion_model_t
     !***************************************************************************************
-
-
-
-
 
 
     !>  A new equation set builder to build a linear diffusion equation set with the 
@@ -132,12 +120,6 @@ module integration_1D_mesh_motion_diffusion_mod
 
 
 
-
-
-
-
-
-
     !>  This parameter initialize the state for each test
     !!
     !!  @author Nathan A. Wukie
@@ -154,10 +136,6 @@ module integration_1D_mesh_motion_diffusion_mod
         procedure   :: toString
     end type case_grid_order
     !*******************************************************************************
-
-
-
-
 
 
 
@@ -190,7 +168,6 @@ contains
 
 
 
-
     !----------------------------------------------------------------------------------------
     !                       Scalar Diffusion Coefficient Model Methods
     !----------------------------------------------------------------------------------------
@@ -207,7 +184,6 @@ contains
 
         call self%set_name('Testing 1D Mesh Motion Diffusion :: Coefficient Model')
         call self%set_dependency('f(Q-)')
-
         call self%add_model_field('Mesh Motion Diffusion Coefficient')
 
     end subroutine init_model
@@ -301,28 +277,18 @@ contains
         class(test_mesh_motion_diffusion_builder_t), intent(in)  :: self
         character(*),                           intent(in)  :: blueprint
 
-        type(equation_set_t)                :: mesh_motion_diffusion_eqn
+        type(equation_set_t)    :: mesh_motion_diffusion_eqn
         
-
-        !
-        ! Set equationset name.
-        !
+        ! Set equationset name
         call mesh_motion_diffusion_eqn%set_name("Test 1D Mesh Motion Diffusion")
 
-
-        !
         ! Add spatial operators
-        !
         call mesh_motion_diffusion_eqn%add_operator("Mesh Motion Diffusion Boundary Average Operator")
         call mesh_motion_diffusion_eqn%add_operator("Mesh Motion Diffusion Volume Operator")
         call mesh_motion_diffusion_eqn%add_operator("Mesh Motion Diffusion BC Operator")
 
-
-        !
         ! Add model for 'compute_mu' scalar coefficient
-        !
         call mesh_motion_diffusion_eqn%add_model("Testing 1D Mesh Motion Diffusion :: Coefficient Model")
-
 
     end function build
     !***************************************************************************************
@@ -341,7 +307,6 @@ contains
     !> Parameter constructors
     !!
     !!
-    !!
     !------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
         type(case_grid_order),  intent(in)          :: test_parameter
@@ -357,7 +322,6 @@ contains
 
 
     !> Parameter initialization
-    !!
     !!
     !!
     !------------------------------------------------------------------------------
@@ -448,9 +412,6 @@ contains
 
 
 
-
-
-
     !>  Set up test routine.
     !!
     !!  This routine reads the grid file, sets up boundary conditions, initializes storage
@@ -474,19 +435,14 @@ contains
         type(testing_1D_mesh_motion_diffusion_model_t)   :: diffusion_coefficient_model
         type(test_mesh_motion_diffusion_builder_t)       :: builder_test_mesh_motion_diffusion
 
-        !
         ! Get MPI communicator information from pFUnit
-        !
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
-        !
         ! Initialize ChiDG environment
-        !
         call this%chidg%start_up('mpi',this%ChiDG_COMM)
         call this%chidg%start_up('core')
-
 
 
         !-------------------------------------------------------------------------------
@@ -496,8 +452,6 @@ contains
         call model_factory%register(diffusion_coefficient_model)
 
 
-
-
         !-------------------------------------------------------------------------------
         !
         !                 Initialize and register equation set builder
@@ -505,7 +459,6 @@ contains
         !-------------------------------------------------------------------------------
         call builder_test_mesh_motion_diffusion%init()
         call equation_set_factory%register(builder_test_mesh_motion_diffusion%build('default'))
-
 
 
         !------------------------------------------------------------------------------
@@ -522,31 +475,22 @@ contains
         linear_solver    = "fgmres"
         preconditioner   = "ILU0"
         IO_DESTINATION   = "file"
-        !------------------------------------------------------------------------------
-
-
-        ! Set timescheme options to pass during initialization
-        !call toptions%set("dt", 0.1_rk) ! means nothing here
-        !call toptions%set("nsteps",100)
-        !call toptions%set("nwrite",0)
-
 
         ! Set linear solver options to pass during initialization
-        !call loptions%set("tol",1.e-14_rk)
         call loptions%set("tol",1.e-15_rk)
+        call loptions%set("inner_fgmres",.true.)
 
         ! Set nonlinear solver options
         call noptions%set("tol",5.e-11_rk)
         call noptions%set("cfl0",1.0_rk)
         call noptions%set("nsteps",1000)
+        call noptions%set("search",'Backtrack')
+        call noptions%set("ptc",.false.)
+        !------------------------------------------------------------------------------
 
 
 
-
-
-        !
         ! Create mesh
-        !
         if (IRANK == GLOBAL_MASTER) then
 
             bc_state_groups(1)%name = "Left Boundary"
@@ -621,44 +565,20 @@ contains
         end if
 
 
-
-
-
-
-        !
         ! Read grid
-        !
         call this%chidg%read_mesh(this%gridfile)
- 
 
-
-
-
-
-        !
         ! Set ChiDG components
-        !
         call this%chidg%set('Solution Order',   integer_input=this%order)
         call this%chidg%set('Time Integrator',  algorithm=time_integrator)
         call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
         call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
-
-
-
-        !
         ! Wrap-up initialization activities
-        !
         call this%chidg%init('all')
 
-
-
-        
-
-        !
         ! Initialize solution
-        !
         call create_function(fcn,'constant')
         call fcn%set_option('val',1.0_rk)
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
@@ -667,16 +587,12 @@ contains
         call fcn%set_option('val',0.0_rk)
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
 
-
-
     end subroutine SetUp
     !*****************************************************************************************
 
 
 
     !>
-    !!
-    !!
     !!
     !-----------------------------------------------------------------------------------------
     subroutine tearDown(this)
@@ -691,12 +607,6 @@ contains
 
     end subroutine tearDown
     !*****************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -724,34 +634,22 @@ contains
         grid_index  = get_grid_index(self%nelem_xi)
         order_index = get_order_index(self%order)
 
-
-        !
         ! Run ChiDG simulation
-        !
         call self%chidg%run(write_initial=.false., write_final=.false.)
 
-
-        !
         ! Store the number of nonlinear iterations that the solution converged in. Problem 
         ! is linear so it should converge in 1 Newton Step. Really, just the solution 
         ! of 1 linear system of equations.
-        !
         if (self%gridtype == 'singleblock') then
             nsteps_convergence(npes_index,grid_index,order_index)         = self%chidg%nonlinear_solver%newton_iterations
         elseif (self%gridtype == 'chimera') then
             nsteps_convergence_chimera(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations 
         end if
 
-
-        !
         ! Compute error
-        !
         computed_error = compute_1D_mesh_motion_diffusion_error(self%chidg%data,self%ChiDG_COMM)
 
-
-        !
         ! Store the computed error for the current case
-        !
         if (self%gridtype == 'singleblock') then
             error(npes_index,grid_index,order_index)         = computed_error
         elseif (self%gridtype == 'chimera') then
@@ -759,14 +657,8 @@ contains
         end if
 
 
-
-
     end subroutine run_calculations
     !*****************************************************************************************
-
-
-
-
 
 
 
@@ -848,17 +740,10 @@ contains
 
 
 
-
-
-
-
     !>
-    !!
-    !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/16/2016
-    !!
     !!
     !-----------------------------------------------------------------------------------------
     @Test(npes=[1])
@@ -870,7 +755,6 @@ contains
 
         tol = 0.1_rk
 
-
         do inpes = 1,3
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,3
@@ -881,13 +765,9 @@ contains
                     mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
                     mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
 
-                    
-                    !
                     ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
                     convergence_rate = (log10(error_previous)-log10(error_current)) / &
                                        (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-
                 
                     @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
                     @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
@@ -905,11 +785,8 @@ contains
 
     !>
     !!
-    !!
-    !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/16/2016
-    !!
     !!
     !-----------------------------------------------------------------------------------------
     @Test(npes=[1])
@@ -922,7 +799,6 @@ contains
 
         tol = 0.1_rk
 
-
         do inpes = 1,3
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,3
@@ -933,14 +809,10 @@ contains
                     mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
                     mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
 
-                    
-                    !
                     ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
                     convergence_rate = (log10(error_previous)-log10(error_current)) / &
                                        (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
 
-                
                     @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
                     @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
 
@@ -948,12 +820,8 @@ contains
             end do
         end do
 
-
-
     end subroutine test_err_chimera
     !*****************************************************************************************
-
-
 
 
 
@@ -966,7 +834,6 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/16/2016
     !!
-    !!
     !------------------------------------------------------------------------------------
     function compute_1D_mesh_motion_diffusion_error(data,ChiDG_COMM) result(error)
         type(chidg_data_t), intent(inout)   :: data
@@ -975,46 +842,32 @@ contains
         real(rk), allocatable, dimension(:) :: &
             u_dg, u_analytical, x_gq, gq_error_squared
 
-
         integer(ik) :: iu1, iu2, iu3
         integer(ik) :: ielem, idom, ierr, itime
         real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
-
 
         associate (mesh   => data%mesh,     &
                    sdata  => data%sdata,    &
                    eqnset => data%eqnset,   &
                    prop   => data%eqnset(1)%prop)
 
-
-            !
             ! Get equation indices
-            !
             iu1 = prop%get_primary_field_index("grid_displacement1")
             iu2 = prop%get_primary_field_index("grid_displacement2")
             iu3 = prop%get_primary_field_index("grid_displacement3")
 
-
-            !
             ! Zero error accumulator
-            !
             error_squared_sum = ZERO
 
-
-
-            !
             ! Loop over elements and accumulate error
-            !
             itime = 1
             do idom = 1,data%mesh%ndomains()
                 do ielem = 1,data%mesh%domain(idom)%nelem
 
-
-                    !
                     ! Compute the analytical solution at the quadrature nodes
-                    !
                     x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     u_analytical = x_gq
+
 
                     !
                     !ANALYTICAL SOLUTION DEFINITION
@@ -1043,111 +896,63 @@ contains
                     !u_analytical =  ONE
 
 
-                    !
                     ! Interpolate DG numerical solution
-                    !
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu1,itime,'value')
 
-
-                    !
                     ! Compute error
-                    !                    
                     gq_error_squared = (u_analytical - u_dg)**TWO
 
-
-                    !
                     ! Integrate error
-                    !
                     element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights_element())
 
-
-                    !
                     ! Accumulate error from each element
-                    !
                     error_squared_sum = error_squared_sum + element_error_squared
-                    !
+
                     ! Compute the analytical solution at the quadrature nodes
-                    !
                     x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     u_analytical = ZERO 
 
-                    !
                     ! Interpolate DG numerical solution
-                    !
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu2,itime,'value')
 
-
-                    !
                     ! Compute error
-                    !                    
                     gq_error_squared = (u_analytical - u_dg)**TWO
 
-
-                    !
                     ! Integrate error
-                    !
                     element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights_element())
 
-
-                    !
                     ! Accumulate error from each element
-                    !
                     error_squared_sum = error_squared_sum + element_error_squared
 
-!
                     ! Compute the analytical solution at the quadrature nodes
-                    !
                     x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     u_analytical = ZERO 
 
-                    !
                     ! Interpolate DG numerical solution
-                    !
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu3,itime,'value')
 
-
-                    !
                     ! Compute error
-                    !                    
                     gq_error_squared = (u_analytical - u_dg)**TWO
 
-
-                    !
                     ! Integrate error
-                    !
                     element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights_element())
 
-
-                    !
                     ! Accumulate error from each element
-                    !
                     error_squared_sum = error_squared_sum + element_error_squared
-
-
 
                 end do ! ielem
             end do ! idom
 
-
         end associate
-
-
 
         ! Reduce the total error across processors
         call MPI_AllReduce(error_squared_sum,error_squared_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 
         ! Sqrt of the reduced error
         error = sqrt(error_squared_sum_reduced)
-
         
     end function compute_1D_mesh_motion_diffusion_error
     !*****************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -1155,8 +960,6 @@ contains
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/16/2016
-    !!
-    !!
     !!
     !-----------------------------------------------------------------------------------------
     function mesh_parameter(igrid,iorder) result(param)
@@ -1194,13 +997,6 @@ contains
 
     end function mesh_parameter
     !****************************************************************************************
-
-
-
-
-
-
-
 
 
 

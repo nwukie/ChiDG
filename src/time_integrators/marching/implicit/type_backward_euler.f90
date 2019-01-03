@@ -30,13 +30,9 @@ module type_backward_euler
     !-------------------------------------------------------------------------------
     type, extends(time_integrator_marching_t),  public  :: backward_euler_t
 
-
     contains
-
         procedure   :: init
         procedure   :: step
-
-
     end type backward_euler_t
     !*******************************************************************************
 
@@ -49,14 +45,9 @@ module type_backward_euler
     !!
     !-------------------------------------------------------------------------------
     type, extends(system_assembler_t),  public  :: assemble_backward_euler_t
-
         type(chidg_vector_t)    :: q_n
-
     contains
-
         procedure   :: assemble
-
-
     end type assemble_backward_euler_t
     !*******************************************************************************
 
@@ -76,24 +67,9 @@ module type_backward_euler
     type, extends(solver_controller_t), public :: backwardeuler_solver_controller_t
 
     contains
-
         procedure   :: update_lhs
-
     end type backwardeuler_solver_controller_t
     !********************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

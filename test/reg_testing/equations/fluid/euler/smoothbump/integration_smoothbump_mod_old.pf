@@ -37,7 +37,8 @@ module integration_smoothbump_mod
 #include <messenger.h>
     use pfunit_mod
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, ONE, IO_DESTINATION
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, ONE
     use mod_string,             only: string_t
     use type_chidg,             only: chidg_t
     use mod_bc,                 only: create_bc
@@ -61,9 +62,8 @@ module integration_smoothbump_mod
     ! a different number of procs.
     !
     ! Procs: 1, 2, 4, 5, 8
-    type(rvector_t) :: nonlinear_convergence(5,2,4) ! nprocs, ngrids, norders
-    real(rk)        :: error(5,2,4) = ZERO          ! nprocs, ngrids, norders
-    logical         :: run_setup = .true.
+    type(rvector_t) :: nonlinear_convergence(5,2,3) ! nprocs, ngrids, norders
+    real(rk)        :: error(5,2,3)                 ! nprocs, ngrids, norders
 
 
 !    public  :: smoothbump
@@ -144,27 +144,25 @@ contains
         integer(ik),        allocatable :: nelem_xi(:)
         integer(ik),        allocatable :: nelem_eta(:)
         type(string_t),     allocatable :: files(:)
-        integer(ik),        allocatable :: P(:)
+        integer(ik),        allocatable :: Ps(:)
         integer(ik) :: icase
 
-        nelem_xi  = [24, 24, 24, 24, &
-                     48, 48, 48, 48]
+        nelem_xi  = [24, 24, 24, &
+                     48, 48, 48]
 
-        nelem_eta = [12, 12, 12, 12, &
-                     24, 24, 24, 24]
+        nelem_eta = [12, 12, 12, &
+                     24, 24, 24]
 
         files = [string_t('smoothbump_24x12x2.h5'), &
                  string_t('smoothbump_24x12x2.h5'), &
                  string_t('smoothbump_24x12x2.h5'), &
-                 string_t('smoothbump_24x12x2.h5'), &
-                 string_t('smoothbump_48x24x2.h5'), &
                  string_t('smoothbump_48x24x2.h5'), &
                  string_t('smoothbump_48x24x2.h5'), &
                  string_t('smoothbump_48x24x2.h5')  &
                  ]
 
-        P = [0, 1, 2, 3, &
-             0, 1, 2, 3]
+        Ps = [0, 1, 2,  &
+              0, 1, 2 ]
 
 
         !Initialize the test case container with the parameter
@@ -173,7 +171,7 @@ contains
             params(icase)%nelem_xi    = nelem_xi(icase)
             params(icase)%nelem_eta   = nelem_eta(icase)
             params(icase)%gridfile    = files(icase)%str
-            params(icase)%P           = P(icase)
+            params(icase)%P           = Ps(icase)
         end do
 
     end function getParameters
@@ -218,120 +216,115 @@ contains
         type(bc_state_group_t)          :: bc_state_groups(3)
         type(string_t)                  :: group_names(1,6)
         class(function_t),  allocatable :: fcn
-        logical                         :: exists
-        integer(ik)                     :: ierr
 
         ! Get MPI communicator information from pFUnit
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
         
-        if (run_setup) then
 
-            ! Initialize ChiDG environment
-            call this%chidg%start_up('mpi',this%ChiDG_COMM)
-            call this%chidg%start_up('core')
+        !------------------------------------------------------------------------------
+        !
+        ! Define input data here that is normally read through the namelist input file
+        !
+        ! As a result, we don't call chidg%init('io')
+        !
+        !------------------------------------------------------------------------------
+        basis            = 'legendre'
+        gq_rule          = 3
+        time_integrator  = 'steady'
+        nonlinear_solver = 'newton'
+        linear_solver    = 'fgmres'
+        preconditioner   = 'RASILU0'
+        IO_DESTINATION   = 'file'
 
-            !------------------------------------------------------------------------------
-            !
-            ! Define input data here that is normally read through the namelist input file
-            !
-            ! As a result, we don't call chidg%init('io')
-            !
-            !------------------------------------------------------------------------------
-            basis            = 'legendre'
-            gq_rule          = 3
-            time_integrator  = 'steady'
-            nonlinear_solver = 'newton'
-            linear_solver    = 'fgmres'
-            preconditioner   = 'RASILU0'
-            IO_DESTINATION   = 'file'
+        call this%chidg%data%time_manager%init()
 
-            call this%chidg%data%time_manager%init()
+        ! Set linear solver options to pass during initialization
+        call loptions%set('tol',1.e-9_rk)
+        call loptions%set('inner_fgmres',.true.)
 
-            ! Set linear solver options to pass during initialization
-            call loptions%set('tol',1.e-9_rk)
-            call loptions%set('inner_fgmres',.true.)
-
-            ! Set nonlinear solver options
-            call noptions%set('tol',1.e-7_rk)
-            call noptions%set('cfl0',1.0_rk)
-            call noptions%set('nsteps',100)
-            call noptions%set('ptc',.true.)
-            call noptions%set('search','Backtrack')
-            !------------------------------------------------------------------------------
+        ! Set nonlinear solver options
+        call noptions%set('tol',1.e-7_rk)
+        call noptions%set('cfl0',1.0_rk)
+        call noptions%set('nsteps',100)
+        call noptions%set('ptc',.true.)
+        call noptions%set('search','Backtrack')
+        !------------------------------------------------------------------------------
 
 
+        ! Initialize ChiDG environment
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
 
 
-            ! Create mesh, only for P==0 since we don't want to destroy the lower-order
-            ! solutions once they are written because they are used to initialize the higher-order 
-            ! problems.
-            if ( IRANK==GLOBAL_MASTER .and. this%P==0 ) then
-            !if ( IRANK==GLOBAL_MASTER ) then
-                bc_state_groups(1)%name = 'Inlet'
-                bc_state_groups(2)%name = 'Outlet'
-                bc_state_groups(3)%name = 'Walls'
+        ! Create mesh, only for P==0 since we don't want to destroy the lower-order
+        ! solutions once they are written because they are used to initialize the higher-order 
+        ! problems.
+        !if ( IRANK==GLOBAL_MASTER .and. this%P==0 ) then
+        if ( IRANK==GLOBAL_MASTER ) then
+            bc_state_groups(1)%name = 'Inlet'
+            bc_state_groups(2)%name = 'Outlet'
+            bc_state_groups(3)%name = 'Walls'
 
 
-                call create_bc('Inlet - Total', bc_state)
-                call bc_state%set_fcn_option('Total Pressure',   'val', 110000._rk)
-                call bc_state%set_fcn_option('Total Temperature','val', 300._rk   )
-                call bc_state_groups(1)%add_bc_state(bc_state)
+            call create_bc('Inlet - Total', bc_state)
+            call bc_state%set_fcn_option('Total Pressure',   'val', 110000._rk)
+            call bc_state%set_fcn_option('Total Temperature','val', 300._rk   )
+            call bc_state_groups(1)%add_bc_state(bc_state)
 
-                call create_bc('Outlet - Constant Pressure', bc_state)
-                call bc_state%set_fcn_option('Static Pressure', 'val', 93000._rk )
-                call bc_state_groups(2)%add_bc_state(bc_state)
+            call create_bc('Outlet - Constant Pressure', bc_state)
+            call bc_state%set_fcn_option('Static Pressure', 'val', 93000._rk )
+            call bc_state_groups(2)%add_bc_state(bc_state)
 
-                call create_bc('Wall', bc_state)
-                call bc_state_groups(3)%add_bc_state(bc_state)
-
-
-                ! Define patch group names
-                group_names(1,:) = [string_t('Inlet') , &
-                                    string_t('Outlet'), &
-                                    string_t('Walls') , &
-                                    string_t('Walls') , &
-                                    string_t('Walls') , &
-                                    string_t('Walls') ]
+            call create_bc('Wall', bc_state)
+            call bc_state_groups(3)%add_bc_state(bc_state)
 
 
-                call create_mesh_file('Smooth Bump',this%gridfile,equation_sets=[string_t('Euler')], &
-                                                                  group_names     = group_names,     &
-                                                                  bc_state_groups = bc_state_groups, &
-                                                                  nelem_xi        = this%nelem_xi,   &
-                                                                  nelem_eta       = this%nelem_eta,  &
-                                                                  nelem_zeta      = 1)
-            end if
+            ! Define patch group names
+            group_names(1,:) = [string_t('Inlet') , &
+                                string_t('Outlet'), &
+                                string_t('Walls') , &
+                                string_t('Walls') , &
+                                string_t('Walls') , &
+                                string_t('Walls') ]
 
-            ! Set ChiDG components
-            call this%chidg%set('Solution Order',   integer_input=this%P+1)
-            call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-            call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-            call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-            call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
-            ! Read grid
-            call this%chidg%read_mesh(this%gridfile)
+            call create_mesh_file('Smooth Bump',this%gridfile,equation_sets=[string_t('Euler')], &
+                                                              group_names     = group_names,     &
+                                                              bc_state_groups = bc_state_groups, &
+                                                              nelem_xi        = this%nelem_xi,   &
+                                                              nelem_eta       = this%nelem_eta,  &
+                                                              nelem_zeta      = 1)
+        end if
 
-            ! Initialize solution
-            if (this%P == 0) then
-                call create_function(fcn,'constant')
-                call fcn%set_option('val',1.13262_rk)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
-                call fcn%set_option('val',190.339029_rk)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
-                call fcn%set_option('val',ZERO)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
-                call fcn%set_option('val',ZERO)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
-                call fcn%set_option('val',248493.425_rk)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
-            else
-                call this%chidg%read_fields(this%gridfile)
-            end if
+        ! Set ChiDG components
+        call this%chidg%set('Solution Order',   integer_input=this%P+1)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
-        end if !run_setup
+        ! Read grid
+        call this%chidg%read_mesh(this%gridfile)
+
+        ! Initialize solution
+!        if (this%P == 0) then
+            call create_function(fcn,'constant')
+            call fcn%set_option('val',1.13262_rk)
+            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+            call fcn%set_option('val',190.339029_rk)
+            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
+            call fcn%set_option('val',ZERO)
+            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
+            call fcn%set_option('val',ZERO)
+            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
+            call fcn%set_option('val',248493.425_rk)
+            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
+!        else
+!            call this%chidg%read_fields(this%gridfile)
+!        end if
+
 
     end subroutine setUp
     !*******************************************************************************************
@@ -344,25 +337,16 @@ contains
     subroutine tearDown(this)
         class(smoothbump),  intent(inout)   :: this
 
-        logical :: exists
+        ! Close ChiDG
+        call this%chidg%shut_down('core')
 
-        if (run_setup) then
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
 
-            ! Close ChiDG
-            call this%chidg%shut_down('core')
-
-            if (IRANK == GLOBAL_MASTER) then
-                !call delete_file(this%gridfile)
-
-                inquire(file=this%gridfile, exist=exists)
-                if (exists) then
-                    if (this%P == 3) then
-                        call delete_file(this%gridfile)
-                    end if
-                end if
-            end if
-
-        end if !run_setup
+!            if (this%P == 2) then
+!                call delete_file(this%gridfile)
+!            end if
+        end if
 
     end subroutine tearDown
     !******************************************************************************************
@@ -380,8 +364,8 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    @Test(npes=[1,2,4,5,8])
-    !@Test(npes=[8])
+    !@Test(npes=[1,2,4,5,8])
+    @Test(npes=[8])
     subroutine run_calculations(self)
         class(smoothbump),  intent(inout)   :: self
 
@@ -396,8 +380,8 @@ contains
         ! Run ChiDG simulation
         call self%chidg%run(write_initial=.false., write_final=.false.)
 
-        call self%chidg%write_mesh(self%gridfile)
-        call self%chidg%write_fields(self%gridfile)
+!        call self%chidg%write_mesh(self%gridfile)
+!        call self%chidg%write_fields(self%gridfile)
 
 
         ! Store the nonlinear convergence of the calculation
@@ -418,13 +402,6 @@ contains
         ! Compute entropy error
         error(npes_index,grid_index,order_index) = compute_entropy_error(self%chidg%data)
 
-
-        ! Check if all information has been accumulated, if so, don't initialize anymore 
-        ! or try to open files because they might not exist.
-        if (abs(error(size(error,1),size(error,2),size(error,3)) - ZERO) > 1.e-8_rk) then
-            run_setup = .false.
-        end if
-
     end subroutine run_calculations
     !*****************************************************************************************
 
@@ -444,9 +421,10 @@ contains
         integer(ik) :: inpes, igrid, iorder
         real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate
 
-        do inpes = 1,5
+        !do inpes = 1,5
+        do inpes = 5,5
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-                do iorder = 2,4
+                do iorder = 2,3
 
                     error_previous = error(inpes,igrid-1,iorder)
                     error_current  = error(inpes,igrid  ,iorder)
@@ -457,6 +435,7 @@ contains
                     ! Compute convergence rate of spatial operators. log10(error change)/log10(mesh spacing change)
                     convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
                 
+                    print*, iorder, convergence_rate
                     ! For this problem and specified grid resolutions, the convergence rates are 
                     ! a little higher than expected so we want to observe between iorder and iorder+1
                     @assertGreaterThan(convergence_rate, real(iorder,rk)-0.1)
@@ -479,44 +458,44 @@ contains
 
 
 
-    !>  Access the stored nonlinear convergence data(module global variable) and compare 
-    !!  the parallel convergence to the serial convergence for each (grid,order) combination.
-    !!
-    !!  This assumes that the 'test_entropy_error_rate' has already been executed for all cases
-    !!  and numbers of processors to that the 'nonlinear_convergence' variable has been 
-    !!  populated.
-    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
-    !!  there is a guaruntee that this can't change.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @author Nathan A. Wukie (AFRL)
-    !!
-    !-------------------------------------------------------------------------------------------
-    @Test(npes=[1])
-    subroutine test_nonlinear_convergence(self)
-        class(smoothbump),  intent(inout)   :: self
-
-        integer(ik)             :: inpes, igrid, iorder
-        real(rk), allocatable   :: reference_convergence(:), test_convergence(:)
-
-        do inpes = 1,5
-            do igrid = 1,2
-                do iorder = 1,4
-
-                    ! Get the serial convergence for this (igrid,iorder)
-                    reference_convergence = nonlinear_convergence(1,igrid,iorder)%data()
-
-                    ! Test that the current convergence for the processor count matches the serial convergence
-                    test_convergence = nonlinear_convergence(inpes,igrid,iorder)%data()
-
-                    @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
-
-                end do
-            end do
-        end do
-
-    end subroutine test_nonlinear_convergence
-    !*******************************************************************************************
+!    !>  Access the stored nonlinear convergence data(module global variable) and compare 
+!    !!  the parallel convergence to the serial convergence for each (grid,order) combination.
+!    !!
+!    !!  This assumes that the 'test_entropy_error_rate' has already been executed for all cases
+!    !!  and numbers of processors to that the 'nonlinear_convergence' variable has been 
+!    !!  populated.
+!    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
+!    !!  there is a guaruntee that this can't change.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!
+!    !-------------------------------------------------------------------------------------------
+!    @Test(npes=[1])
+!    subroutine test_nonlinear_convergence(self)
+!        class(smoothbump),  intent(inout)   :: self
+!
+!        integer(ik)             :: inpes, igrid, iorder
+!        real(rk), allocatable   :: reference_convergence(:), test_convergence(:)
+!
+!        do inpes = 1,5
+!            do igrid = 1,2
+!                do iorder = 1,4
+!
+!                    ! Get the serial convergence for this (igrid,iorder)
+!                    reference_convergence = nonlinear_convergence(1,igrid,iorder)%data()
+!
+!                    ! Test that the current convergence for the processor count matches the serial convergence
+!                    test_convergence = nonlinear_convergence(inpes,igrid,iorder)%data()
+!
+!                    @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
+!
+!                end do
+!            end do
+!        end do
+!
+!    end subroutine test_nonlinear_convergence
+!    !*******************************************************************************************
 
 
 
@@ -553,13 +532,13 @@ contains
                 nterms_1d = (iorder)
             case(3)
                 nterms_1d = (iorder)
-            case(4)
-                nterms_1d = (iorder)
             case default
                 call chidg_signal(FATAL,"integration_smoothbump_mod%mesh_parameter: invalid iorder")
         end select
 
 
+        !param = ONE/(real(nelem,rk)*real(nterms_1d*nterms_1d,rk))
+        !param = ONE/sqrt(real(nelem,rk)*real(nterms_1d*nterms_1d,rk))
         param = ONE/sqrt(real(nelem,rk)*real(nterms_1d*nterms_1d,rk))
 
     end function mesh_parameter
@@ -603,6 +582,8 @@ contains
         integer(ik)         :: igrid
 
         select case (trim(grid))
+!            case('smoothbump_6x2x2.h5')
+!                igrid = 1
             case('smoothbump_24x12x2.h5')
                 igrid = 1 
             case('smoothbump_48x24x2.h5')

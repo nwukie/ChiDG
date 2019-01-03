@@ -88,21 +88,16 @@ module integration_1d_linear_adv_diff_ale_mod
 
     public  :: linear_advection_diffusion_1D_ale
 
-
-
     real(rk), parameter :: cx = ONE
     real(rk), parameter :: cy = ZERO
     real(rk), parameter :: cz = ZERO
     real(rk), parameter :: mu = 0.05_rk
 
 
-
-
     !>  The advection-diffusion coefficient model.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   12/3/2016
-    !!
     !!
     !---------------------------------------------------------------------------------------
     type, extends(model_t), public :: testing_1D_linear_adv_diff_ale_model_t
@@ -116,10 +111,6 @@ module integration_1d_linear_adv_diff_ale_mod
     !***************************************************************************************
 
 
-
-
-
-
     !>  A new equation set builder to build a linear diffusion equation set with the 
     !!  new custom volume source.
     !!
@@ -129,7 +120,6 @@ module integration_1d_linear_adv_diff_ale_mod
     !-----------------------------------------------------------------------------------------
     type, extends(equation_builder_t), public :: test_1D_linear_advection_diffusion_ale_builder_t
 
-
     contains
 
         procedure   :: init => init_builder
@@ -137,11 +127,6 @@ module integration_1d_linear_adv_diff_ale_mod
 
     end type test_1D_linear_advection_diffusion_ale_builder_t
     !*****************************************************************************************
-
-
-
-
-
 
 
     !>  This parameter initialize the state for each test
@@ -164,9 +149,6 @@ module integration_1d_linear_adv_diff_ale_mod
 
     end type case_grid_order_ale
     !****************************************************************************************
-
-
-
 
 
 
@@ -304,16 +286,10 @@ contains
 
         type(equation_set_t)    :: linear_advection_diffusion_ale_eqn
         
-
-        !
-        ! Set equationset name.
-        !
+        ! Set equationset name
         call linear_advection_diffusion_ale_eqn%set_name("Test 1D Linear Advection Diffusion ALE")
 
-
-        !
         ! Add spatial operators
-        !
         call linear_advection_diffusion_ale_eqn%add_operator("Scalar Advection ALE Boundary Average Operator")
         call linear_advection_diffusion_ale_eqn%add_operator("Scalar Advection ALE LaxFriedrichs Operator")
         call linear_advection_diffusion_ale_eqn%add_operator("Scalar Advection ALE Volume Operator")
@@ -322,20 +298,11 @@ contains
         call linear_advection_diffusion_ale_eqn%add_operator("Scalar Diffusion ALE Volume Operator")
         call linear_advection_diffusion_ale_eqn%add_operator("Scalar Diffusion ALE BC Operator")
 
-        !
         ! Add model for 'compute_mu' scalar coefficient
-        !
         call linear_advection_diffusion_ale_eqn%add_model('Testing 1D Linear Advection Diffusion :: Coefficient Model')
 
     end function build
     !*****************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -346,8 +313,6 @@ contains
 
 
     !> Parameter constructors
-    !!
-    !!
     !!
     !------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
@@ -364,8 +329,6 @@ contains
 
 
     !> Parameter initialization
-    !!
-    !!
     !!
     !------------------------------------------------------------------------------
     function getParameters() result(params)
@@ -452,9 +415,6 @@ contains
 
 
 
-
-
-
     !>  Set up test routine.
     !!
     !!  This routine reads the grid file, sets up boundary conditions, initializes storage
@@ -474,38 +434,28 @@ contains
         type(bc_state_group_t)                :: bc_state_groups(3)
         type(string_t)                  :: group_names(2,6)
         class(function_t),  allocatable :: fcn
+        real(rk)                        :: sim_time
 
-        
         type(test_1D_linear_advection_diffusion_ale_builder_t)  :: builder_test_linear_advection_diffusion
         type(testing_1D_linear_adv_diff_ale_model_t)            :: diffusion_coefficient_model
 
 
-        real(rk)                        :: sim_time
-
-        !
         ! Get MPI communicator information from pFUnit
-        !
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
-        !
         ! Initialize ChiDG environment
-        !
         call this%chidg%start_up('mpi',this%ChiDG_COMM)
         call this%chidg%start_up('core')
 
-
-        sim_time = 0.5
 
         !-------------------------------------------------------------------------------
         !               Initialize and register the diffusion coefficient model
         !-------------------------------------------------------------------------------
         call diffusion_coefficient_model%init()
         call model_factory%register(diffusion_coefficient_model)
-
-
 
 
         !-------------------------------------------------------------------------------
@@ -522,11 +472,12 @@ contains
         ! As a result, we don't call chidg%init('io')
         !
         !------------------------------------------------------------------------------
+        sim_time = 0.5
         basis            = 'legendre'
         gq_rule          = 3 
         time_integrator  = 'DIRK'
         nonlinear_solver = 'newton'
-        linear_solver    = 'fgmres_cgs'
+        linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'both'
         time_steps       = 720
@@ -550,19 +501,14 @@ contains
         call noptions%set('tol',5.e-10_rk)
         call noptions%set('cfl0',1.0_rk)
         call noptions%set('nsteps',100)
+        call noptions%set('ptc',.false.)
 
 
 
-
-
-        !
         ! Create mesh
-        !
         if (IRANK == GLOBAL_MASTER) then
 
-            !
             ! Set boundary condition function groups
-            !
             bc_state_groups(1)%name = "Left Boundary"
             bc_state_groups(2)%name = "Right Boundary"
             bc_state_groups(3)%name = "YZ Boundaries"
@@ -580,10 +526,7 @@ contains
             call create_bc("Scalar ALE Extrapolate", bc_state)
             call bc_state_groups(3)%add_bc_state(bc_state)
 
-            
-            !
             ! Generate grid
-            !
             if (this%gridtype == 'chimera') then
 
 
@@ -601,20 +544,16 @@ contains
                                     string_t("YZ Boundaries") , &
                                     string_t("YZ Boundaries")]
 
-                call create_mesh_file('Scalar Advection Diffusion PMM Multiblock',this%gridfile,equation_sets   = [string_t("Test 1D Linear Advection Diffusion ALE"),    &
+                call create_mesh_file('Scalar Advection Diffusion PMM Multiblock',this%gridfile,    &
+                                                                  equation_sets   = [string_t("Test 1D Linear Advection Diffusion ALE"),    &
                                                                                      string_t("Test 1D Linear Advection Diffusion ALE")],   &
-                                                                  group_names     = group_names,                                        &
-                                                                  bc_state_groups = bc_state_groups,                                    &
-                                                                  nelem_xi        = this%nelem_xi,                                      &
-                                                                  nelem_eta       = 1,                                                  &
+                                                                  group_names     = group_names,                                            &
+                                                                  bc_state_groups = bc_state_groups,                                        &
+                                                                  nelem_xi        = this%nelem_xi,                                          &
+                                                                  nelem_eta       = 1,                                                      &
                                                                   nelem_zeta      = 1)
-            
-
 
             else
-
-
-
 
                 group_names(1,:) = [string_t("Left Boundary")  , &
                                     string_t("Right Boundary") , &
@@ -623,40 +562,31 @@ contains
                                     string_t("YZ Boundaries")  , &
                                     string_t("YZ Boundaries") ]
 
-                call create_mesh_file('Scalar Advection Diffusion PMM',this%gridfile,equation_sets   = [string_t("Test 1D Linear Advection Diffusion ALE")],  &
-                                                               group_names     = group_names,                                       &
-                                                               bc_state_groups = bc_state_groups,                                   &
-                                                               nelem_xi        = this%nelem_xi,                                     &
-                                                               nelem_eta       = 1,                                                 &
+                call create_mesh_file('Scalar Advection Diffusion PMM',this%gridfile,                                                   &
+                                                               equation_sets   = [string_t("Test 1D Linear Advection Diffusion ALE")],  &
+                                                               group_names     = group_names,                                           &
+                                                               bc_state_groups = bc_state_groups,                                       &
+                                                               nelem_xi        = this%nelem_xi,                                         &
+                                                               nelem_eta       = 1,                                                     &
                                                                nelem_zeta      = 1)
             end if ! chimera
 
         end if !GLOBAL_MASTER
 
 
-        !
         ! Set ChiDG components
-        !
         call this%chidg%set('Solution Order',   integer_input=this%order)
         call this%chidg%set('Time Integrator',  algorithm=time_integrator)
         call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
         call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
-
-        !
         ! Read grid
-        !
         call this%chidg%read_mesh(this%gridfile)
 
-
-
-        !
         ! Initialize solution
-        !
         call create_function(fcn,'scalar_adv_diff_bl_solution')
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
-
 
     end subroutine SetUp
     !*****************************************************************************************
@@ -664,7 +594,6 @@ contains
 
 
     !>
-    !!
     !!
     !!
     !-----------------------------------------------------------------------------------------
@@ -687,9 +616,6 @@ contains
 
 
 
-
-
-
     !>  Run the simulation.
     !!
     !!      - compute the entropy error, test against the reference values.
@@ -698,7 +624,6 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
-    !!
     !!
     !-----------------------------------------------------------------------------------------
     @Test(npes=[1,2,3])
@@ -714,17 +639,13 @@ contains
         order_index = get_order_index(self%order)
 
 
-        !
         ! Run ChiDG simulation
-        !
         call self%chidg%run(write_initial=.false., write_final=.false.)
 
 
-        !
         ! Store the number of nonlinear iterations that the solution converged in. 
         ! Problem is linear so it should converge in 1 Newton Step. Really, just the 
         ! solution of 1 linear system of equations.
-        !
         if (self%gridtype == 'singleblock') then
             nsteps_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations
         elseif (self%gridtype == 'chimera') then
@@ -732,15 +653,11 @@ contains
         end if
 
 
-        !
         ! Compute error
-        !
         computed_error = compute_1D_linear_advection_diffusion_error(self%chidg%data,self%ChiDG_COMM)
 
 
-        !
         ! Store the computed error for the current case
-        !
         if (self%gridtype == 'singleblock') then
             ! conforming grids
             error(npes_index,grid_index,order_index)         = computed_error
@@ -757,20 +674,10 @@ contains
 
 
 
-
-
-
-
-
-
-
     !>
-    !!
-    !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/16/2016
-    !!
     !!
     !----------------------------------------------------------------------------------------
     @Test(npes=[1])
@@ -782,7 +689,6 @@ contains
 
         tol = 0.1_rk
 
-
         do inpes = 1,3
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,3
@@ -793,20 +699,17 @@ contains
                     mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
                     mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
 
-                    
-                    !
                     ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
                     convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
 
-                
-                    !@assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
 
-                    print *, 'iorder + 1'
-                    print *, iorder + 1
-
-                    print *, 'convergence rate'
-                    print *, convergence_rate
+!                    print *, 'iorder + 1'
+!                    print *, iorder + 1
+!
+!                    print *, 'convergence rate'
+!                    print *, convergence_rate
                 end do
             end do
         end do
@@ -848,20 +751,17 @@ contains
                     mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
                     mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
 
-                    
-                    !
                     ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
                     convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
 
-                
-                    !@assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
 
-                    print *, 'iorder + 1'
-                    print *, iorder + 1
-
-                    print *, 'convergence rate'
-                    print *, convergence_rate
+!                    print *, 'iorder + 1'
+!                    print *, iorder + 1
+!
+!                    print *, 'convergence rate'
+!                    print *, convergence_rate
                 end do
             end do
         end do
@@ -899,63 +799,39 @@ contains
 
         associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, prop => data%eqnset(1)%prop)
 
-            !
             ! Get equation indices
-            !
             iu = prop%get_primary_field_index("u")
 
-            !
             ! Zero error accumulator
-            !
             error_squared_sum = ZERO
 
-            !
             ! Loop over elements and accumulate error
-            !
             itime = 1
             do idom = 1,data%mesh%ndomains()
                 do ielem = 1,data%mesh%domain(idom)%nelem
 
-
-                    !
                     ! Compute the analytical solution at the quadrature nodes
-                    !
                     ale_g_gq = mesh%domain(idom)%elems(ielem)%ale_g
                     x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     u_analytical = (ONE - exp((x_gq-ONE)*(cx/mu))) / (ONE - exp(-cx/mu))
 
-
-                    !
                     ! Interpolate DG numerical solution
-                    !
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,itime,'value')
-
                     u_dg = u_dg/ale_g_gq
 
-                    !
                     ! Compute error at GQ nodes
-                    !                    
                     gq_error_squared = (u_analytical - u_dg)**TWO
 
-
-                    !
                     ! Integrate error
-                    !
                     element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_def * mesh%domain(idom)%elems(ielem)%basis_s%weights_element())
 
-
-                    !
                     ! Accumulate error from each element
-                    !
                     error_squared_sum = error_squared_sum + element_error_squared
-
 
                 end do ! ielem
             end do ! idom
 
-
         end associate
-
 
         ! Reduce the total error across processors
         call MPI_AllReduce(error_squared_sum,error_squared_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
@@ -970,22 +846,10 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/16/2016
-    !!
-    !!
     !!
     !----------------------------------------------------------------------------------------
     function mesh_parameter(igrid,iorder) result(param)
@@ -1021,12 +885,6 @@ contains
 
     end function mesh_parameter
     !****************************************************************************************
-
-
-
-
-
-
 
 
 

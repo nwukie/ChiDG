@@ -54,34 +54,25 @@ contains
         type(cache_handler_t)       :: cache_handler
 
 
-        !
         ! Initialize Chidg Worker references
-        !
         call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, data%time_manager, cache)
 
 
-        !
         ! Start timer on spatial discretization update
-        !
         call timer%start()
 
     
 
-        !
         ! Clear function_status data. This tracks if a function has already been called. So, 
         ! in this way we can compute a function on a face and apply it to both elements. 
         ! The function is just registered as computed for both. So we need to reset all of 
         ! that data here. This is only tracked for the interior scheme. Boundary condition 
         ! evaluations and Chimera faces are not tracked.
-        !
         call data%sdata%function_status%clear()
 
 
 
-
-        !
         ! Communicate solution vector
-        !
         call comm_timer%start()
         call data%sdata%q%comm_send()
         call data%sdata%q%comm_recv()
@@ -89,34 +80,23 @@ contains
         call comm_timer%stop()
 
 
-
-
-        !
         ! Loop through given element compute the residual functions and also the 
         ! linearization of those functions.
-        !
         call write_line('-  Updating spatial scheme', io_proc=GLOBAL_MASTER, silence=(verbosity < 3))
 
 
-        !
         ! Clear function_status data. This tracks if a function has already been called. So, in this way
         ! we can compute a function on a face and apply it to both elements. The function is just registered
         ! as computed for both. So we need to reset all of that data here. This is only tracked for the interior scheme.
         ! Boundary condition evaluations and Chimera faces are not tracked.
-        !
         call data%sdata%function_status%clear()
 
 
 
-        !
         ! Set time info on chidg_worker
-        !
         worker%itime = data%time_manager%itime
         worker%t     = data%time_manager%t
-
-
-
-        nelem_total = data%mesh%nelements()
+        nelem_total  = data%mesh%nelements()
 
 
         call loop_timer%start()
@@ -143,8 +123,6 @@ contains
                                                                                    lift          = .true.)
 
 
-
-
                 ! Faces loop. For the current element, compute the 
                 ! contributions from boundary integrals.
                 do iface = 1,NFACES
@@ -157,13 +135,11 @@ contains
 
                 end do  ! faces loop
                 
-
-
-                !
                 ! Compute contributions from volume integrals
-                !
                 call eqnset%compute_volume_advective_operators(worker, differentiate)
                 call eqnset%compute_volume_diffusive_operators(worker, differentiate)
+
+
 
 
                 end associate
@@ -185,25 +161,15 @@ contains
 
 
 
-        !
         ! Synchronize
-        !
         call MPI_Barrier(ChiDG_COMM,ierr)
-
-
         call timer%stop()
 
 
-
-        !
         ! Timing IO
-        !
         call write_line('Spatial Discretization Time: ', timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
         call write_line('   - Spatial comm time: ', comm_timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
         call write_line('   - Spatial loop time: ', loop_timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-!            call timer%report('Spatial Discretization Time')
-!            call comm_timer%report('    - Spatial comm time:')
-!            call loop_timer%report('    - Spatial loop time:')
 
         if (present(timing)) then
             timing = timer%elapsed()

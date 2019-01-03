@@ -657,22 +657,19 @@ contains
         call write_line('Updating to mesh motion...', io_proc=GLOBAL_MASTER)
 
         ! Update mesh motion objects
-        do imm = 1, size(self%mesh_motion) 
+        !do imm = 1, size(self%mesh_motion) 
+        do imm = 1, self%nmm_groups()
             call self%mesh_motion(imm)%mm%update(self%mesh, self%time_manager%t)
             call self%mesh_motion(imm)%mm%apply(self%mesh, self%time_manager%t)
         end do
 
         ! Loop through domains and apply mesh motions
         do idom = 1,self%mesh%ndomains()
-            associate ( mesh => self%mesh)
-            mm_ID = mesh%domain(idom)%mm_ID
-
+            mm_ID = self%mesh%domain(idom)%mm_ID
             if (mm_ID /= NO_MM_ASSIGNED) then
-
-                call mesh%domain(idom)%set_displacements_velocities(mesh%domain(idom)%dnodes, mesh%domain(idom)%vnodes)
-                call mesh%domain(idom)%update_interpolations_ale()
+                call self%mesh%domain(idom)%set_displacements_velocities(self%mesh%domain(idom)%dnodes, self%mesh%domain(idom)%vnodes)
+                call self%mesh%domain(idom)%update_interpolations_ale()
             end if
-            end associate
         end do  ! idom
 
 

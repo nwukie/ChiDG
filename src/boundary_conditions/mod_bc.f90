@@ -42,22 +42,21 @@ module mod_bc
 
 
     ! Fluid boundary conditions
-    use bc_state_wall,                              only: wall_t
-    use bc_state_moving_wall,                       only: moving_wall_t
-    use bc_state_inlet_total,                       only: inlet_total_t
-    use bc_state_inlet_characteristic,              only: inlet_characteristic_t
-    use bc_state_outlet_constant_pressure,          only: outlet_constant_pressure_t
-    use bc_state_outlet_linear_pressure,            only: outlet_linear_pressure_t
-    use bc_state_outlet_auxiliary_equations,        only: outlet_auxiliary_equations_t
-    use bc_state_outlet_neumann_pressure_fd,        only: outlet_neumann_pressure_fd_t
-    use bc_state_outlet_neumann_pressure_localdg,   only: outlet_neumann_pressure_localdg_t
+    use bc_state_wall,                                  only: wall_t
+    use bc_state_moving_wall,                           only: moving_wall_t
+    use bc_state_inlet_total,                           only: inlet_total_t
+    use bc_state_inlet_characteristic,                  only: inlet_characteristic_t
+    use bc_state_outlet_constant_pressure,              only: outlet_constant_pressure_t
+    use bc_state_outlet_linear_pressure,                only: outlet_linear_pressure_t
+    use bc_state_outlet_auxiliary_equations,            only: outlet_auxiliary_equations_t
+    use bc_state_outlet_neumann_pressure_fd,            only: outlet_neumann_pressure_fd_t
+    use bc_state_outlet_neumann_pressure_localdg,       only: outlet_neumann_pressure_localdg_t
     use bc_state_outlet_neumann_pressure_localdg_new,   only: outlet_neumann_pressure_localdg_new_t
-    use bc_state_outlet_neumann_pressure_globaldg,  only: outlet_neumann_pressure_globaldg_t
-    use bc_state_outlet_neumann_LODI_localdg,       only: outlet_neumann_LODI_localdg_t
-    !use bc_state_outlet_point_pressure,         only: outlet_point_pressure_t
-    !use bc_state_outlet_LODI_pressure,          only: outlet_LODI_pressure_t
-    !use bc_state_outlet_LODI_z_pressure,        only: outlet_LODI_z_pressure_t
-    !use bc_state_outlet_wukie,                  only: outlet_wukie_t
+    use bc_state_outlet_neumann_pressure_globaldg,      only: outlet_neumann_pressure_globaldg_t
+    use bc_state_outlet_neumann_LODI_localdg,           only: outlet_neumann_LODI_localdg_t
+    !use bc_state_outlet_point_pressure,                 only: outlet_point_pressure_t
+    !use bc_state_outlet_LODI_pressure,                  only: outlet_LODI_pressure_t
+    !use bc_state_outlet_LODI_z_pressure,                only: outlet_LODI_z_pressure_t
     use bc_state_outlet_steady_1dchar,              only: outlet_steady_1dchar_t
     use bc_state_outlet_3dgiles,                    only: outlet_3dgiles_t
     use bc_state_outlet_3dgiles_innerproduct,       only: outlet_3dgiles_innerproduct_t
@@ -71,7 +70,6 @@ module mod_bc
     use bc_state_symmetry,                          only: symmetry_t
     use bc_state_slipwall,                          only: slipwall_t
     use bc_state_farfield,                          only: farfield_t
-    use bc_state_farfield_perturbation,             only: farfield_perturbation_t
 
     use bc_state_outlet_nrbc_lindblad,          only: outlet_nrbc_lindblad_t
     use bc_state_inlet_nrbc_lindblad,           only: inlet_nrbc_lindblad_t
@@ -101,36 +99,6 @@ module mod_bc
     use bc_state_rstm_ssglrrw_symmetry_z,   only: rstm_ssglrrw_symmetry_z_t
     use bc_state_rstm_ssglrrw_farfield,     only: rstm_ssglrrw_farfield_t
     use bc_state_rstm_ssglrrw_wall,         only: rstm_ssglrrw_wall_t
-
-
-
-
-    ! Artificial Viscosity boundary conditions
-    use bc_state_artificial_viscosity_wall,     only: artificial_viscosity_wall_t
-    use bc_state_artificial_viscosity_inlet,    only: artificial_viscosity_inlet_t
-    use bc_state_artificial_viscosity_outlet,   only: artificial_viscosity_outlet_t
-    use bc_state_artificial_viscosity_symmetry, only: artificial_viscosity_symmetry_t
-
-    ! Radial-Angular equilibrium
-    use bc_state_rae_extrapolate,   only: rae_extrapolate_t
-    use bc_state_rae_dirichlet,     only: rae_dirichlet_t
-
-    ! Radial-Angular equilibrium
-    use bc_state_rac_extrapolate,   only: rac_extrapolate_t
-    use bc_state_rac_dirichlet,     only: rac_dirichlet_t
-
-    ! Radial-Angular equilibrium
-    use bc_state_tm_extrapolate,   only: tm_extrapolate_t
-    use bc_state_tm_dirichlet,     only: tm_dirichlet_t
-
-    use bc_state_graddemo_gradp_extrapolate,        only: graddemo_gradp_extrapolate_t
-    use bc_state_graddemo_gradp_extrapolate_outer,  only: graddemo_gradp_extrapolate_outer_t
-
-    use bc_state_auxiliary_boundary,        only: auxiliary_boundary_t
-    use bc_state_auxiliary_interior,        only: auxiliary_interior_t
-
-    use bc_state_pgradtest_extrapolate,    only: pgradtest_extrapolate_t
-
 
     ! Linearized Euler Eigen
     use bc_primlineuler_extrapolate,    only: primlineuler_extrapolate_t
@@ -203,7 +171,6 @@ contains
         !type(outlet_point_pressure_t)           :: OUTLET_POINT_PRESSURE
         !type(outlet_LODI_pressure_t)            :: OUTLET_LODI_PRESSURE
         !type(outlet_LODI_z_pressure_t)          :: OUTLET_LODI_Z_PRESSURE
-        !type(outlet_wukie_t)                    :: OUTLET_WUKIE
         type(outlet_steady_1dchar_t)            :: OUTLET_STEADY_1DCHAR
         type(outlet_3dgiles_t)                  :: OUTLET_3DGILES
         type(outlet_3dgiles_innerproduct_t)     :: OUTLET_3DGILES_INNERPRODUCT
@@ -217,7 +184,6 @@ contains
         type(symmetry_t)                        :: SYMMETRY
         type(slipwall_t)                        :: SLIP_WALL
         type(farfield_t)                        :: FARFIELD
-        type(farfield_perturbation_t)           :: FARFIELD_PERTURBATION
 
         type(outlet_nrbc_lindblad_t)    ::  outlet_nrbc_lindblad
         type(outlet_nrbc_giles_t)       ::  outlet_nrbc_giles
@@ -243,36 +209,6 @@ contains
         type(rstm_ssglrrw_symmetry_z_t)         :: rstm_ssglrrw_SYMMETRY_z
         type(rstm_ssglrrw_farfield_t)           :: rstm_ssglrrw_FARFIELD
         type(rstm_ssglrrw_wall_t)               :: rstm_ssglrrw_WALL
-
-
-
-
-
-
-        type(artificial_viscosity_wall_t)       :: ARTIFICIAL_VISCOSITY_WALL
-        type(artificial_viscosity_inlet_t)      :: ARTIFICIAL_VISCOSITY_INLET
-        type(artificial_viscosity_outlet_t)     :: ARTIFICIAL_VISCOSITY_OUTLET
-        type(artificial_viscosity_symmetry_t)   :: ARTIFICIAL_VISCOSITY_SYMMETRY
-
-        ! Radial-Angular Equilibirum
-        type(rae_extrapolate_t) :: RAE_EXTRAPOLATE
-        type(rae_dirichlet_t)   :: RAE_DIRICHLET
-
-        ! Radial-Angular Equilibirum
-        type(rac_extrapolate_t) :: RAC_EXTRAPOLATE
-        type(rac_dirichlet_t)   :: RAC_DIRICHLET
-
-        ! Tangential Equilibirum
-        type(tm_extrapolate_t) :: TM_EXTRAPOLATE
-        type(tm_dirichlet_t)   :: TM_DIRICHLET
-
-        type(graddemo_gradp_extrapolate_t)          :: GRADDEMO_GRADP_EXTRAPOLATE
-        type(graddemo_gradp_extrapolate_outer_t)    :: GRADDEMO_GRADP_EXTRAPOLATE_OUTER
-
-        type(auxiliary_boundary_t)      :: AUXILIARY_BOUNDARY
-        type(auxiliary_interior_t)      :: AUXILIARY_INTERIOR
-
-        type(pgradtest_extrapolate_t)  :: PGRADTEST_EXTRAPOLATE
 
         ! Linearized Euler Eign
         type(primlineuler_extrapolate_t)    :: PRIMLINEULER_EXTRAPOLATE
@@ -328,14 +264,12 @@ contains
             !call registered_bcs%push_back(OUTLET_POINT_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_Z_PRESSURE)
-            !call registered_bcs%push_back(OUTLET_WUKIE)
             call registered_bcs%push_back(FLUID_EXTRAPOLATE)
             call registered_bcs%push_back(MOMENTUM_INLET)
             call registered_bcs%push_back(SUPERSONIC_INLET)
             call registered_bcs%push_back(SYMMETRY)
             call registered_bcs%push_back(SLIP_WALL)
             call registered_bcs%push_back(FARFIELD)
-            call registered_bcs%push_back(FARFIELD_PERTURBATION)
 
             call registered_bcs%push_back(OUTLET_NRBC_LINDBLAD)
             call registered_bcs%push_back(OUTLET_NRBC_GILES)
@@ -361,31 +295,6 @@ contains
             call registered_bcs%push_back(rstm_ssglrrw_SYMMETRY_z)
             call registered_bcs%push_back(rstm_ssglrrw_FARFIELD)
             call registered_bcs%push_back(rstm_ssglrrw_WALL)
-
-
-
-
-            call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_WALL)
-            call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_INLET)
-            call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_OUTLET)
-            call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_SYMMETRY)
-
-            call registered_bcs%push_back(RAE_EXTRAPOLATE)
-            call registered_bcs%push_back(RAE_DIRICHLET)
-
-            call registered_bcs%push_back(RAC_EXTRAPOLATE)
-            call registered_bcs%push_back(RAC_DIRICHLET)
-
-            call registered_bcs%push_back(TM_EXTRAPOLATE)
-            call registered_bcs%push_back(TM_DIRICHLET)
-
-            call registered_bcs%push_back(GRADDEMO_GRADP_EXTRAPOLATE)
-            call registered_bcs%push_back(GRADDEMO_GRADP_EXTRAPOLATE_OUTER)
-
-            call registered_bcs%push_back(AUXILIARY_BOUNDARY)
-            call registered_bcs%push_back(AUXILIARY_INTERIOR)
-
-            call registered_bcs%push_back(PGRADTEST_EXTRAPOLATE)
 
             call registered_bcs%push_back(PRIMLINEULER_EXTRAPOLATE)
             call registered_bcs%push_back(PRIMLINEULER_WALL)

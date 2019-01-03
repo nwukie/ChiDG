@@ -304,7 +304,7 @@ contains
                 q0 = qold
                 f0 = resid
                 step = 0
-                if (self%search) then
+                if (trim(self%search) == 'Backtrack') then
 
                     searching = .true.
                     do while (searching)
@@ -438,7 +438,7 @@ contains
                 q0 = qold
                 f0 = resid
                 step = 0
-                if (self%search) then
+                if (trim(self%search) == 'Backtrack') then
 
                     searching = .true.
                     do while (searching)
@@ -515,7 +515,8 @@ contains
 
 
                 absolute_convergence = (resid > self%tol)
-                relative_convergence = ( (log10(resid0) - log10(resid)) < real(self%norders_reduction,rk) )
+                relative_convergence = (fn/resid0 > self%rtol)
+                !relative_convergence = ( (log10(resid0) - log10(resid)) < real(self%norders_reduction,rk) )
 
 
 

@@ -60,9 +60,7 @@ contains
     !-----------------------------------------------------------------------------------
     subroutine register_time_integrators()
 
-        !
         ! Instantiate time_integrators
-        !
         type(steady_t)                      :: steady
         type(forward_euler_t)               :: forward_euler
         type(backward_euler_t)              :: backward_euler
@@ -72,11 +70,7 @@ contains
         type(DIRK_coupled_oscillator_t)     :: DIRK_coupled_oscillator
 
 
-        !
-        ! Register if needed
-        !
         if ( .not. initialized ) then
-
             ! Register in global vector
             call time_integrator_factory%register(steady)
             call time_integrator_factory%register(forward_euler)
@@ -88,15 +82,10 @@ contains
 
             ! Confirm initialization
             initialized = .true.
-
         end if
 
     end subroutine register_time_integrators
     !*************************************************************************************
-
-
-
-
 
 
 
@@ -136,44 +125,31 @@ contains
         integer                                 :: ierr, bindex
         class(time_integrator_t),   allocatable :: time_integrator
 
-
-        !
         ! Find equation set in 'available_equations' vector
-        !
         bindex = self%time_integrators%index_by_name(string)
 
-
-        !
         ! Check time integrator was found in factory
-        !
-        user_msg = "We can't seem to find an equation set that matches the string that &
-                    was passed into the equation set factory. Maybe check that the &
-                    equation set strings that were set for the domains are all valid."
-        dev_msg = "Check that the equation set builder is registered properly in the &
-                   equation set builder factory: &
-                   src/time_integrator/mod_time_integrators.f90. When an equation &
-                   set builder is defined, is needs to be registered in the factory by &
+        user_msg = "We can't seem to find a time integrator that matches the string that &
+                    was passed into the time integrator factory. Maybe check that the &
+                    time integrator strings that were set for the domains are all valid."
+        dev_msg = "Check that the time integrator is registered properly in the &
+                   time integrator factory: &
+                   src/time_integrator/mod_time_integrators.f90. When a time integrator &
+                   is defined, is needs to be registered in the factory by &
                    calling 'call time_integrator_factory%register(time_integrator)', &
-                   where 'builder' is the object that knows how to build the equation set. &
-                   This could be done in 'mod_equations.register_equation_builders'. &
-                   The 'register_equation_builders' routine gets called on startup and &
-                   loads all the default equation builders into the factory so the library &
-                   knows what equation sets it can build."
+                   where 'time_integrator' is the time_integrator instance to be registered. &
+                   This could be done in 'mod_time_integrators.register_time_integrators'. &
+                   The 'register_time_integrators' routine gets called on startup and &
+                   loads all the default time integrators into the factory so the library &
+                   knows what time integrators it can build."
         if (bindex == 0) call chidg_signal_two(OOPS,user_msg,trim(string),dev_msg=dev_msg)
 
-
-        !
         ! Get equation set builder
-        !
         allocate(time_integrator, source=self%time_integrators%at(bindex), stat=ierr)
         if (ierr /= 0) call AllocationError
-        !time_integrator = self%time_integrators%at(bindex)
-
 
     end function produce_time_integrator
     !*************************************************************************************
-
-
 
 
 
@@ -200,8 +176,6 @@ contains
 
 
 
-
-
     !>  Check if a given equation builder is registered in the factory.
     !!
     !!  @author Nathan A. Wukie
@@ -225,83 +199,6 @@ contains
 
     end function has_time_integrator
     !**************************************************************************************
-
-
-
-
-
-
-
-
-
-
-!    !>  Create a concrete time integrator
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   3/15/2016
-!    !!
-!    !!
-!    !!
-!    !------------------------------------------------------------------------------------------
-!    subroutine create_time_integrator(time_string,instance)
-!        character(*),                               intent(in)      :: time_string
-!        class(time_integrator_t),   allocatable,    intent(inout)   :: instance
-!
-!        character(:),   allocatable :: user_msg, dev_msg
-!
-!
-!
-!        select case (trim(time_string))
-!
-!            case ('steady','Steady','STEADY')
-!                allocate(instance, source=STEADY)
-!
-!            case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler', 'Forward Euler')
-!                allocate(instance, source=FORWARD_EULER)
-!
-!            case ('backward_euler', 'Backward_Euler', 'BACKWARD_EULER', 'backward euler', 'Backward Euler', 'BACKWARD EULER')
-!                allocate(instance, source=BACKWARD_EULER)
-!            
-!            case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance', 'harmonic_balance', 'HB')
-!                allocate(instance, source=HB)
-!            
-!            case ('Second Order Runge_Kutta', 'Explict Midpoint', 'Second Order RK', 'Modified Euler', 'Second Order Ralston Method', 'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK', &
-!                   'Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4', 'Three-Eighth Rule', 'Fourth Order Kutta') ! this probably needs to be split up in several RK schemes
-!                allocate(instance, source=EXPLICIT_RK)
-!
-!            case ('DIRK')
-!                allocate(instance, source=DIRK)
-!
-!            case ('DIRK_coupled_oscillator')
-!                allocate(instance, source=DIRK_coupled_oscillator)
-!
-!            case default
-!                user_msg = "We can't seem to find a time integrator that matches the input &
-!                            string. Maybe check that the time integrator string in the input &
-!                            file or driver script is valid."
-!                dev_msg = "Check that the time integrator is registered properly in &
-!                           create_time_integrator."
-!                call chidg_signal_two(OOPS, user_msg, trim(time_string), dev_msg=dev_msg)
-!        end select
-!
-!
-!
-!
-!        !
-!        ! Make sure the solver was allocated
-!        !
-!        user_msg = "create_time_integrator: solver was not allocated. Check that the desired &
-!                                            solver was registered and instantiated in the mod_time_integrator module"
-!        if (.not. allocated(instance)) call chidg_signal(FATAL,user_msg)
-!
-!
-!    end subroutine create_time_integrator
-!    !****************************************************************************************
-
-
-
-
-
 
 
 

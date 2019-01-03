@@ -12,8 +12,6 @@ add_subdirectory(rstm_ssglrr_lnw)
 
 add_lib_sources(
                 eqn_euler.f90
-                eqn_euler_outlet.f90
-                eqn_euler_aux.f90
                 eqn_euler_av.f90
                 eqn_euler_ani_av.f90
                 eqn_filtered_euler.f90

@@ -5,6 +5,7 @@
 !!  detect_chimera_donors
 !!  compute_chimera_interpolators
 !!  find_gq_donor
+!!  clear_donor_cache
 !!
 !!  detect_chimera_faces, detect_chimera_donors, and compute_chimera_interpolators are probably
 !!  called in src/parallel/mod_communication.f90%establish_chimera_communication.
@@ -555,8 +556,9 @@ contains
 
         end do ! iproc
 
-
-
+        
+        ! Clear cache of last detected overset donor.
+        call clear_donor_cache()
 
     end subroutine detect_chimera_donors
     !*************************************************************************************
@@ -777,6 +779,7 @@ contains
         search1 = xgq + offset1
         search2 = ygq + offset2
         search3 = zgq + offset3
+
 
 
         ! Try previous donor, since it is relatively likely the previous donor
@@ -1003,6 +1006,8 @@ contains
         else
             call chidg_signal(FATAL,"find_gq_donor: invalid number of donors")
         end if
+
+
 
         ! Store donor as previous donor, only if one was found. Don't want to
         ! set to zero!
@@ -1252,6 +1257,35 @@ contains
 
     end subroutine find_gq_donor_parallel
     !******************************************************************************
+
+
+
+    !>  Reset the module indices corresponding to the last detected overset donor.
+    !!
+    !!  This should be called when a new environment is initialized and is setup 
+    !!  to be called in chidg%start_up('core').
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   12/26/2018
+    !!
+    !------------------------------------------------------------------------------
+    subroutine clear_donor_cache()
+
+        ! Reset previous donor element to null, so future calls (maybe in tests) don't
+        ! try to access an element that might not exist.
+        idomain_g_prev = NO_ID
+        idomain_l_prev = NO_ID
+        ielement_g_prev = NO_ID
+        ielement_l_prev = NO_ID
+
+    end subroutine clear_donor_cache
+    !******************************************************************************
+
+
+
+
+
+
 
 
 end module mod_chimera

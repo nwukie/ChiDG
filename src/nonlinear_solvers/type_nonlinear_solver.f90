@@ -15,23 +15,18 @@ module type_nonlinear_solver
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
     !!
-    !!
     !-----------------------------------------------------------------------------------------
     type, abstract, public  :: nonlinear_solver_t
 
-        logical         :: solverInitialized = .false.
-
-        ! OPTIONS
+        ! Parameters
         real(rk)        :: cfl0              = 1.0_rk       ! Initial CFL number
         real(rk)        :: cflmax            = -1.0_rk
-        real(rk)        :: tol               = 1.e-13_rk    ! Convergence tolerance
-        integer(ik)     :: nsteps            = 100          ! Max number of steps to take in the nonlinear solver
+        real(rk)        :: tol               = 1.e-10_rk    ! Absolute convergence tolerance
+        real(rk)        :: rtol              = 1.e-10_rk    ! Relative convergence tolerance
+        integer(ik)     :: nmax              = -1           ! Max number of steps to take in the nonlinear solver, default<0(unlimited)
         integer(ik)     :: nwrite            = 100          ! Write data every 'nwrite' steps
-        integer(ik)     :: norders_reduction = 10           ! Number of orders of magnitude residual is to be reduced by
-        logical         :: search            = .true.
-
-
-        type(timer_t)   :: timer                    ! Timer data-type
+        logical         :: ptc               = .true.       ! Pseudo-transient continuation
+        character(100)  :: search            = 'Backtrack'  ! Line search algorithm
 
 
         ! Data logs
@@ -42,22 +37,21 @@ module type_nonlinear_solver
         type(ivector_t) :: newton_iterations
         type(rvector_t) :: total_time
 
+        type(timer_t)   :: timer
+        logical         :: solverInitialized = .false.
 
     contains
 
         procedure   :: init
         procedure   :: init_spec
 
-        procedure(data_interface),   deferred   :: solve    ! Must define this procedures in the extended type
-
         procedure   :: set
         procedure   :: report
 
+        procedure(data_interface),   deferred   :: solve    ! Must define this procedures in the extended type
+
     end type nonlinear_solver_t
     !*****************************************************************************************
-
-
-
 
 
 
@@ -135,24 +129,13 @@ contains
         class(nonlinear_solver_t),  intent(inout)   :: self
         type(chidg_data_t),         intent(inout)   :: data
 
-
-        !
         ! Call user-specified initialization
-        !
         call self%init_spec(data)
-
 
         self%solverInitialized = .true.
 
     end subroutine init
     !*****************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -169,23 +152,16 @@ contains
         type(dict_t),               intent(inout)   :: options
 
         if (options%contains('tol'   )) call options%get('tol',   self%tol   )
+        if (options%contains('rtol'  )) call options%get('rtol',  self%rtol  )
         if (options%contains('cfl0'  )) call options%get('cfl0',  self%cfl0  )
         if (options%contains('cflmax')) call options%get('cflmax',self%cflmax)
-        if (options%contains('nsteps')) call options%get('nsteps',self%nsteps)
+        if (options%contains('nmax'))   call options%get('nmax',  self%nmax  )
         if (options%contains('nwrite')) call options%get('nwrite',self%nwrite)
-        if (options%contains('norders_reduction')) call options%get('norders_reduction',self%norders_reduction)
+        if (options%contains('search')) call options%get('search',self%search)
+        if (options%contains('ptc'   )) call options%get('ptc',   self%ptc   )
 
     end subroutine set
     !****************************************************************************************
-
-
-
-
-
-
-
-
-
 
 
 
@@ -202,17 +178,8 @@ contains
         type(chidg_data_t),         intent(inout)   :: data
         type(dict_t), optional,     intent(inout)   :: options
 
-
-
     end subroutine init_spec
     !****************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -274,9 +241,7 @@ contains
             end do
 
 
-            !
             ! Accumulate total residual and matrix solver compute times
-            !
             total_residual = 0._rk
             total_matrix   = 0._rk
             do i = 1,self%residual_time%size()
@@ -300,8 +265,6 @@ contains
 
     end subroutine report
     !****************************************************************************************
-
-
 
 
 

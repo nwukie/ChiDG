@@ -6,11 +6,14 @@ subroutine test__create_time_integrator__allocated()
     use mod_kinds,              only: rk,ik
     use mod_time_integrators,   only: time_integrator_factory
     use type_time_integrator,   only: time_integrator_t
+    use type_chidg,             only: chidg_t
     
     implicit none
+    type(chidg_t)                           :: chidg
     integer(ik)                             :: ierr
     class(time_integrator_t),   allocatable :: time
     
+    call chidg%start_up('core')
     
     ! PROCEDURE BEING TESTED
     allocate(time, source=time_integrator_factory%produce('Steady'), stat=ierr)
@@ -20,6 +23,8 @@ subroutine test__create_time_integrator__allocated()
     
     ! Test allocated
     @assertTrue(allocated(time))
+
+    call chidg%shut_down('core')
     
 end subroutine test__create_time_integrator__allocated
 
@@ -37,11 +42,15 @@ subroutine test__create_time_integrator__type()
     use mod_time_integrators,   only: time_integrator_factory
     use type_time_integrator,   only: time_integrator_t
     use type_steady,            only: steady_t
+    use type_chidg,             only: chidg_t
     
     implicit none
+    type(chidg_t)                           :: chidg
     integer(ik)                             :: ierr
     class(time_integrator_t),   allocatable :: time
     
+
+    call chidg%start_up('core')
     
         
     ! PROCEDURE BEING TESTED
@@ -61,6 +70,7 @@ subroutine test__create_time_integrator__type()
             @assertTrue(.false.) 
     end select
             
-    
+    call chidg%shut_down('core')
+
 end subroutine test__create_time_integrator__type
 

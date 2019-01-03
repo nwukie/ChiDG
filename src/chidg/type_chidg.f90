@@ -34,6 +34,7 @@ module type_chidg
     use mod_nonlinear_solver,       only: create_nonlinear_solver
     use mod_preconditioner,         only: create_preconditioner
 
+    use mod_chimera,                only: clear_donor_cache
     use mod_communication,          only: establish_neighbor_communication, &
                                           establish_chimera_communication
     use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize,   &
@@ -52,10 +53,6 @@ module type_chidg
     use type_mesh_motion_group_wrapper, only: mesh_motion_group_wrapper_t
     use type_octree,                    only: octree_t
     implicit none
-
-
-
-
 
 
 
@@ -124,7 +121,6 @@ module type_chidg
         procedure       :: read_mesh_boundary_conditions
         procedure       :: read_mesh_motions
         procedure       :: record_mesh_size
-        !procedure       :: read_prescribedmeshmotions
         procedure       :: write_mesh
         procedure       :: read_fields
         procedure       :: write_fields
@@ -177,18 +173,13 @@ contains
 
         select case (trim(activity))
 
-            !
             ! Start up MPI
-            !
             case ('mpi')
                 call chidg_mpi_init(comm)
 
 
-            !
             ! Start up ChiDG core
-            !
             case ('core')
-
 
                 ! Call environment initialization routines by default on first init call
                 if (.not. self%envInitialized ) then
@@ -197,6 +188,7 @@ contains
                     ! Call environment initialization routines by default on first init call
                     ! Order matters here. Functions need to come first. Used by 
                     ! equations and bcs.
+                    call initialize_input_dictionaries()
                     call register_functions()
                     call register_prescribed_mesh_motion_functions()
                     call register_operators()
@@ -218,15 +210,14 @@ contains
                 self%envInitialized = .true.
                 call self%data%time_manager%init()
 
-                !
                 ! Initialize global time_manager variable
-                !
                 call time_manager_global%init()
 
+                ! Initialize overset donor cache
+                call clear_donor_cache()
 
-            !
+
             ! Start up Namelist
-            !
             case ('namelist')
 
                 ! Read data from 'chidg.nml'
@@ -240,7 +231,6 @@ contains
                 ! Assign from mod_io variables that were read from .nml
                 self%grid_file        = gridfile
                 self%solution_file_in = solutionfile_in
-
 
 
             case default
@@ -336,9 +326,7 @@ contains
 
         select case (trim(activity))
 
-            !
             ! Call all initialization routines.
-            !
             case ('all')
                 ! geometry
                 call self%init('domains',interpolation,level)
@@ -356,9 +344,7 @@ contains
 
 
 
-            !
             ! Initialize domain data that depend on the solution expansion
-            !
             case ('domains')
 
                 user_msg = "chidg%init('domains'): It appears the 'Solution Order' was &
@@ -384,61 +370,45 @@ contains
                 call self%data%initialize_solution_domains(interpolation_in,level_in,self%nterms_s)
 
 
-            !
             ! Initialize boundary condition space
-            !
             case ('comm - bc')
                 call self%data%initialize_solution_bc()
 
-            !
+
             ! Execute boundary custom routins
-            !
             case ('bc - postcomm')
                 call self%data%initialize_postcomm_bc()
 
-            !
+
             ! Initialize communication. Local face communication. Global parallel communication.
-            !
             case ('comm - interior')
                 call establish_neighbor_communication(self%data%mesh,ChiDG_COMM)
 
 
-            !
             ! Initialize chimera
-            !
             case ('comm - chimera')
                 call establish_chimera_communication(self%data%mesh,ChiDG_COMM)
 
 
-            !
             ! Initialize solver storage initialization: vectors, matrices, etc.
-            !
             case ('storage')
                 call self%data%initialize_solution_solver()
 
 
-            !
             ! Allocate components, based on input or default input data
-            !
             case ('algorithms')
 
-                !
                 ! Test chidg necessary components have been allocated
-                !
                 if (.not. allocated(self%time_integrator))  call chidg_signal(FATAL,"chidg%time_integrator component was not allocated")
                 if (.not. allocated(self%nonlinear_solver)) call chidg_signal(FATAL,"chidg%nonlinear_solver component was not allocated")
                 if (.not. allocated(self%linear_solver))    call chidg_signal(FATAL,"chidg%linear_solver component was not allocated")
                 if (.not. allocated(self%preconditioner))   call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
-                !
                 ! Initialize preconditioner
-                !
                 call write_line("Initialize: preconditioner...", io_proc=GLOBAL_MASTER)
                 call self%preconditioner%init(self%data)
                 
-                !
                 ! Initialize time_integrator
-                !
                 !call write_line("Initialize: time integrator...", io_proc=GLOBAL_MASTER)
                 !call self%time_integrator%init(self%data)
 
@@ -476,7 +446,7 @@ contains
     !!  @param[inout] options     Dictionary for initialization options
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine set(self,selector,algorithm,integer_input,real_input,options,cfl0,tol,nsteps,nwrite,norders_reduction,search)
+    subroutine set(self,selector,algorithm,integer_input,real_input,options,cfl0,tol,rtol,nmax,nwrite,search)
         class(chidg_t),             intent(inout)   :: self
         character(*),               intent(in)      :: selector
         character(*),   optional,   intent(in)      :: algorithm
@@ -485,22 +455,18 @@ contains
         type(dict_t),   optional,   intent(inout)   :: options 
         real(rk),       optional,   intent(in)      :: cfl0
         real(rk),       optional,   intent(in)      :: tol
-        integer(ik),    optional,   intent(in)      :: nsteps
+        real(rk),       optional,   intent(in)      :: rtol
+        integer(ik),    optional,   intent(in)      :: nmax 
         integer(ik),    optional,   intent(in)      :: nwrite
-        integer(rk),    optional,   intent(in)      :: norders_reduction
-        logical,        optional,   intent(in)      :: search
+        character(*),   optional,   intent(in)      :: search
 
         character(:),   allocatable :: user_msg
         integer(ik)                 :: ierr
 
-
-        !
         ! Check options for the algorithm family of inputs
-        !
         select case (trim(selector))
             
             case ('Time Integrator', 'Nonlinear Solver', 'Linear Solver', 'Preconditioner')
-
                 user_msg = "chidg%set: The component being set needs an algorithm string passed in &
                             along with it. Try 'call chidg%set('your component', algorithm='your algorithm string')"
                 if (.not. present(algorithm)) call chidg_signal_one(FATAL,user_msg,trim(selector))
@@ -508,13 +474,10 @@ contains
         end select
 
 
-        !
         ! Check options for integer family of inputs
-        !
         select case (trim(selector))
 
             case ('Solution Order')
-
                 user_msg = "chidg%set: The component being set needs an integer passed in &
                             along with it. Try 'call chidg%set('your component', integer_input=my_int)"
                 if (.not. present(integer_input)) call chidg_signal_one(FATAL,user_msg,trim(selector))
@@ -524,71 +487,56 @@ contains
 
 
 
-
-
-        !
         ! Actually go in and call the specialized routine based on 'selector'
-        !
         select case (trim(selector))
-            !
+
             ! Allocation for time integrator
-            !
             case ('Time Integrator')
                 if (allocated(self%time_integrator)) deallocate(self%time_integrator)
-                !call create_time_integrator(algorithm,self%time_integrator)
                 allocate(self%time_integrator, source=time_integrator_factory%produce(algorithm), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
 
-
-            !
             ! Allocation for nonlinear solver
-            !
             case ('Nonlinear Solver')
                 if (allocated(self%nonlinear_solver)) deallocate(self%nonlinear_solver)
                 call create_nonlinear_solver(algorithm,self%nonlinear_solver,options)
 
                 if (present(cfl0))   self%nonlinear_solver%cfl0   = cfl0
                 if (present(tol))    self%nonlinear_solver%tol    = tol
-                if (present(nsteps)) self%nonlinear_solver%nsteps = nsteps
+                if (present(rtol))   self%nonlinear_solver%rtol   = rtol
+                if (present(nmax))   self%nonlinear_solver%nmax   = nmax
                 if (present(nwrite)) self%nonlinear_solver%nwrite = nwrite
                 if (present(search)) self%nonlinear_solver%search = search
-                if (present(norders_reduction)) self%nonlinear_solver%norders_reduction = norders_reduction
 
 
-            !
             ! Allocation for linear solver
-            !
             case ('Linear Solver')
                 if (allocated(self%linear_solver)) deallocate(self%linear_solver)
                 call create_linear_solver(algorithm,self%linear_solver,options)
 
-                if (present(tol)) self%linear_solver%tol = tol
+                if (present(tol))  self%linear_solver%tol  = tol
+                if (present(rtol)) self%linear_solver%rtol = rtol
+                if (present(nmax)) self%linear_solver%nmax = nmax
 
-            !
+
             ! Allocation for preconditioner
-            !
             case ('Preconditioner')
                 if (allocated(self%preconditioner)) deallocate(self%preconditioner)
                 call create_preconditioner(algorithm,self%preconditioner)
 
 
-
-            !
             ! Set the 'solution order'. Order-of-accuracy, that is. Compute the number of terms
             ! in the 1D, 3D solution bases
-            !
             case ('Solution Order')
                 self%nterms_s_1d = integer_input
                 self%nterms_s    = self%nterms_s_1d * self%nterms_s_1d * self%nterms_s_1d
         
-                
 
             case default
                 user_msg = "chidg%set: component string was not recognized. Check spelling and that the component &
                             was registered as an option in the chidg%set routine"
                 call chidg_signal_one(FATAL,user_msg,selector)
-
 
         end select
 
@@ -645,19 +593,11 @@ contains
         call write_line('Reading mesh... ', io_proc=GLOBAL_MASTER)
 
 
-        !
         ! Read domain geometry. Also performs partitioning.
-        !
         call self%read_mesh_grids(grid_file,equation_set,partitions_in)
 
 
-
-
-
-
-        !
         ! Read boundary conditions.
-        !
         call self%read_mesh_boundary_conditions(grid_file, bc_wall,        &
                                                            bc_inlet,       &
                                                            bc_outlet,      &
@@ -666,11 +606,11 @@ contains
                                                            bc_periodic )
 
 
+        ! Read mesh motion information.
         call self%read_mesh_motions(grid_file)
                                                       
-        !
+
         ! Initialize data
-        !
         call self%init('all',interpolation,level)
 
         call self%record_mesh_size()
@@ -722,114 +662,91 @@ contains
         real(rk),    allocatable    :: rbf_radius_recv(:,:), rbf_center_recv(:,:),rbf_radius_sendv(:,:), rbf_center_sendv(:,:), global_nodes(:,:)
 
 
-
-
         call write_line(' ',                           ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('   Reading domain grids... ', ltrim=.false., io_proc=GLOBAL_MASTER)
 
 
-
-        !
         ! Partitions defined from user input
-        !
         if ( present(partitions_in) ) then
 
             self%partition = partitions_in(IRANK+1)
 
+            ! Need connectivity for initializing number of domains/elements/global nodes. 
+            if ( IRANK == GLOBAL_MASTER) then
+                call read_global_connectivity_hdf(grid_file,connectivities)
+            end if
 
-        !
+
         ! Partitions from partitioner tool
-        !
         else
 
-            !
             ! Master rank: Read connectivity, partition connectivity, distribute partitions
-            !
             call write_line("   partitioning...", ltrim=.false., io_proc=GLOBAL_MASTER)
             if ( IRANK == GLOBAL_MASTER ) then
 
-                !!!-------------------------  REVISIT  --------------------------------!!!
-                call read_global_nodes_hdf(grid_file,global_nodes)
-                nnodes = size(global_nodes(:,1))
-                !!!-------------------------  REVISIT  --------------------------------!!!
-
-
                 call read_global_connectivity_hdf(grid_file,connectivities)
                 call read_weights_hdf(grid_file,weights)
-
-
-                !!!-------------------------  REVISIT  --------------------------------!!!
-                ndoms = size(connectivities)
-                allocate(nelems_per_domain(size(connectivities)))
-                allocate(nnodes_per_domain(size(connectivities)))
-                do idom = 1, size(connectivities)
-                    nelems_per_domain(idom) = connectivities(idom)%nelements
-                    nnodes_per_domain(idom) = connectivities(idom)%nnodes
-                end do
-                !!!-------------------------  REVISIT  --------------------------------!!!
-
 
                 call partition_connectivity(connectivities, weights, partitions)
                 call send_partitions(partitions,ChiDG_COMM)
 
             end if
 
-
-
-
-            !!!-------------------------  REVISIT  --------------------------------!!!
-            call MPI_Bcast(ndoms,  1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
-            call MPI_Bcast(nnodes, 1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
-            if (IRANK /= GLOBAL_MASTER) then
-                allocate(nelems_per_domain(ndoms))
-                allocate(nnodes_per_domain(ndoms))
-                allocate(global_nodes(nnodes,3))
-            end if
-            call MPI_Bcast(nelems_per_domain, ndoms, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
-            call MPI_Bcast(nnodes_per_domain, ndoms, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
-            call MPI_Bcast(global_nodes, 3*nnodes, MPI_REAL8, GLOBAL_MASTER, ChiDG_COMM, ierr)
-
-            call self%data%sdata%set_nelems_per_domain(nelems_per_domain)
-            call self%data%sdata%set_nnodes_per_domain(nnodes_per_domain)
-            call self%data%sdata%set_global_nodes(global_nodes)
-            !!!-------------------------  REVISIT  --------------------------------!!!
-
-
-
-
-
-            !
             ! All ranks: Receive partition from GLOBAL_MASTER
-            !
             call write_line("   distributing partitions...", ltrim=.false., io_proc=GLOBAL_MASTER)
             call recv_partition(self%partition,ChiDG_COMM)
-
 
         end if ! partitions in from user
 
 
 
-        !
+        !!!-------------------------  REVISIT  --------------------------------!!!
+        if (IRANK == GLOBAL_MASTER) then
+            call read_global_nodes_hdf(grid_file,global_nodes)
+            nnodes = size(global_nodes(:,1))
+            ndoms = size(connectivities)
+            allocate(nelems_per_domain(size(connectivities)))
+            allocate(nnodes_per_domain(size(connectivities)))
+            do idom = 1, size(connectivities)
+                nelems_per_domain(idom) = connectivities(idom)%nelements
+                nnodes_per_domain(idom) = connectivities(idom)%nnodes
+            end do
+        end if
+
+
+        call MPI_Bcast(ndoms,  1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
+        call MPI_Bcast(nnodes, 1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
+        if (IRANK /= GLOBAL_MASTER) then
+            allocate(nelems_per_domain(ndoms))
+            allocate(nnodes_per_domain(ndoms))
+            allocate(global_nodes(nnodes,3))
+        end if
+        call MPI_Bcast(nelems_per_domain, ndoms, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
+        call MPI_Bcast(nnodes_per_domain, ndoms, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
+        call MPI_Bcast(global_nodes, 3*nnodes, MPI_REAL8, GLOBAL_MASTER, ChiDG_COMM, ierr)
+
+        call self%data%sdata%set_nelems_per_domain(nelems_per_domain)
+        call self%data%sdata%set_nnodes_per_domain(nnodes_per_domain)
+        call self%data%sdata%set_global_nodes(global_nodes)
+        !!!-------------------------  REVISIT  --------------------------------!!!
+
+
+
+
         ! Read data from hdf file
-        !
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
-
                 call read_equations_hdf(self%data, grid_file)
                 call read_grids_hdf(grid_file,self%partition,meshdata)
-
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
         end do
 
 
 
-        !
         ! Add domains to ChiDG%data
-        !
         call write_line("   processing...", ltrim=.false., io_proc=GLOBAL_MASTER)
         do idom = 1,size(meshdata)
-
 
             ! Use equation_set if specified, else default to the grid file data
             if (present(equation_set)) then
@@ -838,8 +755,6 @@ contains
             else
                 domain_equation_set = meshdata(idom)%eqnset
             end if
-
-
 
             ! Get the equation set identifier
             eqn_ID = self%data%get_equation_set_id(domain_equation_set)
@@ -852,8 +767,6 @@ contains
                                             meshdata(idom)%nelements_g,  &
                                             meshdata(idom)%coord_system, &
                                             eqn_ID )
-
-
 
         end do !idom
 
@@ -882,13 +795,6 @@ contains
         self%data%sdata%rbf_center = rbf_center_recv
         self%data%sdata%rbf_radius = rbf_radius_recv
         !!!-------------------------  REVISIT  --------------------------------!!!
-
-
-
-
-
-
-
 
 
 
@@ -936,9 +842,7 @@ contains
         call write_line('   Reading boundary conditions... ', ltrim=.false., io_proc=GLOBAL_MASTER)
 
 
-        !
         ! Call boundary condition reader based on file extension
-        !
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
@@ -950,11 +854,7 @@ contains
 
 
 
-
-
-        !
         ! Add all boundary condition state groups
-        !
         call write_line('   processing groups...', ltrim=.false., io_proc=GLOBAL_MASTER)
         do ibc = 1,size(bc_state_groups)
 
@@ -968,10 +868,7 @@ contains
         end do !ibc
 
 
-
-        !
         ! Add boundary condition patch groups
-        !
         call write_line('   processing patches...', ltrim=.false., io_proc=GLOBAL_MASTER)
         ndomains = size(domain_patch_data)
         do idom = 1,ndomains
@@ -990,7 +887,6 @@ contains
 
             end do !iface
         end do !ipatch
-
 
 
         call write_line('   Done reading boundary conditions.', ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -1017,83 +913,55 @@ contains
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: grid_file
 
-        character(5),           dimension(1)    :: extensions
-        character(:),           allocatable     :: extension
-        type(mesh_motion_domain_data_t),  allocatable     :: pmm_domain_data(:)
-        type(string_t)                          :: pmm_group_name
-        type(mesh_motion_group_wrapper_t)            :: pmm_group_wrapper
-        type(string_t)                          :: group_name
-        integer(ik)                                 :: idom, ndomains, iface, ibc, ierr, iread, npmm_groups
+        character(5),           dimension(1)            :: extensions
+        character(:),           allocatable             :: extension
+        type(mesh_motion_domain_data_t),  allocatable   :: pmm_domain_data(:)
+        type(mesh_motion_group_wrapper_t)               :: pmm_group_wrapper
+        type(string_t)      :: pmm_group_name
+        type(string_t)      :: group_name
+        integer(ik)         :: idom, ndomains, iface, ibc, ierr, iread, npmm_groups
 
-
-        !
         ! Get filename extension
-        !
         extensions = ['.h5']
         extension = get_file_extension(grid_file, extensions)
 
 
-        !
         ! Call boundary condition reader based on file extension
-        !
         call write_line('Reading Mesh Motions...', io_proc=GLOBAL_MASTER)
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
-
-
                 if ( extension == '.h5' ) then
                     call read_mesh_motion_hdf(grid_file,pmm_domain_data,pmm_group_wrapper,self%partition)
                 else
                     call chidg_signal(FATAL,"chidg%read_mesh_motions: grid file extension not recognized")
                 end if
-
-
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
         end do
 
 
-
-
-
-        call write_line('Processing Mesh Motions...', io_proc=GLOBAL_MASTER)
-        !
         ! Add all boundary condition groups
-        !
+        call write_line('Processing Mesh Motions...', io_proc=GLOBAL_MASTER)
         npmm_groups = pmm_group_wrapper%ngroups
         if (npmm_groups>0) then
-        do ibc = 1,npmm_groups
-
-            call self%data%add_mm_group(pmm_group_wrapper%mm_groups(ibc))
-
-        end do !ibc
+            do ibc = 1,npmm_groups
+                call self%data%add_mm_group(pmm_group_wrapper%mm_groups(ibc))
+            end do !ibc
         end if
 
 
-        !
         ! Add boundary condition patches
-        !
         if (npmm_groups>0) then
-        ndomains = size(pmm_domain_data)
-        do idom = 1,ndomains
-            
-            call pmm_group_name%set(pmm_domain_data(idom)%mm_group_name)
-            call self%data%add_mm_domain(pmm_domain_data(idom)%domain_name,            &
-                                        pmm_group_name%get())
-
-        end do !ipatch
+            ndomains = size(pmm_domain_data)
+            do idom = 1,ndomains
+                call pmm_group_name%set(pmm_domain_data(idom)%mm_group_name)
+                call self%data%add_mm_domain(pmm_domain_data(idom)%domain_name,pmm_group_name%get())
+            end do !ipatch
         end if
-
-
 
 
     end subroutine read_mesh_motions
     !*****************************************************************************************
-
-
-
-
-
 
 
 
@@ -1110,27 +978,21 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine read_fields(self,file_name)
-        class(chidg_t),     intent(inout)           :: self
-        character(*),       intent(in)              :: file_name
-
+        class(chidg_t),     intent(inout)   :: self
+        character(*),       intent(in)      :: file_name
 
         call write_line(' ',                            ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line(' Reading solution... ',        ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('   reading from: ', file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
 
-
-        !
         ! Read solution from hdf file
-        !
         call read_fields_hdf(file_name,self%data)
-
 
         call write_line('Done reading solution.', io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,       io_proc=GLOBAL_MASTER)
 
     end subroutine read_fields
     !*****************************************************************************************
-
 
 
 
@@ -1226,15 +1088,11 @@ contains
         call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('Writing mesh... ', io_proc=GLOBAL_MASTER)
 
-
-
-        !
         ! Check for file existence
         !
         ! Create new file if necessary
         !   Barrier makes sure everyone has called file_exists before
         !   one potentially gets created by another processor
-        !
         file_exists = check_file_exists_hdf(file_name)
         call MPI_Barrier(ChiDG_COMM,ierr)
         if (.not. file_exists) then
@@ -1249,7 +1107,6 @@ contains
                 do iproc = 0,NRANK-1
                     if (iproc == IRANK) then
                         fid = open_file_hdf(file_name)
-                        !call initialize_file_structure_hdf(fid,self%data)
                         call initialize_file_structure_hdf(fid,self%data%mesh)
                         call close_file_hdf(fid)
                     end if
@@ -1261,19 +1118,10 @@ contains
 
 
 
-
-
-
-
-
-        !
         ! Call grid reader based on file extension
-        !
         call write_line("   writing to: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
 
-        !
         ! Each process, write its own portion of the solution
-        !
         do iwrite = 0,NRANK-1
             if ( iwrite == IRANK ) then
 
@@ -1284,7 +1132,6 @@ contains
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
         end do
-
 
 
         call write_line("Done writing mesh.", io_proc=GLOBAL_MASTER)
@@ -1319,14 +1166,8 @@ contains
         call write_line('Writing solution... ', io_proc=GLOBAL_MASTER)
         call write_line("   writing to:", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
 
-
-        !
-        ! Call grid reader based on file extension
-        !
         call write_fields_hdf(self%data,file_name)
         call self%time_integrator%write_time_options(self%data,file_name)
-
-
 
         call write_line("Done writing solution.", io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,       io_proc=GLOBAL_MASTER)
@@ -1362,43 +1203,32 @@ contains
         call write_line('Writing visualization... ', io_proc=GLOBAL_MASTER)
 
 
-        !
         ! Check we are running serial
-        !
         user_msg = "chidg%produce_visualization: We currently can only write &
                     visualization files in serial. Please run using a single process."
         if (NRANK > 1) call chidg_signal(FATAL,user_msg)
 
 
-
-        !
         ! Get properties from solution_file and set
-        !
         fid = open_file_hdf(solution_file)
         solution_orders = get_domain_field_orders_hdf(fid)
         time_integrator = get_time_integrator_hdf(fid)
         call close_file_hdf(fid)
 
 
-        !
         ! Initialize solution data storage
-        !
         call self%set('Solution Order', integer_input=solution_orders(1))
         call self%set('Time Integrator', algorithm=trim(time_integrator))
         self%solution_file_in = solution_file
 
 
-        !
         ! Read grid/solution modes and time integrator options from HDF5
-        !
         self%grid_file = grid_file
         call self%read_mesh(grid_file, interpolation='Uniform', level=OUTPUT_RES, equation_set=equation_set)
         call self%read_fields(solution_file)
 
 
-        !
         ! Process for getting wall distance
-        !
         call self%process()
 
 
@@ -1407,9 +1237,7 @@ contains
         call self%time_integrator%process_data_for_output(self%data)
 
 
-        !
         ! Write solution
-        !
         solution_file_prefix = get_file_prefix(solution_file,'.h5')
         call write_tecio(self%data,solution_file_prefix, write_domains=.true., write_surfaces=.true.)
 
@@ -1419,9 +1247,6 @@ contains
 
     end subroutine produce_visualization
     !*****************************************************************************************
-
-
-
 
 
 
@@ -1458,7 +1283,6 @@ contains
         auxiliary_fields_local = self%data%get_auxiliary_field_names()
 
 
-        !
         ! Rule for 'Wall Distance'
         !   1: Detect if proc requires auxiliary field 'Wall Distance : p-Poisson' be provided.
         !   2: Detect if all procs require 'Wall Distance : p-Poisson'. MPI_AllReduce
@@ -1481,7 +1305,6 @@ contains
                                                                                    aux_file  = 'wall_distance.h5')
         end if
         !*************************************************************************************
-
 
 
 
@@ -1526,6 +1349,7 @@ contains
         call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
         call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
 
+        
 
         ! Prerun processing
         !   : Getting/computing auxiliary fields etc.
@@ -1614,7 +1438,7 @@ contains
 
 
 
-    !> Report on ChiDG simulation
+    !>  Report on ChiDG simulation
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -1639,8 +1463,6 @@ contains
                 end if
                 call MPI_Barrier(ChiDG_COMM,ierr)
             end do
-
-
 
 
         else if ( trim(selection) == 'after' ) then

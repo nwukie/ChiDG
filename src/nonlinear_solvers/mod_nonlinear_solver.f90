@@ -7,7 +7,6 @@ module mod_nonlinear_solver
     ! Import solverdata types
     use type_newton,            only: newton_t
     use type_jfnk,              only: jfnk_t
-    use type_quasi_newton,      only: quasi_newton_t
     use type_quasi_newton_sst,  only: quasi_newton_sst_t
     use type_quasi_newton_rs,   only: quasi_newton_rs_t
     implicit none
@@ -15,7 +14,6 @@ module mod_nonlinear_solver
 
     ! Instantiate solver types for sourcing
     type(newton_t)              :: NEWTON
-    type(quasi_newton_t)        :: QUASI_NEWTON
     type(jfnk_t)                :: JFNK 
     type(quasi_newton_sst_t)    :: QUASI_NEWTON_SST
     type(quasi_newton_rs_t)     :: QUASI_NEWTON_RS
@@ -41,10 +39,7 @@ contains
         class(nonlinear_solver_t), allocatable, intent(inout)   :: instance
         type(dict_t), optional,                 intent(inout)   :: options
 
-        character(len=:), allocatable   :: user_msg, dev_msg
-
-
-
+        character(:),   allocatable :: user_msg, dev_msg
 
         select case (trim(string))
 
@@ -54,17 +49,11 @@ contains
             case ('jfnk','Jfnk','JFNK')
                 allocate(instance, source=JFNK)
 
-            case ('quasi_newton','Quasi_Newton','quasi-newton','Quasi-Newton')
-                allocate(instance, source=QUASI_NEWTON)
-
             case ('quasi_newton_sst','Quasi_Newton_SST','quasi-newton-sst','Quasi-Newton-SST')
-                allocate(instance, source=QUASI_NEWTON)
-
+                allocate(instance, source=QUASI_NEWTON_SST)
 
             case ('quasi_newton_rs','Quasi_Newton_RS','quasi-newton-rs','Quasi-Newton-RS')
                 allocate(instance, source=QUASI_NEWTON_RS)
-
-
 
             case default
                 user_msg = "We can't seem to find a nonlinear solver that matches the input &
@@ -77,19 +66,11 @@ contains
         end select
 
 
-
-
-
-        !
         ! Call options initialization if present
-        !
         if (present(options)) call instance%set(options)
 
 
-
-        !
         ! Make sure the solver was allocated
-        !
         user_msg = "create_nonlinear_solver: solver was not allocated. Check that the &
                     desired solver was registered and instantiated in the &
                     mod_nonlinear_solver module"

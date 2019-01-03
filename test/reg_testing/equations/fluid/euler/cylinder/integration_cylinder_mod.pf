@@ -64,16 +64,13 @@ module integration_cylinder_mod
     ! to test the nonlinear convergence between a case running on
     ! a different number of procs.
     !
-    ! Procs: 1, 2, 4, 7, 10
-    !
+    ! Procs: 1, 2, 4, 5, 8
     type(rvector_t) :: nonlinear_convergence(5,4) ! nprocs, norders
 
     type(MPI_STATUS)  :: tmp_status
     type(MPI_REQUEST) :: tmp_request
 
     public  :: cylinder
-
-
 
 
     !>  This parameter initialize the state for each test
@@ -84,17 +81,11 @@ module integration_cylinder_mod
     !-------------------------------------------------------------------------------
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
-
         integer(ik)     :: order
-
     contains
         procedure   :: toString
     end type case_grid_order
     !*******************************************************************************
-
-
-
-
 
 
 
@@ -106,12 +97,10 @@ module integration_cylinder_mod
     !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: cylinder
-
         integer(ik)                     :: order
         character(:),       allocatable :: gridfile
         type(chidg_t)                   :: chidg
         type(mpi_comm)                  :: ChiDG_COMM
-
     contains
         procedure   :: setUp
         procedure   :: tearDown
@@ -121,13 +110,10 @@ module integration_cylinder_mod
 
 
 
-
 contains
 
 
     !> Parameter constructors
-    !!
-    !!
     !!
     !------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
@@ -140,10 +126,7 @@ contains
     !******************************************************************************
 
 
-
     !> Parameter initialization
-    !!
-    !!
     !!
     !------------------------------------------------------------------------------
     function getParameters() result(params)
@@ -165,10 +148,7 @@ contains
     !*******************************************************************************************
 
 
-
     !>  Reporting the parameters of the test
-    !!
-    !!
     !!
     !-------------------------------------------------------------------------------------------
     function toString(this) result(string)
@@ -196,7 +176,6 @@ contains
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
     !!
-    !!
     !--------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(cylinder),  intent(inout)   :: this
@@ -205,11 +184,13 @@ contains
         type(bc_state_group_t)          :: bc_state_groups(3)
         type(string_t)                  :: group_names(4,6)
         class(function_t),  allocatable :: fcn
-        real(rk)                        :: tol
         logical                         :: file_exists
 
         
-        tol = 1.e-6_rk
+        ! Get MPI communicator information from pFUnit
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
         !------------------------------------------------------------------------------
         !
@@ -222,48 +203,38 @@ contains
         basis            = 'legendre'
         gq_rule          = 2
         time_integrator  = 'steady'
-        nonlinear_solver = 'quasi_newton'
+        nonlinear_solver = 'newton'
         linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
-        IO_DESTINATION   = 'file'
+        !preconditioner   = 'ILU0'
+        !preconditioner   = 'Jacobi'
+        !IO_DESTINATION   = 'file'
+        IO_DESTINATION   = 'both'
         !------------------------------------------------------------------------------
 
-        !
-        ! Get MPI communicator information from pFUnit
-        !
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
-
-
-
-        ! Set timescheme options to pass during initialization
-        !call toptions%set('dt', 0.1_rk) ! means nothing here
-        !call toptions%set('nsteps',100)
-        !call toptions%set('nwrite',0)
-
-        
-        ! Set linear solver options to pass during initialization
-        call loptions%set('tol',1.e-8_rk)
-
-        ! Set nonlinear solver options
-        call noptions%set('tol',3.e-5_rk)
-        call noptions%set('cfl0',0.5_rk)
-        call noptions%set('nsteps',100)
-
-
-
-        !
         ! Initialize ChiDG environment
-        !
         call this%chidg%start_up('mpi',this%ChiDG_COMM)
         call this%chidg%start_up('core')
 
+        
+        ! Set linear solver options to pass during initialization
+        call loptions%set('tol',1.e-13_rk)
+        call loptions%set('rtol',1.e-14_rk)
+        call loptions%set('inner_fgmres',.true.)
+
+        ! Set nonlinear solver options
+        call noptions%set('tol',5.e-7_rk)
+        call noptions%set('rtol',1.e-14_rk)
+        call noptions%set('cfl0',0.5_rk)
+        call noptions%set('nsteps',100)
+        call noptions%set('ptc',.true.)
+        call noptions%set('search','Backtrack')
+        call noptions%set('','Backtrack')
 
 
-        !
+
+
         ! Create mesh
-        !
         if (IRANK == GLOBAL_MASTER) then
 
             ! Set bc_group names
@@ -333,27 +304,17 @@ contains
         end if
 
 
-        !
         ! Set ChiDG components
-        !
         call this%chidg%set('Solution Order',   integer_input=this%order)
         call this%chidg%set('Time Integrator',  algorithm=time_integrator)
         call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
         call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
-
-
-        !
         ! Read grid
-        !
         call this%chidg%read_mesh(this%gridfile)
 
-
-
-        !
         ! Initialize solution
-        !
         if (this%order == 1) then
             call create_function(fcn,'constant')
 
@@ -389,25 +350,17 @@ contains
 
         logical :: file_exists
 
-        !
         ! Close ChiDG
-        !
         call this%chidg%shut_down('core')
 
-
-        !
         ! Delete grid file
-        !
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
         end if
 
-        
-        !
         ! Only delete solution file after 
-        !
         if ( (this%getProcessRank() == GLOBAL_MASTER)   .and. &
-             (this%getNumProcessesRequested() == 10)    .and. &
+             (this%getNumProcessesRequested() == 8)    .and. &
              (this%order == 4) ) then
 
             inquire(file='cylinder_solution.h5', exist=file_exists)
@@ -416,13 +369,6 @@ contains
 
     end subroutine tearDown
     !*******************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -438,7 +384,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    @Test(npes=[1,2,4,7,10])
+    @Test(npes=[1,2,4,5,8])
     subroutine test_symmetry(self)
         class(cylinder),  intent(inout)   :: self
 
@@ -447,39 +393,23 @@ contains
         real(rk), allocatable   :: top_solution(:), bot_solution(:)
         character(1)    :: leading_int
 
-        !
         ! Get test case indices
-        !
         npes_index  = get_npes_index(NRANK)
         order_index = get_order_index(self%order)
 
-
-        !
         ! Run ChiDG simulation
-        !
         call self%chidg%run(write_initial=.false., write_final=.false.)
-
-
         call self%chidg%write_fields('cylinder_solution.h5')
 
 
-
-        !
         ! Store the nonlinear convergence of the calculation
-        !
         nonlinear_convergence(npes_index,order_index) = self%chidg%nonlinear_solver%residual_norm
 
-
-
-        !
         ! Test symmetry. Do some comparisons of the solution between symmetrically 
         ! located elements.
         !
         ! Block 1 is directly below the cylinder
         ! Block 3 is directly above the cylinder
-        !
-        ! Note, in generating 
-        !
         doms_top  = [1, 1]
         elems_top = [33, 34]  !   domain 1. These are the top two middle elements of block 1
 
@@ -493,10 +423,8 @@ contains
 
         do ielem_search = 1,size(elems_top)
             
-            !
             ! Find the top and bottom solutions and if found, send to the master process so 
             ! they can be compared.
-            !
             dom_search = doms_top(ielem_search)
             elem_search = elems_top(ielem_search)
 
@@ -532,18 +460,12 @@ contains
             end do !idom
 
 
-
-
-            !
             ! Receive the top and bottom solutions and compare
-            !
             if (IRANK == GLOBAL_MASTER) then
                 ! Receive top element solution
                 call MPI_Recv(top_solution, send_size, MPI_REAL8, MPI_ANY_SOURCE, 0, ChiDG_COMM, tmp_status, ierr)
-
                 ! Receive bot element solution
                 call MPI_Recv(bot_solution, send_size, MPI_REAL8, MPI_ANY_SOURCE, 1, ChiDG_COMM, tmp_status, ierr)
-
                 @assertEqual(abs(top_solution),abs(bot_solution), 1.e-2_rk)
             end if
 
@@ -555,8 +477,6 @@ contains
 
     end subroutine test_symmetry
     !******************************************************************************************
-
-
 
 
 
@@ -593,7 +513,6 @@ contains
                 ! the serial convergence.
                 test_convergence = nonlinear_convergence(inpes,iorder)%data()
 
-
                 @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
 
             end do
@@ -602,10 +521,6 @@ contains
 
     end subroutine test_nonlinear_convergence
     !*******************************************************************************************
-
-
-
-
 
 
 
@@ -624,16 +539,15 @@ contains
                 inpes = 2
             case(4)
                 inpes = 3
-            case(7)
+            case(5)
                 inpes = 4
-            case(10)
+            case(8)
                 inpes = 5
 
         end select
 
     end function get_npes_index
     !******************************************************************************
-
 
 
 

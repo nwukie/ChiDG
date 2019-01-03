@@ -128,25 +128,21 @@ contains
         logical                         :: wd_file_exists, have_wd_field
 
 
-
-        !
         ! chidg%init('mpi') should have already been called by another ChiDG instance.
         ! chidg%init('io')  should have already been called by another ChiDG instance.
-        !
         ! Make sure this ChiDG environment is initialized.
-        !
         call wall_distance%start_up('core')
 
 
-
-
-        !
-        ! Initialize options dictionaries
-        !
-        call noptions%set('tol',1.e-8_rk)   ! Set nonlinear solver options
+        ! Initialize solver dictionaries
+        call noptions%set('tol',1.e-8_rk)
         call noptions%set('cfl0',1.0_rk)
         call noptions%set('nsteps',50)
-        call loptions%set('tol',1.e-10_rk)  ! Set linear solver options
+        call noptions%set('search','Backtrack')
+        call noptions%set('ptc',.true.)
+
+        call loptions%set('tol',1.e-10_rk)  
+        call loptions%set('inner_fgmres',.true.)
 
 
 
@@ -154,24 +150,20 @@ contains
         ! Set ChiDG components
         !
         call wall_distance%set('Time Integrator' , algorithm='Steady')
-        call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
-        call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs_correct', options=loptions)
+        call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
+        call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
         call wall_distance%set('Preconditioner'  , algorithm='RASILU0')
 
         order = chidg%nterms_s_1d
         call wall_distance%set('Solution Order', integer_input=order)
 
-        !wall_distance%nonlinear_solver%search = .false.
-        wall_distance%nonlinear_solver%search = .true.
 
 
-        !
         ! Set up boudary condition states to impose.
         !
         ! u = 0 on walls
         !
         ! dudn = 0 else where
-        !
         call create_bc('Scalar Value',      dirichlet_zero)
         call create_bc('Scalar Derivative', neumann_zero  )
 
@@ -180,8 +172,6 @@ contains
 
 
 
-
-        !
         ! Read grid, boundary conditions.
         !
         ! Override equation_set and boundary conditions with p-Poisson equation
@@ -189,7 +179,6 @@ contains
         !
         ! Solid walls get dirichlet zero bc.
         ! All other families get neumann zero bc.
-        !
         call wall_distance%read_mesh(grid_file, equation_set = 'Wall Distance : p-Poisson',  &
                                                 bc_wall      = dirichlet_zero,               &
                                                 bc_inlet     = neumann_zero,                 &
@@ -198,18 +187,11 @@ contains
                                                 bc_farfield  = neumann_zero )
 
 
-
-        !
         ! Initialize wall_distance with chidg order in case we are going to read in a solution.
-        !
         call wall_distance%init('all')
 
 
-
-
-        !
         ! Check if we already have a wall distance solution
-        !
         do iproc = 0,NRANK-1
             if (iproc == IRANK) then
 
@@ -228,23 +210,18 @@ contains
 
 
 
-        !
         ! If we have a wall distance file and it has an accurate solution,
         ! just read from file.
-        !
         if (wd_file_exists .and. have_wd_field) then
 
             call wall_distance%read_fields(aux_file)
             wall_distance%data%sdata%q = wall_distance%data%sdata%q_in
 
-        !
+
         ! If we don't have an accurate wall distance field in file, solve for a new one.
-        !
         else
 
-            !
             ! Store grid to file
-            !
             call wall_distance%write_mesh(aux_file)
 
             ! Get wall-distance approximation for p-Poisson equation using a low-order
@@ -260,9 +237,10 @@ contains
             !
             iorder = 2
             call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
+            call noptions%set('ptc',.false.)    ! Set nonlinear solver options
             call loptions%set('tol',1.e-5_rk)   ! Set linear solver options
             call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
-            call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs_correct', options=loptions)
+            call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
 !            wall_distance%nonlinear_solver%norders_reduction = 3
             do p = 2,6,2
                 call write_line('Wall Distance Driver : Loop 1 : p = ', p)
@@ -273,22 +251,14 @@ contains
                     !wall_distance%nonlinear_solver%norders_reduction = 30
                 end if
                 
-                !
                 ! Update p-Poisson fidelity
-                !
                 call set_p_poisson_parameter(real(p,rk))
 
-
-                !
                 ! (Re)Initialize domain storage, communication, matrix/vector storage
-                !
                 call wall_distance%set('Solution Order', integer_input=iorder)
                 call wall_distance%init('all')
 
-
-                !
                 ! Read solution if it exists.
-                !
                 if (p == 2) then
                     call create_function(constant,'constant')
                     call constant%set_option('val',0.001_rk)
@@ -299,24 +269,15 @@ contains
                     call wall_distance%read_fields(aux_file)
                 end if
 
-
-                !
                 ! Run ChiDG simulation
-                !
                 call wall_distance%report('before')
                 call wall_distance%run(write_initial=.false., write_final=.false.)
                 call wall_distance%report('after')
 
-
-                !
                 ! Write wall distance to auxiliary field
-                !
                 call wall_distance%write_fields(aux_file)
 
-
             end do
-
-
 
 
 
@@ -338,9 +299,10 @@ contains
             p = 6
             call set_p_poisson_parameter(real(p,rk))
             call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
+            call noptions%set('ptc',.true.)   ! Set nonlinear solver options
             call loptions%set('tol',1.e-8_rk)   ! Set linear solver options
-            call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
-            call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs_correct', options=loptions)
+            call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
+            call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
 
 !            wall_distance%nonlinear_solver%norders_reduction = 8
 !            wall_distance%nonlinear_solver%norders_reduction = 30
@@ -349,59 +311,38 @@ contains
             do iorder = 3,order
                 call write_line('Wall Distance Driver : Loop 2 : order = ', iorder)
 
-
-                !
                 ! (Re)Initialize domain storage, communication, matrix/vector storage
-                !
                 call wall_distance%set('Solution Order', integer_input=iorder)
                 call wall_distance%init('all')
 
-
-                !
                 ! Read solution if it exists.
-                !
                 call wall_distance%read_fields(aux_file)
 
-
-                !
                 ! Run ChiDG simulation
-                !
                 call wall_distance%report('before')
                 call wall_distance%run(write_initial=.false., write_final=.false.)
                 call wall_distance%report('after')
 
-
-                !
                 ! Write wall distance to auxiliary field
-                !
                 call wall_distance%write_fields(aux_file)
-
 
             end do
 
-
         end if ! have_wd_field .and. wd_file_exists
 
-        call write_line('Storing Wall Distance field to Auxiliary field ChiDG Vector:', io_proc=GLOBAL_MASTER)
 
 
-        !
         ! Try to find 'Wall Distance' auxiliary field storage.
-        !
+        call write_line('Storing Wall Distance field to Auxiliary field ChiDG Vector:', io_proc=GLOBAL_MASTER)
         aux_field_index = chidg%data%sdata%get_auxiliary_field_index('Wall Distance : p-Poisson')
 
-
-        !
         ! If no 'Wall Distance' auxiliary field storage was not found, create one.
-        !
         if (aux_field_index == 0) then
 
             call chidg%data%sdata%add_auxiliary_field('Wall Distance : p-Poisson', wall_distance%data%sdata%q)
 
-        !
         ! If 'Wall Distance' auxiliary field storage was found, copy Wall Distance solution 
         ! to working ChiDG environment.
-        !
         else
             chidg%data%sdata%auxiliary_field(aux_field_index) = wall_distance%data%sdata%q
 

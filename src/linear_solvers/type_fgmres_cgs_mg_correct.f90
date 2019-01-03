@@ -11,8 +11,7 @@ module type_fgmres_cgs_mg_correct
     use type_linear_solver,     only: linear_solver_t 
     use type_preconditioner,    only: preconditioner_t
     use type_solver_controller, only: solver_controller_t
-    use type_fgmres_cgs_correct,only: fgmres_cgs_correct_t
-    use type_fgmres_cgs,        only: fgmres_cgs_t
+    use type_fgmres,            only: fgmres_t
     use precon_ILU0,            only: precon_ILU0_t
     use precon_jacobi,          only: precon_jacobi_t
     use type_chidg_data,        only: chidg_data_t
@@ -37,7 +36,7 @@ module type_fgmres_cgs_mg_correct
     !---------------------------------------------------------------------------------------------
     type, public, extends(linear_solver_t) :: fgmres_cgs_mg_correct_t
 
-        integer(ik) :: m = 2000
+        !integer(ik) :: m = 2000
         integer(ik) :: mg_correct = 2
         !integer(ik) :: mg_correct = 4
 
@@ -101,7 +100,7 @@ contains
         type(chidg_vector_t)    :: mg_zj
         type(chidg_vector_t)    :: mg_deltaz
 
-        type(fgmres_cgs_t) :: linear_solver
+        type(fgmres_t) :: linear_solver
 
 
 
@@ -111,14 +110,14 @@ contains
         ! Set the multigrid recursion level
         !
         mg_linear_solver%mg_correct = self%mg_correct - 1
-        mg_linear_solver%m = 2000
+        mg_linear_solver%nkrylov = 2000
 
-        linear_solver%m = 100
+        linear_solver%nkrylov = 100
         !linear_solver%tol = 1.e-1_rk
         !linear_solver%rtol = 6.e-1_rk
         linear_solver%tol = 1.e-1_rk
         linear_solver%rtol = 6.e-1_rk
-        linear_solver%maxiter = 100
+        linear_solver%nmax = 100
         linear_solver%silence = -10
 
 
@@ -150,8 +149,8 @@ contains
         !
         ! Allocate and initialize Krylov vectors V
         !
-        allocate(v(self%m+1),  &
-                 z(self%m+1), stat=ierr)
+        allocate(v(self%nkrylov+1),  &
+                 z(self%nkrylov+1), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         do ivec = 1,size(v)
@@ -166,7 +165,7 @@ contains
         !
         ! Allocate hessenberg matrix to store orthogonalization
         !
-        allocate(h(self%m + 1, self%m), dot_tmp(self%m+1), htmp(self%m + 1, self%m), stat=ierr)
+        allocate(h(self%nkrylov + 1, self%nkrylov), dot_tmp(self%nkrylov+1), htmp(self%nkrylov + 1, self%nkrylov), stat=ierr)
         if (ierr /= 0) call AllocationError
         h       = ZERO
         htmp    = ZERO
@@ -177,10 +176,10 @@ contains
         !
         ! Allocate vectors for solving hessenberg system
         !
-        allocate(p(self%m+1), &
-                 y(self%m+1), &
-                 c(self%m+1), &
-                 s(self%m+1), stat=ierr)
+        allocate(p(self%nkrylov+1), &
+                 y(self%nkrylov+1), &
+                 c(self%nkrylov+1), &
+                 s(self%nkrylov+1), stat=ierr)
         if (ierr /= 0) call AllocationError
         p = ZERO
         y = ZERO
@@ -238,7 +237,7 @@ contains
             nvecs = 0
             nmg_correct = 0
             nhigh_freq = 1
-            do j = 1,self%m
+            do j = 1,self%nkrylov
                 nvecs = nvecs + 1
            
 

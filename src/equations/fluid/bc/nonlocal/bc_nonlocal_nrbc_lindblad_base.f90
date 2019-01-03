@@ -108,21 +108,12 @@ contains
 
     !>
     !!
-    !!  @author Nathan A. average_pressure 
-    !!  @date   2/8/2017
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2018
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
         class(nonlocal_nrbc_lindblad_base_t),   intent(inout) :: self
-
-!        ! Set name, family
-!        call self%set_name('Outlet - Giles Quasi3D Unsteady HB')
-!        call self%set_family('Outlet')
-!
-!        ! Add functions
-!        call self%bcproperties%add('Average Pressure',    'Required')
-!        call self%bcproperties%add('Pitch',               'Required')
-!        call self%bcproperties%add('Spatial Periodicity', 'Required')
 
     end subroutine init
     !********************************************************************************
@@ -446,15 +437,10 @@ contains
         do iradius = 1,nradius
             do itime = 1,ntime
 
-                if (itime == 1) then
-                    !negate_dft = .false.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
-                    !shift_sign = ONE
-                    negate_dft = .true.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
-                    shift_sign = -ONE
-                else if (itime > 1) then
-                    negate_dft = .true.     ! this is consistens with Lindblad's formulation, which is used for the unsteady modes(itime>1)
-                    shift_sign = -ONE
-                end if
+                ! this is consistens with Lindblad's formulation, which is used for the unsteady modes(itime>1)
+                negate_dft = .true. 
+                shift_sign = -ONE
+
 
                 ! DFT in space
                 call dft(density_Ft_real( iradius,:,itime), density_Ft_imag( iradius,:,itime), density_real_tmp,  density_imag_tmp,  negate=negate_dft)
@@ -597,16 +583,9 @@ contains
         pressure_check_imag = ZERO*density_hat_real(:,1,:)
 
         
+        negate_dft = .true.     ! this is consistent with Lindblad's formulation
         do igq = 1,size(coords)
             do itime = 1,size(density_hat_real,3)
-
-                if (itime == 1) then
-                    !negate_dft = .false.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
-                    negate_dft = .true.    ! this is consistent with Giles' formulation, which is used for the steady modes(itime=1).
-                else if (itime > 1) then
-                    negate_dft = .true.     ! this is consistent with Lindblad's formulation, which is used for the unsteady modes(itime>1)
-                end if
-
 
                 theta_offset = coords(igq)%c2_ - self%theta_ref
                 ! **** WARNING: probably want ipdft_eval here ****
@@ -962,19 +941,6 @@ contains
                     ! Space-time average handled at the bottom
                     if (itime == 1 .and. itheta == 1) then
 
-!                    else if (itime == 1 .and. itheta > 1) then
-!
-!                        a1_real(iradius,itheta,itime) = -(c_bar*c_bar)*density_real(iradius,itheta,itime)    + (ONE)*pressure_real(iradius,itheta,itime)
-!                        a2_real(iradius,itheta,itime) =  (density_bar*c_bar)*vel1_real(iradius,itheta,itime)
-!                        a3_real(iradius,itheta,itime) =  (density_bar*c_bar)*vel2_real(iradius,itheta,itime)
-!                        a4_real(iradius,itheta,itime) =  (density_bar*c_bar)*vel3_real(iradius,itheta,itime) + (ONE)*pressure_real(iradius,itheta,itime)
-!                        a5_real(iradius,itheta,itime) = -(density_bar*c_bar)*vel3_real(iradius,itheta,itime) + (ONE)*pressure_real(iradius,itheta,itime)
-!                                                     
-!                        a1_imag(iradius,itheta,itime) = -(c_bar*c_bar)*density_imag(iradius,itheta,itime)    + (ONE)*pressure_imag(iradius,itheta,itime)
-!                        a2_imag(iradius,itheta,itime) =  (density_bar*c_bar)*vel1_imag(iradius,itheta,itime)
-!                        a3_imag(iradius,itheta,itime) =  (density_bar*c_bar)*vel2_imag(iradius,itheta,itime)
-!                        a4_imag(iradius,itheta,itime) =  (density_bar*c_bar)*vel3_imag(iradius,itheta,itime) + (ONE)*pressure_imag(iradius,itheta,itime)
-!                        a5_imag(iradius,itheta,itime) = -(density_bar*c_bar)*vel3_imag(iradius,itheta,itime) + (ONE)*pressure_imag(iradius,itheta,itime)
 
                     else
 
@@ -1211,21 +1177,6 @@ contains
                     
                     ! Space-time average handled at the bottom
                     if (itime == 1 .and. itheta == 1) then
-
-!                    else if (itime == 1 .and. itheta > 1) then
-!
-!
-!                        density_real(iradius,itheta,itime)  = (-ONE/(c_bar*c_bar))*a1_real(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a4_real(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a5_real(iradius,itheta,itime)
-!                        vel1_real(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a2_real(iradius,itheta,itime)
-!                        vel2_real(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a3_real(iradius,itheta,itime)
-!                        vel3_real(iradius,itheta,itime)     = (ONE/(TWO*density_bar*c_bar))*a4_real(iradius,itheta,itime)  -  (ONE/(TWO*density_bar*c_bar))*a5_real(iradius,itheta,itime)
-!                        pressure_real(iradius,itheta,itime) = HALF*a4_real(iradius,itheta,itime)  +  HALF*a5_real(iradius,itheta,itime)
-!
-!                        density_imag(iradius,itheta,itime)  = (-ONE/(c_bar*c_bar))*a1_imag(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a4_imag(iradius,itheta,itime)  +  (ONE/(TWO*c_bar*c_bar))*a5_imag(iradius,itheta,itime)
-!                        vel1_imag(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a2_imag(iradius,itheta,itime)
-!                        vel2_imag(iradius,itheta,itime)     = (ONE/(density_bar*c_bar))*a3_imag(iradius,itheta,itime)
-!                        vel3_imag(iradius,itheta,itime)     = (ONE/(TWO*density_bar*c_bar))*a4_imag(iradius,itheta,itime)  -  (ONE/(TWO*density_bar*c_bar))*a5_imag(iradius,itheta,itime)
-!                        pressure_imag(iradius,itheta,itime) = HALF*a4_imag(iradius,itheta,itime)  +  HALF*a5_imag(iradius,itheta,itime)
 
 
                     else

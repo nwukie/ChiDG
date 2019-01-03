@@ -25,10 +25,6 @@ module mod_models
 
     use model_spalart_allmaras_turbulent_model_fields,  only: spalart_allmaras_turbulent_model_fields_t
     use model_fluid_wave_speed,                         only: fluid_wave_speed_t
-    use model_rae,                                      only: rae_t
-    use model_rac,                                      only: rac_t
-    use model_tm,                                       only: tm_t
-
     use model_wall_distance,                            only: wall_distance_m
 
 
@@ -39,25 +35,25 @@ module mod_models
 
     use model_modified_ducros_sensor,                   only: modified_ducros_sensor_t
     use model_artificial_viscosity,                     only: artificial_viscosity_t
-    use model_zero_artificial_viscosity,                     only: zero_artificial_viscosity_t
-    use model_unsmoothed_artificial_viscosity,                     only: unsmoothed_artificial_viscosity_t
+    use model_zero_artificial_viscosity,                only: zero_artificial_viscosity_t
+    use model_unsmoothed_artificial_viscosity,          only: unsmoothed_artificial_viscosity_t
     use model_rbf_smoothed_artificial_viscosity,        only: rbf_smoothed_artificial_viscosity_t
-    use model_vertex_smoothed_artificial_viscosity,        only: vertex_smoothed_artificial_viscosity_t
+    use model_vertex_smoothed_artificial_viscosity,     only: vertex_smoothed_artificial_viscosity_t
     use model_pde_smoothed_artificial_viscosity,        only: pde_smoothed_artificial_viscosity_t
 
     use model_mnp_shock_sensor,                         only: mnp_shock_sensor_t
-    use model_mnp_artificial_viscosity,                     only: mnp_artificial_viscosity_t
-    use model_vertex_smoothed_mnp_artificial_viscosity,        only: vertex_smoothed_mnp_artificial_viscosity_t
+    use model_mnp_artificial_viscosity,                 only: mnp_artificial_viscosity_t
+    use model_vertex_smoothed_mnp_artificial_viscosity, only: vertex_smoothed_mnp_artificial_viscosity_t
 
     use model_mnph_shock_sensor,                        only: mnph_shock_sensor_t
     use model_mnph_artificial_viscosity,                only: mnph_artificial_viscosity_t
     
-    use model_mnpha_artificial_viscosity,                only: mnpha_artificial_viscosity_t
+    use model_mnpha_artificial_viscosity,               only: mnpha_artificial_viscosity_t
 
     use model_sst_turbulence_kinetic_energy,            only: sst_turbulence_kinetic_energy_t
     use model_sst_turbulence_quantities,                only: sst_turbulence_quantities_t
     use model_sst_blended_coefficients,                 only: sst_blended_coefficients_t
-    use model_sst_source_terms,                 only: sst_source_terms_t
+    use model_sst_source_terms,                         only: sst_source_terms_t
 
     use model_rstm_ssglrrw_blended_coefficients,        only: rstm_ssglrrw_blended_coefficients_t
     use model_rstm_ssglrrw_generalized_diffusion,       only: rstm_ssglrrw_generalized_diffusion_t
@@ -68,10 +64,6 @@ module mod_models
 !    use model_rstm_ssglrrw_reynolds_stress,             only: rstm_ssglrrw_reynolds_stress_t
     use model_rstm_ssglrrw_turbulence_quantities,       only: rstm_ssglrrw_turbulence_quantities_t
 !    use model_rstm_ssglrrw_turbulence_kinetic_energy,       only: rstm_ssglrrw_turbulence_kinetic_energy_t
-
-
-    use type_artificial_viscosity_jump_sensor,          only: artificial_viscosity_jump_sensor_t
-    use type_artificial_viscosity_resolution_sensor,    only: artificial_viscosity_resolution_sensor_t
     implicit none
 
 
@@ -124,16 +116,10 @@ contains
         integer(ik)                         :: ierr, imodel
         type(model_wrapper_t),  allocatable :: temp(:)
 
-        
-        !
         ! Initialize the incoming model
-        !
         call model%init()
 
-
-        !
         ! Extend storage
-        !
         if (allocated(self%models)) then
 
             allocate(temp(size(self%models) + 1), stat=ierr)
@@ -144,26 +130,17 @@ contains
                 if (ierr /= 0) call AllocationError
             end do
 
-
         else
             allocate(temp(1), stat=ierr)
             if (ierr /= 0) call AllocationError
         end if
 
-
-
-        !
         ! Store new model
-        !
         allocate(temp(size(temp))%model, source=model, stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
-        !
         ! Move allocation
-        !
         call move_alloc(from=temp, to=self%models)
-
 
     end subroutine register
     !**************************************************************************************
@@ -187,32 +164,21 @@ contains
         class(model_t),     allocatable :: model
         integer(ik)                     :: imodel, ierr
 
-        !
         ! Find location of model
-        !
         imodel = self%index_by_name(string)
 
-
-        !
         ! Check model was found
-        !
         user_msg = "model_factory%produce: We couldn't find the model string in &
                     the list of registered models. Make sure the model was registered &
                     in the model factory."
         if (imodel == 0) call chidg_signal_one(FATAL,user_msg,trim(string))
 
-
-        !
         ! Allocate model to be returned
-        !
         allocate(model, source=self%models(imodel)%model, stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
         user_msg = "model_factory%produce: For some reason, the model didn't get allocated"
         if (.not. allocated(model)) call chidg_signal(FATAL,user_msg)
-
-
 
     end function produce
     !**************************************************************************************
@@ -245,13 +211,10 @@ contains
 
 
 
-
-
     !>  Given a string indicating a model, return the index of the model in the factory.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/29/2016
-    !!
     !!
     !------------------------------------------------------------------------------------
     function index_by_name(self,string) result(ind)
@@ -261,7 +224,6 @@ contains
         integer(ik)                 :: ind, imodel
         character(:),   allocatable :: model_name
         logical                     :: found
-
 
         ind = 0
         do imodel = 1,self%nmodels()
@@ -275,7 +237,6 @@ contains
             end if
 
         end do
-
 
     end function index_by_name
     !************************************************************************************
@@ -297,9 +258,6 @@ contains
     subroutine register_models()
         integer(ik) :: imodel
 
-        !
-        ! Fluid models
-        !
         type(ideal_gas_t)                               :: IDEAL_GAS
         type(ideal_gas_sst_t)                           :: IDEAL_GAS_SST
         type(ideal_gas_rstm_t)                          :: IDEAL_GAS_RSTM
@@ -359,23 +317,8 @@ contains
         type(rstm_ssglrrw_turbulence_quantities_t)      :: RSTM_SSGLRRW_TURBULENCE_QUANTITIES
 !        type(rstm_ssglrrw_turbulence_kinetic_energy_t)      :: RSTM_SSGLRRW_TURBULENCE_KE
 
-        type(rae_t)                                     :: RADIAL_ANGULAR_EQUILIBRIUM
-        type(rac_t)                                     :: RADIAL_ANGULAR_COMBINED
-        type(tm_t)                                      :: TANGENTIAL_MOMENTUM
 
-
-
-        !
-        ! Scalar models
-        !
         type(wall_distance_m)                           :: WALL_DISTANCE_NORMALIZATION
-
-
-        !
-        ! Artificial Viscosity models
-        !
-        type(artificial_viscosity_jump_sensor_t)        :: ARTIFICIAL_VISCOSITY_JUMP_SENSOR
-        type(artificial_viscosity_resolution_sensor_t)  :: ARTIFICIAL_VISCOSITY_RESOLUTION_SENSOR
 
 
         if (.not. models_initialized) then
@@ -437,18 +380,6 @@ contains
             !call model_factory%register(RSTM_SSGLRRW_REYNOLDS_STRESS)
             call model_factory%register(RSTM_SSGLRRW_TURBULENCE_QUANTITIES)
 !            call model_factory%register(RSTM_SSGLRRW_TURBULENCE_KE)
-
-
-
-
-
-
-
-            call model_factory%register(ARTIFICIAL_VISCOSITY_JUMP_SENSOR)
-            call model_factory%register(ARTIFICIAL_VISCOSITY_RESOLUTION_SENSOR)
-            call model_factory%register(RADIAL_ANGULAR_EQUILIBRIUM)
-            call model_factory%register(RADIAL_ANGULAR_COMBINED)
-            call model_factory%register(TANGENTIAL_MOMENTUM)
 
             models_initialized = .true.
 

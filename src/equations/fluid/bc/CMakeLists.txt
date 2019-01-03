@@ -19,7 +19,6 @@ add_lib_sources(
                 bc_state_symmetry.f90
                 bc_state_slipwall.f90
                 bc_state_farfield.f90
-                bc_state_farfield_perturbation.f90
                 bc_state_outlet_steady_1dchar.f90
                 bc_state_outlet_3dgiles.f90
                 bc_state_outlet_3dgiles_innerproduct.f90

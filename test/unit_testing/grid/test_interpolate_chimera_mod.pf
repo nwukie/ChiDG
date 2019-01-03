@@ -66,6 +66,7 @@ contains
 
         integer(ik)                     :: ivar, idom
         type(meshdata_t),   allocatable :: meshdata(:) 
+
         
         !
         ! Send log to file

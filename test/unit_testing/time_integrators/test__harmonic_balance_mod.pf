@@ -217,7 +217,7 @@ contains
         tol              = 1.e-13_rk
         nterms_s         = 8
         IO_DESTINATION   = 'file'
-        time_integrator  = 'harmonic_balance'
+        time_integrator  = 'Harmonic Balance'
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres'
         preconditioner   = 'ILU0'

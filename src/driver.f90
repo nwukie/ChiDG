@@ -2,25 +2,20 @@
 !!
 !!  This program is designed to solve partial differential equations,
 !!  and systems of partial differential equations, using the discontinuous
-!!  Galerkin method for spatial discretization using Chimera, overset grids to
+!!  Galerkin method for spatial discretization using overset grids to
 !!  represent the simulation domain.
 !!
 !!  @author Nathan A. Wukie
 !!  @date   1/31/2016
 !!
-!!
 !---------------------------------------------------------------------------------------------
 program driver
 #include <messenger.h>
-    use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: ZERO, ONE, TWO, FOUR, PI
     use type_chidg,                 only: chidg_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
-    use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM, IRANK
     use mod_file_utilities,         only: delete_file
     use mod_io
-    use mod_hdf_utilities
 
     ! Actions
     use mod_chidg_edit,         only: chidg_edit
@@ -32,52 +27,30 @@ program driver
     use mod_tutorials,          only: tutorial_driver
     use mod_euler_eigenmodes,   only: compute_euler_eigenmodes
 
-    use mod_oscillating_cylinder_1, only: oscillating_cylinder
-    
-    !
     ! Variable declarations
-    !
     implicit none
     type(chidg_t)                               :: chidg
-
-
-    integer                                     :: iarg, narg, iorder, ierr, loc, ifield
+    integer                                     :: narg, ierr, ifield
     character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern, tutorial, patch_group
     character(len=10)                           :: time_string
     character(:),                   allocatable :: command, tmp_file
     class(function_t),              allocatable :: fcn
 
 
-    integer(HID_T) :: file_id, dom_id
-
-    !VIV problem parameters
-    real(rk)    :: freq_ratio, reynolds_number, diam_cyl, mstar, freq_cyl(3), damping_coeff(3), stiffness_coeff(3), u_reduced, u_inf, rho_inf, mass
-
-
-    !
     ! Check for command-line arguments
-    !
     narg = command_argument_count()
 
 
-    !
     ! Execute ChiDG calculation
-    !
     if ( narg == 0 ) then
 
-
-
-        !
         ! Initialize ChiDG environment
-        !
         call chidg%start_up('mpi')
         call chidg%start_up('namelist')
         call chidg%start_up('core')
 
 
-        !
         ! Set ChiDG Algorithms, Accuracy
-        !
         call chidg%set('Time Integrator' , algorithm=time_integrator                   )
         call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call chidg%set('Linear Solver'   , algorithm=linear_solver,    options=loptions)
@@ -85,112 +58,13 @@ program driver
         call chidg%set('Solution Order'  , integer_input=solution_order                )
 
 
-        !
-        ! Specify prescribed mesh motions by creating PMM entries in the grid file
-        !
-!        if (IRANK == GLOBAL_MASTER) then
-!            !
-!            ! Heaving and Pitching Airfoil
-!            !
-!
-!            file_id = open_file_hdf(gridfile)
-!            !Create PMM group
-!            call create_pmm_group_hdf(file_id,'hpaf_pmm')
-!            call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case3_blended')
-!            !call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case1')
-!
-!            !Assign PMMs to domains
-!            dom_id = open_domain_hdf(file_id,'01')
-!            call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
-!            call close_domain_hdf(dom_id)
-!
-!            dom_id = open_domain_hdf(file_id,'02')
-!            call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
-!            call close_domain_hdf(dom_id)
-!
-!            call close_file_hdf(file_id)
-!
-!            !
-!            ! VIV Cylinder with Rigid Body Mesh Motion
-!            !
-!
-!            ! VIV parameters
-!            !
-!            ! Reference: Wang et al, 2013, "Vortex Induced Vibration of Circular Cylinder with Two Degrees of Freedom:
-!            !                                   Computational Fluid Dynamics vs Reduced-Order Models", ASME
-!            !                               
-!            
-!            !
-!            ! NOTE: This reference considers an incompressible formulation. Check the Mach number in our simulation!
-!            !
-!            ! Prescribed quantities:
-!            ! Farfield density: rho_inf = 1.19 (for our simulation)
-!            ! Farfield velocity: u_inf = mom_1_inf/rho_inf
-!            ! Cylinder diameter: diam_cyl = 2.0 (for our simulation)
-!            ! Re = rho_inf*u_inf*diam_cyl/mu = 150
-!            ! Mass ratio: mstar = 2.55 (ratio of fluid to cylinder mass/density)
-!            ! Damping coefficient: damping_coeff = ZERO (to obtain maximal amplitude of oscillation)
-!            ! Reduced velocity: u_reduced = 4.0 ( = u_inf/(freq_cyl*diam_cyl)),
-!            !                       3.0 < u_reduced < 7.0, maximum oscillation amplitude at u_reduced = 4.0
-!
-!            ! Derived quantities:
-!            ! Cylinder mass: mass = mstar*rho_inf*PI*diam_cyl**TWO/FOUR
-!            ! Natural frequency of the cylinder: freq_cyl = u_inf/(u_reduced*diam_cyl)
-!            ! Stiffness coefficient: stiffness_coeff  = TWO*pi*freq_cyl**TWO
-!
-!            !
-!            ! Prescribed quantities: 
-!            
-!            !Fluid quantites: these must be consistent with the BC/IC and the viscosity parameter value.
-!            reynolds_number = 150.0_rk !Not used here - set viscosity properly in models.nml!
-!            rho_inf = 1.19_rk
-!            u_inf = 34.2997_rk
-!
-!            !Cylinder
-!            diam_cyl = 2.0_rk
-!            u_reduced = 4.0_rk
-!            mstar = 2.55_rk
-!            damping_coeff = ZERO
-!            freq_ratio = 0.0_rk
-!            
-!
-!            ! Derived quantities:
-!            mass = mstar*rho_inf*PI*diam_cyl**TWO/FOUR
-!            freq_cyl = ZERO
-!            freq_cyl(2) = u_inf/(u_reduced*diam_cyl)
-!            freq_cyl(1) = freq_ratio*freq_cyl(2)
-!            stiffness_coeff = TWO*PI*mass*freq_cyl**TWO
-!
-!            call create_pmm_group_hdf(file_id,'viv_rigid_body_pmm')
-!            call set_pmmf_name_hdf(file_id, 'viv_rigid_body_pmm','rigid_body_motion')
-!
-!            !Assign PMMs to domains
-!            dom_id = open_domain_hdf(file_id,'01')
-!            call set_pmm_domain_group_hdf(dom_id,'viv_rigid_body_pmm')
-!            call close_domain_hdf(dom_id)
-!
-!            call close_file_hdf(file_id)
-!
-!            !
-!            ! Initialize the oscillating cylinder model
-!            !
-!            call oscillating_cylinder%init()
-!        end if
-
-        call MPI_Barrier(ChiDG_COMM,ierr)
-
-
-        !
         ! Read grid and boundary condition data
-        !
         call chidg%read_mesh(gridfile)
 
 
-        !
         ! Initialize solution
         !   1: 'none', init fields with values from mod_io module variable initial_fields(:)
         !   2: read initial solution from ChiDG hdf5 file
-        !
         if (solutionfile_in == 'none') then
             call create_function(fcn,'constant')
             do ifield = 1,chidg%data%mesh%domain(1)%neqns
@@ -198,63 +72,33 @@ program driver
                 call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,ifield)
             end do
 
-            !call create_function(fcn,'pressure_pulse')
-            !call create_function(fcn,'isentropic_vortex')
-            !call create_function(fcn,'euler_gradients')
-            !call fcn%set_option('ivar',1._rk)
-            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
-            !call fcn%set_option('ivar',2._rk)
-            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,2)
-            !call fcn%set_option('ivar',3._rk)
-            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,3)
-            !call fcn%set_option('ivar',4._rk)
-            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,4)
-            !call fcn%set_option('ivar',5._rk)
-            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,5)
-            !call fcn%set_option('ivar',6._rk)
-            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,6)
-            !call fcn%set_option('ivar',7._rk)
-            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,7)
-            !call fcn%set_option('ivar',8._rk)
-            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,8)
-            !call fcn%set_option('ivar',9._rk)
-            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,9)
-
-
         else
             call chidg%read_fields(solutionfile_in)
         end if
 
 
-        !
         ! Run ChiDG simulation
-        !
         call chidg%report('before')
         call chidg%run(write_initial=initial_write, write_final=final_write)
         call chidg%report('after')
 
 
-        !
         ! Close ChiDG
-        !
         call chidg%shut_down('core')
         call chidg%shut_down('mpi')
 
 
 
 
-    !
+
     ! Check if executing 'action'
-    !
     else if ( narg >= 1 ) then
 
         ! Get 'action'
         call get_command_argument(1,chidg_action)
         call chidg%start_up('core')
 
-        !
         ! Select 'action'
-        ! 
         select case (trim(chidg_action))
             !>  ChiDG:convert   src/actions/convert
             !!
@@ -496,7 +340,9 @@ program driver
 
 
 
-
+            case ('inputs')
+                if (narg > 2) call chidg_signal(FATAL,"The 'inputs' action expects to be called as: chidg inputs")
+                call write_namelist()
 
 
             case ('tutorial')

@@ -619,7 +619,6 @@ contains
         call registered_fcns%push_back(gaussian)
 
 
-
         !------------------------------------------------------------------------------
         !
         ! Define input data here that is normally read through the namelist input file
@@ -632,34 +631,23 @@ contains
         time_integrator  = trim(this%integrator)
         dt               = this%dt
         time_steps       = this%nsteps
-        ttol             = 1.e-6_rk
         ntime_instances  = 1
         nonlinear_solver = 'Newton'
         linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
         nwrite           = 10000000
         IO_DESTINATION   = 'file'
-!        IO_DESTINATION   = 'both'
-!        verbosity = 4
-        !------------------------------------------------------------------------------
-
-
-
-
-        ! Set timescheme options to pass during initialization
-        !call toptions%set('dt', 0.1_rk) ! means nothing here
-        !call toptions%set('nsteps',100)
-        !call toptions%set('nwrite',0)
-
 
         ! Set linear solver options to pass during initialization
         call loptions%set('tol',1.e-14_rk)
+        call loptions%set('rtol',1.e-15_rk)
 
         ! Set nonlinear solver options
         call noptions%set('tol',5.e-10_rk)
+        call noptions%set('rtol',1.e-15_rk)
         call noptions%set('cfl0',1.0_rk)
         call noptions%set('nsteps',100)
-
+        !------------------------------------------------------------------------------
 
 
         !

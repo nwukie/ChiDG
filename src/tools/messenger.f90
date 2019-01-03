@@ -1075,15 +1075,12 @@ contains
     subroutine chidg_abort()
         integer(ik) :: ierr
 
-        !
         ! Abort MPI library
-        !
         call MPI_Abort(ChiDG_COMM,ierr)
 
         ! Send error signal to unix process.
         ! Important for tests that fail because of setup problems. 
         ! This returns an error status to the ctest runner in 'make test'
-        ! 
         call exit(-1)
 
 

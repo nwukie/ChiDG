@@ -12,6 +12,9 @@ module mod_io
     use type_dict,      only: dict_t
     implicit none
 
+    ! Namelist read flag
+    logical                         :: namelist_read_error = .false.
+
     ! Files
     character(len=100),     save    :: gridfile         = 'none'
     character(len=100),     save    :: solutionfile_in  = 'none'
@@ -20,7 +23,6 @@ module mod_io
     ! Space
     character(len=100),     save    :: basis            = 'legendre'
     integer(ik),            save    :: solution_order   = 1
-    integer(ik),            save    :: spacedim         = 3
 
     ! Quadrature
     integer(ik),            save    :: gq_rule          = 2          ! 1: Collocation, 2: Over-integration
@@ -29,46 +31,79 @@ module mod_io
     character(len=100),     save    :: time_integrator  = 'steady'
     real(rk),               save    :: dt               = 0.001_rk
     integer(ik),            save    :: time_steps       = 100
-    real(rk),               save    :: ttol             = 1.e-8     !Apparently not used
     integer(ik),            save    :: ntime_instances  = 1         !TODO: probably we should ask for the entire time of the analysis rather than dt and how many steps
     real(rk),               save    :: frequencies(100) = ZERO
    
-    ! Nonlinear solver
+    ! Nonlinear solver parameters
+    !   ntol    : absolute convergence tolerance
+    !   nrtol   : relative convergence tolerance
+    !   nnmax   : max number of nonlinear iterations
+    !   search  : line-search algorithm ('Backtrack','none')
+    !   ptc     : pseudo-transient continuation
+    !   cfl0    : initial cfl scaling for pseudo-transient continuation 
+    !   cflmax  : max cfl during pseudo-transient continuation. (< 0) = unlimited
     character(len=100),     save    :: nonlinear_solver  = 'newton'
     real(rk),               save    :: ntol              = 1.e-8
     real(rk),               save    :: nrtol             = 1.e-8
     integer(ik),            save    :: nnmax             = -1
-    real(rk),               save    :: cfl0              = 1._rk
-    real(rk),               save    :: cflmax            = -1._rk
     character(len=100),     save    :: search            = 'Backtrack'
     logical,                save    :: ptc               = .true.
+    real(rk),               save    :: cfl0              = 1._rk
+    real(rk),               save    :: cflmax            = -1._rk
     type(dict_t),           save    :: noptions
     
-    ! Linear solver
+    ! Linear solver parameters
+    !   preconditioner          : 'Identity','Jacobi','ILU0','RASILU0'
+    !   ltol                    : absolute convergence tolerance
+    !   lrtol                   : relative convergence tolerance
+    !   lnmax                   : max number of linear iterations
+    !   nkrylov                 : number of krylov vectors
+    !   orthogonalization       : 'CGS','MGS'
+    !   inner_fgmres            : inner fgmres iterative preconditioning
+    !   inner_ltol              : absolute convergence tolerance for inner iteration
+    !   inner_lrtol             : relative convergence tolerance for inner iteration
+    !   inner_lnmax             : maximum number of inner iterations
+    !   inner_nkrylov           : number of inner krylov vectors
+    !   inner_orthogonalization : 'CGS','MGS'
+    !   inner_silence           : -10(no report of inner iteration), 0(report inner iteration)
     character(len=100),     save    :: linear_solver    = 'fgmres'
-    real(rk),               save    :: ltol             = 1.e-8
-    real(rk),               save    :: lrtol            = 1.e-8
+    character(len=100),     save    :: preconditioner   = 'identity'
+    real(rk),               save    :: ltol             = 1.e-8_rk
+    real(rk),               save    :: lrtol            = 1.e-8_rk
     integer(ik),            save    :: lnmax            = -1
     integer(ik),            save    :: nkrylov          = 2000
-    character(len=100),     save    :: preconditioner   = 'identity'
     character(len=3),       save    :: orthogonalization = 'CGS'
     logical,                save    :: inner_fgmres     = .true.
-    real(rk),               save    :: inner_ltol       = 1.e-1
-    real(rk),               save    :: inner_lrtol      = 1.e-1
+    real(rk),               save    :: inner_ltol       = 1.e-1_rk
+    real(rk),               save    :: inner_lrtol      = 1.e-1_rk
     integer(ik),            save    :: inner_lnmax      = 100
     integer(ik),            save    :: inner_nkrylov    = 100
-    integer(ik),            save    :: inner_silence    = -10
     character(len=3),       save    :: inner_orthogonalization = 'CGS'
+    integer(ik),            save    :: inner_silence    = -10
     type(dict_t),           save    :: loptions
    
-    ! io
-    integer(ik),            save    :: nwrite           = 100
-    integer(ik),            save    :: verbosity        = 2
+    ! Output
+    !   initial_write   : write initial solution
+    !   final_write     : write final solution
+    !   nwrite          : write solution every 'nwrite' steps of time-integrator
+    !   verbosity       : 1-5, controls amount of information to screen/log file
     logical,                save    :: initial_write    = .false.
     logical,                save    :: final_write      = .true.
+    integer(ik),            save    :: nwrite           = 100
+    integer(ik),            save    :: verbosity        = 2
      
 
-    ! initial field values: function = constant
+    ! Initial fields
+    !
+    !   Specify constant initial solution. 
+    !
+    !   READ ONLY IF: solutionfile_in='none'
+    !
+    !   Example for Euler fluid problem(5 equations):
+    !   ---------------------------------------------
+    !   &initial
+    !       initial_fields = 1.19, 150., 0., 0., 250000.
+    !   /
     real(rk),               save    :: initial_fields(100) = ZERO
 
 
@@ -78,8 +113,7 @@ module mod_io
                                         solutionfile_out
 
     namelist /space/                    basis,              &
-                                        solution_order,     &
-                                        spacedim
+                                        solution_order
 
     namelist /quadrature/               gq_rule
 
@@ -87,7 +121,6 @@ module mod_io
     namelist /time/                     time_integrator,    &
                                         dt,                 &
                                         time_steps,         &
-                                        ttol,               &
                                         ntime_instances,    &
                                         frequencies
 
@@ -192,24 +225,49 @@ contains
 
 
         ! Read namelist input for parameter initialization
+!        open(newunit=file_unit,form='formatted',file="chidg.nml")
+!        read(file_unit,nml=files,           iostat=msg)
+!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'files' namelist from 'chidg.nml'.")
+!        read(file_unit,nml=space,           iostat=msg)
+!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'space' namelist from 'chidg.nml'.")
+!        read(file_unit,nml=quadrature,      iostat=msg)
+!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'quadrature' namelist from 'chidg.nml'.")
+!        read(file_unit,nml=time,            iostat=msg)
+!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'time' namelist from 'chidg.nml'.")
+!        read(file_unit,nml=nonlinear_solve, iostat=msg)
+!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'nonlinear_solve' namelist from 'chidg.nml'.")
+!        read(file_unit,nml=linear_solve,    iostat=msg)
+!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'linear_solve' namelist from 'chidg.nml'.")
+!        read(file_unit,nml=io,              iostat=msg)
+!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'io' namelist from 'chidg.nml'.")
+!        read(file_unit,nml=initial,         iostat=msg)
+!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'initial' namelist from 'chidg.nml'.")
+!        close(file_unit)
+
         open(newunit=file_unit,form='formatted',file="chidg.nml")
         read(file_unit,nml=files,           iostat=msg)
-        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'files' namelist from 'chidg.nml'.")
+        if (msg/=0) call handle_namelist_error(file_unit,msg)
         read(file_unit,nml=space,           iostat=msg)
-        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'space' namelist from 'chidg.nml'.")
+        if (msg/=0) call handle_namelist_error(file_unit,msg)
         read(file_unit,nml=quadrature,      iostat=msg)
-        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'quadrature' namelist from 'chidg.nml'.")
+        if (msg/=0) call handle_namelist_error(file_unit,msg)
         read(file_unit,nml=time,            iostat=msg)
-        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'time' namelist from 'chidg.nml'.")
+        if (msg/=0) call handle_namelist_error(file_unit,msg)
         read(file_unit,nml=nonlinear_solve, iostat=msg)
-        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'nonlinear_solve' namelist from 'chidg.nml'.")
+        if (msg/=0) call handle_namelist_error(file_unit,msg)
         read(file_unit,nml=linear_solve,    iostat=msg)
-        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'linear_solve' namelist from 'chidg.nml'.")
+        if (msg/=0) call handle_namelist_error(file_unit,msg)
         read(file_unit,nml=io,              iostat=msg)
-        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'io' namelist from 'chidg.nml'.")
+        if (msg/=0) call handle_namelist_error(file_unit,msg)
         read(file_unit,nml=initial,         iostat=msg)
-        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'initial' namelist from 'chidg.nml'.")
+        if (msg/=0) call handle_namelist_error(file_unit,msg)
         close(file_unit)
+
+        ! Exit if error detected in namelist read
+        if (namelist_read_error) call chidg_abort()
+
+
+
 
 
         ! Set nonlinear solver options
@@ -238,6 +296,33 @@ contains
     end subroutine read_input
     !****************************************************************************************
 
+
+
+
+    !>  Handle namelist read error.
+    !!
+    !!  @author Nathan A. Wukie(AFRL)
+    !!  @date   1/3/2019
+    !!
+    !!  @attribution Jacob Williams
+    !!  @license     See label: JWILLIAMS in LICENSE file
+    !!  @purpose     Approach for namelist error checking
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine handle_namelist_error(file_unit,msg)
+        use iso_fortran_env,    only: error_unit
+        integer,        intent(in)  :: file_unit 
+        integer,        intent(in)  :: msg
+
+        character(len=1000) :: line
+
+        backspace(file_unit)
+        read(file_unit,fmt='(A)') line
+        write(error_unit,'(A)') 'Invalid line in namelist: '//trim(line) 
+        namelist_read_error = .true.
+
+    end subroutine handle_namelist_error
+    !***************************************************************************************
 
 
 

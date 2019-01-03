@@ -366,6 +366,43 @@ foreach (L ${TECPLOT_LIBRARIES})
     message(STATUS "        " ${L})
 endforeach()
 
+
+
+
+
+
+
+
+#----------------------------------------------------------------------------------------------
+#                                           Find PETSc
+#----------------------------------------------------------------------------------------------
+find_package (PETSc REQUIRED)
+include_directories(${PETSC_INCLUDES})
+add_definitions (${PETSC_DEFINITIONS})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #----------------------------------------------------------------------------------------------
 #                                   Add source tree and includes
 #----------------------------------------------------------------------------------------------
@@ -407,6 +444,7 @@ target_link_libraries(chidg-core
                       ${TECPLOT_LIBRARIES} 
                       ${MPI_Fortran_LIBRARIES}
                       ${METIS_LIBRARIES}
+                      ${PETSC_LIBRARIES}
                       )
 set_target_properties(chidg-core PROPERTIES 
                              COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"

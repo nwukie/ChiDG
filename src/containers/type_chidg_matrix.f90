@@ -1,5 +1,9 @@
 module type_chidg_matrix
 #include <messenger.h>
+#include "petsc/finclude/petscmat.h"
+    use petscmat
+
+
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: NO_ID, ZERO
     use mod_chidg_mpi,          only: IRANK
@@ -13,6 +17,7 @@ module type_chidg_matrix
     implicit none
 
 
+    private chidg_store, chidg_store_chimera, chidg_store_bc, chidg_store_hb, chidg_clear
 
 
     !>  ChiDG matrix type. Contains an array of domain_matrix_t types, each corresponding to a 
@@ -28,12 +33,27 @@ module type_chidg_matrix
     !------------------------------------------------------------------------------------------
     type, public :: chidg_matrix_t
 
-        type(domain_matrix_t), allocatable    :: dom(:) ! Array of domain-matrices. One for each domain
+        ! PETSC
+        type(tMat)  :: petsc_matrix
 
+        ! ChiDG
+        type(domain_matrix_t), allocatable    :: dom(:) ! Array of domain-matrices. One for each domain
         logical     :: local_initialized = .false.      ! Has the matrix processor-local data been initialized
         logical     :: recv_initialized  = .false.      ! Has matrix been initialized with information about chidg_vector%recv
 
         integer     :: stamp(8) = NO_ID                 ! Stamp from date_and_time that gets updated when store routines are called
+
+        ! backend dynamic procedures
+        !procedure(store_interface), pointer, pass :: store_b         => null()
+        !procedure(store_interface), pointer, pass :: store_chimera_b => null()
+        !procedure(store_interface), pointer, pass :: store_bc_b      => null()
+        !procedure(store_interface), pointer, pass :: store_hb_b      => null()
+        !procedure(store_interface), pointer, pass :: clear_b         => null()
+        procedure(store_interface), pointer, pass :: store         => chidg_store
+        procedure(store_interface), pointer, pass :: store_chimera => chidg_store_chimera
+        procedure(store_interface), pointer, pass :: store_bc      => chidg_store_bc
+        procedure(store_interface), pointer, pass :: store_hb      => chidg_store_hb
+        procedure(clear_interface), pointer, pass :: clear         => chidg_clear
 
     contains
         ! Initializers
@@ -42,12 +62,14 @@ module type_chidg_matrix
 
         procedure, public   :: init_recv                ! Initialize with information about chidg_vector%recv for mv multiply
 
-        ! Setters
-        procedure   :: store                            ! Store interior coupling
-        procedure   :: store_chimera                    ! Store chimera coupling
-        procedure   :: store_bc                         ! Store boundary condition coupling
-        procedure   :: store_hb                         ! Store linearization data for coupling across harmonic balance levels 
-        procedure   :: clear                            ! Zero matrix-values
+!        ! Setters
+!        procedure   :: store                            ! Store interior coupling
+!        procedure   :: store_chimera                    ! Store chimera coupling
+!        procedure   :: store_bc                         ! Store boundary condition coupling
+!        procedure   :: store_hb                         ! Store linearization data for coupling across harmonic balance levels 
+!        procedure   :: clear                            ! Zero matrix-values
+
+        !procedure(store_interface), pointer :: store_b => null()
 
         ! Processors
         procedure   :: restrict
@@ -62,6 +84,30 @@ module type_chidg_matrix
 
     end type chidg_matrix_t
     !*****************************************************************************************
+
+
+    interface 
+        subroutine store_interface(self,integral,face_info,seed,ivar,itime)
+            import chidg_matrix_t
+            import AD_D
+            import face_info_t
+            import seed_t
+            import ik
+            class(chidg_matrix_t),  intent(inout)   :: self
+            type(AD_D),             intent(in)      :: integral(:)
+            type(face_info_t),      intent(in)      :: face_info
+            type(seed_t),           intent(in)      :: seed
+            integer(ik),            intent(in)      :: ivar 
+            integer(ik),            intent(in)      :: itime
+        end subroutine store_interface
+    end interface
+
+    interface 
+        subroutine clear_interface(self)
+            import chidg_matrix_t
+            class(chidg_matrix_t),  intent(inout)   :: self
+        end subroutine clear_interface
+    end interface
 
 
 
@@ -467,7 +513,7 @@ contains
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine store(self,integral,face_info,seed,ivar,itime)
+    subroutine chidg_store(self,integral,face_info,seed,ivar,itime)
         class(chidg_matrix_t),   intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
         type(face_info_t),      intent(in)      :: face_info
@@ -485,7 +531,7 @@ contains
         ! Update stamp
         call date_and_time(values=self%stamp)
 
-    end subroutine store
+    end subroutine chidg_store
     !*******************************************************************************************
 
 
@@ -507,7 +553,7 @@ contains
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !------------------------------------------------------------------------------------------
-    subroutine store_chimera(self,integral,face_info,seed,ivar,itime)
+    subroutine chidg_store_chimera(self,integral,face_info,seed,ivar,itime)
         class(chidg_matrix_t),      intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face_info
@@ -525,7 +571,7 @@ contains
         ! Update stamp
         call date_and_time(values=self%stamp)
 
-    end subroutine store_chimera
+    end subroutine chidg_store_chimera
     !******************************************************************************************
 
 
@@ -550,7 +596,7 @@ contains
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !------------------------------------------------------------------------------------------
-    subroutine store_bc(self,integral,face_info,seed,ivar,itime)
+    subroutine chidg_store_bc(self,integral,face_info,seed,ivar,itime)
         class(chidg_matrix_t),      intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face_info
@@ -568,7 +614,7 @@ contains
         ! Update stamp
         call date_and_time(values=self%stamp)
 
-    end subroutine store_bc
+    end subroutine chidg_store_bc
     !*******************************************************************************************
 
 
@@ -589,7 +635,7 @@ contains
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !------------------------------------------------------------------------------------------
-    subroutine store_hb(self,integral,face_info,seed,ivar,itime)
+    subroutine chidg_store_hb(self,integral,face_info,seed,ivar,itime)
         class(chidg_matrix_t),      intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face_info
@@ -607,7 +653,7 @@ contains
         ! Update stamp
         call date_and_time(values=self%stamp)
 
-    end subroutine store_hb
+    end subroutine chidg_store_hb
     !*******************************************************************************************
 
 
@@ -621,7 +667,7 @@ contains
     !!  @date   2/1/2016
     !! 
     !----------------------------------------------------------------------------------
-    subroutine clear(self)
+    subroutine chidg_clear(self)
         class(chidg_matrix_t),   intent(inout)   :: self
 
         integer(ik) :: idom
@@ -631,7 +677,7 @@ contains
            call self%dom(idom)%clear() 
         end do
     
-    end subroutine clear
+    end subroutine chidg_clear
     !**********************************************************************************
 
 

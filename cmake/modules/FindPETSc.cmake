@@ -343,7 +343,6 @@ int main(int argc,char *argv[]) {
 endif ()
 
 include (FindPackageHandleStandardArgs)
-message(${PETSC_INCLUDES} ${PETSC_LIBRARIES})
 find_package_handle_standard_args (PETSc
   REQUIRED_VARS PETSC_INCLUDES PETSC_LIBRARIES PETSC_EXECUTABLE_RUNS
   VERSION_VAR PETSC_VERSION

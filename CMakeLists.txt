@@ -376,28 +376,94 @@ endforeach()
 #----------------------------------------------------------------------------------------------
 #                                           Find PETSc
 #----------------------------------------------------------------------------------------------
+message(STATUS " ")
+message(STATUS "PETSc Summary:")
 find_package (PETSc REQUIRED)
 include_directories(${PETSC_INCLUDES})
 add_definitions (${PETSC_DEFINITIONS})
 
 
+if (PETSC_FOUND)
+    message(STATUS "    PETSC Libraries: ")
+    foreach (L ${PETSC_LIBRARIES})
+        message(STATUS "        " ${L})
+    endforeach()
+    message(STATUS "    PETSC Compiler: ")
+    message(STATUS "        " ${PETSC_COMPILER})
 
 
 
+    # Write test program to file.
+    set(test_petsc_file ${CMAKE_CURRENT_BINARY_DIR}/test_petsc.f90)
+
+    # Try compiling and running test
+    # petsc/src/vec/vec/examples/tutorials/ex11f.F
+    file(WRITE ${test_petsc_file}
+        "program main\n"
+        "#include <petsc/finclude/petscvec.h>\n"
+        "   use petscvec\n"
+        "   implicit none\n"
+        "   Vec               x\n"
+        "   PetscReal         norm\n"
+        "   PetscBool         flg\n"
+        "   PetscMPIInt       rank\n"
+        "   PetscInt          n,bs,comp\n"
+        "   PetscErrorCode    ierr\n"
+        "   PetscScalar       one\n"
+        "   call PetscInitialize(PETSC_NULL_CHARACTER,ierr)\n"
+        "   print*, ierr\n"
+        "   if (ierr .ne. 0) stop\n"
+        "   call MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr)\n"
+        "   n   = 20\n"
+        "   one = 1.0\n"
+        "   call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER, '-n',n,flg,ierr)\n"
+        "   call VecCreate(PETSC_COMM_WORLD,x,ierr)\n"
+        "   call VecSetSizes(x,PETSC_DECIDE,n,ierr)\n"
+        "   bs = 2\n"
+        "   call VecSetBlockSize(x,bs,ierr)\n"
+        "   call VecSetFromOptions(x,ierr)\n"
+        "   call VecSet(x,one,ierr)\n"
+        "   call VecNorm(x,NORM_2,norm,ierr)\n"
+        "   comp = 0\n"
+        "   call VecStrideNorm(x,comp,NORM_2,norm,ierr)\n"
+        "   comp = 1\n"
+        "   call VecStrideNorm(x,comp,NORM_2,norm,ierr)\n"
+        "   call VecStrideNorm(x,comp,NORM_1,norm,ierr)\n"
+        "   call VecStrideNorm(x,comp,NORM_INFINITY,norm,ierr)\n"
+        "   call VecDestroy(x,ierr)\n"
+        "   call PetscFinalize(ierr)\n"
+        "end program main\n")
 
 
+    # Try compiling and running test program that uses PETSC routines.
+    # We are checking here to make sure that the detected libraries actually
+    # work on the current machine. 
+    try_run(RUN_RESULTS COMPILE_RESULTS
+            ${CMAKE_CURRENT_BINARY_DIR} ${test_petsc_file}
+            CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${PETSC_INCLUDES}"
+            COMPILE_DEFINITIONS ${CMAKE_Fortran_FLAGS_RELEASE}
+            LINK_LIBRARIES ${PETSC_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} 
+            COMPILE_OUTPUT_VARIABLE compile_out
+            RUN_OUTPUT_VARIABLE run_out)
 
+    # Interpret RUN/COMPILE results as good/bad
+    set(COMPILED_OKAY ${COMPILE_RESULTS})
+    if (${RUN_RESULTS} EQUAL 0)
+        set(RAN_OKAY TRUE)
+    else()
+        set(RAN_OKAY FALSE)
+    endif()
 
+    # Handle RUN/COMPILE results
+    if (NOT ${COMPILED_OKAY})
+        message(SEND_ERROR "We couldn't compile a test program using the PETSC \
+                            Libraries that were detected.")
+    elseif(NOT ${RAN_OKAY} )
+        message(SEND_ERROR "A test program compiled but failed when trying to use the PETSC \
+                            Libraries that were detected.")
+    endif()
 
-
-
-
-
-
-
-
-
-
+endif()
 
 
 

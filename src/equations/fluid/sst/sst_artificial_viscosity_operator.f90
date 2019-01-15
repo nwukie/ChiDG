@@ -107,9 +107,9 @@ contains
         grad1 = worker%get_field('Density * k'   , 'grad1', 'element')
         grad2 = worker%get_field('Density * k'   , 'grad2', 'element')
         grad3 = worker%get_field('Density * k'   , 'grad3', 'element')
-        flux_1 = -(h(1)**TWO*sst_avc-mu_neg*sigma_k)*grad1
-        flux_2 = -(h(2)**TWO*sst_avc-mu_neg*sigma_k)*grad2
-        flux_3 = -(h(3)**TWO*sst_avc-mu_neg*sigma_k)*grad3
+        flux_1 = -(h(1)**TWO*sst_avc+mu_neg*sigma_k)*grad1
+        flux_2 = -(h(2)**TWO*sst_avc+mu_neg*sigma_k)*grad2
+        flux_3 = -(h(3)**TWO*sst_avc+mu_neg*sigma_k)*grad3
         
         
         call worker%integrate_volume_flux('Density * k','Diffusion',flux_1,flux_2,flux_3)

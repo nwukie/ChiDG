@@ -109,26 +109,22 @@ contains
         h_m = h_m/real(p+1,rk)
         h_p = h_p/real(p+1,rk)
 
-        ! AV constant
-        avc = 75.0_rk
-        !avc = 150.0_rk
-
         !----------------------------------
         !            mass flux
         !----------------------------------
         grad1_m = worker%get_field('Density * k'   , 'grad1', 'face interior')
         grad2_m = worker%get_field('Density * k'   , 'grad2', 'face interior')
         grad3_m = worker%get_field('Density * k'   , 'grad3', 'face interior')
-        flux_1_m = -(h_m(1)**TWO*sst_avc-sigma_k_m*mu_neg_m)*grad1_m
-        flux_2_m = -(h_m(2)**TWO*sst_avc-sigma_k_m*mu_neg_m)*grad2_m
-        flux_3_m = -(h_m(3)**TWO*sst_avc-sigma_k_m*mu_neg_m)*grad3_m
+        flux_1_m = -(h_m(1)**TWO*sst_avc+sigma_k_m*mu_neg_m)*grad1_m
+        flux_2_m = -(h_m(2)**TWO*sst_avc+sigma_k_m*mu_neg_m)*grad2_m
+        flux_3_m = -(h_m(3)**TWO*sst_avc+sigma_k_m*mu_neg_m)*grad3_m
 
         grad1_p = worker%get_field('Density * k'   , 'grad1', 'face exterior')
         grad2_p = worker%get_field('Density * k'   , 'grad2', 'face exterior')
         grad3_p = worker%get_field('Density * k'   , 'grad3', 'face exterior')
-        flux_1_p = -(h_p(1)**TWO*sst_avc - sigma_k_p*mu_neg_p)*grad1_p
-        flux_2_p = -(h_p(2)**TWO*sst_avc - sigma_k_p*mu_neg_p)*grad2_p
-        flux_3_p = -(h_p(3)**TWO*sst_avc - sigma_k_p*mu_neg_p)*grad3_p
+        flux_1_p = -(h_p(1)**TWO*sst_avc + sigma_k_p*mu_neg_p)*grad1_p
+        flux_2_p = -(h_p(2)**TWO*sst_avc + sigma_k_p*mu_neg_p)*grad2_p
+        flux_3_p = -(h_p(3)**TWO*sst_avc + sigma_k_p*mu_neg_p)*grad3_p
 
 
         call worker%integrate_boundary_average('Density * k','Diffusion',    &

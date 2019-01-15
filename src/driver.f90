@@ -354,7 +354,7 @@ program driver
                 call compute_euler_eigenmodes()
 
             case default
-                call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'forces'.")
+                call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' 'inputs' and 'forces'.")
         end select
 
         call chidg%shut_down('core')

@@ -20,10 +20,11 @@ module type_newton
 
 
 
-    !>  Nonlinear iteration using Newton's method.
+    !>  Nonlinear iteration using newton's method.
     !!
     !!  Optional algorithms:
     !!      : Pseudo-transient continuation (&nonlinear_solve   ptc=.true. /)
+    !!      : Residual Smoothing            (&nonlinear_solve   smooth=.true. /)
     !!      : Backtracking                  (&nonlinear_solve   search='Backtrack' /)
     !!
     !!  Termination:
@@ -67,7 +68,7 @@ contains
         real(rk)                :: cfl, timing, resid, resid_prev, resid0, resid_new,    &
                                    alpha, f0, fn, forcing_term, residual_ratio
         real(rk), allocatable   :: cfln(:), rnorm0(:), rnorm(:)
-        type(chidg_vector_t)    :: b, qn, qold, q0
+        type(chidg_vector_t)    :: b, qn, qold, q0, f_smooth
         logical                 :: absolute_convergence, relative_convergence, stop_run, iteration_convergence
 
         type(solver_controller_t),  target  :: default_controller
@@ -172,8 +173,14 @@ contains
                 call contribute_pseudo_temporal(data,cfln)
             end if ! self%ptc
 
+            ! Residual-smoothing
+            if (self%smooth) then
+                f_smooth = compute_smoothed_residual(data,preconditioner,cfln,controller)
+                b = b - f_smooth
+            end if ! self%smooth
 
-            ! Solve system [lhs][dq] = [b] for Newton step: [dq]
+
+            ! Solve system [lhs][dq] = [b] for newton step: [dq]
             call set_forcing_terms(linear_solver)
             call linear_solver%solve(lhs,dq,b,preconditioner,controller,data)
 
@@ -189,10 +196,12 @@ contains
                     qn = q0 + dq
                     data%sdata%q = qn
                     call system%assemble(data,differentiate=.false.)
+
+                    rhs = rhs + f_smooth
                     fn = rhs%norm(ChiDG_COMM)
 
                 case default
-                    user_msg = "Invalid nonlinear search algorithm in Newton iteration routine. Valid inputs: 'Backtrack', 'none'."
+                    user_msg = "Invalid nonlinear search algorithm in newton iteration routine. Valid inputs: 'Backtrack', 'none'."
                     call chidg_signal_one(OOPS, user_msg, trim(self%search))
             end select
 
@@ -372,10 +381,97 @@ contains
 
 
 
+    !>  Compute smoothed residual
+    !!
+    !!  @author Nathan A. Wukie(AFRL)
+    !!  @date   01/15/2019
+    !!
+    !-----------------------------------------------------------------------------------------
+    function compute_smoothed_residual(data,M,cfln,controller) result(f_smooth)
+        type(chidg_data_t),         intent(inout)   :: data
+        class(preconditioner_t),    intent(inout)   :: M
+        real(rk),                   intent(in)      :: cfln(:)
+        class(solver_controller_t), intent(inout)   :: controller
+
+        integer(ik)             :: idom, ielem, eqn_ID, itime, ifield, i
+        real(rk)                :: dtau
+        real(rk),   allocatable :: field(:)
+        type(chidg_vector_t)    :: f_smooth
+
+        ! Compute element-local pseudo-timestep
+        call compute_pseudo_timestep(data,cfln)
+
+
+        ! Update smoother(preconditioner)
+        if (controller%update_preconditioner(data%sdata%lhs)) call M%update(data%sdata%lhs,data%sdata%rhs)
+
+
+        ! Apply smoothing
+        f_smooth = data%sdata%rhs
+        f_smooth = M%apply(data%sdata%lhs,f_smooth)
+        
+        ! I don't think this iteration procedure is correct
+        ! for more than one iteration
+        !do i = 1,1
+        !    f_smooth = M%apply(data%sdata%lhs,f_smooth)
+        !end do ! smooth
+
+
+        ! Scale vector by (M/dtau)
+        do idom = 1,data%mesh%ndomains()
+            do ielem = 1,data%mesh%domain(idom)%nelem
+                eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
+                do itime = 1,data%mesh%domain(idom)%ntime
+                    do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
+
+                        ! get element-local timestep
+                        dtau = data%mesh%domain(idom)%elems(ielem)%dtau(ifield)
+
+                        ! Retrieve field
+                        field = f_smooth%dom(idom)%vecs(ielem)%getvar(ifield,itime)
+
+                        ! Scale field by (M/dtau)
+                        field = matmul(data%mesh%domain(idom)%elems(ielem)%mass/dtau,field)
+
+                        ! Store scaled field 
+                        call f_smooth%dom(idom)%vecs(ielem)%setvar(ifield,itime,field)
+
+                    end do !ifield
+                end do !itime
+            end do !ielem
+        end do !idom
+
+    end function compute_smoothed_residual
+    !*************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     !>  Backtracking search procedure.
     !!
-    !!  If the Newton update(dq) causes the residual to increase, scale the update
+    !!  If the newton update(dq) causes the residual to increase, scale the update
     !!  to be smaller until the residual achieves some reasonable value.
     !!
     !!  Scaling based on recursive bisection:

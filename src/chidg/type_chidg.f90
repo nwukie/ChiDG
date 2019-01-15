@@ -188,7 +188,7 @@ contains
                     ! Call environment initialization routines by default on first init call
                     ! Order matters here. Functions need to come first. Used by 
                     ! equations and bcs.
-                    call initialize_input_dictionaries()
+                    call initialize_input_dictionaries(noptions,loptions)
                     call register_functions()
                     call register_prescribed_mesh_motion_functions()
                     call register_operators()

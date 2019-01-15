@@ -26,6 +26,7 @@ module type_nonlinear_solver
         integer(ik)     :: nmax              = -1           ! Max number of steps to take in the nonlinear solver, default<0(unlimited)
         integer(ik)     :: nwrite            = 100          ! Write data every 'nwrite' steps
         logical         :: ptc               = .true.       ! Pseudo-transient continuation
+        logical         :: smooth            = .true.       ! Residual smoothing
         character(100)  :: search            = 'Backtrack'  ! Line search algorithm
 
 
@@ -159,6 +160,7 @@ contains
         if (options%contains('nwrite')) call options%get('nwrite',self%nwrite)
         if (options%contains('search')) call options%get('search',self%search)
         if (options%contains('ptc'   )) call options%get('ptc',   self%ptc   )
+        if (options%contains('smooth')) call options%get('smooth',self%smooth)
 
     end subroutine set
     !****************************************************************************************

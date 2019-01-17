@@ -118,7 +118,7 @@
 
 MODULE DNAD_D
     use mod_kinds,      only: rsingle,rdouble,ishort,ilong,rk
-    use mod_constants,  only: ZERO, ONE, PI
+    use mod_constants,  only: ZERO, HALF, ONE, PI
 
 IMPLICIT NONE
 
@@ -1393,34 +1393,61 @@ CONTAINS
          ENDIF
 
     END FUNCTION ABS_D_D
-
     !---------------------------------------------------
-    ! Smooth ABS of dual numbers
+    ! ABS of dual numbers
     ! ABS<u,up>=<ABS(u),up SIGN(u)>
     !----------------------------------------------------
     ELEMENTAL FUNCTION SABS_D_D(u,b_in) RESULT(res)
          TYPE (AD_D), INTENT(IN)::u
          REAL(DBL_AD),INTENT(IN),OPTIONAL:: b_in
          TYPE (AD_D)::res
-         REAL(DBL_AD) :: b, c
-         TYPE (AD_D):: max_u_0, min_u_0
+         REAL(DBL_AD) :: b
          allocate(res%xp_ad_(size(u%xp_ad_)))
 
 
         IF (present(b_in)) THEN
             b = b_in
         ELSE
-            b = 100.0D0
+            b = 1.0D-12
         ENDIF
 
+        IF (abs(u%x_ad_)<b) THEN
+            res = 0.5D0*(u*u/b + b)
+        ELSE
+            res = ABS_D_D(res)
+        END IF
         
-        c = 0.5D0 - atan(b)/PI
-        max_u_0 = u*(atan(b*u)/PI+0.5D0)+c
-        min_u_0 = u*(atan(-b*u)/PI+0.5D0)-c
-
-        res = max_u_0 - min_u_0
-
     END FUNCTION SABS_D_D
+
+
+
+    !!---------------------------------------------------
+    !! Smooth ABS of dual numbers
+    !! ABS<u,up>=<ABS(u),up SIGN(u)>
+    !!----------------------------------------------------
+    !ELEMENTAL FUNCTION SABS_D_D(u,b_in) RESULT(res)
+    !     TYPE (AD_D), INTENT(IN)::u
+    !     REAL(DBL_AD),INTENT(IN),OPTIONAL:: b_in
+    !     TYPE (AD_D)::res
+    !     REAL(DBL_AD) :: b, c
+    !     TYPE (AD_D):: max_u_0, min_u_0
+    !     allocate(res%xp_ad_(size(u%xp_ad_)))
+
+
+    !    IF (present(b_in)) THEN
+    !        b = b_in
+    !    ELSE
+    !        b = 100.0D0
+    !    ENDIF
+
+    !    
+    !    c = 0.5D0 - atan(b)/PI
+    !    max_u_0 = u*(atan(b*u)/PI+0.5D0)+c
+    !    min_u_0 = u*(atan(-b*u)/PI+0.5D0)-c
+
+    !    res = max_u_0 - min_u_0
+
+    !END FUNCTION SABS_D_D
 
 
 
@@ -1947,7 +1974,6 @@ CONTAINS
         ENDIF
 
     END FUNCTION MAX_DD_D
-
     !-----------------------------------------
     ! Obtain the smoothed max of 2 dual numbers
     !----------------------------------------    
@@ -1963,13 +1989,38 @@ CONTAINS
         IF (present(b_in)) THEN
             b = b_in
         ELSE
-            b = 100.0D0
+            b = 1.0D-12
         ENDIF
 
-        res = (val1 + val2 + SABS_D_D(val1 - val2, b))/2.0D0
+        res = 0.5D0*(val1 + val2 + SABS_D_D(val1 - val2, b))
    
 
     END FUNCTION SMAX_DD_D
+
+
+
+    !!-----------------------------------------
+    !! Obtain the smoothed max of 2 dual numbers
+    !!----------------------------------------    
+    !ELEMENTAL FUNCTION SMAX_DD_D(val1, val2, b_in) RESULT(res)
+    !    TYPE (AD_D), INTENT(IN)::val1, val2
+    !    REAL(DBL_AD),INTENT(IN),OPTIONAL::b_in
+    !    TYPE (AD_D)::res
+
+    !    REAL(DBL_AD) :: b
+
+    !    allocate(res%xp_ad_(size(val1%xp_ad_)))
+
+    !    IF (present(b_in)) THEN
+    !        b = b_in
+    !    ELSE
+    !        b = 100.0D0
+    !    ENDIF
+
+    !    res = (val1 + val2 + SABS_D_D(val1 - val2, b))/2.0D0
+   
+
+    !END FUNCTION SMAX_DD_D
 
 
 
@@ -2085,7 +2136,6 @@ CONTAINS
         ENDIF
 
     END FUNCTION MIN_DD_D
-
     !-----------------------------------------
     ! Obtain the smoothed min of 2 dual numbers
     !----------------------------------------    
@@ -2101,13 +2151,38 @@ CONTAINS
         IF (present(b_in)) THEN
             b = b_in
         ELSE
-            b = 100.0D0
+            b = 1.0D-12
         ENDIF
 
-        res = (val1 + val2 - SABS_D_D(val1 - val2, b))/2.0D0
+        res = 0.5D0*(val1 + val2 - SABS_D_D(val1 - val2, b))
    
 
     END FUNCTION SMIN_DD_D
+
+
+
+    !!-----------------------------------------
+    !! Obtain the smoothed min of 2 dual numbers
+    !!----------------------------------------    
+    !ELEMENTAL FUNCTION SMIN_DD_D(val1, val2, b_in) RESULT(res)
+    !    TYPE (AD_D), INTENT(IN)::val1, val2
+    !    REAL(DBL_AD),INTENT(IN),OPTIONAL::b_in
+    !    TYPE (AD_D)::res
+
+    !    REAL(DBL_AD) :: b
+
+    !    allocate(res%xp_ad_(size(val1%xp_ad_)))
+
+    !    IF (present(b_in)) THEN
+    !        b = b_in
+    !    ELSE
+    !        b = 100.0D0
+    !    ENDIF
+
+    !    res = (val1 + val2 - SABS_D_D(val1 - val2, b))/2.0D0
+   
+
+    !END FUNCTION SMIN_DD_D
 
 
 
@@ -2243,7 +2318,7 @@ CONTAINS
          IF (u%x_ad_ < xs) THEN
             res = 0.0d0
          ELSEIF ((xs .le. u%x_ad_) .AND. (u%x_ad_ .le. xe)) THEN
-            theta = (PI/2.0d0)*(2.0d0*u - (xs+xe))/(xs-xe)
+            theta = (PI/2.0d0)*(2.0d0*u - (xs+xe))/(xe-xs)
             res = 0.5d0*(SIN_D_D(theta) + 1.0d0)
          ELSE
             res = 1.0d0

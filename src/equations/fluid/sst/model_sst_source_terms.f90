@@ -30,6 +30,9 @@ module model_sst_source_terms
     !--------------------------------------------------------------------------------
     type, extends(model_t)  :: sst_source_terms_t
 
+        real(rk)    :: k_infty      = 1.0e-3_rk
+        real(rk)    :: omega_infty  = 345.0_rk
+
     contains
 
         procedure   :: init
@@ -55,6 +58,14 @@ contains
     !---------------------------------------------------------------------------------------
     subroutine init(self)   
         class(sst_source_terms_t), intent(inout)   :: self
+        real(rk)            :: k_infty, omega_infty
+        integer             :: unit, msg
+        logical             :: file_exists
+
+        namelist /k_omega/   k_infty, omega_infty 
+
+
+
 
         call self%set_name('SST Source Terms')
         call self%set_dependency('f(Grad(Q))')
@@ -63,6 +74,21 @@ contains
         call self%add_model_field('SST Omega Source Term')
         call self%add_model_field('SST k Source Term')
         call self%add_model_field('SST Energy Source Term')
+!
+        ! Check if input from 'models.nml' is available.
+        !   1: if available, read and set self%k_infty/omega_infty
+        !   2: if not available, do nothing and retain default values
+        !
+        inquire(file='models.nml', exist=file_exists)
+        if (file_exists) then
+            open(newunit=unit,form='formatted',file='models.nml')
+            read(unit,nml=k_omega,iostat=msg)
+            if (msg == 0) self%k_infty = k_infty 
+            if (msg == 0) self%omega_infty = omega_infty 
+            close(unit)
+        end if
+
+
     end subroutine init
     !***************************************************************************************
 
@@ -86,6 +112,7 @@ contains
             alpha_w, beta_w, beta_k, sigma_w, sigma_d, &
             p_ub, production, production_mod, destruction, destruction_neg, &
             CD, k_src, omega_src, omega_prod_fac,&
+            k_sust, omega_sust, &
             grad1_density,  grad2_density,  grad3_density,              &
             density_omega, omega,                                       &
             grad1_density_omega, grad2_density_omega, grad3_density_omega, &
@@ -189,11 +216,12 @@ contains
         !production_mod = p_ub - (p_ub - production)*(atan(b*(p_ub-production))/PI + HALF) - c
         !production_mod = smax(p_ub, production)
         
-        k_src = production_mod - destruction - destruction_neg
+        k_sust = beta_k*density*self%k_infty*self%omega_infty
+        k_src = production_mod - destruction - destruction_neg + k_sust
 
         call worker%store_model_field('SST k Source Term', 'value', k_src)
 
-        e_src = -production_mod + destruction
+        e_src = -production_mod + destruction - k_sust
         call worker%store_model_field('SST Energy Source Term', 'value', e_src)
 
         ! Compute the omega production term in an algebraically simplified form
@@ -214,16 +242,18 @@ contains
 
         grad_omega_sq =  worker%get_field('Omega Gradient Squared', 'value')
         CD =  worker%get_field('SST CD', 'value')
+        omega_sust = beta_w*density*self%omega_infty**TWO*exp(-omega)
         omega_src = (alpha_w*density*exp(-omega))*production &
                         - beta_w*density*exp(omega) &
                         + sigma_d*CD &
-                        + (mu_l + sigma_w*mu_t)*grad_omega_sq 
+                        + (mu_l + sigma_w*mu_t)*grad_omega_sq  + omega_sust
 
 
 
         
     
         call worker%store_model_field('SST Omega Source Term', 'value', omega_src)
+
 
     end subroutine compute
     !***************************************************************************************

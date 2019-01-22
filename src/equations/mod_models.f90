@@ -56,12 +56,16 @@ module mod_models
     use model_sst_source_terms,                         only: sst_source_terms_t
 
     use model_rstm_ssglrrw_blended_coefficients,        only: rstm_ssglrrw_blended_coefficients_t
+    use model_rstm_ssglrrw_lrr_coefficients,            only: rstm_ssglrrw_lrr_coefficients_t
     use model_rstm_ssglrrw_generalized_diffusion,       only: rstm_ssglrrw_generalized_diffusion_t
     use model_rstm_ssglrrw_simple_diffusion,            only: rstm_ssglrrw_simple_diffusion_t
     use model_rstm_ssglrrw_isotropic_dissipation,       only: rstm_ssglrrw_isotropic_dissipation_t
     use model_rstm_ssglrrw_pressure_strain_correlation, only: rstm_ssglrrw_pressure_strain_correlation_t
     use model_rstm_ssglrrw_production,                  only: rstm_ssglrrw_production_t
 !    use model_rstm_ssglrrw_reynolds_stress,             only: rstm_ssglrrw_reynolds_stress_t
+    use model_rstm_ssglrrw_realizable_stress,           only: rstm_ssglrrw_realizable_stress_t
+    use model_rstm_ssglrrw_realize_source,              only: rstm_ssglrrw_realize_source_t
+    use model_rstm_ssglrrw_artificial_viscosity,        only: rstm_ssglrrw_artificial_viscosity_t
     use model_rstm_ssglrrw_turbulence_quantities,       only: rstm_ssglrrw_turbulence_quantities_t
 !    use model_rstm_ssglrrw_turbulence_kinetic_energy,       only: rstm_ssglrrw_turbulence_kinetic_energy_t
     implicit none
@@ -315,6 +319,10 @@ contains
         type(rstm_ssglrrw_production_t)                 :: RSTM_SSGLRRW_PRODUCTION
         !type(rstm_ssglrrw_reynolds_stress_t)            :: RSTM_SSGLRRW_REYNOLDS_STRESS
         type(rstm_ssglrrw_turbulence_quantities_t)      :: RSTM_SSGLRRW_TURBULENCE_QUANTITIES
+        type(rstm_ssglrrw_lrr_coefficients_t)            :: RSTM_SSGLRRW_LRR_COEFFICIENTS
+        type(rstm_ssglrrw_artificial_viscosity_t)       :: RSTM_SSGLRRW_ARTIFICIAL_VISCOSITY
+        type(rstm_ssglrrw_realizable_stress_t)          :: RSTM_SSGLRRW_REALIZABLE_STRESS
+        type(rstm_ssglrrw_realize_source_t)             :: RSTM_SSGLRRW_REALIZE_SOURCE
 !        type(rstm_ssglrrw_turbulence_kinetic_energy_t)      :: RSTM_SSGLRRW_TURBULENCE_KE
 
 
@@ -379,6 +387,11 @@ contains
             call model_factory%register(RSTM_SSGLRRW_PRODUCTION)
             !call model_factory%register(RSTM_SSGLRRW_REYNOLDS_STRESS)
             call model_factory%register(RSTM_SSGLRRW_TURBULENCE_QUANTITIES)
+            call model_factory%register(RSTM_SSGLRRW_LRR_COEFFICIENTS)
+            call model_factory%register(RSTM_SSGLRRW_ARTIFICIAL_VISCOSITY)
+            call model_factory%register(RSTM_SSGLRRW_REALIZE_SOURCE)
+            call model_factory%register(RSTM_SSGLRRW_REALIZABLE_STRESS)
+
 !            call model_factory%register(RSTM_SSGLRRW_TURBULENCE_KE)
 
             models_initialized = .true.

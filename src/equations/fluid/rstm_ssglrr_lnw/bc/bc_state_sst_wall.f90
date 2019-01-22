@@ -1,4 +1,4 @@
-module bc_state_rstm_ssglrrw_wall
+module bc_state_sst_wall
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: TWO, HALF, ZERO
     use type_bc_state,          only: bc_state_t
@@ -7,7 +7,7 @@ module bc_state_rstm_ssglrrw_wall
     use mpi_f08,                only: mpi_comm
     use DNAD_D
     use ieee_arithmetic,        only: ieee_is_nan
-    use mod_rstm_ssglrrw
+    use mod_sst
     implicit none
     
 
@@ -18,14 +18,14 @@ module bc_state_rstm_ssglrrw_wall
     !! @date    02/01/2018 
     !!
     !--------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: rstm_ssglrrw_wall_t
+    type, public, extends(bc_state_t) :: sst_wall_t
 
     contains
 
         procedure   :: init
         procedure   :: compute_bc_state
 
-    end type rstm_ssglrrw_wall_t
+    end type sst_wall_t
     !*******************************************************************************************
 
 
@@ -42,12 +42,12 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(rstm_ssglrrw_wall_t),   intent(inout) :: self
+        class(sst_wall_t),   intent(inout) :: self
         
         !
         ! Set operator name
         !
-        call self%set_name('RSTMSSGLRRW Wall')
+        call self%set_name('SST Wall')
         call self%set_family('Wall')
 
     end subroutine init
@@ -67,16 +67,11 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(rstm_ssglrrw_wall_t), intent(inout)   :: self
+        class(sst_wall_t), intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
         type(mpi_comm),                 intent(in)      :: bc_COMM
 
-
-        ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   :: &
-            density_reynolds_m, grad1_density_reynolds_m, grad2_density_reynolds_m, grad3_density_reynolds_m, & 
-            density_nutilde_m, grad1_density_nutilde_m, grad2_density_nutilde_m, grad3_density_nutilde_m
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   :: &
@@ -85,7 +80,6 @@ contains
             r_1, r_2, r_3, density_omega_lb, &
             density_k_m, grad1_density_k_m, grad2_density_k_m, grad3_density_k_m, k_m, mu_t,& 
             density_omega_m, grad1_density_omega_m, grad2_density_omega_m, grad3_density_omega_m, y_plus_c
-
 
         type(AD_D), allocatable,    dimension(:) ::         &
             density, mom1, mom2, mom3, div_vel,                  &
@@ -99,13 +93,14 @@ contains
             du_ddensity,   dv_ddensity,   dw_ddensity,      &
             du_dmom1,      dv_dmom2,      dw_dmom3,         &
             invdensity
+
+
         real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3
         real(rk) :: h(3), distance, alpha_p, y_plus
         integer(ik) :: ii, nnodes, order
 
 
-
-!
+        !
         ! Get omega wall bc correction factor, from Schoenwa and Hartmann (2014)
         !
 
@@ -149,7 +144,9 @@ contains
         mom2    = worker%get_field('Momentum-2', 'value', 'face interior')
         mom3    = worker%get_field('Momentum-3', 'value', 'face interior')
 
+        k_m = worker%get_field('k',     'value', 'face interior')
         density_omega_m = worker%get_field('Density * Omega',     'value', 'face interior')
+        mu_t = density_m*k_m*exp(-density_omega_m/density_m)
 
         grad1_density    = worker%get_field('Density'   , 'grad1',  'face interior', override_lift=.true.)
         grad2_density    = worker%get_field('Density'   , 'grad2',  'face interior', override_lift=.true.)
@@ -207,12 +204,12 @@ contains
 
         mu_l = worker%get_field('Laminar Viscosity', 'value', 'face interior')
         div_vel = grad1_u + grad2_v + grad3_w
-        shear_11 = (mu_l)*(grad1_u + grad1_u - (TWO/THREE)*div_vel)
-        shear_22 = (mu_l)*(grad2_v + grad2_v - (TWO/THREE)*div_vel)
-        shear_33 = (mu_l)*(grad3_w + grad3_w - (TWO/THREE)*div_vel)
-        shear_12 = (mu_l)*(grad1_v + grad2_u)
-        shear_13 = (mu_l)*(grad1_w + grad3_u)
-        shear_23 = (mu_l)*(grad2_w + grad3_v)
+        shear_11 = (mu_l+mu_t)*(grad1_u + grad1_u - (TWO/THREE)*div_vel)
+        shear_22 = (mu_l+mu_t)*(grad2_v + grad2_v - (TWO/THREE)*div_vel)
+        shear_33 = (mu_l+mu_t)*(grad3_w + grad3_w - (TWO/THREE)*div_vel)
+        shear_12 = (mu_l+mu_t)*(grad1_v + grad2_u)
+        shear_13 = (mu_l+mu_t)*(grad1_w + grad3_u)
+        shear_23 = (mu_l+mu_t)*(grad2_w + grad3_v)
 
         unorm_1 = worker%unit_normal(1)
         unorm_2 = worker%unit_normal(2)
@@ -250,13 +247,13 @@ contains
         density_omega_m = density_m
 
 
-        density_omega_m = density_m*log(6.0_rk*tau_wall/(mu_l*SSG_LRRW_beta_w*(alpha_p*y_plus)**TWO+1.0e-15_rk))
+        density_omega_m = density_m*log(6.0_rk*tau_wall/(mu_l*sst_w_beta_k*(alpha_p*y_plus)**TWO+1.0e-15_rk))
 
         ! 
         ! Set a lower bound
         !
         density_omega_lb = density_m
-        density_omega_lb = density_m*log(6.0_rk*mu_l/(density_m*SSG_LRRW_beta_w*(alpha_p*distance)**TWO+1.0e-15_rk))
+        density_omega_lb = density_m*log(6.0_rk*mu_l/(density_m*sst_w_beta_k*(alpha_p*distance)**TWO+1.0e-15_rk))
 
         !density_omega_m = density_omega_lb
         nnodes = size(density_omega_m)
@@ -267,87 +264,33 @@ contains
 
         call worker%store_bc_state('Density * Omega', density_omega_m, 'value')
 
+        !
+        ! Store boundary condition gradient - Extrapolate
+        !
+        !
+        ! Interpolate interior solution to quadrature nodes
+        !
         grad1_density_omega_m = worker%get_field('Density * Omega', 'grad1', 'face interior')
         grad2_density_omega_m = worker%get_field('Density * Omega', 'grad2', 'face interior')
         grad3_density_omega_m = worker%get_field('Density * Omega', 'grad3', 'face interior')
 
+
         call worker%store_bc_state('Density * Omega', grad1_density_omega_m, 'grad1')
         call worker%store_bc_state('Density * Omega', grad2_density_omega_m, 'grad2')
         call worker%store_bc_state('Density * Omega', grad3_density_omega_m, 'grad3')
- 
-                                               
+                                                
 
-        ! R_11
-        density_reynolds_m       = worker%get_field('Density * Reynolds-11', 'value', 'face interior')
-        grad1_density_reynolds_m = worker%get_field('Density * Reynolds-11', 'grad1', 'face interior')
-        grad2_density_reynolds_m = worker%get_field('Density * Reynolds-11', 'grad2', 'face interior')
-        grad3_density_reynolds_m = worker%get_field('Density * Reynolds-11', 'grad3', 'face interior')
+        ! k 
+        density_k_m     = worker%get_field('Density * k',     'value', 'face interior')
+        grad1_density_k_m = worker%get_field('Density * k', 'grad1', 'face interior')
+        grad2_density_k_m = worker%get_field('Density * k', 'grad2', 'face interior')
+        grad3_density_k_m = worker%get_field('Density * k', 'grad3', 'face interior')
 
-        density_reynolds_m = ZERO
-        call worker%store_bc_state('Density * Reynolds-11', density_reynolds_m, 'value')
-        call worker%store_bc_state('Density * Reynolds-11', grad1_density_reynolds_m, 'grad1')
-        call worker%store_bc_state('Density * Reynolds-11', grad2_density_reynolds_m, 'grad2')
-        call worker%store_bc_state('Density * Reynolds-11', grad3_density_reynolds_m, 'grad3')
-
-        ! R_22
-        density_reynolds_m       = worker%get_field('Density * Reynolds-22', 'value', 'face interior')
-        grad1_density_reynolds_m = worker%get_field('Density * Reynolds-22', 'grad1', 'face interior')
-        grad2_density_reynolds_m = worker%get_field('Density * Reynolds-22', 'grad2', 'face interior')
-        grad3_density_reynolds_m = worker%get_field('Density * Reynolds-22', 'grad3', 'face interior')
-
-        density_reynolds_m = ZERO
-        call worker%store_bc_state('Density * Reynolds-22', density_reynolds_m, 'value')
-        call worker%store_bc_state('Density * Reynolds-22', grad1_density_reynolds_m, 'grad1')
-        call worker%store_bc_state('Density * Reynolds-22', grad2_density_reynolds_m, 'grad2')
-        call worker%store_bc_state('Density * Reynolds-22', grad3_density_reynolds_m, 'grad3')
-
-        ! R_33
-        density_reynolds_m       = worker%get_field('Density * Reynolds-33', 'value', 'face interior')
-        grad1_density_reynolds_m = worker%get_field('Density * Reynolds-33', 'grad1', 'face interior')
-        grad2_density_reynolds_m = worker%get_field('Density * Reynolds-33', 'grad2', 'face interior')
-        grad3_density_reynolds_m = worker%get_field('Density * Reynolds-33', 'grad3', 'face interior')
-
-        density_reynolds_m = ZERO
-        call worker%store_bc_state('Density * Reynolds-33', density_reynolds_m, 'value')
-        call worker%store_bc_state('Density * Reynolds-33', grad1_density_reynolds_m, 'grad1')
-        call worker%store_bc_state('Density * Reynolds-33', grad2_density_reynolds_m, 'grad2')
-        call worker%store_bc_state('Density * Reynolds-33', grad3_density_reynolds_m, 'grad3')
-
-        ! R_12
-        density_reynolds_m       = worker%get_field('Density * Reynolds-12', 'value', 'face interior')
-        grad1_density_reynolds_m = worker%get_field('Density * Reynolds-12', 'grad1', 'face interior')
-        grad2_density_reynolds_m = worker%get_field('Density * Reynolds-12', 'grad2', 'face interior')
-        grad3_density_reynolds_m = worker%get_field('Density * Reynolds-12', 'grad3', 'face interior')
-
-        density_reynolds_m = ZERO
-        call worker%store_bc_state('Density * Reynolds-12', density_reynolds_m, 'value')
-        call worker%store_bc_state('Density * Reynolds-12', grad1_density_reynolds_m, 'grad1')
-        call worker%store_bc_state('Density * Reynolds-12', grad2_density_reynolds_m, 'grad2')
-        call worker%store_bc_state('Density * Reynolds-12', grad3_density_reynolds_m, 'grad3')
-
-        ! R_13
-        density_reynolds_m       = worker%get_field('Density * Reynolds-13', 'value', 'face interior')
-        grad1_density_reynolds_m = worker%get_field('Density * Reynolds-13', 'grad1', 'face interior')
-        grad2_density_reynolds_m = worker%get_field('Density * Reynolds-13', 'grad2', 'face interior')
-        grad3_density_reynolds_m = worker%get_field('Density * Reynolds-13', 'grad3', 'face interior')
-
-        density_reynolds_m = ZERO
-        call worker%store_bc_state('Density * Reynolds-13', density_reynolds_m, 'value')
-        call worker%store_bc_state('Density * Reynolds-13', grad1_density_reynolds_m, 'grad1')
-        call worker%store_bc_state('Density * Reynolds-13', grad2_density_reynolds_m, 'grad2')
-        call worker%store_bc_state('Density * Reynolds-13', grad3_density_reynolds_m, 'grad3')
-
-        ! R_23
-        density_reynolds_m       = worker%get_field('Density * Reynolds-23', 'value', 'face interior')
-        grad1_density_reynolds_m = worker%get_field('Density * Reynolds-23', 'grad1', 'face interior')
-        grad2_density_reynolds_m = worker%get_field('Density * Reynolds-23', 'grad2', 'face interior')
-        grad3_density_reynolds_m = worker%get_field('Density * Reynolds-23', 'grad3', 'face interior')
-
-        density_reynolds_m = ZERO
-        call worker%store_bc_state('Density * Reynolds-23', density_reynolds_m, 'value')
-        call worker%store_bc_state('Density * Reynolds-23', grad1_density_reynolds_m, 'grad1')
-        call worker%store_bc_state('Density * Reynolds-23', grad2_density_reynolds_m, 'grad2')
-        call worker%store_bc_state('Density * Reynolds-23', grad3_density_reynolds_m, 'grad3')
+        density_k_m = ZERO
+        call worker%store_bc_state('Density * k', density_k_m, 'value')
+        call worker%store_bc_state('Density * k', grad1_density_k_m, 'grad1')
+        call worker%store_bc_state('Density * k', grad2_density_k_m, 'grad2')
+        call worker%store_bc_state('Density * k', grad3_density_k_m, 'grad3')
 
 
     end subroutine compute_bc_state
@@ -360,4 +303,4 @@ contains
 
 
 
-end module bc_state_rstm_ssglrrw_wall
+end module bc_state_sst_wall

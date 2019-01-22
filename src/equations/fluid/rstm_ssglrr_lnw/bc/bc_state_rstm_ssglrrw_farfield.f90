@@ -144,6 +144,7 @@ contains
 
         ! Get farfield turbulent kinetic energy 
         k_t_ff  = (THREE/TWO)*(SSG_LRRW_tu_infty)**TWO*u_infty_sq
+        k_t_ff = rstm_ssglrrw_k_infty
 
         density_reynolds_ff = (TWO/THREE)*density_bc*k_t_ff
         !density_reynolds_ff = 6.0e-9_rk*347.27942639897344_rk**TWO
@@ -163,7 +164,8 @@ contains
         ! Omega
         ! Compute FF values
         density_omega_ff = density_omega_m
-        density_omega_ff = density_bc*log(density_bc*k_t_ff/mu_t_ff)
+        !density_omega_ff = density_bc*log(density_bc*k_t_ff/mu_t_ff)
+        density_omega_ff = density_bc*log(rstm_ssglrrw_omega_infty)
         !density_omega_ff = 1.0e-6_rk*1.1765047303964247_rk*347.27942639897344_rk**TWO/1.634303551710997e-05_rk
         density_omega_bc = density_omega_m
         density_omega_bc = density_omega_ff

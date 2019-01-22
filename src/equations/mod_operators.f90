@@ -94,6 +94,10 @@ module mod_operators
     use rstm_ssglrrw_boundary_diffusion,            only: rstm_ssglrrw_boundary_diffusion_operator_t
     use rstm_ssglrrw_volume_diffusion,              only: rstm_ssglrrw_volume_diffusion_operator_t
     use rstm_ssglrrw_bc_diffusion,                  only: rstm_ssglrrw_bc_diffusion_operator_t
+    use rstm_ssglrrw_artificial_viscosity_operator,                          only: rstm_ssglrrw_artificial_viscosity_operator_t
+    use rstm_ssglrrw_artificial_viscosity_bc_operator,                       only: rstm_ssglrrw_artificial_viscosity_bc_operator_t
+    use rstm_ssglrrw_artificial_viscosity_boundary_average_operator,         only: rstm_ssglrrw_artificial_viscosity_boundary_average_operator_t
+
 
     !! RANS Low-Cache operators
     !use RANS_volume_advection,                      only: RANS_volume_advection_t
@@ -323,6 +327,10 @@ contains
         type(rstm_ssglrrw_boundary_diffusion_operator_t)            :: rstm_ssglrrw_boundary_diffusion_operator
         type(rstm_ssglrrw_volume_diffusion_operator_t)              :: rstm_ssglrrw_volume_diffusion_operator
         type(rstm_ssglrrw_bc_diffusion_operator_t)                  :: rstm_ssglrrw_bc_diffusion_operator
+        type(rstm_ssglrrw_artificial_viscosity_operator_t)          :: rstm_ssglrrw_artificial_viscosity_operator
+        type(rstm_ssglrrw_artificial_viscosity_bc_operator_t)          :: rstm_ssglrrw_artificial_viscosity_bc_operator
+        type(rstm_ssglrrw_artificial_viscosity_boundary_average_operator_t)          :: rstm_ssglrrw_artificial_viscosity_boundary_average_operator
+
 
 
         !type(RANS_volume_advection_t)                           :: rans_volume_advection
@@ -450,6 +458,10 @@ contains
             call operator_factory%register(rstm_ssglrrw_boundary_diffusion_operator)
             call operator_factory%register(rstm_ssglrrw_volume_diffusion_operator)
             call operator_factory%register(rstm_ssglrrw_bc_diffusion_operator)
+            call operator_factory%register(rstm_ssglrrw_artificial_viscosity_operator)
+            call operator_factory%register(rstm_ssglrrw_artificial_viscosity_bc_operator)
+            call operator_factory%register(rstm_ssglrrw_artificial_viscosity_boundary_average_operator)
+
 
             !! Register RANS Low-Cache operators
             !call operator_factory%register(rans_volume_advection)

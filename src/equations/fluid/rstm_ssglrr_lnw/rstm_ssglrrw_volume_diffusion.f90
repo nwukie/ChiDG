@@ -142,16 +142,16 @@ contains
         diffusion_232 = worker%get_field('Diffusion-232', 'value')
         diffusion_233 = worker%get_field('Diffusion-233', 'value')
 
-        ! Turbulent heat flux for the energy equation
-        ! is modeled as one half of the trace of the diffusion tensor
-        grad1_temp = worker%get_field('Temperature Gradient - 1', 'value')
-        grad2_temp = worker%get_field('Temperature Gradient - 2', 'value')
-        grad3_temp = worker%get_field('Temperature Gradient - 3', 'value')
+        !! Turbulent heat flux for the energy equation
+        !! is modeled as one half of the trace of the diffusion tensor
+        !grad1_temp = worker%get_field('Temperature Gradient - 1', 'value')
+        !grad2_temp = worker%get_field('Temperature Gradient - 2', 'value')
+        !grad3_temp = worker%get_field('Temperature Gradient - 3', 'value')
 
 
-        energy_flux_1 = HALF*(diffusion_111+diffusion_221+diffusion_331) + cp*mu_t*grad1_temp/0.9_rk
-        energy_flux_2 = HALF*(diffusion_112+diffusion_222+diffusion_332) + cp*mu_t*grad2_temp/0.9_rk
-        energy_flux_3 = HALF*(diffusion_113+diffusion_223+diffusion_333) + cp*mu_t*grad3_temp/0.9_rk
+        !energy_flux_1 = HALF*(diffusion_111+diffusion_221+diffusion_331) + cp*mu_t*grad1_temp/0.9_rk
+        !energy_flux_2 = HALF*(diffusion_112+diffusion_222+diffusion_332) + cp*mu_t*grad2_temp/0.9_rk
+        !energy_flux_3 = HALF*(diffusion_113+diffusion_223+diffusion_333) + cp*mu_t*grad3_temp/0.9_rk
 
         ! Omega diffusive terms
 
@@ -241,16 +241,16 @@ contains
         call worker%integrate_volume_flux('Density * Reynolds-23','Diffusion',flux_1,flux_2,flux_3)
 
 
-        !================================
-        !       TURBULENCE FLUX - Energy 
-        !================================
+        !!================================
+        !!       TURBULENCE FLUX - Energy 
+        !!================================
 
-        flux_1 = -energy_flux_1
-        flux_2 = -energy_flux_2
-        flux_3 = -energy_flux_3
+        !flux_1 = -energy_flux_1
+        !flux_2 = -energy_flux_2
+        !flux_3 = -energy_flux_3
 
 
-        call worker%integrate_volume_flux('Energy','Diffusion',flux_1,flux_2,flux_3)
+        !call worker%integrate_volume_flux('Energy','Diffusion',flux_1,flux_2,flux_3)
 
 
 

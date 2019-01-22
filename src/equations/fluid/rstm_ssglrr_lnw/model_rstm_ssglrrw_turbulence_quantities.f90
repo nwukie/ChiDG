@@ -68,19 +68,19 @@ contains
         call self%add_model_field('Omega Gradient Squared')
 
 
-        call self%add_model_field('Reynolds-11')
-        call self%add_model_field('Reynolds-22')
-        call self%add_model_field('Reynolds-33')
-        call self%add_model_field('Reynolds-12')
-        call self%add_model_field('Reynolds-13')
-        call self%add_model_field('Reynolds-23')
+        !call self%add_model_field('Reynolds-11')
+        !call self%add_model_field('Reynolds-22')
+        !call self%add_model_field('Reynolds-33')
+        !call self%add_model_field('Reynolds-12')
+        !call self%add_model_field('Reynolds-13')
+        !call self%add_model_field('Reynolds-23')
 
-        call self%add_model_field('Reynolds-Stress-11')
-        call self%add_model_field('Reynolds-Stress-22')
-        call self%add_model_field('Reynolds-Stress-33')
-        call self%add_model_field('Reynolds-Stress-12')
-        call self%add_model_field('Reynolds-Stress-13')
-        call self%add_model_field('Reynolds-Stress-23')
+        !call self%add_model_field('Reynolds-Stress-11')
+        !call self%add_model_field('Reynolds-Stress-22')
+        !call self%add_model_field('Reynolds-Stress-33')
+        !call self%add_model_field('Reynolds-Stress-12')
+        !call self%add_model_field('Reynolds-Stress-13')
+        !call self%add_model_field('Reynolds-Stress-23')
 
 
 
@@ -215,26 +215,26 @@ contains
         reynolds_13 = worker%get_field('Density * Reynolds-13', 'value')
         reynolds_23 = worker%get_field('Density * Reynolds-23', 'value')
 
-        if ((any(reynolds_11(:)%x_ad_ < 0.0_rk)) .or. (any(reynolds_22(:)%x_ad_ < 0.0_rk)) .or. (any(reynolds_33(:)%x_ad_ < 0.0_rk))) then
-            print *, 'warning, negative R diag, ', worker%interpolation_source
-        end if
-        
-        if (any(abs(reynolds_12(:)%x_ad_) > sqrt(abs(reynolds_11(:)%x_ad_*reynolds_22(:)%x_ad_)))) print *, 'warning, r_12 unrealizable, ', worker%interpolation_source
-        if (any(abs(reynolds_13(:)%x_ad_) > sqrt(abs(reynolds_11(:)%x_ad_*reynolds_33(:)%x_ad_)))) print *, 'warning, r_13 unrealizable, ', worker%interpolation_source
-        if (any(abs(reynolds_23(:)%x_ad_) > sqrt(abs(reynolds_22(:)%x_ad_*reynolds_33(:)%x_ad_)))) print *, 'warning, r_23 unrealizable, ', worker%interpolation_source
+        !if ((any(reynolds_11(:)%x_ad_ < 0.0_rk)) .or. (any(reynolds_22(:)%x_ad_ < 0.0_rk)) .or. (any(reynolds_33(:)%x_ad_ < 0.0_rk))) then
+        !    print *, 'warning, negative R diag, ', worker%interpolation_source
+        !end if
+        !
+        !if (any(abs(reynolds_12(:)%x_ad_) > sqrt(abs(reynolds_11(:)%x_ad_*reynolds_22(:)%x_ad_)))) print *, 'warning, r_12 unrealizable, ', worker%interpolation_source
+        !if (any(abs(reynolds_13(:)%x_ad_) > sqrt(abs(reynolds_11(:)%x_ad_*reynolds_33(:)%x_ad_)))) print *, 'warning, r_13 unrealizable, ', worker%interpolation_source
+        !if (any(abs(reynolds_23(:)%x_ad_) > sqrt(abs(reynolds_22(:)%x_ad_*reynolds_33(:)%x_ad_)))) print *, 'warning, r_23 unrealizable, ', worker%interpolation_source
 
-        det_r =  reynolds_11(:)%x_ad_*(reynolds_22(:)%x_ad_*reynolds_33(:)%x_ad_-reynolds_23(:)%x_ad_*reynolds_23(:)%x_ad_) &
-                -reynolds_12(:)%x_ad_*(reynolds_12(:)%x_ad_*reynolds_33(:)%x_ad_-reynolds_23(:)%x_ad_*reynolds_13(:)%x_ad_) &
-                +reynolds_13(:)%x_ad_*(reynolds_12(:)%x_ad_*reynolds_23(:)%x_ad_-reynolds_22(:)%x_ad_*reynolds_13(:)%x_ad_) 
+        !det_r =  reynolds_11(:)%x_ad_*(reynolds_22(:)%x_ad_*reynolds_33(:)%x_ad_-reynolds_23(:)%x_ad_*reynolds_23(:)%x_ad_) &
+        !        -reynolds_12(:)%x_ad_*(reynolds_12(:)%x_ad_*reynolds_33(:)%x_ad_-reynolds_23(:)%x_ad_*reynolds_13(:)%x_ad_) &
+        !        +reynolds_13(:)%x_ad_*(reynolds_12(:)%x_ad_*reynolds_23(:)%x_ad_-reynolds_22(:)%x_ad_*reynolds_13(:)%x_ad_) 
 
-        if (any(det_r<0.0_rk)) print *, 'warning det R < 0, ', worker%interpolation_source
+        !if (any(det_r<0.0_rk)) print *, 'warning det R < 0, ', worker%interpolation_source
 
-        call worker%store_model_field('Reynolds-Stress-11', 'value', -(reynolds_11))
-        call worker%store_model_field('Reynolds-Stress-22', 'value', -(reynolds_22))
-        call worker%store_model_field('Reynolds-Stress-33', 'value', -(reynolds_33))
-        call worker%store_model_field('Reynolds-Stress-12', 'value', -reynolds_12)
-        call worker%store_model_field('Reynolds-Stress-13', 'value', -reynolds_13)
-        call worker%store_model_field('Reynolds-Stress-23', 'value', -reynolds_23)
+        !!call worker%store_model_field('Reynolds-Stress-11', 'value', -(reynolds_11))
+        !!call worker%store_model_field('Reynolds-Stress-22', 'value', -(reynolds_22))
+        !!call worker%store_model_field('Reynolds-Stress-33', 'value', -(reynolds_33))
+        !!call worker%store_model_field('Reynolds-Stress-12', 'value', -reynolds_12)
+        !!call worker%store_model_field('Reynolds-Stress-13', 'value', -reynolds_13)
+        !!call worker%store_model_field('Reynolds-Stress-23', 'value', -reynolds_23)
 
 
         reynolds_11 = invdensity*reynolds_11
@@ -245,12 +245,12 @@ contains
         reynolds_23 = invdensity*reynolds_23
 
 
-        call worker%store_model_field('Reynolds-11', 'value', (reynolds_11))
-        call worker%store_model_field('Reynolds-22', 'value', (reynolds_22))
-        call worker%store_model_field('Reynolds-33', 'value', (reynolds_33))
-        call worker%store_model_field('Reynolds-12', 'value', reynolds_12)
-        call worker%store_model_field('Reynolds-13', 'value', reynolds_13)
-        call worker%store_model_field('Reynolds-23', 'value', reynolds_23)
+        !call worker%store_model_field('Reynolds-11', 'value', (reynolds_11))
+        !call worker%store_model_field('Reynolds-22', 'value', (reynolds_22))
+        !call worker%store_model_field('Reynolds-33', 'value', (reynolds_33))
+        !call worker%store_model_field('Reynolds-12', 'value', reynolds_12)
+        !call worker%store_model_field('Reynolds-13', 'value', reynolds_13)
+        !call worker%store_model_field('Reynolds-23', 'value', reynolds_23)
 
         grad1_density_reynolds_11 = worker%get_field('Density * Reynolds-11', 'grad1')
         grad2_density_reynolds_11 = worker%get_field('Density * Reynolds-11', 'grad2')
@@ -372,6 +372,7 @@ contains
 
         mu_t = density*k_t*exp(-omega)
         call worker%store_model_field('Equivalent Eddy Viscosity', 'value', (mu_t))
+
     end subroutine compute
     !***************************************************************************************
 

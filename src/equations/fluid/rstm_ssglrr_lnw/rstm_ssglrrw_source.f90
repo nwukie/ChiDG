@@ -92,6 +92,7 @@ contains
             pressure_strain_12, pressure_strain_13, pressure_strain_23,                    &
             dissipation_11, dissipation_22, dissipation_33,                    &
             dissipation_12, dissipation_13, dissipation_23,                    &
+            rsrc_11, rsrc_22, rsrc_33, rsrc_12, rsrc_13, rsrc_23, &
             source, mu_l, mu_t
 
         real(rk)    :: const, epsilon_vorticity, eps
@@ -132,6 +133,12 @@ contains
         dissipation_13      = worker%get_field('Turbulence Dissipation-13', 'value', 'element')
         dissipation_23      = worker%get_field('Turbulence Dissipation-23', 'value', 'element')
 
+        rsrc_11   = worker%get_field('Realizability Source-11', 'value', 'element')
+        rsrc_22   = worker%get_field('Realizability Source-22', 'value', 'element')
+        rsrc_33   = worker%get_field('Realizability Source-33', 'value', 'element')
+        rsrc_12   = worker%get_field('Realizability Source-12', 'value', 'element')
+        rsrc_13   = worker%get_field('Realizability Source-13', 'value', 'element')
+        rsrc_23   = worker%get_field('Realizability Source-23', 'value', 'element')
         !
         ! Interpolate solution to quadrature nodes
         !
@@ -151,7 +158,7 @@ contains
         !========================================================================
         !                       R_11 Source Term
         !========================================================================
-        source = production_11 + pressure_strain_11 - dissipation_11
+        source = production_11 + pressure_strain_11 - dissipation_11 + rsrc_11
         !source = ZERO
 
         call worker%integrate_volume_source('Density * Reynolds-11',source)
@@ -159,7 +166,7 @@ contains
         !========================================================================
         !                       R_22 Source Term
         !========================================================================
-        source = production_22 + pressure_strain_22 - dissipation_22
+        source = production_22 + pressure_strain_22 - dissipation_22 + rsrc_22
         !source = ZERO
 
         call worker%integrate_volume_source('Density * Reynolds-22',source)
@@ -167,7 +174,7 @@ contains
         !========================================================================
         !                       R_33 Source Term
         !========================================================================
-        source = production_33 + pressure_strain_33 - dissipation_33
+        source = production_33 + pressure_strain_33 - dissipation_33 + rsrc_33
         !source = ZERO
 
         call worker%integrate_volume_source('Density * Reynolds-33',source)
@@ -175,7 +182,7 @@ contains
         !========================================================================
         !                       R_12 Source Term
         !========================================================================
-        source = production_12 + pressure_strain_12 - dissipation_12
+        source = production_12 + pressure_strain_12 - dissipation_12 + rsrc_12
         !source = ZERO
 
         call worker%integrate_volume_source('Density * Reynolds-12',source)
@@ -183,7 +190,7 @@ contains
         !========================================================================
         !                       R_13 Source Term
         !========================================================================
-        source = production_13 + pressure_strain_13 - dissipation_13
+        source = production_13 + pressure_strain_13 - dissipation_13 + rsrc_13
         !source = ZERO
 
         call worker%integrate_volume_source('Density * Reynolds-13',source)
@@ -191,7 +198,7 @@ contains
         !========================================================================
         !                       R_23 Source Term
         !========================================================================
-        source = production_23 + pressure_strain_23 - dissipation_23
+        source = production_23 + pressure_strain_23 - dissipation_23 + rsrc_23
         !source = ZERO
 
         call worker%integrate_volume_source('Density * Reynolds-23',source)

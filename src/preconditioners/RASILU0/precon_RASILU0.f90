@@ -365,9 +365,10 @@ contains
         end do !idom
 
 
-
         call write_line(' Done Computing RAS-ILU0 factorization', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
+        ! Update stamp
+        call date_and_time(values=self%stamp)
 
     end subroutine update
     !*****************************************************************************************

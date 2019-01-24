@@ -57,17 +57,11 @@ contains
         type(equation_set_t)            :: rans_eqns
         type(fluid_pseudo_timestep_t)   :: fluid_pseudo_time
 
-        !
         ! Set equation set name
-        !
         call rans_eqns%set_name('RANS')
         
-
-        !
         ! Add spatial operators
-        !
         select case (trim(blueprint))
-
 
             case('default')
                 call rans_eqns%add_operator('Euler Volume Flux')

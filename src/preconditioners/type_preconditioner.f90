@@ -1,7 +1,8 @@
 module type_preconditioner
     use mod_kinds,          only: rk, ik
-    use type_chidg_matrix,   only: chidg_matrix_t
-    use type_chidg_vector,   only: chidg_vector_t
+    use mod_constants,      only: NO_ID
+    use type_chidg_matrix,  only: chidg_matrix_t
+    use type_chidg_vector,  only: chidg_vector_t
     use type_chidg_data,    only: chidg_data_t
     use type_timer,         only: timer_t
 
@@ -19,8 +20,9 @@ module type_preconditioner
     !-------------------------------------------------------------------
     type, public, abstract :: preconditioner_t
 
-        type(timer_t)       :: timer
-        logical             :: initialized = .false.
+        type(timer_t)   :: timer
+        logical         :: initialized = .false.
+        integer         :: stamp(8) = NO_ID                 ! Stamp from date_and_time that gets updated when store routines are called
 
     contains
         procedure   :: init

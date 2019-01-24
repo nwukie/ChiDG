@@ -16,11 +16,6 @@ module operator_chidg_mv
     type(timer_t)   :: timer_comm, timer_blas
 
 
-!    public operator(*)
-!    interface operator(*)
-!        module procedure MULT_chidgMatrix_chidgVector
-!    end interface
-
 contains
 
 
@@ -70,23 +65,31 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------
-    function chidg_mv(A,x) result(res)
-        type(chidg_matrix_t),    intent(inout)   :: A
-        type(chidg_vector_t),    intent(inout)   :: x
+    function chidg_mv(A,x,pattern) result(res)
+        type(chidg_matrix_t),   intent(inout)           :: A
+        type(chidg_vector_t),   intent(inout)           :: x
+        character(*),           intent(in), optional    :: pattern
 
         type(chidg_vector_t)        :: res
         integer(ik)                 :: idom, ielem, iblk, imat, itime, ivar,  &
-                                       itime_i, recv_comm, recv_domain, recv_element
+                                       itime_i, recv_comm, recv_domain, recv_element, idiag
         integer(ik)                 :: dparent_g, dparent_l, eparent_g, eparent_l
         integer(ik)                 :: matrix_proc, vector_proc, nrows, ncols, ierr
         integer(ik)                 :: res_istart, res_iend, x_istart, x_iend, xstart, xend, tparent
         logical                     :: local_multiply, parallel_multiply
         logical                     :: nonconforming = .false.
         logical                     :: HB_flag_status = .false.
-        character(:), allocatable   :: HB_flag
+        logical                     :: pattern_multiply
+        character(:), allocatable   :: HB_flag, multiply_pattern
         real(rk),     allocatable   :: D(:,:)
         real(rk),     allocatable   :: temp_1(:), temp_2(:)
 
+
+        if (present(pattern)) then
+            multiply_pattern = pattern
+        else
+            multiply_pattern = 'all'
+        end if
 
 
         !
@@ -126,14 +129,17 @@ contains
                 ! Routine for proc-local INTERIOR coupling (lblks)
                 !
                 do ielem = 1,size(A%dom(idom)%lblks,1)
+                    idiag = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
                     do imat = 1,A%dom(idom)%lblks(ielem,itime)%size()
+
                     
                         matrix_proc = IRANK
                         vector_proc = A%dom(idom)%lblks(ielem,itime)%parent_proc(imat)
 
-                        local_multiply = ( matrix_proc == vector_proc )
-
+                        local_multiply   = ( matrix_proc == vector_proc )
+                        pattern_multiply = (multiply_pattern == 'all') .or. (multiply_pattern == 'off-diagonal' .and. (imat /= idiag))
         
+                        !if ( local_multiply .and. pattern_multiply) then
                         if ( local_multiply ) then
                             dparent_l = A%dom(idom)%lblks(ielem,itime)%dparent_l(imat)
                             eparent_l = A%dom(idom)%lblks(ielem,itime)%eparent_l(imat)

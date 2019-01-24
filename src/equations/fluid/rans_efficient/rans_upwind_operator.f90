@@ -1,7 +1,10 @@
-module euler_roe_operator
+module rans_upwind_operator
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
-    use mod_fluid,              only: gam
+    use mod_fluid,              only: Rgas, gam
+    use mod_rans_efficient
+
     use type_operator,          only: operator_t
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -19,23 +22,15 @@ module euler_roe_operator
     !!  @date   1/28/2016
     !!
     !------------------------------------------------------------------------------
-    type, extends(operator_t), public :: euler_roe_operator_t
+    type, extends(operator_t), public :: rans_upwind_operator_t
 
     contains
 
         procedure   :: init
         procedure   :: compute
 
-    end type euler_roe_operator_t
+    end type rans_upwind_operator_t
     !*******************************************************************************
-
-
-
-
-
-
-
-
 
 
 contains
@@ -48,10 +43,10 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(euler_roe_operator_t),   intent(inout)    :: self
+        class(rans_upwind_operator_t),   intent(inout)    :: self
 
         ! Set operator name
-        call self%set_name("Euler Roe Flux")
+        call self%set_name("RANS Upwind Operator")
 
         ! Set operator type
         call self%set_operator_type("Boundary Advective Flux")
@@ -76,7 +71,7 @@ contains
     !!
     !!---------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(euler_roe_operator_t),    intent(inout)   :: self
+        class(rans_upwind_operator_t),    intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
 
@@ -91,15 +86,18 @@ contains
             enthalpy_m,     enthalpy_p,                             &
             invdensity_m,   invdensity_p,                           &
             p_m,            p_p,                                    &
+            T_m,            T_p,                                    &
             un_m,           un_p,                                   &
             rtil, util, vtil, wtil, vmagtil, Htil, ctil, qtil2,     &
             C1,  C2_a, C2_b,  C3,                                   &
             u_m, v_m, w_m,                                          &
             u_p, v_p, w_p,                                          &
+            c_m, c_p,                                               &
             vmag_p, vmag_m,                                         &
             delr,   delp,   delvmag, delu, delv, delw,              &
             lamda1, lamda2, lamda3,                                 &
-            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, upwind
+            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, upwind, &
+            dissipation, wavespeed_m, wavespeed_p, density_nutilde_m, density_nutilde_p
 
         real(rk), allocatable, dimension(:) ::              &
             norm_1,         norm_2,         norm_3,         &
@@ -164,8 +162,10 @@ contains
         !
         ! Compute pressure and gamma
         !
-        p_m = worker%get_field('Pressure', 'value', 'face interior')
-        p_p = worker%get_field('Pressure', 'value', 'face exterior')
+        call compute_pressure_temperature(density_m,mom1_m,mom2_m,mom3_m,energy_m,p_m,T_m)
+        call compute_pressure_temperature(density_p,mom1_p,mom2_p,mom3_p,energy_p,p_p,T_p)
+
+
 
         invdensity_m = ONE/density_m
         invdensity_p = ONE/density_p
@@ -306,6 +306,44 @@ contains
         call worker%integrate_boundary_upwind('Energy',upwind)
 
 
+
+
+        !================================
+        !       Spalart Allmaras: Density * NuTilde
+        !================================
+        select case (trim(turbulence_model))
+            case('Spalart Allmaras')
+                density_nutilde_m = worker%get_field('Density * NuTilde', 'value', 'face interior')
+                density_nutilde_p = worker%get_field('Density * NuTilde', 'value', 'face exterior')
+
+                ! Compute maximum wave speed
+                grid_vel = worker%get_grid_velocity_face('face interior')
+                un_m = u_m*unorm_1_ale + v_m*unorm_2_ale + w_m*unorm_3_ale
+                un_p = u_p*unorm_1_ale + v_p*unorm_2_ale + w_p*unorm_3_ale
+                grid_vel_n = grid_vel(:,1)*unorm_1_ale  +  grid_vel(:,2)*unorm_2_ale  +  grid_vel(:,3)*unorm_3_ale
+
+                c_m = sqrt(gam * Rgas * T_m)
+                c_p = sqrt(gam * Rgas * T_p)
+
+                wavespeed_m = abs(un_m) + c_m  + abs(grid_vel_n)
+                wavespeed_p = abs(un_p) + c_p  + abs(grid_vel_n)
+
+                ! Compute Lax-Friedrichs upwind dissipation
+                dissipation = -HALF*max(abs(wavespeed_m),abs(wavespeed_p))*(density_nutilde_p - density_nutilde_m)
+
+                ! Integrate
+                call worker%integrate_boundary_upwind('Density * NuTilde',dissipation)
+
+            case('none')
+
+            case default
+                call chidg_signal_one(FATAL,"RANS Efficient: invalid turbulence_model.",trim(turbulence_model))
+        end select
+
+
+
+
+
     end subroutine compute
     !**********************************************************************************************
 
@@ -321,4 +359,4 @@ contains
 
 
 
-end module euler_roe_operator
+end module rans_upwind_operator

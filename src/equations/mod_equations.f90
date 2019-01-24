@@ -33,6 +33,8 @@ module mod_equations
     use eqn_rans_sst,                       only: rans_sst
     use eqn_rans_rstm,                      only: rans_rstm
 
+    use eqn_rans_efficient,                 only: rans_efficient
+
     use eqn_wall_distance,                  only: wall_distance
     use eqn_mesh_motion_diffusion,          only: mesh_motion_diffusion 
     use eqn_mesh_motion_linear_elasticity,  only: mesh_motion_linear_elasticity
@@ -129,6 +131,7 @@ contains
         type(rans_cv)                       :: rans_cv_builder
         type(rans_sst)                      :: rans_sst_builder
         type(rans_rstm)                     :: rans_rstm_builder
+        type(rans_efficient)                :: rans_efficient_builder
         type(wall_distance)                 :: wall_distance_builder
         type(mesh_motion_diffusion)         :: mesh_motion_diffusion_builder
         type(mesh_motion_linear_elasticity) :: mesh_motion_linear_elasticity_builder
@@ -156,6 +159,7 @@ contains
             call equation_set_factory%register(rans_cv_builder%build('default'))
             call equation_set_factory%register(rans_sst_builder%build('default'))
             call equation_set_factory%register(rans_rstm_builder%build('default'))
+            call equation_set_factory%register(rans_efficient_builder%build('default'))
             call equation_set_factory%register(wall_distance_builder%build('default'))
             call equation_set_factory%register(mesh_motion_diffusion_builder%build('default'))
             call equation_set_factory%register(mesh_motion_linear_elasticity_builder%build('default'))

@@ -238,6 +238,11 @@ contains
             end do !ielem
         end do !idom
 
+
+        ! Update stamp
+        call date_and_time(values=self%stamp)
+
+
     end subroutine update
     !*******************************************************************************************
 

@@ -199,7 +199,7 @@ contains
 
 
         ! Update stamp
-        call date_and_time(values=self%stamp)
+        self%stamp = A%stamp
 
 
     end subroutine update

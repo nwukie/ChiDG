@@ -10,6 +10,7 @@ module mod_fluid
     real(rk), parameter :: gam   = 1.4_rk               ! Ratio of specific heats
     real(rk), parameter :: cp    = Rgas*gam/(gam-ONE)   ! Specific heat capacity, constant pressure
     real(rk)            :: omega = 0._rk                ! Rotation rate (rad/s)
+    real(rk)            :: Pr    = 0.72_rk              ! Prandtl number
 
 
 end module mod_fluid

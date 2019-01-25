@@ -46,7 +46,7 @@ contains
                                        diff_min, diff_max, eqn_ID, nelem_total, &
                                        loop_status
         real(rk)                    :: percent_complete, percent_report
-        type(timer_t)               :: timer, comm_timer, loop_timer
+        type(timer_t)               :: total_timer, comm_timer, cache_timer, function_timer
 
         type(element_info_t)        :: elem_info
         type(chidg_worker_t)        :: worker
@@ -59,14 +59,14 @@ contains
 
 
         ! Start timer on spatial discretization update
-        call timer%start()
+        call total_timer%start()
 
     
 
         ! Clear function_status data. This tracks if a function has already been called. So, 
         ! in this way we can compute a function on a face and apply it to both elements. 
         ! The function is just registered as computed for both. So we need to reset all of 
-        ! that data here. This is only tracked for the interior scheme. Boundary condition 
+        ! that data here. This is only tracked for the interior discretization. Boundary condition 
         ! evaluations and Chimera faces are not tracked.
         call data%sdata%function_status%clear()
 
@@ -82,13 +82,13 @@ contains
 
         ! Loop through given element compute the residual functions and also the 
         ! linearization of those functions.
-        call write_line('-  Updating spatial scheme', io_proc=GLOBAL_MASTER, silence=(verbosity < 3))
+        call write_line('-  Updating spatial residual', io_proc=GLOBAL_MASTER, silence=(verbosity < 3))
 
 
         ! Clear function_status data. This tracks if a function has already been called. So, in this way
         ! we can compute a function on a face and apply it to both elements. The function is just registered
-        ! as computed for both. So we need to reset all of that data here. This is only tracked for the interior scheme.
-        ! Boundary condition evaluations and Chimera faces are not tracked.
+        ! as computed for both. So we need to reset all of that data here. This is only tracked for the interior 
+        ! discretization. Boundary condition evaluations and Chimera faces are not tracked.
         call data%sdata%function_status%clear()
 
 
@@ -99,7 +99,6 @@ contains
         nelem_total  = data%mesh%nelements()
 
 
-        call loop_timer%start()
         loop_status = 0
         percent_complete = ZERO
         percent_report = 20.
@@ -117,14 +116,17 @@ contains
 
 
                 ! Update the element cache
+                call cache_timer%start()
                 call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'all',           &
                                                                                    face          = NO_ID,           &
                                                                                    differentiate = differentiate,   &
                                                                                    lift          = .true.)
+                call cache_timer%stop()
 
 
                 ! Faces loop. For the current element, compute the 
                 ! contributions from boundary integrals.
+                call function_timer%start()
                 do iface = 1,NFACES
 
                     call worker%set_face(iface)
@@ -138,6 +140,7 @@ contains
                 ! Compute contributions from volume integrals
                 call eqnset%compute_volume_advective_operators(worker, differentiate)
                 call eqnset%compute_volume_diffusive_operators(worker, differentiate)
+                call function_timer%stop()
 
 
 
@@ -149,30 +152,30 @@ contains
                 if (real(loop_status,rk)/real(nelem_total,rk)*100. > percent_report) then
                     percent_complete = percent_complete + percent_report
                     loop_status = 0
-                    call write_line(percent_complete,' percent complete...',ltrim=.true.,io_proc=GLOBAL_MASTER,silence=(verbosity<4))
+                    call write_line('-',nint(percent_complete),'percent complete...',ltrim=.true.,io_proc=GLOBAL_MASTER,silence=(verbosity<4))
                 end if
 
 
 
             end do  ! ielem
         end do  ! idom
-        call loop_timer%stop()
 
 
 
 
         ! Synchronize
         call MPI_Barrier(ChiDG_COMM,ierr)
-        call timer%stop()
+        call total_timer%stop()
 
 
         ! Timing IO
-        call write_line('Spatial Discretization Time: ', timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('   - Spatial comm time: ', comm_timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('   - Spatial loop time: ', loop_timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('- total time: ',    total_timer%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('- comm time: ',     comm_timer%elapsed(),     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('- cache time: ',    cache_timer%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('- function time: ', function_timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
         if (present(timing)) then
-            timing = timer%elapsed()
+            timing = total_timer%elapsed()
         end if
 
 

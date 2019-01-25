@@ -8,7 +8,7 @@ add_subdirectory(laplacian_av)
 add_subdirectory(laplacian_anisotropic_av)
 add_subdirectory(sst)
 add_subdirectory(rstm_ssglrr_lnw)
-#add_subdirectory(rans_lowcache)
+add_subdirectory(rans_efficient)
 
 add_lib_sources(
                 eqn_euler.f90

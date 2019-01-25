@@ -238,6 +238,11 @@ contains
             end do !ielem
         end do !idom
 
+
+        ! Update stamp
+        self%stamp = A%stamp
+
+
     end subroutine update
     !*******************************************************************************************
 

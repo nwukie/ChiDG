@@ -2,6 +2,7 @@ module type_mesh
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: NO_ID, INTERIOR, NFACES, CARTESIAN, CYLINDRICAL
+    use mod_chidg_mpi,              only: NRANK, IRANK
     use type_element,               only: element_t
     use type_domain,                only: domain_t
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -12,7 +13,7 @@ module type_mesh
     use type_mpi_request_vector,    only: mpi_request_vector_t
     use mpi_f08,                    only: mpi_isend, mpi_recv, mpi_integer4, mpi_real8, &
                                           mpi_waitall, mpi_request, mpi_status_ignore,  &
-                                          mpi_statuses_ignore, mpi_character
+                                          mpi_statuses_ignore, mpi_character, mpi_sum
     use type_octree,                  only: octree_t
     implicit none
     private
@@ -32,12 +33,14 @@ module type_mesh
     type, public :: mesh_t
 
         integer(ik)                         :: ntime_
+        integer(ik)                         :: mesh_dof_start
 
         ! Local data
         type(domain_t),         allocatable :: domain(:)
         type(bc_patch_group_t), allocatable :: bc_patch_group(:)
 
         ! Parallel data
+        integer(ik),            allocatable :: nelements_per_proc(:)
         type(element_t),        allocatable :: parallel_element(:)
         type(mpi_request_vector_t)          :: comm_requests
 
@@ -49,6 +52,7 @@ module type_mesh
 
         ! Mesh procedures
         procedure           :: nelements
+        procedure           :: get_dof_start
 
         ! Domain procedures
         procedure           :: add_domain
@@ -56,13 +60,11 @@ module type_mesh
         procedure, private  :: new_domain
         procedure           :: ndomains
 
-
         ! Boundary patch group procedures
         procedure, private  :: new_bc_patch_group
         procedure           :: get_bc_patch_group_id
         procedure           :: nbc_patch_groups
         procedure           :: add_bc_patch
-
 
         ! Chimera
         procedure           :: assemble_chimera_data
@@ -73,14 +75,12 @@ module type_mesh
         ! Resouce management
         procedure           :: release
 
-
         ! Parallel communication pattern
         procedure           :: get_recv_procs
         procedure           :: get_send_procs
 
         procedure           :: get_proc_ninterior_neighbors
         procedure           :: get_proc_nchimera_donors
-        !procedure           :: get_proc_nchimera_receivers
         procedure           :: get_nelements_recv
 
         procedure           :: find_parallel_element
@@ -92,6 +92,7 @@ module type_mesh
         procedure           :: stub_new_domain
 
         ! Communication 
+        procedure           :: comm_nelements
         procedure           :: comm_send
         procedure           :: comm_recv
         procedure           :: comm_wait
@@ -1048,6 +1049,56 @@ contains
 
 
 
+    !>  Communicate number of elements on each process.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/24/2019
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine comm_nelements(self)
+        class(mesh_t),  intent(inout)   :: self
+
+        integer(ik)                 :: ierr
+        integer(ik), allocatable    :: buffer(:)
+
+        ! Allocate storage for number of elements on each process
+        allocate(self%nelements_per_proc(NRANK), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        self%nelements_per_proc = 0
+        buffer = self%nelements_per_proc
+
+
+        ! Fill current RANK entry
+        self%nelements_per_proc(IRANK) = self%nelements()
+
+
+        ! Reduce results
+        call MPI_AllReduce(self%nelements_per_proc,buffer,NRANK,MPI_INTEGER4,MPI_SUM,ChiDG_COMM,ierr)
+        self%nelements_per_proc = buffer
+
+
+    end subroutine comm_nelements
+    !*********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     !>  Initialiate parallel communication of mesh quantities.
     !!
     !!  Currently communicates just ALE quantities.
@@ -1148,7 +1199,7 @@ contains
                 
                         ! First send location of donor
                         call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,             5, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
-                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_data,                 8, mpi_integer4, iproc, 0, ChiDG_COMM, request(2), ierr)
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_data,                 9, mpi_integer4, iproc, 0, ChiDG_COMM, request(2), ierr)
                         call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords,        send_size_b, mpi_real8,    iproc, 0, ChiDG_COMM, request(3), ierr)
                         call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_def,    send_size_c, mpi_real8,    iproc, 0, ChiDG_COMM, request(4), ierr)
                         call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_vel,    send_size_d, mpi_real8,    iproc, 0, ChiDG_COMM, request(5), ierr)
@@ -1207,7 +1258,7 @@ contains
 !                
 !                        ! First send location of donor
 !                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,             5, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
-!                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_data,                 8, mpi_integer4, iproc, 0, ChiDG_COMM, request(2), ierr)
+!                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_data,                 9, mpi_integer4, iproc, 0, ChiDG_COMM, request(2), ierr)
 !                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords,        send_size_b, mpi_real8,    iproc, 0, ChiDG_COMM, request(3), ierr)
 !                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_def,    send_size_c, mpi_real8,    iproc, 0, ChiDG_COMM, request(4), ierr)
 !                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_vel,    send_size_d, mpi_real8,    iproc, 0, ChiDG_COMM, request(5), ierr)
@@ -1260,7 +1311,7 @@ contains
                                        idomain_g, ielement_g, coordinate_system,    & 
                                        recv_size_a, recv_size_b, recv_size_c,       &
                                        face_location(5), element_location(5),       &
-                                       element_data(8), spacedim, inode
+                                       element_data(9), spacedim, inode, dof_start
 
         logical :: parallel_donor
 
@@ -1318,7 +1369,7 @@ contains
 
 
                 ! element_data = [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level]
-                call mpi_recv(element_data,     8, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(element_data, 9, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
                 etype               = element_data(1)
                 spacedim            = element_data(2)
                 coordinate_system   = element_data(3)
@@ -1327,6 +1378,7 @@ contains
                 nterms_c            = element_data(6)
                 ntime               = element_data(7)
                 interpolation_level = element_data(8)
+                dof_start           = element_data(9)
                 nnodes = (etype+1)*(etype+1)*(etype+1)
                 
 
@@ -1398,7 +1450,7 @@ contains
                 end if
 
 
-                call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime)
+                call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start)
                 call self%parallel_element(pelem_ID)%set_displacements_velocities(nodes_disp,nodes_vel)
                 call self%parallel_element(pelem_ID)%update_interpolations_ale()
 
@@ -1490,6 +1542,64 @@ contains
 
     end function nelements
     !********************************************************************************
+
+
+
+
+
+    !>  Return the global dof starting index for a given element.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/24/2019
+    !!
+    !--------------------------------------------------------------------------------
+    function get_dof_start(self,idomain_l,ielement_l) result(idof_start)
+        class(mesh_t),  intent(in)  :: self
+        integer(ik),    intent(in)  :: idomain_l
+        integer(ik),    intent(in)  :: ielement_l
+
+
+        integer(ik) :: idof_start, ndof_prev, idom, end_elem, ielem
+
+        ! Sum DOF on ranks 0 to IRANK-1. Indexing goes to IRANK since Fortran starts at 1.
+        ! WARNING: ASSUMING ALL ELEMENTS ON OTHER PROCS HAVE SAME nterms_s
+        ndof_prev = sum(self%nelements_per_proc(1:IRANK))*self%domain(1)%elems(1)%nterms_s*self%domain(1)%elems(1)%neqns
+
+
+        ! Accumulate dofs on current RANK until idomain_l,ielement_l
+        do idom = 1,idomain_l
+
+            if (idom < idomain_l) then
+                end_elem = self%domain(idom)%nelements()
+            else if (idom == idomain_l) then
+                end_elem = ielement_l-1
+            end if
+
+            do ielem = 1,end_elem
+                ndof_prev = ndof_prev + self%domain(idom)%elems(ielem)%nterms_s*self%domain(idom)%elems(ielem)%neqns
+            end do
+
+        end do
+
+
+        ! dof index for requested element starts on dof after all previous
+        idof_start = ndof_prev + 1
+
+
+    end function get_dof_start
+    !********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

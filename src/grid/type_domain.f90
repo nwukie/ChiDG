@@ -57,6 +57,7 @@ module type_domain
         !
         integer(ik)                     :: idomain_g
         integer(ik)                     :: idomain_l
+        integer(ik)                     :: domain_dof_start
 
         integer(ik)                     :: neqns       = 0     ! N-equations being solved
         integer(ik)                     :: nterms_s    = 0     ! N-terms in solution expansion
@@ -127,6 +128,9 @@ module type_domain
         procedure,  public  :: get_nelements_global             ! Return number of elements in the global domain
         procedure,  public  :: get_nelements_local              ! Return number of elements in the processor-local domain
         procedure,  public  :: nelements => get_nelements_local ! Included for framework consistency
+
+        procedure,  public  :: get_dof_start
+        procedure,  public  :: get_dof_end
 
         final               :: destructor
 
@@ -297,28 +301,30 @@ contains
     !!  @date   11/9/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_sol(self,interpolation,level,nterms_s,neqns,ntime)
+    subroutine init_sol(self,interpolation,level,nterms_s,neqns,ntime,domain_dof_start)
         class(domain_t),    intent(inout)   :: self
         character(*),       intent(in)      :: interpolation
         integer(ik),        intent(in)      :: level
         integer(ik),        intent(in)      :: nterms_s
         integer(ik),        intent(in)      :: neqns
         integer(ik),        intent(in)      :: ntime
+        integer(ik),        intent(in)      :: domain_dof_start
 
         !
         ! Store number of equations and number of terms in solution expansion
         !
-        self%neqns    = neqns
-        self%nterms_s = nterms_s
-        self%ntime    = ntime
+        self%neqns            = neqns
+        self%nterms_s         = nterms_s
+        self%ntime            = ntime
+        self%domain_dof_start = domain_dof_start
 
         !
         ! Call numerics initialization for elements and faces
         !
         call self%init_elems_sol(interpolation,level,nterms_s,neqns,ntime)
         call self%init_faces_sol()               
-
         call self%update_interpolations_ale()
+
         !
         ! Confirm initialization
         !
@@ -499,6 +505,7 @@ contains
         integer(ik),        intent(in)      :: ntime
         integer(ik)                         :: ielem
 
+        integer(ik) :: dof_start
 
         !
         ! Store number of equations and number of terms in the solution expansion
@@ -511,7 +518,14 @@ contains
         ! Call the numerics initialization procedure for each element
         !
         do ielem = 1,self%nelem
-            call self%elems(ielem)%init_sol(interpolation,level,self%nterms_s,self%neqns,ntime) 
+            ! Compute dof starting index
+            if (ielem == 1) then
+                dof_start = self%domain_dof_start
+            else
+                dof_start = self%elems(ielem-1)%dof_start + 1
+            end if
+
+            call self%elems(ielem)%init_sol(interpolation,level,self%nterms_s,self%neqns,ntime,dof_start)
         end do
 
 
@@ -624,23 +638,18 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine init_comm_local(self)
-        class(domain_t),                  intent(inout)   :: self
-
+        class(domain_t),    intent(inout)   :: self
 
         integer(ik)             :: iface,ftype,ielem,ierr, ielem_neighbor,              &
-                                   corner_one, corner_two, corner_three, corner_four,   &
-                                   node_indices(4),                                     &
                                    ineighbor_domain_g,  ineighbor_domain_l,             &
                                    ineighbor_element_g, ineighbor_element_l,            &
                                    ineighbor_face,      ineighbor_proc,                 &
                                    ineighbor_neqns,     ineighbor_nterms_s,             &
+                                   ineighbor_dof_start,                                 &
                                    neighbor_status, idomain_g, idomain_l, ielement_g,   &
-                                   ielement_l, nterms_s, neqns
+                                   ielement_l, nterms_s, neqns, dof_start
 
         logical                 :: boundary_face = .false.
-        logical                 :: includes_node_one, includes_node_two,    &
-                                   includes_node_three, includes_node_four, &
-                                   neighbor_element
 
         !
         ! Loop through each local element and call initialization for each face
@@ -693,6 +702,7 @@ contains
                         ftype               = INTERIOR
                         ineighbor_neqns     = self%elems(ineighbor_element_l)%neqns
                         ineighbor_nterms_s  = self%elems(ineighbor_element_l)%nterms_s
+                        print*, 'domain%init_comm_local: need dof_start'
 
 
                     else
@@ -707,7 +717,9 @@ contains
                         ineighbor_face      = 0
                         ineighbor_neqns     = 0
                         ineighbor_nterms_s  = 0
+                        ineighbor_dof_start = 0
                         ineighbor_proc      = NO_PROC
+                        ineighbor_dof_start = 0
 
                     end if
 
@@ -715,10 +727,11 @@ contains
                     !
                     ! Call face neighbor initialization routine
                     !
-                    call self%faces(ielem,iface)%set_neighbor(ftype,ineighbor_domain_g, ineighbor_domain_l,    &
-                                                                    ineighbor_element_g,ineighbor_element_l,   &
-                                                                    ineighbor_face,     ineighbor_neqns,       &
-                                                                    ineighbor_nterms_s, ineighbor_proc)
+                    call self%faces(ielem,iface)%set_neighbor(ftype,ineighbor_domain_g, ineighbor_domain_l,     &
+                                                                    ineighbor_element_g,ineighbor_element_l,    &
+                                                                    ineighbor_face,     ineighbor_neqns,        &
+                                                                    ineighbor_nterms_s, ineighbor_proc,         &
+                                                                    ineighbor_dof_start)
 
                     !
                     ! Also, initialize neighbor face at the same time so we don't
@@ -733,10 +746,11 @@ contains
                         ielement_l = self%elems(ielem)%ielement_l
                         neqns      = self%elems(ielem)%neqns
                         nterms_s   = self%elems(ielem)%nterms_s
-                        call self%faces(ineighbor_element_l,ineighbor_face)%set_neighbor(ftype,idomain_g,  idomain_l,  &
-                                                                                               ielement_g, ielement_l, &
-                                                                                               iface,      neqns,      &
-                                                                                               nterms_s,   IRANK)
+                        dof_start  = self%elems(ielem)%dof_start
+                        call self%faces(ineighbor_element_l,ineighbor_face)%set_neighbor(ftype,idomain_g,  idomain_l,   &
+                                                                                               ielement_g, ielement_l,  &
+                                                                                               iface,      neqns,       &
+                                                                                               nterms_s,   IRANK, dof_start)
                     end if
 
                 end if
@@ -778,22 +792,16 @@ contains
 
 
         integer(ik)             :: iface,ftype,ielem,ierr, ielem_neighbor,              &
-                                   corner_one, corner_two, corner_three, corner_four,   &
-                                   node_indices(4),                                     &
                                    ineighbor_domain_g,  ineighbor_domain_l,             &
                                    ineighbor_element_g, ineighbor_element_l,            &
                                    ineighbor_face,      ineighbor_proc,                 &
-                                   ineighbor_neqns,     ineighbor_nterms_s, neighbor_status
-
-        logical                 :: includes_node_one, includes_node_two,    &
-                                   includes_node_three, includes_node_four, &
-                                   neighbor_element, searching
-
+                                   ineighbor_neqns,     ineighbor_nterms_s, neighbor_status, ineighbor_dof_start
 
         real(rk)                                :: neighbor_h(3)
         real(rk), allocatable, dimension(:,:)   :: neighbor_grad1,   neighbor_grad2,    &
                                                    neighbor_grad3,   neighbor_br2_face, &
                                                    neighbor_br2_vol, neighbor_invmass
+        logical :: searching
 
 
 
@@ -881,7 +889,7 @@ contains
                     call self%faces(ielem,iface)%set_neighbor(ftype,ineighbor_domain_g,  ineighbor_domain_l,   &
                                                                     ineighbor_element_g, ineighbor_element_l,  &
                                                                     ineighbor_face,      ineighbor_neqns,      &
-                                                                    ineighbor_nterms_s,  ineighbor_proc)
+                                                                    ineighbor_nterms_s,  ineighbor_proc, ineighbor_dof_start)
 
 
                 end if
@@ -944,10 +952,6 @@ contains
         ! also contained in an element, then they are neighbors.
         neighbor_element = .false.
         do ielem_l = 1,self%nelem
-            !includes_corner_one   = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(1) )
-            !includes_corner_two   = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(2) )
-            !includes_corner_three = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(3) )
-            !includes_corner_four  = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(4) )
             includes_corner_one   = any( self%elems(ielem_l)%connectivity == corner_indices(1) )
             includes_corner_two   = any( self%elems(ielem_l)%connectivity == corner_indices(2) )
             includes_corner_three = any( self%elems(ielem_l)%connectivity == corner_indices(3) )
@@ -1071,7 +1075,6 @@ contains
         ! Get the element-local node indices of the corner nodes that correspond 
         ! to the current face in an element connectivity list
         !
-        !mapping = self%elems(ielem_l)%connectivity%get_element_mapping()
         mapping = self%elems(ielem_l)%element_type
         corner_one   = FACE_CORNERS(iface,1,mapping)
         corner_two   = FACE_CORNERS(iface,2,mapping)
@@ -1083,10 +1086,6 @@ contains
         ! For the current face, get the global-indices of the coordinate nodes 
         ! for the corners
         !
-        !corner_indices(1) = self%elems(ielem_l)%connectivity%get_element_node(corner_one)
-        !corner_indices(2) = self%elems(ielem_l)%connectivity%get_element_node(corner_two)
-        !corner_indices(3) = self%elems(ielem_l)%connectivity%get_element_node(corner_three)
-        !corner_indices(4) = self%elems(ielem_l)%connectivity%get_element_node(corner_four)
         corner_indices(1) = self%elems(ielem_l)%connectivity(corner_one)
         corner_indices(2) = self%elems(ielem_l)%connectivity(corner_two)
         corner_indices(3) = self%elems(ielem_l)%connectivity(corner_three)
@@ -1731,6 +1730,55 @@ contains
         nelements = self%nelem
 
     end function get_nelements_local
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Return the starting index of the current domain dof's in the ChiDG-global dof list.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/25/2019
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_dof_start(self) result(dof_start)
+        class(domain_t),   intent(in)  :: self
+
+        integer(ik) :: dof_start
+
+        dof_start = self%domain_dof_start
+
+    end function get_dof_start
+    !****************************************************************************************
+
+
+
+
+
+    !>  Return the start
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/25/2019
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_dof_end(self) result(dof_end)
+        class(domain_t),   intent(in)  :: self
+
+        integer(ik) :: dof_end, ielem, dofs
+
+        ! Accumulate dof's
+        dofs = 0
+        do ielem = 1,self%nelements()
+            dofs = dofs + self%elems(ielem)%neqns*self%elems(ielem)%nterms_s
+        end do
+
+        dof_end = self%domain_dof_start + dofs - 1
+
+    end function get_dof_end
     !****************************************************************************************
 
 

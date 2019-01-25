@@ -8,7 +8,8 @@
 !!
 !-----------------------------------------------------------------------------
 module mod_chidg_mpi
-!#include <messenger.h>
+#include <petsc/finclude/petsc.h>
+use petsc,          only: PETSC_NULL_CHARACTER, PETSC_COMM_WORLD
     use mod_kinds,  only: rk, ik
     use mpi_f08
     implicit none
@@ -52,6 +53,10 @@ contains
         type(mpi_comm), intent(in), optional    :: comm
         integer :: ierr
 
+        PetscErrorCode perr
+
+
+
 
         !
         ! Check if MPI_Init has been called already or by someone else
@@ -77,6 +82,29 @@ contains
 
         call MPI_Comm_Size(ChiDG_COMM,NRANK,ierr)
         call MPI_Comm_Rank(ChiDG_COMM,IRANK,ierr)
+
+
+
+
+        ! Initialize PETSc
+        !if (petsc) then
+        PETSC_COMM_WORLD = ChiDG_COMM%mpi_val
+        call PetscInitialize(PETSC_NULL_CHARACTER,perr)
+        if (perr .ne. 0) then
+          print*,'Unable to initialize PETSc'
+          stop
+        endif
+
+        !n   = 20
+        !one = 1.0
+        !call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-n',n,flg,perr)
+
+
+
+
+
+
+
 
 
     end subroutine chidg_mpi_init

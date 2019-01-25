@@ -17,6 +17,7 @@ module type_face_info
         integer(ik)     :: ielement_g
         integer(ik)     :: ielement_l
         integer(ik)     :: iface        ! Element-local face index
+        integer(ik)     :: idof_start
 
     end type face_info_t
     !**********************************************************************************
@@ -37,7 +38,7 @@ contains
     !!  @date   7/21/2017
     !!
     !----------------------------------------------------------------------------------
-    function face_info_constructor(idomain_g, idomain_l, ielement_g, ielement_l, iface) result(face_info)
+    function face_info_constructor(idomain_g, idomain_l, ielement_g, ielement_l, iface, idof_start) result(face_info)
         integer(ik),    intent(in)  :: idomain_g
         integer(ik),    intent(in)  :: idomain_l
         integer(ik),    intent(in)  :: ielement_g
@@ -51,6 +52,7 @@ contains
         face_info%ielement_g = ielement_g
         face_info%ielement_l = ielement_l
         face_info%iface      = iface
+        face_info%idof_start = idof_start
 
     end function face_info_constructor
     !**********************************************************************************

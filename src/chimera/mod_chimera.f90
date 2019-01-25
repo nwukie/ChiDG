@@ -174,7 +174,7 @@ contains
                        neqns_list, nterms_s_list, nterms_c_list, iproc_list, eqn_ID_list,       &
                        local_domain_g, parallel_domain_g, donor_domain_g, donor_index,          &
                        donor_ID, send_ID
-        integer(ik) :: receiver_indices(5), parallel_indices(9)
+        integer(ik) :: receiver_indices(6), parallel_indices(10)
 
 
         real(rk)                :: donor_metric(3,3), parallel_metric(3,3)
@@ -269,7 +269,8 @@ contains
                             receiver_indices(3) = receiver%ielement_g
                             receiver_indices(4) = receiver%ielement_l
                             receiver_indices(5) = receiver%iface
-                            call MPI_BCast(receiver_indices,5,MPI_INTEGER4, iproc, ChiDG_COMM, ierr)
+                            receiver_indices(6) = receiver%idof_start
+                            call MPI_BCast(receiver_indices,6,MPI_INTEGER4, iproc, ChiDG_COMM, ierr)
 
 
 
@@ -372,7 +373,7 @@ contains
                                 ! Receive parallel donor index from processor indicated
                                 !
                                 idonor_proc = donor_proc_indices%at(donor_index)
-                                call MPI_Recv(parallel_indices,9,MPI_INTEGER4, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                call MPI_Recv(parallel_indices,10,MPI_INTEGER4, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
                                 donor%idomain_g  = parallel_indices(1)
                                 donor%idomain_l  = parallel_indices(2)
                                 donor%ielement_g = parallel_indices(3)
@@ -382,6 +383,7 @@ contains
                                 donor%neqns      = parallel_indices(7)
                                 donor%nterms_s   = parallel_indices(8)
                                 donor%nterms_c   = parallel_indices(9)
+                                donor%dof_start  = parallel_indices(10)
 
 
 
@@ -416,7 +418,7 @@ contains
                             ! Add donor
                             !
                             donor_ID = mesh%domain(idom)%chimera%recv(ichimera_face)%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, donor%iproc)
-                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%set_properties(donor%nterms_c,donor%nterms_s,donor%neqns,donor%eqn_ID)
+                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%set_properties(donor%nterms_c,donor%nterms_s,donor%neqns,donor%eqn_ID,donor%dof_start)
                             call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%add_node(igq,donor_coord,donor_metric,donor_jinv)
 
 
@@ -470,12 +472,13 @@ contains
                     !
                     ! Receive receiver indices
                     !
-                    call MPI_BCast(receiver_indices,5,MPI_INTEGER4, iproc, ChiDG_COMM, ierr)
+                    call MPI_BCast(receiver_indices,6,MPI_INTEGER4, iproc, ChiDG_COMM, ierr)
                     receiver = face_info(receiver_indices(1),   &
                                          receiver_indices(2),   &
                                          receiver_indices(3),   &
                                          receiver_indices(4),   &
-                                         receiver_indices(5)    &
+                                         receiver_indices(5),   &
+                                         receiver_indices(6)    &
                                          )
 
 
@@ -517,17 +520,18 @@ contains
 
                             ! 1: Send donor indices
                             ! 2: Send donor-local coordinate for the quadrature node
-                            parallel_indices(1) = donor%idomain_g
-                            parallel_indices(2) = donor%idomain_l
-                            parallel_indices(3) = donor%ielement_g
-                            parallel_indices(4) = donor%ielement_l
-                            parallel_indices(5) = donor%iproc
-                            parallel_indices(6) = donor%eqn_ID
-                            parallel_indices(7) = donor%neqns
-                            parallel_indices(8) = donor%nterms_s
-                            parallel_indices(9) = donor%nterms_c
+                            parallel_indices(1)  = donor%idomain_g
+                            parallel_indices(2)  = donor%idomain_l
+                            parallel_indices(3)  = donor%ielement_g
+                            parallel_indices(4)  = donor%ielement_l
+                            parallel_indices(5)  = donor%iproc
+                            parallel_indices(6)  = donor%eqn_ID
+                            parallel_indices(7)  = donor%neqns
+                            parallel_indices(8)  = donor%nterms_s
+                            parallel_indices(9)  = donor%nterms_c
+                            parallel_indices(10) = donor%dof_start
 
-                            call MPI_Send(parallel_indices,9,MPI_INTEGER4,iproc,0,ChiDG_COMM,ierr)
+                            call MPI_Send(parallel_indices,10,MPI_INTEGER4,iproc,0,ChiDG_COMM,ierr)
                             call MPI_Send(donor_coord,3,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
 
 
@@ -958,6 +962,7 @@ contains
             donor_element%neqns      = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
             donor_element%nterms_s   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
             donor_element%nterms_c   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
+            donor_element%dof_start  = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%dof_start
 
             xi   = donors_xi%at(1)
             eta  = donors_eta%at(1)
@@ -993,6 +998,7 @@ contains
             donor_element%neqns      = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
             donor_element%nterms_s   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
             donor_element%nterms_c   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
+            donor_element%dof_start  = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%dof_start
 
             ! Set donor coordinate and volume if present
             xi   = donors_xi%at(donor_index)

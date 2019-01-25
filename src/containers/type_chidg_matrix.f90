@@ -1,12 +1,12 @@
 module type_chidg_matrix
 #include <messenger.h>
 #include "petsc/finclude/petscmat.h"
-    use petscmat
-
-
+    use petscmat,               only: PETSC_DECIDE, MatCreate, MatSetType, MatSetSizes, MatSetUp, MatSetValues, tMat, ADD_VALUES
     use mod_kinds,              only: rk, ik
+    
     use mod_constants,          only: NO_ID, ZERO
-    use mod_chidg_mpi,          only: IRANK
+    use mod_chidg_mpi,          only: IRANK, ChiDG_COMM
+    use mpi_f08,                only: MPI_AllReduce, MPI_SUM, MPI_INTEGER4
     use type_densematrix,       only: densematrix_t
     use type_domain_matrix,     only: domain_matrix_t
     use type_mesh,              only: mesh_t
@@ -34,31 +34,35 @@ module type_chidg_matrix
     type, public :: chidg_matrix_t
 
         ! PETSC
-        type(tMat)  :: petsc_matrix
+        Mat         :: petsc_matrix
+        PetscInt    :: petsc_start
+        PetscInt    :: petsc_end
 
         ! ChiDG
         type(domain_matrix_t), allocatable    :: dom(:) ! Array of domain-matrices. One for each domain
         logical     :: local_initialized = .false.      ! Has the matrix processor-local data been initialized
         logical     :: recv_initialized  = .false.      ! Has matrix been initialized with information about chidg_vector%recv
 
-        integer     :: stamp(8) = NO_ID                 ! Stamp from date_and_time that gets updated when store routines are called
 
         ! backend dynamic procedures
-        !procedure(store_interface), pointer, pass :: store_b         => null()
-        !procedure(store_interface), pointer, pass :: store_chimera_b => null()
-        !procedure(store_interface), pointer, pass :: store_bc_b      => null()
-        !procedure(store_interface), pointer, pass :: store_hb_b      => null()
-        !procedure(store_interface), pointer, pass :: clear_b         => null()
+        procedure(init_interface),  pointer, pass :: init => chidg_init
+
+
         procedure(store_interface), pointer, pass :: store         => chidg_store
         procedure(store_interface), pointer, pass :: store_chimera => chidg_store_chimera
         procedure(store_interface), pointer, pass :: store_bc      => chidg_store_bc
         procedure(store_interface), pointer, pass :: store_hb      => chidg_store_hb
         procedure(clear_interface), pointer, pass :: clear         => chidg_clear
 
+
+
+        ! Stamp for uniqueness
+        integer     :: stamp(8) = NO_ID                 ! Stamp from date_and_time that gets updated when store routines are called
+
     contains
         ! Initializers
-        generic,    public  :: init => initialize
-        procedure,  private :: initialize               ! chidg_matrix initialization
+        !generic,    public  :: init => initialize
+        !procedure,  private :: initialize               ! chidg_matrix initialization
 
         procedure, public   :: init_recv                ! Initialize with information about chidg_vector%recv for mv multiply
 
@@ -84,6 +88,19 @@ module type_chidg_matrix
 
     end type chidg_matrix_t
     !*****************************************************************************************
+
+
+
+
+    interface 
+        subroutine init_interface(self,mesh,mtype)
+            import chidg_matrix_t
+            import mesh_t
+            class(chidg_matrix_t),  intent(inout)   :: self
+            type(mesh_t),           intent(in)      :: mesh
+            character(*),           intent(in)      :: mtype
+        end subroutine init_interface
+    end interface
 
 
     interface 
@@ -117,16 +134,13 @@ contains
 
 
 
-    !>  Subroutine for initializing chidg_matrix_t
+    !>  Subroutine for initializing chidg_matrix_t using chidg native backend storage.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  domains     Array of domain_t instances
-    !!  
-    !!
     !------------------------------------------------------------------------------------------
-    subroutine initialize(self,mesh,mtype)
+    subroutine chidg_init(self,mesh,mtype)
         class(chidg_matrix_t),  intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh
         character(*),           intent(in)      :: mtype
@@ -150,8 +164,132 @@ contains
         ! Set initialization to true
         self%local_initialized = .true.
 
-    end subroutine initialize
+    end subroutine chidg_init
     !******************************************************************************************
+
+
+
+
+    !>  Subroutine for initializing chidg_matrix_t using PETSc as backend storage container.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/24/2019
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_init(self,mesh,mtype)
+        class(chidg_matrix_t),  intent(inout)   :: self
+        type(mesh_t),           intent(in)      :: mesh
+        character(*),           intent(in)      :: mtype
+
+        integer(ik)     :: ndomains, idom, ielem
+        PetscErrorCode  ierr
+        PetscInt        nlocal_rows, nlocal_cols, nglobal_rows, nglobal_cols
+
+        ! Create matrix object
+        call MatCreate(ChiDG_COMM%mpi_val, self%petsc_matrix, ierr)
+        if (ierr /= 0) then
+            call chidg_signal(FATAL,'chidg_matrix%petsc_init: error creating PETSc matrix.')
+        end if
+
+
+        ! Set matrix type
+        call MatSetType(self%petsc_matrix, 'aij', ierr)
+        if (ierr /= 0) then
+            call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting PETSc matrix type.')
+        end if
+
+
+        !
+        ! Set matrix size
+        !
+        !---------------------------------------------
+
+        ! Compute proc-local degress-of-freedom
+        nlocal_rows = 0
+        do idom = 1,mesh%ndomains()
+            do ielem = 1,mesh%domain(idom)%nelements()
+                nlocal_rows = nlocal_rows + mesh%domain(idom)%elems(ielem)%nterms_s * mesh%domain(idom)%elems(ielem)%neqns
+            end do !ielem
+        end do !idom
+
+        ! Compute global degrees-of-freedom via reduction
+        call MPI_AllReduce(nlocal_rows,nglobal_rows,1,MPI_INTEGER4,MPI_SUM,ChiDG_COMM,ierr)
+        if (ierr /= 0) then
+            call chidg_signal(FATAL,'chidg_matrix%petsc_init: error reducing global degrees-of-freedom.')
+        end if
+        
+
+        nlocal_cols  = PETSC_DECIDE
+        nglobal_cols = nglobal_rows
+        call MatSetSizes(self%petsc_matrix,nlocal_rows,nlocal_cols,nglobal_rows,nglobal_cols,ierr)
+        if (ierr /= 0) then
+            call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc matrix sizes.')
+        end if
+        !---------------------------------------------
+
+
+        ! Set up matrix
+        call MatSetUp(self%petsc_matrix,ierr)
+        if (ierr /= 0) then
+            call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc matrix.')
+        end if
+
+
+        ! Determine global ownership range
+        call MatGetOwnershipRange(self%petsc_matrix,self%petsc_start,self%petsc_end,ierr)
+        if (ierr /= 0) then
+            call chidg_signal(FATAL,'chidg_matrix%petsc_init: error getting PETSc matrix ownership range.')
+        end if
+
+
+
+
+!        ! Deallocate storage if necessary in case this is being called as a 
+!        ! reinitialization routine.
+!        if (allocated(self%dom)) deallocate(self%dom)
+!
+!        ! Allocate domain_matrix_t for each domain
+!        ndomains = mesh%ndomains()
+!        allocate(self%dom(ndomains), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!        ! Call initialization procedure for each domain_matrix_t
+!        do idom = 1,ndomains
+!             call self%dom(idom)%init(mesh,idom,mtype=mtype)
+!        end do
+
+
+
+
+        ! Set initialization to true
+        self%local_initialized = .true.
+
+    end subroutine petsc_init
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -533,6 +671,83 @@ contains
 
     end subroutine chidg_store
     !*******************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_store(self,integral,face_info,seed,ivar,itime)
+        class(chidg_matrix_t),  intent(inout)   :: self
+        type(AD_D),             intent(in)      :: integral(:)
+        type(face_info_t),      intent(in)      :: face_info
+        type(seed_t),           intent(in)      :: seed
+        integer(ik),            intent(in)      :: ivar 
+        integer(ik),            intent(in)      :: itime
+
+        integer(ik) :: iarray, i
+
+        PetscErrorCode          :: ierr
+        PetscInt                :: nrows, ncols, row_index_start, col_index_start
+        PetscInt, allocatable   :: col_indices(:)
+        
+
+!        idomain_l = face_info%idomain_l
+!
+!        ! Store linearization in associated domain domain_matrix_t
+!        call self%dom(idomain_l)%store(integral,face_info,seed,ivar,itime)
+
+
+!        ! Compute correct row offest for ivar
+!        irow_start = ( (ivar-1) * nterms )
+!        
+!        ! Loop through integral values, for each value store its derivative.
+!        ! The integral values here should be components of the RHS vector. 
+!        ! An array of partial derivatives from an AD_A variable should be stored 
+!        ! as a row in the block matrix
+!        do iarray = 1,size(integral)
+!            ! Do a += operation to add derivaties to any that are currently stored
+!            irow = irow_start + iarray
+!            self%data_(index)%mat(irow,:) = self%data_(index)%mat(irow,:) + integral(iarray)%xp_ad_
+!        end do
+
+
+!        row_index_start = face_info%idof_start
+!        col_index_start = seed%idof_start
+        col_indices = [(i, i=col_index_start,(col_index_start+seed%neqns*seed%nterms_s-1),1)]
+
+
+        print*, 'chidg_matrix%petsc_store: WARNING!!!!!!!!!!!! BAD INDICES!'
+
+        nrows = 1
+        ncols = size(integral(1)%xp_ad_)
+        do iarray = 1,size(integral)
+            ! subtract 1 from indices since petsc is 0-based
+            call MatSetValues(self%petsc_matrix,nrows,[row_index_start + iarray - 1],ncols,[col_index_start-1],integral(iarray)%xp_ad_,ADD_VALUES,ierr)
+        end do 
+
+
+
+        ! Update stamp
+        call date_and_time(values=self%stamp)
+
+    end subroutine petsc_store
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

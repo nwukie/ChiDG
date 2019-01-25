@@ -4,7 +4,7 @@ module type_face
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX,                 &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR,    &
                                       NO_INTERIOR_NEIGHBOR, NO_PROC,                    &
-                                      ZERO, ONE, TWO, ORPHAN, NO_MM_ASSIGNED, CARTESIAN, CYLINDRICAL
+                                      ZERO, ONE, TWO, ORPHAN, NO_MM_ASSIGNED, CARTESIAN, CYLINDRICAL, NO_ID
     use type_reference_element, only: reference_element_t
     use type_element,           only: element_t
     use type_densevector,       only: densevector_t
@@ -34,7 +34,6 @@ module type_face
     !------------------------------------------------------------------------------------------
     type, public :: face_t
 
-
         ! Self information
         integer(ik)             :: spacedim         ! Number of spatial dimensions
         integer(ik)             :: ftype            ! INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
@@ -59,7 +58,7 @@ module type_face
 
 
         ! Neighbor information
-        integer(ik)             :: neighbor_location(5) = 0         ! [idomain_g, idomain_l, ielement_g, ielement_l, iface]
+        integer(ik)             :: neighbor_location(6) = 0         ! [idomain_g, idomain_l, ielement_g, ielement_l, iface]
         integer(ik)             :: ineighbor_proc       = NO_PROC   ! MPI processor rank of the neighboring element
         integer(ik)             :: ineighbor_domain_g   = 0         ! Global index of the neighboring element's domain
         integer(ik)             :: ineighbor_domain_l   = 0         ! Processor-local index of the neighboring element's domain
@@ -68,6 +67,7 @@ module type_face
         integer(ik)             :: ineighbor_face       = 0
         integer(ik)             :: ineighbor_neqns      = 0
         integer(ik)             :: ineighbor_nterms_s   = 0
+        integer(ik)             :: ineighbor_dof_start  = 0
         integer(ik)             :: recv_comm            = 0
         integer(ik)             :: recv_domain          = 0
         integer(ik)             :: recv_element         = 0
@@ -239,9 +239,10 @@ contains
         self%ineighbor_element_l = NO_INTERIOR_NEIGHBOR
         self%ineighbor_face      = NO_INTERIOR_NEIGHBOR
         self%ineighbor_proc      = NO_PROC
+        self%ineighbor_dof_start = NO_ID
         self%neighbor_location = [self%ineighbor_domain_g, self%ineighbor_domain_l, &
                                   self%ineighbor_element_g, self%ineighbor_element_l, &
-                                  self%ineighbor_face]
+                                  self%ineighbor_face, self%ineighbor_dof_start]
         
 
         !
@@ -1161,7 +1162,7 @@ contains
     subroutine set_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,              &
                                        ineighbor_element_g,ineighbor_element_l,            &
                                        ineighbor_face,ineighbor_neqns, ineighbor_nterms_s, &
-                                       ineighbor_proc)
+                                       ineighbor_proc,ineighbor_dof_start)
         class(face_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: ftype
         integer(ik),    intent(in)      :: ineighbor_domain_g
@@ -1169,9 +1170,10 @@ contains
         integer(ik),    intent(in)      :: ineighbor_element_g
         integer(ik),    intent(in)      :: ineighbor_element_l
         integer(ik),    intent(in)      :: ineighbor_face
-        integer(ik),    intent(in)      :: ineighbor_proc
         integer(ik),    intent(in)      :: ineighbor_neqns
         integer(ik),    intent(in)      :: ineighbor_nterms_s
+        integer(ik),    intent(in)      :: ineighbor_proc
+        integer(ik),    intent(in)      :: ineighbor_dof_start
 
 
         self%ftype               = ftype
@@ -1183,10 +1185,11 @@ contains
         self%ineighbor_neqns     = ineighbor_neqns
         self%ineighbor_nterms_s  = ineighbor_nterms_s
         self%ineighbor_proc      = ineighbor_proc
+        self%ineighbor_dof_start = ineighbor_dof_start
 
         self%neighbor_location = [ineighbor_domain_g,  ineighbor_domain_l,  &
                                   ineighbor_element_g, ineighbor_element_l, &
-                                  ineighbor_face]
+                                  ineighbor_face, ineighbor_dof_start]
 
         self%neighborInitialized = .true.
 

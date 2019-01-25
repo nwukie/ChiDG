@@ -11,10 +11,6 @@
 !---------------------------------------------------------------------------------------------
 program driver
 #include <messenger.h>
-
-#include <petsc/finclude/petscvec.h>
-    use petscvec
-
     use type_chidg,                 only: chidg_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
@@ -41,30 +37,6 @@ program driver
     class(function_t),              allocatable :: fcn
 
 
-      Vec               x
-      PetscReal         norm
-      PetscBool  flg
-      PetscMPIInt rank
-      PetscInt n,bs,comp
-      PetscErrorCode perr
-      PetscScalar       one
-
-      call PetscInitialize(PETSC_NULL_CHARACTER,perr)
-      if (perr .ne. 0) then
-        print*,'Unable to initialize PETSc'
-        stop
-      endif
-      call MPI_Comm_rank(PETSC_COMM_WORLD,rank,perr)
-
-      n   = 20
-      one = 1.0
-      call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-n',n,flg,perr)
-
-
-
-
-
-
 
 
     ! Check for command-line arguments
@@ -78,6 +50,7 @@ program driver
         call chidg%start_up('mpi')
         call chidg%start_up('namelist')
         call chidg%start_up('core')
+
 
 
         ! Set ChiDG Algorithms, Accuracy

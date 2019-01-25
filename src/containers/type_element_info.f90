@@ -24,6 +24,7 @@ module type_element_info
         integer(ik) :: neqns      = NO_ID
         integer(ik) :: nterms_s   = NO_ID
         integer(ik) :: nterms_c   = NO_ID
+        integer(ik) :: dof_start  = NO_ID
 
     end type element_info_t
     !*********************************************************************

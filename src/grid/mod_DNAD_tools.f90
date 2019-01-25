@@ -280,6 +280,7 @@ contains
                                nterms_s     = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,    &
                                iproc        = IRANK,                                                &
                                itime        = itime,                                                &
+                               dof_start    = mesh%domain(idomain_l)%elems(ielement_l)%dof_start,   &
                                recv_comm    = 0,                                                    &
                                recv_domain  = 0,                                                    &
                                recv_element = 0)
@@ -304,6 +305,7 @@ contains
                                    nterms_s     = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,    &
                                    iproc        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,        &
                                    itime        = itime,                                                                &
+                                   dof_start    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start,   &
                                    recv_comm    = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,             &
                                    recv_domain  = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,           &
                                    recv_element = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_element)
@@ -320,6 +322,7 @@ contains
                                    nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nterms_s,       &
                                    iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%iproc,          &
                                    itime        = itime,                                                                    &
+                                   dof_start    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%dof_start,      &
                                    recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_comm,      &
                                    recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_domain,    &
                                    recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_element )
@@ -343,6 +346,7 @@ contains
                                    nterms_s     = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(idepend),    &
                                    iproc        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend),        &
                                    itime        = itime,                                                                                &
+                                   dof_start    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(idepend),   &
                                    recv_comm    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(idepend),   &
                                    recv_domain  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(idepend), &
                                    recv_element = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(idepend) )
@@ -364,16 +368,17 @@ contains
         else
 
             ! no linearization. 
-            call seed%init(idomain_g    = 0,     &
-                           idomain_l    = 0,     &
-                           ielement_g   = 0,     &
-                           ielement_l   = 0,     &
-                           neqns        = 0,     &
-                           nterms_s     = 0,     &
-                           iproc        = 0,     &
-                           itime        = itime, &  ! need itime here because the residual storage relies on it
-                           recv_comm    = 0,     &
-                           recv_domain  = 0,     &
+            call seed%init(idomain_g    = 0,            &
+                           idomain_l    = 0,            &
+                           ielement_g   = 0,            &
+                           ielement_l   = 0,            &
+                           neqns        = 0,            &
+                           nterms_s     = 0,            &
+                           iproc        = 0,            &
+                           itime        = itime,        &  ! need itime here because the residual storage relies on it
+                           dof_start    = 0,            &
+                           recv_comm    = 0,            &
+                           recv_domain  = 0,            &
                            recv_element = 0)
 
 
@@ -452,6 +457,7 @@ contains
                                nterms_s     = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,    &
                                iproc        = IRANK,                                                &
                                itime        = itime_couple,                                         &
+                               dof_start    = mesh%get_dof_start(idomain_l,ielement_l),             &
                                recv_comm    = 0,                                                    &
                                recv_domain  = 0,                                                    &
                                recv_element = 0)
@@ -488,6 +494,7 @@ contains
                                    nterms_s     = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,    &
                                    iproc        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,        &
                                    itime        = itime_couple,                                                         &
+                                   dof_start    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start,   &
                                    recv_comm    = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,             &
                                    recv_domain  = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,           &
                                    recv_element = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_element)
@@ -507,6 +514,7 @@ contains
                                    nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nterms_s,       &
                                    iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%iproc,          &
                                    itime        = itime_couple,                                                             &
+                                   dof_start    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%dof_start,      &
                                    recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_comm,      &
                                    recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_domain,    &
                                    recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_element )
@@ -529,6 +537,7 @@ contains
                                    nterms_s     = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(idepend),    &
                                    iproc        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend),        &
                                    itime        = itime_couple,                                                                         &
+                                   dof_start    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(idepend),   &
                                    recv_comm    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(idepend),   &
                                    recv_domain  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(idepend), &
                                    recv_element = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(idepend) )
@@ -554,6 +563,7 @@ contains
                            nterms_s     = 0, &
                            iproc        = 0, &
                            itime        = 0, &
+                           dof_start    = 0, &
                            recv_comm    = 0, &
                            recv_domain  = 0, &
                            recv_element = 0)

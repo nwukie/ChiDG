@@ -104,12 +104,12 @@ contains
                 call rans_rstm_eqns%add_model('Strain Rate')
                 call rans_rstm_eqns%add_model('Rotation Rate')
                 call rans_rstm_eqns%add_model('Wall Distance : p-Poisson Normalization')
-                call rans_rstm_eqns%add_model('Zero Turbulent Model Fields')
+                !call rans_rstm_eqns%add_model('Zero Turbulent Model Fields')
                 
                 
                 call rans_rstm_eqns%add_model('RSTMSSGLRRW Realizable Reynolds Stress')
-                call rans_rstm_eqns%add_model('RSTMSSGLRRW Turbulence Quantities')
                 call rans_rstm_eqns%add_model('RSTMSSGLRRW LRR Coefficients')
+                call rans_rstm_eqns%add_model('RSTMSSGLRRW Turbulence Quantities')
                 call rans_rstm_eqns%add_model('RSTMSSGLRRW Production')
                 call rans_rstm_eqns%add_model('RSTMSSGLRRW Isotropic Dissipation')
                 call rans_rstm_eqns%add_model('RSTMSSGLRRW Pressure-Strain Correlation')

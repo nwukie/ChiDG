@@ -13,6 +13,7 @@ module model_rstm_ssglrrw_turbulence_quantities
     use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
     use ieee_arithmetic,        only: ieee_is_nan
+    use mod_fluid,              only: cp
     use mod_rstm_ssglrrw
 
     implicit none
@@ -133,6 +134,9 @@ contains
         call self%add_model_field('Omega Source Term')
 
         call self%add_model_field('Equivalent Eddy Viscosity')
+        call self%add_model_field('Turbulent Viscosity')
+        call self%add_model_field('Second Coefficient of Turbulent Viscosity')
+        call self%add_model_field('Turbulent Thermal Conductivity')
     end subroutine init
     !***************************************************************************************
 
@@ -326,10 +330,21 @@ contains
         call worker%store_model_field('Reynolds-23 - Gradient 2', 'value', grad2_reynolds_23)
         call worker%store_model_field('Reynolds-23 - Gradient 3', 'value', grad3_reynolds_23)
 
+        !
+        ! Get realizable Reynolds stress tensor
+        !
+        reynolds_11 = worker%get_field('Reynolds-11', 'value')
+        reynolds_22 = worker%get_field('Reynolds-22', 'value')
+        reynolds_33 = worker%get_field('Reynolds-33', 'value')
+        reynolds_12 = worker%get_field('Reynolds-12', 'value')
+        reynolds_13 = worker%get_field('Reynolds-13', 'value')
+        reynolds_23 = worker%get_field('Reynolds-23', 'value')
+
 
         k_t = 0.5_rk*((reynolds_11)+(reynolds_22)+(reynolds_33))
+        !k_t = k_t*sin_ramp(k_t, 0.0_rk, 10.0_rk*rstm_ssglrrw_k_infty)
         
-        k_t = 0.5_rk*(abs(k_t)+k_t)
+        !k_t = 0.5_rk*(abs(k_t)+k_t)
 
 
         grad1_k_t = 0.5_rk*(grad1_reynolds_11 + grad1_reynolds_22 + grad1_reynolds_33)
@@ -338,12 +353,12 @@ contains
 
         epsilon_t = SSG_LRRW_cmu*k_t*exp(omega)
 
-        anisotropy_11 = reynolds_11/(k_t+0.0e-16_rk)-(2.0_rk/3.0_rk)
-        anisotropy_22 = reynolds_22/(k_t+0.0e-16_rk)-(2.0_rk/3.0_rk)
-        anisotropy_33 = reynolds_33/(k_t+0.0e-16_rk)-(2.0_rk/3.0_rk)
-        anisotropy_12 = reynolds_12/(k_t+0.0e-16_rk)
-        anisotropy_13 = reynolds_13/(k_t+0.0e-16_rk)
-        anisotropy_23 = reynolds_23/(k_t+0.0e-16_rk)
+        anisotropy_11 = reynolds_11/(k_t+1.0e-14_rk)-(2.0_rk/3.0_rk)
+        anisotropy_22 = reynolds_22/(k_t+1.0e-14_rk)-(2.0_rk/3.0_rk)
+        anisotropy_33 = reynolds_33/(k_t+1.0e-14_rk)-(2.0_rk/3.0_rk)
+        anisotropy_12 = reynolds_12/(k_t+1.0e-14_rk)
+        anisotropy_13 = reynolds_13/(k_t+1.0e-14_rk)
+        anisotropy_23 = reynolds_23/(k_t+1.0e-14_rk)
 
 
 
@@ -363,7 +378,8 @@ contains
         call worker%store_model_field('Anisotropy-23', 'value', anisotropy_23)
 
         temp1 = grad1_k_t*grad1_omega+grad2_k_t*grad2_omega+grad3_k_t*grad3_omega
-        temp2 = 0.5_rk*(abs(temp1) + temp1)
+        temp2 = temp1*sin_ramp(temp1, 0.0_rk, 10.0_rk*rstm_ssglrrw_k_infty)
+        !temp2 = 0.5_rk*(abs(temp1) + temp1)
         !temp2 = max(temp1, ZERO)
         omega_source_term = (density*exp(-omega))*temp2
 
@@ -373,6 +389,9 @@ contains
         mu_t = density*k_t*exp(-omega)
         call worker%store_model_field('Equivalent Eddy Viscosity', 'value', (mu_t))
 
+        call worker%store_model_field('Turbulent Viscosity', 'value', ZERO*(mu_t))
+        call worker%store_model_field('Second Coefficient of Turbulent Viscosity', 'value', ZERO*(mu_t))
+        call worker%store_model_field('Turbulent Thermal Conductivity', 'value', cp*(mu_t)/0.9_rk)
     end subroutine compute
     !***************************************************************************************
 

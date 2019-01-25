@@ -281,13 +281,13 @@ contains
             !
             ! Compute shear stress components
             !
-            shear_11 = TWO*mu*grad1_u  +  lamda*(div_velocity)  -   blend*density*reynolds_11
-            shear_22 = TWO*mu*grad2_v  +  lamda*(div_velocity)  -   blend*density*reynolds_22
-            shear_33 = TWO*mu*grad3_w  +  lamda*(div_velocity)  -   blend*density*reynolds_33
+            shear_11 = TWO*mu*grad1_u  +  lamda*(div_velocity)  -   density*reynolds_11
+            shear_22 = TWO*mu*grad2_v  +  lamda*(div_velocity)  -   density*reynolds_22
+            shear_33 = TWO*mu*grad3_w  +  lamda*(div_velocity)  -   density*reynolds_33
 
-            shear_12 = mu*(grad2_u + grad1_v)   -   blend*density*reynolds_12
-            shear_13 = mu*(grad3_u + grad1_w)   -   blend*density*reynolds_13
-            shear_23 = mu*(grad2_w + grad3_v)   -   blend*density*reynolds_23
+            shear_12 = mu*(grad2_u + grad1_v)   -   density*reynolds_12
+            shear_13 = mu*(grad3_u + grad1_w)   -   density*reynolds_13
+            shear_23 = mu*(grad2_w + grad3_v)   -   density*reynolds_23
 
 
 

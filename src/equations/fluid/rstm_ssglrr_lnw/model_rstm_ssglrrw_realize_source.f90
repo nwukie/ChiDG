@@ -58,6 +58,8 @@ contains
         call self%add_model_field('Realizability Source-13')
         call self%add_model_field('Realizability Source-23')
 
+        call self%add_model_field('Sustaining Source-R')
+        call self%add_model_field('Sustaining Source-Omega')
 
 
     end subroutine init
@@ -80,6 +82,7 @@ contains
 
         type(AD_D), dimension(:),   allocatable ::              &
                 density, epsilon_t,                             &
+                omega, R_sust, beta_w, omega_sust,              &
                 r_11, r_22, r_33, r_12, r_13, r_23, det_r,      &
                 src_11, src_22, src_33, src_12, src_13, src_23, &
                 realizability_source_11, realizability_source_22, realizability_source_33, &
@@ -130,8 +133,15 @@ contains
         call worker%store_model_field('Realizability Source-23', 'value', src_23)
 
 
+        R_sust = (TWO/THREE)*SSG_LRRW_cmu*density*rstm_ssglrrw_k_infty*rstm_ssglrrw_omega_infty
+        call worker%store_model_field('Sustaining Source-R', 'value', R_sust)
+ 
 
+        omega     = worker%get_field('Density * Omega',    'value')/density
+        beta_w    = worker%get_field('RSTMSSGLRRW Beta-w',    'value')
+        omega_sust = beta_w*density*rstm_ssglrrw_omega_infty**TWO*exp(-omega)
 
+        call worker%store_model_field('Sustaining Source-Omega', 'value', omega_sust)
     end subroutine compute
     !***************************************************************************************
 

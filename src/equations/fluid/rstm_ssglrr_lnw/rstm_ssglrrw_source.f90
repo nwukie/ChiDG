@@ -63,6 +63,7 @@ contains
         call self%add_primary_field('Density * Reynolds-12')
         call self%add_primary_field('Density * Reynolds-13')
         call self%add_primary_field('Density * Reynolds-23')
+        call self%add_primary_field('Energy')
 
         call self%add_auxiliary_field('Wall Distance : p-Poisson')
         call self%add_model('Wall Distance : p-Poisson Normalization')
@@ -93,7 +94,7 @@ contains
             dissipation_11, dissipation_22, dissipation_33,                    &
             dissipation_12, dissipation_13, dissipation_23,                    &
             rsrc_11, rsrc_22, rsrc_33, rsrc_12, rsrc_13, rsrc_23, &
-            source, mu_l, mu_t
+            source, mu_l, mu_t, ssrc_R, ssrc_omega
 
         real(rk)    :: const, epsilon_vorticity, eps
 
@@ -139,6 +140,10 @@ contains
         rsrc_12   = worker%get_field('Realizability Source-12', 'value', 'element')
         rsrc_13   = worker%get_field('Realizability Source-13', 'value', 'element')
         rsrc_23   = worker%get_field('Realizability Source-23', 'value', 'element')
+
+        ssrc_R     = worker%get_field('Sustaining Source-R', 'value', 'element')
+        ssrc_omega   = worker%get_field('Sustaining Source-Omega', 'value', 'element')
+
         !
         ! Interpolate solution to quadrature nodes
         !
@@ -150,7 +155,7 @@ contains
         !                       Omega Source Term
         !========================================================================
         !source = HALF*alpha_w*omega*production_trace/k_t - beta_w*density_omega*omega+sigma_d_w*omega_source_term
-        source = HALF*(5.0_rk/9.0_rk)*production_trace/(k_t+1.0e-16) -(3.0_rk/40.0_rk)*density*exp(omega) + (mu_l+0.5_rk*mu_t)*omega_source_term
+        source = HALF*(5.0_rk/9.0_rk)*production_trace/(k_t+1.0e-16) -(3.0_rk/40.0_rk)*density*exp(omega) + (mu_l+0.5_rk*mu_t)*omega_source_term + ssrc_omega
         !source = ZERO
 
         call worker%integrate_volume_source('Density * Omega',source)
@@ -158,7 +163,7 @@ contains
         !========================================================================
         !                       R_11 Source Term
         !========================================================================
-        source = production_11 + pressure_strain_11 - dissipation_11 + rsrc_11
+        source = production_11 + pressure_strain_11 - dissipation_11 + rsrc_11 + ssrc_R
         !source = ZERO
 
         call worker%integrate_volume_source('Density * Reynolds-11',source)
@@ -166,7 +171,7 @@ contains
         !========================================================================
         !                       R_22 Source Term
         !========================================================================
-        source = production_22 + pressure_strain_22 - dissipation_22 + rsrc_22
+        source = production_22 + pressure_strain_22 - dissipation_22 + rsrc_22 + ssrc_R
         !source = ZERO
 
         call worker%integrate_volume_source('Density * Reynolds-22',source)
@@ -174,7 +179,7 @@ contains
         !========================================================================
         !                       R_33 Source Term
         !========================================================================
-        source = production_33 + pressure_strain_33 - dissipation_33 + rsrc_33
+        source = production_33 + pressure_strain_33 - dissipation_33 + rsrc_33 + ssrc_R
         !source = ZERO
 
         call worker%integrate_volume_source('Density * Reynolds-33',source)
@@ -203,7 +208,16 @@ contains
 
         call worker%integrate_volume_source('Density * Reynolds-23',source)
 
+        !========================================================================
+        !                       Energy Source Term - to conserve energy
+        !========================================================================
+        source = -0.5_rk*(production_11 + production_22 + production_33 &
+        - dissipation_11 - dissipation_22 - dissipation_33 + 3.0_rk*ssrc_R)
+        !source = ZERO
 
+        call worker%integrate_volume_source('Energy',source)
+
+ 
     end subroutine compute
     !*********************************************************************************************************
 

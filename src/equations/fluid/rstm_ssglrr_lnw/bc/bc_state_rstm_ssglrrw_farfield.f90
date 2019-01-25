@@ -308,7 +308,7 @@ contains
         ! Compute FF values
         if (allocated(density_reynolds_m)) deallocate(density_reynolds_m)
         density_reynolds_m  = worker%get_field('Density * Reynolds-12', 'value', 'face interior')
-        density_reynolds_bc = ZERO*density_reynolds_m
+        density_reynolds_bc = density_reynolds_m
     !    where(inflow)
     !        density_reynolds_bc = ZERO*density_reynolds_ff
     !    end where
@@ -341,7 +341,7 @@ contains
         ! Compute FF values
         if (allocated(density_reynolds_m)) deallocate(density_reynolds_m)
         density_reynolds_m  = worker%get_field('Density * Reynolds-13', 'value', 'face interior')
-        density_reynolds_bc = ZERO*density_reynolds_m
+        density_reynolds_bc = density_reynolds_m
     !    where(inflow)
     !        density_reynolds_bc = ZERO*density_reynolds_ff
     !    end where
@@ -374,7 +374,7 @@ contains
         ! Compute FF values
         if (allocated(density_reynolds_m)) deallocate(density_reynolds_m)
         density_reynolds_m  = worker%get_field('Density * Reynolds-23', 'value', 'face interior')
-        density_reynolds_bc = ZERO*density_reynolds_m
+        density_reynolds_bc = density_reynolds_m
     !    where(inflow)
     !        density_reynolds_bc = ZERO*density_reynolds_ff
     !    end where

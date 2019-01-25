@@ -59,7 +59,7 @@ module mod_rstm_ssglrrw
     real(rk), parameter :: SSG_LRRW_sigma_d_e       = 1.712_rk
     real(rk), parameter :: SSG_LRRW_sigma_d_w       = 0.0_rk
 
-    real(rk), parameter :: rstm_ssglrrw_avc        = 75.0_rk
+    real(rk), parameter :: rstm_ssglrrw_avc        = 50.0_rk
 
     real(rk), parameter :: rstm_ssglrrw_k_infty        = 1.0e-3_rk
     real(rk), parameter :: rstm_ssglrrw_omega_infty        = 345.0_rk

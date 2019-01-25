@@ -254,15 +254,11 @@ contains
 
         integer(ik) :: istart, iend
 
-        !
         ! Compute start and end indices for accessing modes of a variable
-        !
         istart = (self%nvars_ * self%nterms_)*(itime - 1) + 1
         iend = istart + (self%nvars_ * self%nterms_ - 1)
 
-        !
         ! Set modes
-        !
         self%vec(istart:iend) = vals
 
     end subroutine settime
@@ -287,15 +283,11 @@ contains
         integer(ik)             :: istart, iend
         real(rk),   allocatable :: vals_out(:)
 
-        !
         ! Compute start and end indices for accessing modes of a variable
-        !
         istart = (self%nvars_ * self%nterms_)*(itime - 1) + 1
         iend = istart + (self%nvars_ * self%nterms_ - 1)
 
-        !
         ! Return values at particular time
-        !
         vals_out = self%vec(istart:iend)
 
     end function gettime
@@ -331,16 +323,11 @@ contains
         real(rk)                                :: modes_out(self%nterms_)
         integer(ik)                             :: istart, iend
        
-        
-        !
         ! Compute start and end indices for accessing modes of a variable
-        !
         istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1) + 1
         iend = istart + (self%nterms_ - 1)
 
-        !
         ! Return modes
-        !
         modes_out = self%vec(istart:iend)
 
     end function getvar
@@ -379,16 +366,11 @@ contains
 
         integer(ik) :: istart, iend    
 
-
-        !
         ! Compute start and end indices for accessing modes of a variable
-        !
         istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1) + 1
         iend = istart + (self%nterms_ - 1) 
 
-        !
         ! Set modes
-        !
         self%vec(istart:iend) = vals
 
     end subroutine setvar
@@ -423,15 +405,11 @@ contains
         real(rk)    :: mode_out
         integer(ik) :: istart, iterm_g
  
-        !
         ! Compute start and end indices for accessing modes of a variable
-        !
         istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1) + 1
         iterm_g = istart + iterm
         
-        !
         ! Get mode
-        !
         mode_out = self%vec(iterm_g)
 
     end function getterm
@@ -466,23 +444,15 @@ contains
 
         integer(ik) :: istart, iterm_g
 
-        !
         ! Compute start and end indices for accessing modes of a variable
-        !
         istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1) + 1
         iterm_g = istart + iterm
 
-
-        !
         ! Set mode
-        !
         self%vec(iterm_g) = mode_in
 
     end subroutine setterm
     !********************************************************************************
-
-
-
 
 
 
@@ -505,7 +475,6 @@ contains
 
     end function nentries
     !********************************************************************************
-
 
 
 
@@ -592,27 +561,19 @@ contains
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: ntime_in
 
-        !
         ! Set ntime
-        !
         self%ntime_ = ntime_in
 
 
-        !
         ! Reinitialize the densevector
         ! TODO: Move outside this subroutine?
-        !
         call init(self,self%nterms_,self%nvars_,self%ntime_,self%dparent_g_, &
                   self%dparent_l_, self%eparent_g_, self%eparent_l_)
-
 
     end subroutine set_ntime
     !********************************************************************************
   
     
-
-
-
 
 
 

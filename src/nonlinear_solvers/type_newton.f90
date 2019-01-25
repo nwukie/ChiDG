@@ -13,6 +13,9 @@ module type_newton
     use type_preconditioner,    only: preconditioner_t
     use type_solver_controller, only: solver_controller_t
     use type_chidg_vector
+    use operator_chidg_mv
+
+    use precon_jacobi,          only: precon_jacobi_t
 
     use ieee_arithmetic,        only: ieee_is_nan
     implicit none
@@ -20,10 +23,11 @@ module type_newton
 
 
 
-    !>  Nonlinear iteration using Newton's method.
+    !>  Nonlinear iteration using newton's method.
     !!
     !!  Optional algorithms:
     !!      : Pseudo-transient continuation (&nonlinear_solve   ptc=.true. /)
+    !!      : Residual Smoothing            (&nonlinear_solve   smooth=.true. /)
     !!      : Backtracking                  (&nonlinear_solve   search='Backtrack' /)
     !!
     !!  Termination:
@@ -39,8 +43,10 @@ module type_newton
 
     contains
         procedure   :: solve
+        procedure   :: backtracking
         procedure   :: record_and_report
         procedure   :: update_cfl
+        procedure   :: apply_residual_smoother
     end type newton_t
     !******************************************************************************************
 
@@ -59,19 +65,21 @@ contains
         type(chidg_data_t),                     intent(inout)           :: data
         class(system_assembler_t),  optional,   intent(inout)           :: system
         class(linear_solver_t),     optional,   intent(inout)           :: linear_solver
-        class(preconditioner_t),    optional,   intent(inout)           :: preconditioner
+        class(preconditioner_t),    optional,   intent(inout),  target  :: preconditioner
         class(solver_controller_t), optional,   intent(inout),  target  :: solver_controller
 
         character(:),   allocatable :: user_msg
         integer(ik)             :: itime, niter, ierr, icfl
         real(rk)                :: cfl, timing, resid, resid_prev, resid0, resid_new,    &
                                    alpha, f0, fn, forcing_term, residual_ratio
-        real(rk), allocatable   :: cfln(:), rnorm0(:), rnorm(:)
-        type(chidg_vector_t)    :: b, qn, qold, q0
+        real(rk), allocatable   :: cfln(:), rnorm0(:), rnorm(:), fn_fields(:)
+        type(chidg_vector_t)    :: b, qn, qold, q0, f_smooth
         logical                 :: absolute_convergence, relative_convergence, stop_run, iteration_convergence
 
         type(solver_controller_t),  target  :: default_controller
         class(solver_controller_t), pointer :: controller
+        class(preconditioner_t),    pointer :: smoother => null()
+        type(precon_jacobi_t),      target  :: jacobi
       
 
         ! Default controller
@@ -87,6 +95,18 @@ contains
         ! start timer
         call self%timer%reset()
         call self%timer%start()
+
+
+        ! Initialize smoother
+        select case (self%smoother)
+            case('preconditioner','Preconditioner')
+                smoother => preconditioner
+            case('jacobi','Jacobi')
+                smoother => jacobi
+                call smoother%init(data)
+            case default
+                call chidg_signal(FATAL,"newton%solve: invalid smoother. 'default' or 'jacobi'.")
+        end select
 
 
         associate ( q   => data%sdata%q,    &
@@ -125,21 +145,50 @@ contains
                                   timing=timing,    &
                                   differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
 
-            ! Assign rhs to b, which should allocate storage
-            !b = (rhs)  ! BEWARE: this causes an error. Parentheses operator not defined
-            b = (-ONE)*rhs
+
+
+            if (niter == 1) then
+                rnorm0 = rhs%norm_fields(ChiDG_COMM)
+                cfln = rnorm0
+                cfln = self%cfl0
+            end if
+
+
+
+            ! Pseudo-transient continuation
+            !   ptc contribution should be before residual smoothing
+            !   because the smoother for DG needs the ptc scaling
+            !   for stability of the nonlinear smoothing iterations.
+            if (self%ptc) then
+                call contribute_pseudo_temporal(data,cfln)
+            end if ! self%ptc
+
+
+            ! Residual-smoothing
+            if (self%smooth .and. self%ptc) then
+                f_smooth = self%smooth_relax*self%apply_residual_smoother(data,cfln,data%sdata%rhs,smoother,controller)
+                b = -rhs-f_smooth
+            else if (self%smooth .and. .not. self%ptc) then
+                user_msg = 'WARNING: residual smoothing expects pseudo-transient continuation, &
+                            but pseudo-transient continuation was found to be turned off. &
+                            Residual smoothing is being turned off for consistency.'
+                call write_line('------------------------------------------')
+                call write_line(user_msg)
+                call write_line('------------------------------------------')
+            else
+                b = -rhs
+            end if ! self%smooth
+
 
 
             ! Compute and store residual norm for each field
             resid_prev = resid
-            resid      = rhs%norm(ChiDG_COMM)
+            resid      = b%norm(ChiDG_COMM)
             if (niter == 1) then
-                resid0 = rhs%norm(ChiDG_COMM)
-                rnorm0 = rhs%norm_fields(ChiDG_COMM)
-                rnorm0 = resid0 !override
+                resid0 = b%norm(ChiDG_COMM)
+                rnorm0 = b%norm_fields(ChiDG_COMM)
             end if
-            rnorm = rhs%norm_fields(ChiDG_COMM)
-            rnorm = resid !override
+            rnorm = b%norm_fields(ChiDG_COMM)
 
 
             ! During the first few iterations, allow the initial residual norm to update
@@ -153,13 +202,11 @@ contains
             end if
 
 
-            ! Compute new cfl for each field
-            call self%update_cfl(rnorm0,rnorm,cfln)
-
-
             ! Convergence check
             call self%record_and_report(resid,timing,niter,cfln(1))
             if (resid < self%tol) exit
+
+
 
             if ( ieee_is_nan(resid) ) then
                 user_msg = "newton%solve: NaN residual norm. Check initial solution and operator objects."
@@ -167,13 +214,9 @@ contains
             end if
 
 
-            ! Pseudo-transient continuation
-            if (self%ptc) then
-                call contribute_pseudo_temporal(data,cfln)
-            end if ! self%ptc
 
 
-            ! Solve system [lhs][dq] = [b] for Newton step: [dq]
+            ! Solve system [lhs][dq] = [b] for newton step: [dq]
             call set_forcing_terms(linear_solver)
             call linear_solver%solve(lhs,dq,b,preconditioner,controller,data)
 
@@ -182,24 +225,28 @@ contains
             q0 = qold
             f0 = resid
             select case (trim(self%search))
-                case('Backtrack')
-                    call backtracking(data,system,q0,qn,f0,fn)
+                case('Backtrack','backtrack')
+                    call self%backtracking(data,system,cfln,q0,qn,f0,fn,fn_fields,f_smooth)
                 case('none','')
                     ! Update state, update residual, compute residual norm 
                     qn = q0 + dq
                     data%sdata%q = qn
                     call system%assemble(data,differentiate=.false.)
-                    fn = rhs%norm(ChiDG_COMM)
+
+                    if (self%ptc)    rhs = rhs + pseudo_transient_scaling(data,cfln,data%sdata%dq)
+                    if (self%smooth) rhs = rhs + f_smooth
+                    fn        = rhs%norm(ChiDG_COMM)
+                    fn_fields = rhs%norm_fields(ChiDG_COMM)
 
                 case default
-                    user_msg = "Invalid nonlinear search algorithm in Newton iteration routine. Valid inputs: 'Backtrack', 'none'."
+                    user_msg = "Invalid nonlinear search algorithm in newton iteration routine. Valid inputs: 'Backtrack', 'none'."
                     call chidg_signal_one(OOPS, user_msg, trim(self%search))
             end select
 
 
             ! Accept new solution, update cfl using new residual, clear working storage
             q = qn
-            call self%update_cfl(rnorm0,[fn],cfln)
+            !call self%update_cfl(rnorm0,fn_fields,cfln)
             call dq%clear()
 
 
@@ -212,6 +259,7 @@ contains
             relative_convergence  = (fn/resid0 > self%rtol)
             iteration_convergence = (niter < self%nmax) .or. self%nmax <= 0
             inquire(file='STOP', exist=stop_run)
+
 
 
             ! Print iteration information
@@ -276,7 +324,7 @@ contains
             ! rnorm might be coming from a backtracking algorithm and 
             ! only give us a scalar value for the entire vector.
             where (rnorm /= 0.)
-                cfln = self%cfl0*(rnorm0/rnorm(1))
+                cfln = self%cfl0*(rnorm0(1)/rnorm(1))
             else where
                 cfln = 0.1
             end where
@@ -289,9 +337,20 @@ contains
             end where
         end if
 
+        ! If cfl_max is > 0, enforce
         do icfl = 1,size(cfln)
-            if (self%cflmax > 0. .and. cfln(icfl) > self%cflmax) cfln(icfl) = self%cflmax
+            if (self%cfl_max > 0. .and. cfln(icfl) > self%cfl_max) cfln(icfl) = self%cfl_max
         end do
+
+        ! Strategy for cfl across fields
+        select case(trim(self%cfl_fields))
+            case('minimum')
+                cfln = minval(cfln)
+            case('average')
+                cfln = sum(cfln)/size(cfln)
+            case default
+                call chidg_signal(FATAL,"newton%update_cfl: invalid selection of cfl_fields behavior: 'minimum' or 'average'.")
+        end select
 
 
     end subroutine update_cfl
@@ -319,6 +378,8 @@ contains
 
     end subroutine compute_pseudo_timestep
     !*****************************************************************************************
+
+
 
 
 
@@ -361,6 +422,9 @@ contains
                         imat = data%sdata%lhs%dom(idom)%lblks(ielem,itime)%get_diagonal()
                         data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  =  data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  +  data%mesh%domain(idom)%elems(ielem)%mass*(ONE/dtau)
 
+                        ! Update stamp
+                        call date_and_time(values=data%sdata%lhs%stamp)
+
                     end do !ieqn
                 end do !itime
             end do !ielem
@@ -373,9 +437,104 @@ contains
 
 
 
+
+
+    !>  Compute smoothed residual
+    !!
+    !!  @author Nathan A. Wukie(AFRL)
+    !!  @date   01/15/2019
+    !!
+    !-------------------------------------------------------------------------------------
+    function apply_residual_smoother(self,data,cfln,vector,smoother,controller) result(scaled_vector)
+        class(newton_t),            intent(in)      :: self
+        type(chidg_data_t),         intent(inout)   :: data
+        real(rk),                   intent(in)      :: cfln(:)
+        type(chidg_vector_t),       intent(in)      :: vector
+        class(preconditioner_t),    intent(inout)   :: smoother
+        class(solver_controller_t), intent(inout)   :: controller
+
+        type(chidg_vector_t)    :: smoothed_vector, scaled_vector, residual
+        integer(ik) :: ismooth
+
+        ! Update smoother(preconditioner)
+        if (controller%update_preconditioner(data%sdata%lhs,smoother)) call smoother%update(data%sdata%lhs,vector)
+
+        ! Apply residual smoothing
+        smoothed_vector = ZERO*vector
+        do ismooth = 1,self%nsmooth
+            residual = vector - chidg_mv(data%sdata%lhs,smoothed_vector)
+            smoothed_vector = smoother%apply(data%sdata%lhs,residual)
+        end do
+
+        ! Apply pseudo-transient scaling
+        scaled_vector = pseudo_transient_scaling(data,cfln,smoothed_vector)
+
+    end function apply_residual_smoother
+    !************************************************************************************
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    function pseudo_transient_scaling(data,cfln,vector) result(scaled_vector)
+        type(chidg_data_t),     intent(inout)   :: data
+        real(rk),               intent(in)      :: cfln(:)
+        type(chidg_vector_t),   intent(inout)   :: vector
+
+        integer(ik)             :: idom, ielem, eqn_ID, itime, ifield
+        real(rk)                :: dtau
+        real(rk),   allocatable :: field(:)
+        type(chidg_vector_t)    :: scaled_vector
+
+        ! Compute element-local pseudo-timestep
+        call compute_pseudo_timestep(data,cfln)
+
+        ! Initialize storage
+        scaled_vector = vector
+
+        ! Scale vector by (M/dtau)
+        do idom = 1,data%mesh%ndomains()
+            do ielem = 1,data%mesh%domain(idom)%nelem
+                eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
+                do itime = 1,data%mesh%domain(idom)%ntime
+                    do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
+
+                        ! get element-local timestep
+                        dtau = data%mesh%domain(idom)%elems(ielem)%dtau(ifield)
+
+                        ! Retrieve field
+                        field = scaled_vector%dom(idom)%vecs(ielem)%getvar(ifield,itime)
+
+                        ! Scale field by (M/dtau)
+                        field = matmul(data%mesh%domain(idom)%elems(ielem)%mass/dtau,field)
+
+                        ! Store scaled field 
+                        call scaled_vector%dom(idom)%vecs(ielem)%setvar(ifield,itime,field)
+
+                    end do !ifield
+                end do !itime
+            end do !ielem
+        end do !idom
+
+    end function pseudo_transient_scaling
+    !*************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
     !>  Backtracking search procedure.
     !!
-    !!  If the Newton update(dq) causes the residual to increase, scale the update
+    !!  If the newton update(dq) causes the residual to increase, scale the update
     !!  to be smaller until the residual achieves some reasonable value.
     !!
     !!  Scaling based on recursive bisection:
@@ -385,17 +544,22 @@ contains
     !!  @date   11/20/2017
     !!
     !-------------------------------------------------------------------------------------
-    subroutine backtracking(data,system,q0,qn,f0,fn)
+    subroutine backtracking(self,data,system,cfln,q0,qn,f0,fn,fn_fields,f_smooth)
+        class(newton_t),            intent(inout)   :: self
         type(chidg_data_t),         intent(inout)   :: data
         class(system_assembler_t),  intent(inout)   :: system
+        real(rk),                   intent(inout)   :: cfln(:)
         type(chidg_vector_t),       intent(inout)   :: q0
         type(chidg_vector_t),       intent(inout)   :: qn
         real(rk),                   intent(inout)   :: f0
         real(rk),                   intent(inout)   :: fn
+        real(rk),   allocatable,    intent(inout)   :: fn_fields(:)
+        type(chidg_vector_t),       intent(inout)   :: f_smooth
 
-        real(rk)                :: alpha
+        real(rk)                :: alpha, rhs_norm, fn_prev
+        real(rk),   allocatable :: rhs_norm_fields(:)
         logical                 :: searching
-        integer(ik)             :: step
+        integer(ik)             :: step, icfl
 
         step = 0
         searching = .true.
@@ -412,6 +576,12 @@ contains
 
             ! Compute new function value and norm
             call system%assemble(data,differentiate=.false.)
+
+            ! Add globalization contributions
+            if (self%ptc)    data%sdata%rhs = data%sdata%rhs + alpha*pseudo_transient_scaling(data,cfln,data%sdata%dq)
+            if (self%smooth) data%sdata%rhs = data%sdata%rhs + f_smooth
+
+            ! Compute n-th residual norm
             fn = data%sdata%rhs%norm(ChiDG_COMM)
 
             ! Test for |R| increasing too much or NaN. 
@@ -419,9 +589,11 @@ contains
             !   If the residual is small enough, we don't want any growth.
             if (ieee_is_nan(fn)) then
                 searching = .true.
-            else if ( (fn > 1.e-3_rk) .and. (fn > 2.0_rk*f0) ) then
-                searching = .true.
-            else if ( (fn < 1.e-3_rk) .and. (fn > f0) ) then
+            !else if ( (fn > 1.e-3_rk) .and. (fn > 2.0_rk*f0) ) then
+            !    searching = .true.
+            !else if ( (fn < 1.e-3_rk) .and. (fn > f0) ) then
+            !    searching = .true.
+            else if (fn > f0) then
                 searching = .true.
             else
                 searching = .false.
@@ -432,6 +604,24 @@ contains
             step = step + 1
         end do
 
+        ! Compute norm by field
+        fn_fields = data%sdata%rhs%norm_fields(ChiDG_COMM)
+
+
+        ! Update cfl
+        if (alpha > 0.75_rk) then
+            cfln = cfln*self%cfl_up
+        else if (alpha < 0.1) then
+            cfln = cfln*self%cfl_down
+        else
+            ! If inbetween, cfl stays the same
+        end if
+
+
+        ! If cfl_max is > 0, enforce
+        do icfl = 1,size(cfln)
+            if (self%cfl_max > 0. .and. cfln(icfl) > self%cfl_max) cfln(icfl) = self%cfl_max
+        end do
 
     end subroutine backtracking
     !************************************************************************************
@@ -471,20 +661,17 @@ contains
         integer(ik),        intent(in)      :: niter
         real(rk),           intent(in)      :: cfln
 
-        call write_line('|R| = ', resid, io_proc=GLOBAL_MASTER, silence=(verbosity<4))
         if ( resid < self%tol ) then
-!            call self%timer%stop()
-!            call self%total_time%push_back(self%timer%elapsed())
+            call write_line('|R| = ', resid, io_proc=GLOBAL_MASTER, silence=(verbosity<4))
             call self%residual_norm%push_back(resid)
             call self%residual_time%push_back(timing)
             call self%matrix_iterations%push_back(0)
             call self%matrix_time%push_back(0._rk)
             call self%newton_iterations%push_back(niter)
             call write_line(niter, resid, cfln, 0, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
-!            exit
-        !end if
         ! Compute and store first residual norm 
         else if (niter == 1) then
+            call write_line('|R| = ', resid, io_proc=GLOBAL_MASTER, silence=(verbosity<4))
             call self%residual_norm%push_back(resid)
             call self%residual_time%push_back(timing)
             call self%matrix_iterations%push_back(0)

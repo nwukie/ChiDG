@@ -35,21 +35,35 @@ module mod_io
     real(rk),               save    :: frequencies(100) = ZERO
    
     ! Nonlinear solver parameters
-    !   ntol    : absolute convergence tolerance
-    !   nrtol   : relative convergence tolerance
-    !   nnmax   : max number of nonlinear iterations
-    !   search  : line-search algorithm ('Backtrack','none')
-    !   ptc     : pseudo-transient continuation
-    !   cfl0    : initial cfl scaling for pseudo-transient continuation 
-    !   cflmax  : max cfl during pseudo-transient continuation. (< 0) = unlimited
+    !   ntol         : absolute convergence tolerance
+    !   nrtol        : relative convergence tolerance
+    !   nnmax        : max number of nonlinear iterations
+    !   cfl0         : initial cfl scaling for pseudo-transient continuation 
+    !   cfl_max      : max cfl during pseudo-transient continuation. (< 0) = unlimited
+    !   cfl_up       : scale factor for increasing cfl: cfl_new = cfl_up*cfl_old
+    !   cfl_down     : scale factor for decreasing cfl: cfl_new = cfl_down*cfl_old
+    !   search       : line-search algorithm ('backtrack','none')
+    !   ptc          : pseudo-transient continuation
+    !   smooth       : flag for residual smoothing
+    !   smoother     : residual smoother: ('preconditioner','jacobi')
+    !   nsmooth      : number of residual smoothing iterations
+    !   smooth_relax : relaxation factor for smoothed residual contribution
+    !-------------------------------------------------------------------
     character(len=100),     save    :: nonlinear_solver  = 'newton'
     real(rk),               save    :: ntol              = 1.e-8
     real(rk),               save    :: nrtol             = 1.e-8
     integer(ik),            save    :: nnmax             = -1
-    character(len=100),     save    :: search            = 'Backtrack'
+    character(len=100),     save    :: search            = 'backtrack'
+    character(len=100),     save    :: cfl_fields        = 'average'
     logical,                save    :: ptc               = .true.
     real(rk),               save    :: cfl0              = 1._rk
-    real(rk),               save    :: cflmax            = -1._rk
+    real(rk),               save    :: cfl_max           = -1._rk
+    real(rk),               save    :: cfl_up            = 1.5_rk
+    real(rk),               save    :: cfl_down          = 0.2_rk
+    logical,                save    :: smooth            = .false.
+    character(len=100),     save    :: smoother          = 'jacobi'
+    integer(ik),            save    :: nsmooth           = 10
+    real(rk),               save    :: smooth_relax      = 0.5
     type(dict_t),           save    :: noptions
     
     ! Linear solver parameters
@@ -66,6 +80,7 @@ module mod_io
     !   inner_nkrylov           : number of inner krylov vectors
     !   inner_orthogonalization : 'CGS','MGS'
     !   inner_silence           : -10(no report of inner iteration), 0(report inner iteration)
+    !-------------------------------------------------------------------
     character(len=100),     save    :: linear_solver    = 'fgmres'
     character(len=100),     save    :: preconditioner   = 'identity'
     real(rk),               save    :: ltol             = 1.e-8_rk
@@ -87,6 +102,7 @@ module mod_io
     !   final_write     : write final solution
     !   nwrite          : write solution every 'nwrite' steps of time-integrator
     !   verbosity       : 1-5, controls amount of information to screen/log file
+    !-------------------------------------------------------------------
     logical,                save    :: initial_write    = .false.
     logical,                save    :: final_write      = .true.
     integer(ik),            save    :: nwrite           = 100
@@ -104,6 +120,7 @@ module mod_io
     !   &initial
     !       initial_fields = 1.19, 150., 0., 0., 250000.
     !   /
+    !-------------------------------------------------------------------
     real(rk),               save    :: initial_fields(100) = ZERO
 
 
@@ -130,9 +147,16 @@ module mod_io
                                         nrtol,              &
                                         nnmax,              &
                                         cfl0,               &
-                                        cflmax,             &
+                                        cfl_max,            &
+                                        cfl_up,             &
+                                        cfl_down,           &
+                                        cfl_fields,         &
                                         search,             &
-                                        ptc
+                                        ptc,                &
+                                        smooth,             &
+                                        smoother,           &
+                                        nsmooth,            &
+                                        smooth_relax
 
     namelist /linear_solve/             linear_solver,      &
                                         ltol,               &
@@ -174,31 +198,40 @@ contains
     !!  @date   12/28/2018
     !!
     !-----------------------------------------------------------------------------
-    subroutine initialize_input_dictionaries()
+    subroutine initialize_input_dictionaries(noptions_in,loptions_in)
+        type(dict_t)    :: noptions_in
+        type(dict_t)    :: loptions_in
 
         ! Set nonlinear solver options
-        call noptions%set('tol',ntol)
-        call noptions%set('rtol',nrtol)
-        call noptions%set('cfl0',cfl0)
-        call noptions%set('cflmax',cflmax)
-        call noptions%set('nmax',nnmax)
-        call noptions%set('search',search)
-        call noptions%set('ptc',ptc)
+        call noptions_in%set('tol',ntol)
+        call noptions_in%set('rtol',nrtol)
+        call noptions_in%set('nmax',nnmax)
+        call noptions_in%set('cfl0',cfl0)
+        call noptions_in%set('cfl_max',cfl_max)
+        call noptions_in%set('cfl_up',cfl_up)
+        call noptions_in%set('cfl_down',cfl_down)
+        call noptions_in%set('cfl_fields',cfl_fields)
+        call noptions_in%set('search',search)
+        call noptions_in%set('ptc',ptc)
+        call noptions_in%set('smooth',smooth)
+        call noptions_in%set('smoother',smoother)
+        call noptions_in%set('nsmooth',nsmooth)
+        call noptions_in%set('smooth_relax',smooth_relax)
 
         ! Set linear solver options
-        call loptions%set('tol',ltol)
-        call loptions%set('rtol',lrtol)
-        call loptions%set('nmax',lnmax)
-        call loptions%set('nkrylov',nkrylov)
-        call loptions%set('orthogonalization',orthogonalization)
+        call loptions_in%set('tol',ltol)
+        call loptions_in%set('rtol',lrtol)
+        call loptions_in%set('nmax',lnmax)
+        call loptions_in%set('nkrylov',nkrylov)
+        call loptions_in%set('orthogonalization',orthogonalization)
 
-        call loptions%set('inner_fgmres',inner_fgmres)
-        call loptions%set('inner_tol',inner_ltol)
-        call loptions%set('inner_rtol',inner_lrtol)
-        call loptions%set('inner_nmax',inner_lnmax)
-        call loptions%set('inner_nkrylov',inner_nkrylov)
-        call loptions%set('inner_silence',inner_silence)
-        call loptions%set('inner_orthogonalization',inner_orthogonalization)
+        call loptions_in%set('inner_fgmres',inner_fgmres)
+        call loptions_in%set('inner_tol',inner_ltol)
+        call loptions_in%set('inner_rtol',inner_lrtol)
+        call loptions_in%set('inner_nmax',inner_lnmax)
+        call loptions_in%set('inner_nkrylov',inner_nkrylov)
+        call loptions_in%set('inner_silence',inner_silence)
+        call loptions_in%set('inner_orthogonalization',inner_orthogonalization)
 
 
     end subroutine initialize_input_dictionaries
@@ -275,7 +308,19 @@ contains
         call noptions%set('rtol',nrtol)
         call noptions%set('nmax',nnmax)
         call noptions%set('cfl0',cfl0)
-        call noptions%set('cflmax',cflmax)
+        call noptions%set('cfl_max',cfl_max)
+        call noptions%set('cfl_up',cfl_up)
+        call noptions%set('cfl_down',cfl_down)
+        call noptions%set('cfl_fields',cfl_fields)
+        call noptions%set('search',search)
+        call noptions%set('ptc',ptc)
+        call noptions%set('smooth',smooth)
+        call noptions%set('smoother',smoother)
+        call noptions%set('nsmooth',nsmooth)
+        call noptions%set('smooth_relax',smooth_relax)
+
+
+
 
         ! Set linear solver options
         call loptions%set('tol',ltol)

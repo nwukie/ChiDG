@@ -62,28 +62,28 @@ module mod_operators
 
     ! Fluid Turbulence Operators
     ! Spalart-Allmaras
-    use spalart_allmaras_source,                        only: spalart_allmaras_source_operator_t
-    use spalart_allmaras_advection_boundary_average,    only: spalart_allmaras_advection_boundary_average_operator_t
-    use spalart_allmaras_laxfriedrichs,                 only: spalart_allmaras_laxfriedrichs_operator_t
-    use spalart_allmaras_volume_advection,              only: spalart_allmaras_volume_advection_operator_t
-    use spalart_allmaras_bc_advection,                  only: spalart_allmaras_bc_advection_operator_t
-    use spalart_allmaras_boundary_diffusion,            only: spalart_allmaras_boundary_diffusion_operator_t
-    use spalart_allmaras_volume_diffusion,              only: spalart_allmaras_volume_diffusion_operator_t
-    use spalart_allmaras_bc_diffusion,                  only: spalart_allmaras_bc_diffusion_operator_t
+    use spalart_allmaras_source,                            only: spalart_allmaras_source_operator_t
+    use spalart_allmaras_advection_boundary_average,        only: spalart_allmaras_advection_boundary_average_operator_t
+    use spalart_allmaras_laxfriedrichs,                     only: spalart_allmaras_laxfriedrichs_operator_t
+    use spalart_allmaras_volume_advection,                  only: spalart_allmaras_volume_advection_operator_t
+    use spalart_allmaras_bc_advection,                      only: spalart_allmaras_bc_advection_operator_t
+    use spalart_allmaras_boundary_diffusion,                only: spalart_allmaras_boundary_diffusion_operator_t
+    use spalart_allmaras_volume_diffusion,                  only: spalart_allmaras_volume_diffusion_operator_t
+    use spalart_allmaras_bc_diffusion,                      only: spalart_allmaras_bc_diffusion_operator_t
 
     !! SST
-    use sst_source,                                 only: sst_source_operator_t
-    use sst_roe_operator,                           only: sst_roe_operator_t
-    use sst_advection_boundary_average,             only: sst_advection_boundary_average_operator_t
-    use sst_laxfriedrichs,                          only: sst_laxfriedrichs_operator_t
-    use sst_volume_advection,                       only: sst_volume_advection_operator_t
-    use sst_bc_advection,                           only: sst_bc_advection_operator_t
-    use sst_boundary_diffusion,                     only: sst_boundary_diffusion_operator_t
-    use sst_volume_diffusion,                       only: sst_volume_diffusion_operator_t
-    use sst_bc_diffusion,                           only: sst_bc_diffusion_operator_t
-    use sst_artificial_viscosity_operator,                          only: sst_artificial_viscosity_operator_t
-    use sst_artificial_viscosity_bc_operator,                       only: sst_artificial_viscosity_bc_operator_t
-    use sst_artificial_viscosity_boundary_average_operator,         only: sst_artificial_viscosity_boundary_average_operator_t
+    use sst_source,                                         only: sst_source_operator_t
+    use sst_roe_operator,                                   only: sst_roe_operator_t
+    use sst_advection_boundary_average,                     only: sst_advection_boundary_average_operator_t
+    use sst_laxfriedrichs,                                  only: sst_laxfriedrichs_operator_t
+    use sst_volume_advection,                               only: sst_volume_advection_operator_t
+    use sst_bc_advection,                                   only: sst_bc_advection_operator_t
+    use sst_boundary_diffusion,                             only: sst_boundary_diffusion_operator_t
+    use sst_volume_diffusion,                               only: sst_volume_diffusion_operator_t
+    use sst_bc_diffusion,                                   only: sst_bc_diffusion_operator_t
+    use sst_artificial_viscosity_operator,                  only: sst_artificial_viscosity_operator_t
+    use sst_artificial_viscosity_bc_operator,               only: sst_artificial_viscosity_bc_operator_t
+    use sst_artificial_viscosity_boundary_average_operator, only: sst_artificial_viscosity_boundary_average_operator_t
 
     !! RSTM SSG-LRR-w operators
     use rstm_ssglrrw_source,                        only: rstm_ssglrrw_source_operator_t
@@ -95,14 +95,15 @@ module mod_operators
     use rstm_ssglrrw_volume_diffusion,              only: rstm_ssglrrw_volume_diffusion_operator_t
     use rstm_ssglrrw_bc_diffusion,                  only: rstm_ssglrrw_bc_diffusion_operator_t
 
-    !! RANS Low-Cache operators
-    !use RANS_volume_advection,                      only: RANS_volume_advection_t
-    !use RANS_boundary_advection,                    only: RANS_boundary_advection_t
-    !use RANS_bc_advection,                          only: RANS_bc_advection_t
-    !use RANS_volume_diffusion,                      only: RANS_volume_diffusion_t
-    !use RANS_boundary_diffusion,                    only: RANS_boundary_diffusion_t
-    !use RANS_bc_diffusion,                          only: RANS_bc_diffusion_t
-    !use RANS_source,                                only: RANS_source_t
+    ! RANS Efficient operators
+    use rans_bc_advection,                          only: rans_bc_advection_t
+    use rans_bc_diffusion,                          only: rans_bc_diffusion_t
+    use rans_boundary_average_advection,            only: rans_boundary_average_advection_t
+    use rans_boundary_average_diffusion,            only: rans_boundary_average_diffusion_t
+    use rans_volume_advection,                      only: rans_volume_advection_t
+    use rans_volume_diffusion,                      only: rans_volume_diffusion_t
+    use rans_volume_source,                         only: rans_volume_source_t
+    use rans_upwind_operator,                       only: rans_upwind_operator_t
 
     ! Geometric Conservation Operators
     use GCL_volume_advective_operator,               only: GCL_volume_advective_operator_t
@@ -325,13 +326,15 @@ contains
         type(rstm_ssglrrw_bc_diffusion_operator_t)                  :: rstm_ssglrrw_bc_diffusion_operator
 
 
-        !type(RANS_volume_advection_t)                           :: rans_volume_advection
-        !type(RANS_boundary_advection_t)                         :: rans_boundary_advection
-        !type(RANS_bc_advection_t)                               :: rans_bc_advection
-        !type(RANS_volume_diffusion_t)                           :: rans_volume_diffusion
-        !type(RANS_boundary_diffusion_t)                         :: rans_boundary_diffusion
-        !type(RANS_bc_diffusion_t)                               :: rans_bc_diffusion
-        !type(RANS_source_t)                                     :: rans_source
+        ! RANS Efficient
+        type(rans_bc_advection_t)                       :: RANS_BC_ADVECTION
+        type(rans_bc_diffusion_t)                       :: RANS_BC_DIFFUSION
+        type(rans_boundary_average_advection_t)         :: RANS_BOUNDARY_AVERAGE_ADVECTION
+        type(rans_boundary_average_diffusion_t)         :: RANS_BOUNDARY_AVERAGE_DIFFUSION
+        type(rans_volume_advection_t)                   :: RANS_VOLUME_ADVECTION
+        type(rans_volume_diffusion_t)                   :: RANS_VOLUME_DIFFUSION
+        type(rans_volume_source_t)                      :: RANS_VOLUME_SOURCE
+        type(rans_upwind_operator_t)                    :: RANS_UPWIND_OPERATOR
 
 
         ! Geometric Conservation Operators
@@ -451,15 +454,15 @@ contains
             call operator_factory%register(rstm_ssglrrw_volume_diffusion_operator)
             call operator_factory%register(rstm_ssglrrw_bc_diffusion_operator)
 
-            !! Register RANS Low-Cache operators
-            !call operator_factory%register(rans_volume_advection)
-            !call operator_factory%register(rans_volume_diffusion)
-            !call operator_factory%register(rans_boundary_advection)
-            !call operator_factory%register(rans_boundary_diffusion)
-            !call operator_factory%register(rans_bc_advection)
-            !call operator_factory%register(rans_bc_diffusion)
-            !call operator_factory%register(rans_source)
-
+            ! Register RANS Efficient operators
+            call operator_factory%register(RANS_BC_ADVECTION)
+            call operator_factory%register(RANS_BC_DIFFUSION)
+            call operator_factory%register(RANS_BOUNDARY_AVERAGE_ADVECTION)
+            call operator_factory%register(RANS_BOUNDARY_AVERAGE_DIFFUSION)
+            call operator_factory%register(RANS_VOLUME_ADVECTION)
+            call operator_factory%register(RANS_VOLUME_DIFFUSION)
+            call operator_factory%register(RANS_VOLUME_SOURCE)
+            call operator_factory%register(RANS_UPWIND_OPERATOR)
 
             ! Register Geometric Conservation
             call operator_factory%register(GCL_volume_operator)

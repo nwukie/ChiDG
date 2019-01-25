@@ -51,15 +51,10 @@ contains
         class(precon_jacobi_t), intent(inout)   :: self
         type(chidg_data_t),     intent(in)      :: data
 
-
         call self%D%init(data%mesh,mtype='Diagonal')
-
 
     end subroutine init
     !***************************************************************************************
-
-
-
 
 
 
@@ -109,6 +104,9 @@ contains
             end do
         end do
 
+
+        ! Update stamp
+        self%stamp = A%stamp
 
     end subroutine update
     !***************************************************************************************

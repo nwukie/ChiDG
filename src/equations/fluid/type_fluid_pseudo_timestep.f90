@@ -125,10 +125,8 @@ contains
             !
             ! Compute velocity magnitude
             !
-            !r = mesh%domain(idomain)%elems(ielem)%interp_coords(:)%c1_
             r = mesh%domain(idomain)%elems(ielem)%interp_coords(:,1)
             vmag = sqrt((rhou*rhou + rhov*rhov + rhow*rhow)/(rho*rho))
-            !vmag = sqrt((rhou*rhou + (rhov-rho*omega*r)*(rhov-rho*omega*r) + rhow*rhow)/(rho*rho))
 
 
             !

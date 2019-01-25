@@ -1,7 +1,7 @@
 module type_chidg_vector
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: ZERO, TWO
+    use mod_constants,              only: ZERO, TWO, ONE
     use mod_chidg_mpi,              only: GROUP_MASTER, ChiDG_COMM, IRANK
     use type_mesh,                  only: mesh_t
     use type_function,              only: function_t
@@ -103,6 +103,7 @@ module type_chidg_vector
     public operator (-)
     interface operator (-)
         module procedure sub_chidg_vector_chidg_vector    ! chidg_vector - chidg_vector
+        module procedure minus_chidg_vector               ! - chidg_vector
     end interface
 
     public operator (+)
@@ -148,24 +149,18 @@ contains
         integer(ik) :: ierr, ndomains, idom
 
 
-        !
         ! Set ntime_ for the chidg_vector
-        !
         self%ntime_ = ntime
 
-        !
         ! Deallocate storage if necessary in case this is being called as a 
         ! reinitialization routine.
-        !
         if (allocated(self%dom)) deallocate(self%dom)
-
 
 
         ! Allocate domain_vector_t for each mesh
         ndomains = mesh%ndomains()
         allocate(self%dom(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
-
 
 
         ! Call initialization procedure for each domain_vector_t
@@ -215,9 +210,7 @@ contains
         character(:),   allocatable :: user_msg
 
 
-        !
         ! Loop through elements in mesh and call function projection
-        !
         do idom = 1,mesh%ndomains()
 
             ! Check that variable index 'ivar' is valid
@@ -226,18 +219,11 @@ contains
 
             do ielem = 1,mesh%domain(idom)%nelem
                 do itime = 1,mesh%domain(idom)%ntime
-                    !
                     ! Call function projection
-                    !
                     fmodes = mesh%domain(idom)%elems(ielem)%project(fcn)
 
-                    !
-
-                    !
                     ! Store the projected modes to the solution expansion
-                    !
                     call self%dom(idom)%vecs(ielem)%setvar(ivar,itime,fmodes)
-
                 end do ! itime
             end do ! ielem
         end do ! idomain
@@ -263,7 +249,6 @@ contains
 
         integer :: idom
 
-
         ! Call clear procedure for each domain_vector_t
         if (allocated(self%dom)) then
             do idom = 1,size(self%dom)
@@ -276,7 +261,6 @@ contains
 
     end subroutine clear
     !******************************************************************************************
-
 
 
 
@@ -298,7 +282,6 @@ contains
         real(rk)    :: res
         integer(ik) :: idom, ielem
 
-
         ! Loop through domain vectors and compute contribution to vector sum of the squared elements
         res = self%sumsqr()
 
@@ -307,8 +290,6 @@ contains
 
     end function norm_local
     !******************************************************************************************
-
-
 
 
 
@@ -334,23 +315,18 @@ contains
         real(rk)    :: sumsqr, norm
         integer     :: ierr
 
-
         norm = ZERO
 
         ! Compute sum of the squared elements of the processor-local vector
         sumsqr = self%sumsqr()
 
-
         ! Reduce sumsqr across all procs, distribute result back to all
         call MPI_AllReduce(sumsqr,norm,1,MPI_REAL8,MPI_SUM,comm,ierr)
-
 
         norm = sqrt(norm)
 
     end function norm_comm
     !******************************************************************************************
-
-
 
 
 
@@ -378,30 +354,20 @@ contains
         real(rk), allocatable   :: sumsqr(:), norm(:)
         integer     :: ierr
 
-
         ! Compute sum of the squared elements of the processor-local vector
         sumsqr = self%sumsqr_fields()
-
 
         ! Alloate norm
         norm = sumsqr
         norm = ZERO
 
-
         ! Reduce sumsqr across all procs, distribute result back to all
         call MPI_AllReduce(sumsqr,norm,size(sumsqr),MPI_REAL8,MPI_SUM,comm,ierr)
-
 
         norm = sqrt(norm)
 
     end function norm_fields_comm
     !******************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -426,7 +392,6 @@ contains
         real(rk)    :: res
         integer(ik) :: idom, ielem
 
-
         res = ZERO
 
         ! Loop through domain vectors and compute contribution to vector sum of the squared elements
@@ -434,12 +399,8 @@ contains
             res = res + self%dom(idom)%sumsqr()
         end do ! idom
 
-
     end function sumsqr
     !******************************************************************************************
-
-
-
 
 
 
@@ -462,30 +423,17 @@ contains
         real(rk),   allocatable :: res(:)
         integer(ik) :: idom, ielem
 
-
         ! Allocate size of res based on assumption of same equation set across domains.
         res = self%dom(1)%sumsqr_fields()
         res = ZERO
-
 
         ! Loop through domain vectors and compute contribution to vector sum of the squared elements
         do idom = 1,size(self%dom)
             res = res + self%dom(idom)%sumsqr_fields()
         end do ! idom
 
-
     end function sumsqr_fields
     !******************************************************************************************
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -510,9 +458,7 @@ contains
         type(mpi_request)   :: isend_handle
 
 
-        !
         ! Loop through comms to send
-        !
         isend = 1
         do icomm = 1,size(self%send%comm)
 
@@ -525,7 +471,6 @@ contains
                 do ielem_send = 1,self%send%comm(icomm)%elems_send(idom_send)%size()
                     ielem = self%send%comm(icomm)%elems_send(idom_send)%at(ielem_send)
 
-
                     ! Post non-blocking send message for the vector data
                     data_size = size(self%dom(idom)%vecs(ielem)%vec)
                     call MPI_ISend(self%dom(idom)%vecs(ielem)%vec, data_size, MPI_REAL8, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
@@ -536,17 +481,14 @@ contains
                     ! Increment send counter
                     isend = isend + 1
 
-            
                 end do !ielem_send
             end do !idom_send
 
         end do ! icomm
 
 
-
     end subroutine comm_send
     !*****************************************************************************************
-
 
 
 
@@ -574,9 +516,7 @@ contains
 
         real(rk), allocatable   :: test(:)
 
-        !
         ! Receive data from each communicating processor
-        !
         do icomm = 1,size(self%recv%comm)
 
             ! Get process we are receiving from
@@ -595,18 +535,8 @@ contains
 
         end do ! icomm
 
-
-
     end subroutine comm_recv
     !*****************************************************************************************
-
-
-
-
-
-
-
-
 
 
 
@@ -705,11 +635,8 @@ contains
 
         integer(ik)     :: ntime_out
 
-        !
         ! Get ntime 
-        !
         ntime_out = self%ntime_
-
 
     end function get_ntime
     !****************************************************************************************
@@ -734,20 +661,15 @@ contains
 
         self%ntime_ = ntime
 
-        ! 
         ! Set ntime
-        !
         do idom = 1,size(self%dom)
             do ielem = 1,size(self%dom(idom)%vecs)
-                
                 call self%dom(idom)%vecs(ielem)%set_ntime(ntime)
-
             end do
         end do
 
     end subroutine set_ntime
     !****************************************************************************************
-
 
 
 
@@ -769,7 +691,6 @@ contains
         else
             ndomains_ = 0
         end if
-
 
     end function ndomains
     !***************************************************************************************
@@ -850,10 +771,6 @@ contains
 
     end function prolong
     !***************************************************************************************
-
-
-
-
 
 
 
@@ -1049,7 +966,6 @@ contains
         integer(ik)         :: idom, ndom
 
         ndom = size(right%dom)
-
         allocate(res%dom(ndom))
 
 
@@ -1067,6 +983,31 @@ contains
 
 
 
+    !>
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function minus_chidg_vector(right) result(res)
+        type(chidg_vector_t),    intent(in)  :: right
+
+        type(chidg_vector_t) :: res
+        integer(ik)         :: idom, ndom
+
+        ndom = size(right%dom)
+        allocate(res%dom(ndom))
+
+        do idom = 1,size(right%dom)
+            res%dom(idom) = (-ONE)*right%dom(idom)
+        end do
+
+        res%send   = right%send
+        res%recv   = right%recv
+        res%ntime_ = right%ntime_
+
+    end function minus_chidg_vector
+    !****************************************************************************************
 
 
 

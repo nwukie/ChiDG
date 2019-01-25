@@ -69,8 +69,8 @@ if (CMAKE_Fortran_COMPILER_ID MATCHES Intel)
 elseif (CMAKE_Fortran_COMPILER_ID MATCHES GNU)
 
     # Enforce gfortran minimum version requirement
-    if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS 6.0.0)
-        message(FATAL_ERROR "Require at least gfortran 6.0.0.")
+    if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS 7.0.0)
+        message(FATAL_ERROR "Require at least gfortran 7.0.0.")
     endif()
 
     # Set compile/link flags

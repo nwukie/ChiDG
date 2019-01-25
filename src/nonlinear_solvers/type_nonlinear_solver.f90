@@ -19,15 +19,21 @@ module type_nonlinear_solver
     type, abstract, public  :: nonlinear_solver_t
 
         ! Parameters
-        real(rk)        :: cfl0              = 1.0_rk       ! Initial CFL number
-        real(rk)        :: cflmax            = -1.0_rk
-        real(rk)        :: tol               = 1.e-10_rk    ! Absolute convergence tolerance
-        real(rk)        :: rtol              = 1.e-10_rk    ! Relative convergence tolerance
-        integer(ik)     :: nmax              = -1           ! Max number of steps to take in the nonlinear solver, default<0(unlimited)
-        integer(ik)     :: nwrite            = 100          ! Write data every 'nwrite' steps
-        logical         :: ptc               = .true.       ! Pseudo-transient continuation
-        logical         :: smooth            = .true.       ! Residual smoothing
-        character(100)  :: search            = 'Backtrack'  ! Line search algorithm
+        real(rk)        :: cfl0         = 1.0_rk        ! Initial cfl number
+        real(rk)        :: cfl_max      = -1.0_rk       ! Maximum cfl: (negative => unlimited)
+        real(rk)        :: cfl_up       = 1.5           ! scale factor for increasing cfl
+        real(rk)        :: cfl_down     = 0.1           ! scale factor for decreasing cfl
+        character(100)  :: cfl_fields   = 'average'     ! Strategy for cfl selection across fields: ('minimum','average')
+        real(rk)        :: tol          = 1.e-10_rk     ! Absolute convergence tolerance
+        real(rk)        :: rtol         = 1.e-10_rk     ! Relative convergence tolerance
+        integer(ik)     :: nmax         = -1            ! Max number of steps to take in the nonlinear solver, default<0(unlimited)
+        integer(ik)     :: nwrite       = 100           ! Write data every 'nwrite' steps
+        logical         :: ptc          = .true.        ! Pseudo-transient continuation
+        character(100)  :: search       = 'backtrack'   ! Line search algorithm: ('backtrack','none')
+        logical         :: smooth       = .true.        ! Residual smoothing
+        character(100)  :: smoother     = 'jacobi'      ! Residual smoother: ('jacobi')
+        integer(ik)     :: nsmooth      = 10            ! Number of residual smoothing iterations
+        real(rk)        :: smooth_relax = 0.5_rk        ! Relaxation factor on residual smoothing contribution
 
 
         ! Data logs
@@ -102,7 +108,7 @@ module type_nonlinear_solver
             type(chidg_data_t),                         intent(inout)           :: data
             class(system_assembler_t),      optional,   intent(inout)           :: system
             class(linear_solver_t),         optional,   intent(inout)           :: linear_solver
-            class(preconditioner_t),        optional,   intent(inout)           :: preconditioner
+            class(preconditioner_t),        optional,   intent(inout), target   :: preconditioner
             class(solver_controller_t),     optional,   intent(inout), target   :: solver_controller
         end subroutine
     end interface
@@ -152,15 +158,21 @@ contains
         class(nonlinear_solver_t),  intent(inout)   :: self
         type(dict_t),               intent(inout)   :: options
 
-        if (options%contains('tol'   )) call options%get('tol',   self%tol   )
-        if (options%contains('rtol'  )) call options%get('rtol',  self%rtol  )
-        if (options%contains('cfl0'  )) call options%get('cfl0',  self%cfl0  )
-        if (options%contains('cflmax')) call options%get('cflmax',self%cflmax)
-        if (options%contains('nmax'))   call options%get('nmax',  self%nmax  )
-        if (options%contains('nwrite')) call options%get('nwrite',self%nwrite)
-        if (options%contains('search')) call options%get('search',self%search)
-        if (options%contains('ptc'   )) call options%get('ptc',   self%ptc   )
-        if (options%contains('smooth')) call options%get('smooth',self%smooth)
+        if (options%contains('tol'   ))       call options%get('tol',           self%tol   )
+        if (options%contains('rtol'  ))       call options%get('rtol',          self%rtol  )
+        if (options%contains('cfl0'  ))       call options%get('cfl0',          self%cfl0  )
+        if (options%contains('cfl_max'))      call options%get('cfl_max',       self%cfl_max)
+        if (options%contains('cfl_up'))       call options%get('cfl_up',        self%cfl_up)
+        if (options%contains('cfl_down'))     call options%get('cfl_down',      self%cfl_down)
+        if (options%contains('cfl_fields'))   call options%get('cfl_fields',    self%cfl_fields)
+        if (options%contains('nmax'  ))       call options%get('nmax',          self%nmax  )
+        if (options%contains('nwrite'))       call options%get('nwrite',        self%nwrite)
+        if (options%contains('ptc'   ))       call options%get('ptc',           self%ptc   )
+        if (options%contains('search'))       call options%get('search',        self%search)
+        if (options%contains('smooth'))       call options%get('smooth',        self%smooth)
+        if (options%contains('smoother'))     call options%get('smoother',      self%smoother)
+        if (options%contains('nsmooth'))      call options%get('nsmooth',       self%nsmooth)
+        if (options%contains('smooth_relax')) call options%get('smooth_relax',  self%smooth_relax)
 
     end subroutine set
     !****************************************************************************************

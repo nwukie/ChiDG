@@ -44,6 +44,8 @@ contains
         type(chidg_vector_t),    intent(in)      :: b
 
 
+        ! Update stamp
+        call date_and_time(values=self%stamp)
 
         
     end subroutine update

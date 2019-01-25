@@ -98,6 +98,7 @@ contains
         end if
 
 
+
         ! Reset/Start timers
         call timer_comm%reset()
         call timer_blas%reset()
@@ -108,7 +109,7 @@ contains
 
         ! Update preconditioner
         if (present(solver_controller)) then
-            if (solver_controller%update_preconditioner(A)) call M%update(A,b)
+            if (solver_controller%update_preconditioner(A,M)) call M%update(A,b)
         else
             call M%update(A,b)
         end if
@@ -161,9 +162,12 @@ contains
             do j = 1,self%nkrylov
                 nvecs = nvecs + 1
 
+
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 call self%timer_precon%start()
                 z(j) = M%apply(A,v(j))
+
+
 
                 ! Inner fgmres correction
                 if (self%inner_fgmres) then
@@ -171,7 +175,6 @@ contains
                     call fgmres%solve(A,deltaz,zr,M,solver_controller)
                     z(j) = z(j) + deltaz
                 end if
-
                 call self%timer_precon%stop()
 
 
@@ -279,6 +282,7 @@ contains
             ! Solve upper-triangular system y = hinv * p
             h(1:nvecs,1:nvecs) = inv(h(1:nvecs,1:nvecs))
             y_dim = matmul(h(1:nvecs,1:nvecs),p(1:nvecs))
+
 
             ! Reconstruct solution
             x = x0

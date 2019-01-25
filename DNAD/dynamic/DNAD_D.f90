@@ -1850,13 +1850,13 @@ CONTAINS
 
         type(AD_D)                      :: res(size(u,1))  !> Causes memory leak in ifort 15.0.3. Doesn't seem to be deallocating everything correctly
         real(rk), dimension(size(v))    :: tmp
-        real(rk), dimension(size(u,1))  :: tmp2
+!        real(rk), dimension(size(u,1))  :: tmp2
         integer                         :: i,j,vecsize
 
 
         do j = 1,size(res)
-               allocate(res(j)%xp_ad_(size(v(1)%xp_ad_)))
-               res(j)%xp_ad_ = ZERO
+           allocate(res(j)%xp_ad_(size(v(1)%xp_ad_)))
+           res(j)%xp_ad_ = ZERO
         end do
 
 
@@ -1866,12 +1866,12 @@ CONTAINS
         !
 
         ! Broken with GCC 6.1.0
-        ! res%x_ad_ = MATMUL(u,v%x_ad_)
+         res%x_ad_ = MATMUL(u,v%x_ad_)
 
-        ! Fix for GCC 6.1.0
-        tmp = v%x_ad_
-        tmp2 = matmul(u,tmp)
-        res%x_ad_ = tmp2
+!        ! Fix for GCC 6.1.0
+!        tmp = v%x_ad_
+!        tmp2 = matmul(u,tmp)
+!        res%x_ad_ = tmp2
     
 
 

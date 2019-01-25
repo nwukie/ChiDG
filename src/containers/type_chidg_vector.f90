@@ -1,7 +1,7 @@
 module type_chidg_vector
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: ZERO, TWO
+    use mod_constants,              only: ZERO, TWO, ONE
     use mod_chidg_mpi,              only: GROUP_MASTER, ChiDG_COMM, IRANK
     use type_mesh,                  only: mesh_t
     use type_function,              only: function_t
@@ -103,6 +103,7 @@ module type_chidg_vector
     public operator (-)
     interface operator (-)
         module procedure sub_chidg_vector_chidg_vector    ! chidg_vector - chidg_vector
+        module procedure minus_chidg_vector               ! - chidg_vector
     end interface
 
     public operator (+)
@@ -965,7 +966,6 @@ contains
         integer(ik)         :: idom, ndom
 
         ndom = size(right%dom)
-
         allocate(res%dom(ndom))
 
 
@@ -983,6 +983,31 @@ contains
 
 
 
+    !>
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function minus_chidg_vector(right) result(res)
+        type(chidg_vector_t),    intent(in)  :: right
+
+        type(chidg_vector_t) :: res
+        integer(ik)         :: idom, ndom
+
+        ndom = size(right%dom)
+        allocate(res%dom(ndom))
+
+        do idom = 1,size(right%dom)
+            res%dom(idom) = (-ONE)*right%dom(idom)
+        end do
+
+        res%send   = right%send
+        res%recv   = right%recv
+        res%ntime_ = right%ntime_
+
+    end function minus_chidg_vector
+    !****************************************************************************************
 
 
 

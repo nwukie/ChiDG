@@ -61,11 +61,11 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine solve(self,data,system,linear_solver,preconditioner,solver_controller)
-        class(quasi_newton_rs_t),                  intent(inout)           :: self
+        class(quasi_newton_rs_t),               intent(inout)           :: self
         type(chidg_data_t),                     intent(inout)           :: data
         class(system_assembler_t),  optional,   intent(inout)           :: system
         class(linear_solver_t),     optional,   intent(inout)           :: linear_solver
-        class(preconditioner_t),    optional,   intent(inout)           :: preconditioner
+        class(preconditioner_t),    optional,   intent(inout),  target  :: preconditioner
         class(solver_controller_t), optional,   intent(inout),  target  :: solver_controller
 
         type(chidg_data_t)                                              :: data_copy

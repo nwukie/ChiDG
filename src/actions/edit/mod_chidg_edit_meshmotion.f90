@@ -13,7 +13,7 @@ module mod_chidg_edit_meshmotion
     use hdf5
     use h5lt
 
-    use mod_chidg_edit_printoverview,   only: print_overview
+    use mod_chidg_edit_printoverview,   only: print_overview, chidg_clear_screen
     use mod_chidg_edit_boundaryconditions,   only: print_bc_states
     implicit none
 
@@ -72,7 +72,7 @@ contains
         do while ( run_bc_edit )
 
             ! Refresh display
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_mm_overview(fid)
 
@@ -147,7 +147,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_mm_groups(fid,active_topic='Groups')
 
@@ -179,7 +179,7 @@ contains
                     open_group = .true.
                     do while(edit_group)
                         ! Refresh display
-                        call execute_command_line("clear")
+                        call chidg_clear_screen()
                         call print_overview(fid)
                         call print_mm_groups(fid,active_topic='Groups')
 
@@ -244,7 +244,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_mm_groups(fid, active_topic='Groups')
 
@@ -390,7 +390,7 @@ contains
                 !
                 ! Refresh display
                 !
-                call execute_command_line("clear")
+                call chidg_clear_screen()
                 call print_overview(fid)
                 call print_mm_groups(fid,active_topic='Groups',active_group=trim(group_name))
 
@@ -459,7 +459,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_mm_groups(fid, active_topic='Groups', active_group=trim(sourcegroup_name))
             call print_rbf_parameters(sourcegroup_id)
@@ -532,7 +532,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_mm_groups(fid, active_topic='Groups', active_group=trim(sourcegroup_name))
             call print_rbf_parameters(sourcegroup_id, active_rbf='Base')
@@ -667,7 +667,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_mm_groups(fid, active_topic='Groups', active_group=trim(sourcegroup_name))
             call print_rbf_parameters(sourcegroup_id, active_rbf='Explicit')
@@ -771,7 +771,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_mm_groups(fid,active_topic='Groups', active_group=trim(mm_group_name))
             call print_rbf_sources(mm_group_id,active_topic = "Sources")
@@ -804,7 +804,7 @@ contains
                     open_group = .true.
                     do while(edit_group)
                         ! Refresh display
-                        call execute_command_line("clear")
+                        call chidg_clear_screen()
                         call print_overview(fid)
                         call print_mm_groups(fid,active_topic='Groups', active_group = trim(mm_group_name))
                         call print_rbf_sources(mm_group_id,active_topic = "Sources")
@@ -883,7 +883,7 @@ contains
                 !
                 ! Refresh display
                 !
-                call execute_command_line("clear")
+                call chidg_clear_screen()
                 call print_overview(fid)
                 call print_mm_groups(fid,active_topic='Groups',active_group=trim(mm_group_name))
                 call print_rbf_sources(mm_group_id,active_topic = "Sources",active_source=trim(group_name))
@@ -959,7 +959,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_bc_states(fid)
             call print_rbf_sources(mm_group_id,active_topic = "Sources", active_source=trim(group_name))
@@ -1038,7 +1038,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_mm_groups(fid, active_topic='Groups', active_group = trim(mm_group_name))
             call print_rbf_sources(mm_group_id,active_topic = "Sources", active_source=trim(group_name))
@@ -1146,7 +1146,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_mm_groups(fid, active_topic='Groups', active_group=trim(mm_group_name))
             call print_rbf_sources(mm_group_id,active_topic = "Sources", active_source=trim(source_name))
@@ -1370,7 +1370,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_mm_groups(fid, active_topic='Groups', active_group=trim(mm_group_name))
 
@@ -1498,7 +1498,7 @@ contains
                         do while ( get_property )
 
                             ! Refresh display
-                            call execute_command_line("clear")
+                            call chidg_clear_screen()
                             call write_line(trim(group_name%get()))
                             call print_overview(fid)
                             call print_mm_groups(fid, active_topic='Groups', active_group=trim(mm_group_name))
@@ -1592,7 +1592,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_mm_overview(fid,active_topic='Domains')
 
@@ -1663,7 +1663,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid,domain_id)
             call print_mm_overview(fid, active_topic = 'Domains', active_domain=domain_id)
             dname_trim = trim(adjustl(domain_name)) 
@@ -1754,7 +1754,7 @@ contains
 
 
         ! Refresh display
-        call execute_command_line("clear")
+        call chidg_clear_screen()
         call print_overview(fid)
         !call print_mm_overview(fid,active_topic='Groups')
         call print_mm_groups(fid, active_topic='Groups')
@@ -1771,7 +1771,7 @@ contains
         do while (run)
 
             ! Refresh display
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_mm_groups(fid, active_topic='Groups')
             !call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))

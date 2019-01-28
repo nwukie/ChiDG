@@ -10,7 +10,7 @@ module mod_chidg_edit_domaininfo
                                               open_domain_hdf, close_domain_hdf, set_domain_equation_set_hdf,       &
                                               check_domain_exists_hdf, set_domain_name_hdf, create_eqn_group_hdf,   &
                                               check_eqn_group_exists_hdf, prune_eqn_groups_hdf
-    use mod_chidg_edit_printoverview,   only: print_overview
+    use mod_chidg_edit_printoverview,   only: print_overview, chidg_clear_screen
     implicit none
 
 
@@ -47,7 +47,8 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            !call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
 
 
@@ -139,7 +140,8 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            !call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid,domain_id)
 
 
@@ -238,7 +240,8 @@ contains
         !
         ! Refresh display
         !
-        call execute_command_line("clear")
+        !call execute_command_line("clear")
+        call chidg_clear_screen()
         call print_overview(fid,domain_id)
 
 
@@ -308,7 +311,8 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            !call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid,domain_id)
 
 

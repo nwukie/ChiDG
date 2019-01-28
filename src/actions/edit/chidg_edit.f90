@@ -20,7 +20,7 @@ module mod_chidg_edit
     use mod_chidg_edit_meshmotion,          only: chidg_edit_meshmotion
     use mod_chidg_edit_matrixsolver,        only: chidg_edit_matrixsolver
     use mod_chidg_edit_timescheme,          only: chidg_edit_timescheme
-    use mod_chidg_edit_printoverview,       only: print_overview
+    use mod_chidg_edit_printoverview,       only: print_overview, chidg_clear_screen
     implicit none
 
 
@@ -54,6 +54,8 @@ contains
 
         integer(HID_T)     :: fid
 
+        ! Start Alternate Screen so terminal state can be restored afterwards
+        print*, achar(27)//"[?1049h"
 
         !
         ! Initialize chidg environment
@@ -72,7 +74,7 @@ contains
         ! Clear screen for editing
         ! TODO: portability check
         !
-        call execute_command_line("clear")
+        call chidg_clear_screen()
 
 
 
@@ -86,7 +88,7 @@ contains
             !
             ! Refresh display with overview of file contents
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
 
 
@@ -139,16 +141,15 @@ contains
         !
         ! Clear terminal upon exit
         !
-        call execute_command_line("clear")
+        call chidg_clear_screen()
+
+
+        ! Restore terminal state from Alternate Screen
+        print*, achar(27)//"[?1049l"
+
 
     end subroutine chidg_edit
     !********************************************************************************************
-
-
-
-
-
-
 
 
 

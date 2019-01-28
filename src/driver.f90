@@ -96,7 +96,7 @@ program driver
 
         ! Get 'action'
         call get_command_argument(1,chidg_action)
-        call chidg%start_up('core')
+        !call chidg%start_up('core')
 
         ! Select 'action'
         select case (trim(chidg_action))
@@ -118,6 +118,7 @@ program driver
             !!
             !----------------------------------------------------------------------------
             case ('convert')
+                call chidg%start_up('core')
                 if (narg /= 2) call chidg_signal(FATAL,"The 'convert' action expects: chidg convert filename.x")
                 call get_command_argument(2,filename)
                 call chidg_convert(trim(filename))
@@ -137,8 +138,10 @@ program driver
             !!
             !----------------------------------------------------------------------------
             case ('edit')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'edit' action expects to be called as: chidg edit filename.h5")
+                call chidg%start_up('core')
                 call get_command_argument(2,filename)
+                if (narg < 2) call chidg_signal(FATAL,"The 'edit' action was called with too few arguments. Try: chidg edit filename.h5")
+                if (narg > 2) call chidg_signal(FATAL,"The 'edit' action was called with too many arguments. Try: chidg edit filename.h5")
                 call chidg_edit(trim(filename))
 
             !*****************************************************************************
@@ -169,6 +172,7 @@ program driver
             !!                              myfile_0.3000.plt
             !!
             !!---------------------------------------------------------------------------
+                call chidg%start_up('core')
                 if (narg /= 2) call chidg_signal(FATAL,"The 'post' action expects: chidg post file.h5")
 
                 call date_and_time(time=time_string)
@@ -215,6 +219,7 @@ program driver
             !!                              myfile_0.3000.plt
             !!
             !!---------------------------------------------------------------------------
+                call chidg%start_up('core')
                 if (narg /= 2) call chidg_signal(FATAL,"The '2tec' action expects: chidg 2tec file.h5")
 
                 call date_and_time(time=time_string)
@@ -261,6 +266,7 @@ program driver
             !!                              myfile_0_0_3.vtu
             !!
             !!---------------------------------------------------------------------------
+                call chidg%start_up('core')
                 if (narg /= 2) call chidg_signal(FATAL,"The '2vtk' action expects: chidg 2vtk file.h5")
 
                 call date_and_time(time=time_string)
@@ -299,6 +305,7 @@ program driver
             !!
             !-----------------------------------------------------------------------------
             case ('clone')
+                call chidg%start_up('core')
                 if (narg /= 3) call chidg_signal(FATAL,"The 'clone' action expects: chidg clone source_file.h5 target_file.h5")
                 call get_command_argument(2,file_a)
                 call get_command_argument(3,file_b)
@@ -310,12 +317,14 @@ program driver
 
 
             case ('matplotlib')
+                call chidg%start_up('core')
                 if (narg /= 3) call chidg_signal(FATAL,"The 'matplotlib' action expects: chidg matplotlib gridfile.h5solutionfile.h5")
                 call get_command_argument(2,grid_file)
                 call get_command_argument(3,solution_file)
                 call chidg_post_matplotlib(trim(grid_file),trim(solution_file))
 
             case ('forces')
+                call chidg%start_up('core')
                 if (narg /= 2) call chidg_signal(FATAL,"The 'forces' action expects to be called as: chidg forces solutionfile.h5")
                 call get_command_argument(2,solution_file)
                 call write_line('Enter patch group to integrate: ')
@@ -341,19 +350,23 @@ program driver
 
 
             case ('inputs')
+                call chidg%start_up('core')
                 if (narg > 2) call chidg_signal(FATAL,"The 'inputs' action expects to be called as: chidg inputs")
                 call write_namelist()
 
 
             case ('tutorial')
+                call chidg%start_up('core')
                 if (narg /= 2) call chidg_signal(FATAL,"The 'tutorial' action expects to be called as: chidg tutorial selected_tutorial.")
                 call get_command_argument(2,tutorial)
                 call tutorial_driver(trim(tutorial))
 
             case ('eigen')
+                call chidg%start_up('core')
                 call compute_euler_eigenmodes()
 
             case default
+                call chidg%start_up('core')
                 call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' 'inputs' and 'forces'.")
         end select
 

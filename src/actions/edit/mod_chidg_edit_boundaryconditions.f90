@@ -13,7 +13,7 @@ module mod_chidg_edit_boundaryconditions
     use hdf5
     use h5lt
 
-    use mod_chidg_edit_printoverview,   only: print_overview
+    use mod_chidg_edit_printoverview,   only: print_overview, chidg_clear_screen
     implicit none
 
 
@@ -71,7 +71,7 @@ contains
         do while ( run_bc_edit )
 
             ! Refresh display
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_bc_overview(fid)
 
@@ -146,7 +146,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_bc_overview(fid,active_topic='States')
 
@@ -179,7 +179,7 @@ contains
                     open_group = .true.
                     do while(edit_group)
                         ! Refresh display
-                        call execute_command_line("clear")
+                        call chidg_clear_screen()
                         call print_overview(fid)
                         call print_bc_overview(fid,active_topic='States')
 
@@ -260,7 +260,7 @@ contains
                 !
                 ! Refresh display
                 !
-                call execute_command_line("clear")
+                call chidg_clear_screen()
                 call print_overview(fid)
                 call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))
 
@@ -364,7 +364,7 @@ contains
                             do while ( get_property )
 
                                 ! Refresh display
-                                call execute_command_line("clear")
+                                call chidg_clear_screen()
                                 call print_overview(fid)
                                 call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))
                                 call print_bc_state_properties(bcgroup_id)
@@ -442,7 +442,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_bc_overview(fid,active_topic='Patches')
 
@@ -519,7 +519,7 @@ contains
             !
             ! Refresh display
             !
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid,domain_id)
             call print_bc_overview(fid,active_topic='Patches',active_domain=domain_id)
             dname_trim = trim(adjustl(domain_name)) 
@@ -621,7 +621,7 @@ contains
         do while ( run )
 
             ! Refresh display
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid,domain_id)
             call print_bc_overview(fid,active_topic='Patches',active_domain=domain_id,active_face=iface)
 
@@ -717,7 +717,7 @@ contains
 
 
         ! Refresh display
-        call execute_command_line("clear")
+        call chidg_clear_screen()
         call print_overview(fid)
         call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))
         call print_bc_state_properties(bcgroup_id,trim(pname))
@@ -783,7 +783,7 @@ contains
         do while (run)
 
             ! Refresh display
-            call execute_command_line("clear")
+            call chidg_clear_screen()
             call print_overview(fid)
             call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))
             call print_bc_state_properties(bcgroup_id,trim(pname))
@@ -818,7 +818,7 @@ contains
                         list_fcns = .false.
                         do while (run_function)
                             ! Refresh display
-                            call execute_command_line("clear")
+                            call chidg_clear_screen()
                             call print_overview(fid)
                             call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))
                             call print_bc_state_properties(bcgroup_id,trim(pname))

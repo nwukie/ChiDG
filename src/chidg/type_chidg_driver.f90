@@ -143,7 +143,7 @@ contains
         call noptions%set('nsteps',50)
         call noptions%set('search','Backtrack')
         call noptions%set('ptc',.true.)
-        call noptions%set('smooth',.true.)
+        call noptions%set('smooth',.false.)
 
         call loptions%set('tol',1.e-10_rk)  
         call loptions%set('inner_fgmres',.true.)
@@ -242,7 +242,7 @@ contains
             iorder = 2
             call noptions%set('tol',1.e-4_rk)   
             call noptions%set('ptc',.true.)    
-            call noptions%set('smooth',.true.)
+            call noptions%set('smooth',.false.)
             call loptions%set('tol',1.e-5_rk)   ! Set linear solver options
             call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
             call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
@@ -305,7 +305,7 @@ contains
             call set_p_poisson_parameter(real(p,rk))
             call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
             call noptions%set('ptc',.true.)   ! Set nonlinear solver options
-            call noptions%set('smooth',.true.)   ! Set nonlinear solver options
+            call noptions%set('smooth',.false.)   ! Set nonlinear solver options
             call loptions%set('tol',1.e-8_rk)   ! Set linear solver options
             call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
             call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)

@@ -88,7 +88,6 @@ contains
         mom3    = worker%get_field('Momentum-3', 'value')
         energy  = worker%get_field('Energy',     'value')
 
-
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
@@ -104,7 +103,6 @@ contains
 
         call worker%store_model_field('Pressure',    'value', pressure)
         call worker%store_model_field('Temperature', 'value', temperature)
-
 
 
     end subroutine compute

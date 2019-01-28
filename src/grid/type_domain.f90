@@ -702,7 +702,7 @@ contains
                         ftype               = INTERIOR
                         ineighbor_neqns     = self%elems(ineighbor_element_l)%neqns
                         ineighbor_nterms_s  = self%elems(ineighbor_element_l)%nterms_s
-                        print*, 'domain%init_comm_local: need dof_start'
+                        ineighbor_dof_start = self%elems(ineighbor_element_l)%dof_start
 
 
                     else

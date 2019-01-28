@@ -112,6 +112,10 @@ contains
                 elem_info%idomain_l  = domain%elems(ielem)%idomain_l
                 elem_info%ielement_g = domain%elems(ielem)%ielement_g
                 elem_info%ielement_l = domain%elems(ielem)%ielement_l
+                elem_info%neqns      = domain%elems(ielem)%neqns
+                elem_info%nterms_s   = domain%elems(ielem)%nterms_s
+                elem_info%nterms_c   = domain%elems(ielem)%nterms_c
+                elem_info%dof_start  = domain%elems(ielem)%dof_start
                 call worker%set_element(elem_info)
 
 

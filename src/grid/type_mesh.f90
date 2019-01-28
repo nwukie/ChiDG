@@ -1310,7 +1310,7 @@ contains
                                        ntime, pelem_ID, interpolation_level,        &
                                        idomain_g, ielement_g, coordinate_system,    & 
                                        recv_size_a, recv_size_b, recv_size_c,       &
-                                       face_location(5), element_location(5),       &
+                                       face_location(6), element_location(5),       &
                                        element_data(9), spacedim, inode, dof_start
 
         logical :: parallel_donor
@@ -1330,8 +1330,8 @@ contains
 
                 ! The sending proc sent its neighbor location, which is a face on our local processor 
                 ! here where we will store the incoming ALE data
-                ! face_location = [idomain_g, idomain_l, ielement_g, ielement_l, iface]
-                call mpi_recv(face_location, 5, mpi_integer4, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                ! face_location = [idomain_g, idomain_l, ielement_g, ielement_l, iface, dof_start]
+                call mpi_recv(face_location, 6, mpi_integer4, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
                 idom  = face_location(2)
                 ielem = face_location(4)
                 iface = face_location(5)

@@ -36,6 +36,7 @@ module type_bc_element_coupling
 
         procedure   :: neqns
         procedure   :: nterms_s
+        procedure   :: dof_start
 
         procedure   :: proc
 
@@ -205,12 +206,13 @@ contains
     !!
     !!
     !----------------------------------------------------------------------
-    subroutine set_coupled_element_data(self,idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+    subroutine set_coupled_element_data(self,idomain_g,ielement_g,neqns,nterms_s,dof_start,total_area,areas,quad_pts)
         class(bc_element_coupling_t),   intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g
         integer(ik),                    intent(in)      :: ielement_g
         integer(ik),                    intent(in)      :: neqns
         integer(ik),                    intent(in)      :: nterms_s
+        integer(ik),                    intent(in)      :: dof_start
         real(rk),                       intent(in)      :: total_area
         real(rk),                       intent(in)      :: areas(:)
         type(point_t),                  intent(in)      :: quad_pts(:)
@@ -222,7 +224,7 @@ contains
         !
         elem_ID = self%find_coupled_element(idomain_g,ielement_g)
 
-        call self%data(elem_ID)%set_data(neqns,nterms_s,total_area,areas,quad_pts)
+        call self%data(elem_ID)%set_data(neqns,nterms_s,dof_start,total_area,areas,quad_pts)
 
     end subroutine set_coupled_element_data
     !**********************************************************************
@@ -413,6 +415,25 @@ contains
     end function nterms_s
     !************************************************************************
 
+
+
+
+    !>  Return the starting DOF index in the ChiDG-global index.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/27/2019
+    !!
+    !-----------------------------------------------------------------------
+    function dof_start(self,elem_ID) result(dof_start_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: dof_start_
+
+        dof_start_ = self%data(elem_ID)%dof_start
+
+    end function dof_start
+    !************************************************************************
 
 
 

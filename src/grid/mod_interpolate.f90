@@ -740,7 +740,7 @@ contains
                 call find_gq_donor(mesh,                                &
                                    nodes(inode,1:3),                    &
                                    [ZERO,ZERO,ZERO],                    &
-                                   face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
+                                   face_info_constructor(0,0,0,0,0,0),    &   ! we don't really have a receiver face
                                    donor,                               &
                                    donor_node,                          &
                                    donor_found,                         &
@@ -754,7 +754,7 @@ contains
                     call find_gq_donor(mesh,                                &
                                        nodes(inode,1:3),                    &
                                        try_offset,                          &
-                                       face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
+                                       face_info_constructor(0,0,0,0,0,0),    &   ! we don't really have a receiver face
                                        donor,                               &
                                        donor_node,                          &
                                        donor_found,                         &
@@ -771,7 +771,7 @@ contains
                     call find_gq_donor_parallel(mesh,                               &
                                                 nodes(inode,1:3),                   &
                                                 [ZERO,ZERO,ZERO],                   &
-                                                face_info_constructor(0,0,0,0,0),   &   ! we don't really have a receiver face
+                                                face_info_constructor(0,0,0,0,0,0),   &   ! we don't really have a receiver face
                                                 donor,                              &
                                                 donor_node,                         &
                                                 donor_found,                        &
@@ -787,7 +787,7 @@ contains
                     call find_gq_donor_parallel(mesh,                               &
                                                 nodes(inode,1:3),                   &
                                                 try_offset,                         &
-                                                face_info_constructor(0,0,0,0,0),   &   ! we don't really have a receiver face
+                                                face_info_constructor(0,0,0,0,0,0),   &   ! we don't really have a receiver face
                                                 donor,                              &
                                                 donor_node,                         &
                                                 donor_found,                        &

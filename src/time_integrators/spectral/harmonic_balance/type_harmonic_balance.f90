@@ -199,7 +199,8 @@ contains
                                          data%mesh%domain(idom)%elems(ielem)%idomain_l,  &
                                          data%mesh%domain(idom)%elems(ielem)%ielement_g, &
                                          data%mesh%domain(idom)%elems(ielem)%ielement_l, &
-                                         NO_FACE)
+                                         NO_FACE,                                        &
+                                         data%mesh%domain(idom)%elems(ielem)%dof_start)
 
 
                         call seed%init(data%mesh%domain(idom)%elems(ielem)%idomain_g,  &
@@ -210,6 +211,7 @@ contains
                                        data%mesh%domain(idom)%elems(ielem)%nterms_s,   &
                                        IRANK,                                          &
                                        itime_inner,                                    &
+                                       data%mesh%domain(idom)%elems(ielem)%dof_start,  &
                                        NO_ID,                                          &
                                        NO_ID,                                          &
                                        NO_ID)

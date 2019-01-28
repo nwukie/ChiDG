@@ -269,7 +269,7 @@ contains
                             receiver_indices(3) = receiver%ielement_g
                             receiver_indices(4) = receiver%ielement_l
                             receiver_indices(5) = receiver%iface
-                            receiver_indices(6) = receiver%idof_start
+                            receiver_indices(6) = receiver%dof_start
                             call MPI_BCast(receiver_indices,6,MPI_INTEGER4, iproc, ChiDG_COMM, ierr)
 
 

@@ -136,7 +136,7 @@ contains
         integer(ik) :: ipatch, iface_bc, idomain_l, ielement_l, iface, ierr, itime, &
                        idensity, imom1, imom2, imom3, ienergy, group_ID, patch_ID, face_ID, &
                        icoupled, idomain_g_coupled, idomain_l_coupled, ielement_g_coupled,  &
-                       ielement_l_coupled, iface_coupled
+                       ielement_l_coupled, iface_coupled, dof_start_coupled
         real(rk)    :: face_area, total_area
 
         ! Zero integrated quantities
@@ -170,12 +170,14 @@ contains
             ielement_g_coupled = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icoupled)
             ielement_l_coupled = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled)
             iface_coupled      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(     icoupled)
+            dof_start_coupled  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start( icoupled)
 
             face_info = face_info_constructor(idomain_g_coupled,  &
                                               idomain_l_coupled,  &
                                               ielement_g_coupled, &
                                               ielement_l_coupled, &
-                                              iface_coupled)
+                                              iface_coupled,      &
+                                              dof_start_coupled)
 
             
             ! Interpolate coupled element solution on face of coupled element

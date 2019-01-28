@@ -770,6 +770,8 @@ contains
 
         end do !idom
 
+        ! Sync
+        call self%data%mesh%comm_nelements()
 
 
 

@@ -58,8 +58,6 @@ module mod_bc
     !use bc_state_outlet_LODI_pressure,                  only: outlet_LODI_pressure_t
     !use bc_state_outlet_LODI_z_pressure,                only: outlet_LODI_z_pressure_t
     use bc_state_outlet_steady_1dchar,              only: outlet_steady_1dchar_t
-    use bc_state_outlet_3dgiles,                    only: outlet_3dgiles_t
-    use bc_state_outlet_3dgiles_innerproduct,       only: outlet_3dgiles_innerproduct_t
     use bc_state_outlet_giles_quasi3d_steady,       only: outlet_giles_quasi3d_steady_t
     use bc_state_outlet_giles_quasi3d_unsteady_HB,  only: outlet_giles_quasi3d_unsteady_HB_t
     use bc_state_inlet_giles_quasi3d_unsteady_HB,   only: inlet_giles_quasi3d_unsteady_HB_t
@@ -172,8 +170,6 @@ contains
         !type(outlet_LODI_pressure_t)            :: OUTLET_LODI_PRESSURE
         !type(outlet_LODI_z_pressure_t)          :: OUTLET_LODI_Z_PRESSURE
         type(outlet_steady_1dchar_t)            :: OUTLET_STEADY_1DCHAR
-        type(outlet_3dgiles_t)                  :: OUTLET_3DGILES
-        type(outlet_3dgiles_innerproduct_t)     :: OUTLET_3DGILES_INNERPRODUCT
         type(outlet_giles_quasi3d_steady_t)     :: OUTLET_GILES_QUASI3D_STEADY
         type(outlet_giles_quasi3d_unsteady_HB_t):: OUTLET_GILES_QUASI3D_UNSTEADY_HB
         type(inlet_giles_quasi3d_unsteady_HB_t) :: INLET_GILES_QUASI3D_UNSTEADY_HB
@@ -255,8 +251,6 @@ contains
             call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_GLOBALDG)
             call registered_bcs%push_back(OUTLET_NEUMANN_LODI_LOCALDG)
             call registered_bcs%push_back(OUTLET_STEADY_1DCHAR)
-            call registered_bcs%push_back(OUTLET_3DGILES)
-            call registered_bcs%push_back(OUTLET_3DGILES_INNERPRODUCT)
             call registered_bcs%push_back(OUTLET_GILES_QUASI3D_STEADY)
             call registered_bcs%push_back(OUTLET_GILES_QUASI3D_UNSTEADY_HB)
             call registered_bcs%push_back(INLET_GILES_QUASI3D_UNSTEADY_HB)

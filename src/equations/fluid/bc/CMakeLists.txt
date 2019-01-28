@@ -20,15 +20,6 @@ add_lib_sources(
                 bc_state_slipwall.f90
                 bc_state_farfield.f90
                 bc_state_outlet_steady_1dchar.f90
-                bc_state_outlet_3dgiles.f90
-                bc_state_outlet_3dgiles_innerproduct.f90
                 bc_state_supersonic_inlet.f90
-#                bc_state_inlet_giles_quasi3d_steady.f90
-#                bc_state_outlet_giles_quasi3d_steady.f90
-#                bc_state_outlet_giles_quasi3d_steady_extrapolate_average.f90
-#                bc_state_outlet_giles_quasi3d_unsteady_HB.f90
-#                bc_state_inlet_giles_quasi3d_unsteady_HB.f90
-#                bc_state_turbo_interface_steady.f90
-#                bc_giles_HB_base.f90
                 bc_state_outlet_characteristic_quasi3d_unsteady_HB.f90
                 )

@@ -63,7 +63,7 @@ module type_element
         integer(ik)                 :: iproc                ! Processor the element is associated with.
 
         ! Element data
-        integer(ik)                 :: element_data(9)      ! [element_type, spacedim, coordinate_system, neqns, nterms_s, nterms_c, ntime, interpolation_level]
+        integer(ik)                 :: element_data(9)      ! [element_type, spacedim, coordinate_system, neqns, nterms_s, nterms_c, ntime, interpolation_level, dof_start]
         integer(ik)                 :: element_type         ! 1=linear, 2=quadratic, 3=cubic, 4=quartic, etc.
         integer(ik)                 :: spacedim             ! Number of spatial dimensions for the element.
         integer(ik)                 :: coordinate_system    ! CARTESIAN, CYLINDRICAL. parameters from mod_constants.

@@ -45,15 +45,23 @@ module type_chidg_matrix
 
 
         ! backend dynamic procedures
-        procedure(init_interface),  pointer, pass :: init => chidg_init
+        !procedure(init_interface),  pointer, pass :: init => chidg_init
+        procedure(init_interface),  pointer, pass :: init => petsc_init
 
+        !procedure(init_recv_interface) pointer, pass :: init_recv => chidg_init_recv
+        procedure(init_recv_interface), pointer, pass :: init_recv => petsc_init_recv
 
-        procedure(store_interface), pointer, pass :: store         => chidg_store
-        procedure(store_interface), pointer, pass :: store_chimera => chidg_store_chimera
-        procedure(store_interface), pointer, pass :: store_bc      => chidg_store_bc
-        procedure(store_interface), pointer, pass :: store_hb      => chidg_store_hb
-        procedure(clear_interface), pointer, pass :: clear         => chidg_clear
+        !procedure(store_interface), pointer, pass :: store         => chidg_store
+        !procedure(store_interface), pointer, pass :: store_chimera => chidg_store_chimera
+        !procedure(store_interface), pointer, pass :: store_bc      => chidg_store_bc
+        !procedure(store_interface), pointer, pass :: store_hb      => chidg_store_hb
+        !procedure(clear_interface), pointer, pass :: clear         => chidg_clear
 
+        procedure(store_interface), pointer, pass :: store         => petsc_store
+        procedure(store_interface), pointer, pass :: store_chimera => petsc_store
+        procedure(store_interface), pointer, pass :: store_bc      => petsc_store
+        procedure(store_interface), pointer, pass :: store_hb      => petsc_store
+        procedure(clear_interface), pointer, pass :: clear         => petsc_clear
 
 
         ! Stamp for uniqueness
@@ -64,7 +72,7 @@ module type_chidg_matrix
         !generic,    public  :: init => initialize
         !procedure,  private :: initialize               ! chidg_matrix initialization
 
-        procedure, public   :: init_recv                ! Initialize with information about chidg_vector%recv for mv multiply
+!        procedure, public   :: init_recv                ! Initialize with information about chidg_vector%recv for mv multiply
 
 !        ! Setters
 !        procedure   :: store                            ! Store interior coupling
@@ -100,6 +108,16 @@ module type_chidg_matrix
             type(mesh_t),           intent(in)      :: mesh
             character(*),           intent(in)      :: mtype
         end subroutine init_interface
+    end interface
+
+
+    interface 
+        subroutine init_recv_interface(self,x)
+            import chidg_matrix_t
+            import chidg_vector_t
+            class(chidg_matrix_t),  intent(inout)   :: self
+            type(chidg_vector_t),   intent(in)      :: x
+        end subroutine init_recv_interface
     end interface
 
 
@@ -198,6 +216,7 @@ contains
         if (ierr /= 0) then
             call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting PETSc matrix type.')
         end if
+
 
 
         !
@@ -301,7 +320,7 @@ contains
     !!  @date   7/1/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine init_recv(self,x)
+    subroutine chidg_init_recv(self,x)
         class(chidg_matrix_t),   intent(inout)   :: self
         type(chidg_vector_t),    intent(in)      :: x
 
@@ -628,8 +647,58 @@ contains
         ! Set recv initialization to true
         self%recv_initialized = .true.
 
-    end subroutine init_recv
+    end subroutine chidg_init_recv
     !*******************************************************************************************
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/1/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_init_recv(self,x)
+        class(chidg_matrix_t),   intent(inout)   :: self
+        type(chidg_vector_t),    intent(in)      :: x
+
+
+        ! Set recv initialization to true
+        self%recv_initialized = .true.
+
+    end subroutine petsc_init_recv
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -717,8 +786,13 @@ contains
 
 !        row_index_start = face_info%idof_start
 !        col_index_start = seed%idof_start
+
+
+        print*, 'store - 1'
+
         col_indices = [(i, i=col_index_start,(col_index_start+seed%neqns*seed%nterms_s-1),1)]
 
+        print*, 'store - 2'
 
         print*, 'chidg_matrix%petsc_store: WARNING!!!!!!!!!!!! BAD INDICES!'
 
@@ -729,6 +803,7 @@ contains
             call MatSetValues(self%petsc_matrix,nrows,[row_index_start + iarray - 1],ncols,[col_index_start-1],integral(iarray)%xp_ad_,ADD_VALUES,ierr)
         end do 
 
+        print*, 'store - 3'
 
 
         ! Update stamp
@@ -895,6 +970,23 @@ contains
     end subroutine chidg_clear
     !**********************************************************************************
 
+
+
+
+
+    !> Set all chidg_matrix matrix-values to zero
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/27/2019
+    !! 
+    !----------------------------------------------------------------------------------
+    subroutine petsc_clear(self)
+        class(chidg_matrix_t),   intent(inout)   :: self
+
+        print*, 'WARNING!!!!! no implementation for petsc_clear'
+    
+    end subroutine petsc_clear
+    !**********************************************************************************
 
 
 

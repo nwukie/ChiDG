@@ -830,7 +830,9 @@ contains
         integer(ik),        intent(in)      :: group_ID
         type(mpi_comm),     intent(in)      :: bc_COMM
 
-        integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l, iface, neqns, nterms_s
+        integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l,         &
+                       ielement_g, ielement_l, iface, neqns, nterms_s,  &
+                       dof_start
 
 
 
@@ -862,6 +864,17 @@ contains
                                                                                                 ielement_l, &
                                                                                                 iface,      &
                                                                                                 IRANK)
+
+                call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID,    &
+                                                                                            idomain_g,  &
+                                                                                            ielement_g, &
+                                                                                            mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns,               &
+                                                                                            mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s,            &
+                                                                                            mesh%domain(idomain_l)%faces(ielement_l,iface)%dof_start,           &
+                                                                                            mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area,          &
+                                                                                            mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas,  &
+                                                                                            mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def)
+
 
             end do ! face_ID
         end do ! patch_ID

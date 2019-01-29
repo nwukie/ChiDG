@@ -732,6 +732,14 @@ contains
         call write_line(" ", ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line("Initialize: domain equation space...", io_proc=GLOBAL_MASTER)
 
+
+        ! Initialize mesh_dof_start
+        eqn_ID = self%mesh%domain(1)%elems(1)%eqn_ID
+        nfields = self%eqnset(eqn_ID)%prop%nprimary_fields()
+        self%mesh%mesh_dof_start = sum(self%mesh%nelements_per_proc(1:IRANK))*nterms_s*nfields + 1
+        print*, 'mesh_dof_start: ', self%mesh%mesh_dof_start
+
+
         do idomain = 1,self%mesh%ndomains()
             ! Assume each element has the same eqn_ID
             eqn_ID = self%mesh%domain(idomain)%elems(1)%eqn_ID

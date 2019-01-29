@@ -1553,17 +1553,17 @@ contains
     !!  @date   1/24/2019
     !!
     !--------------------------------------------------------------------------------
-    function get_dof_start(self,idomain_l,ielement_l) result(idof_start)
+    function get_dof_start(self,idomain_l,ielement_l) result(dof_start)
         class(mesh_t),  intent(in)  :: self
         integer(ik),    intent(in)  :: idomain_l
         integer(ik),    intent(in)  :: ielement_l
 
 
-        integer(ik) :: idof_start, ndof_prev, idom, end_elem, ielem
+        integer(ik) :: dof_start, ndof_prev, idom, end_elem, ielem
 
         ! Sum DOF on ranks 0 to IRANK-1. Indexing goes to IRANK since Fortran starts at 1.
         ! WARNING: ASSUMING ALL ELEMENTS ON OTHER PROCS HAVE SAME nterms_s
-        ndof_prev = sum(self%nelements_per_proc(1:IRANK))*self%domain(1)%elems(1)%nterms_s*self%domain(1)%elems(1)%neqns
+        ndof_prev = self%mesh_dof_start - 1
 
 
         ! Accumulate dofs on current RANK until idomain_l,ielement_l
@@ -1583,7 +1583,7 @@ contains
 
 
         ! dof index for requested element starts on dof after all previous
-        idof_start = ndof_prev + 1
+        dof_start = ndof_prev + 1
 
 
     end function get_dof_start

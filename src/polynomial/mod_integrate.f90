@@ -9,7 +9,7 @@ module mod_integrate
     use type_element,           only: element_t
     use type_face,              only: face_t
     use type_element_info,      only: element_info_t
-    use type_face_info,         only: face_info_t
+    use type_face_info,         only: face_info_t, face_info_constructor
     use type_function_info,     only: function_info_t
     use type_solverdata,        only: solverdata_t
     use type_seed,              only: seed_t
@@ -265,11 +265,18 @@ contains
         if ( ineighbor_element_l /= NO_INTERIOR_NEIGHBOR ) then
             if ( .not. parallel_neighbor ) then
 
-                face_n%idomain_g  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
-                face_n%idomain_l  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
-                face_n%ielement_g = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
-                face_n%ielement_l = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
-                face_n%iface      = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
+                !face_n%idomain_g  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
+                !face_n%idomain_l  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
+                !face_n%ielement_g = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
+                !face_n%ielement_l = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+                !face_n%iface      = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
+                face_n = face_info_constructor(mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g, &
+                                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l, &
+                                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g, &
+                                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l, &
+                                               mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face(), &
+                                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start)
+                    
 
                 !
                 ! Get linearization block for the neighbor element
@@ -375,6 +382,20 @@ contains
                           (idiff == 5) .or. (idiff == 6) )
 
 
+
+        !
+        ! Initialize a face_info in case it is needed below
+        !
+        !face_info%idomain_g  = elem_info%idomain_g
+        !face_info%idomain_l  = elem_info%idomain_l
+        !face_info%ielement_g = elem_info%ielement_g
+        !face_info%ielement_l = elem_info%ielement_l
+        !face_info%dof_start  = elem_info%dof_start
+        !face_info%iface      = idiff
+        face_info = face_info_constructor(elem_info%idomain_g,elem_info%idomain_l, &
+                                          elem_info%ielement_g, elem_info%ielement_l, &
+                                          idiff, elem_info%dof_start)
+
         !
         ! Only store rhs once. 
         !   - If we are differentiating things, only apply function once, when wrt interior
@@ -383,8 +404,10 @@ contains
         !       idiff == 0
         !
         if ( diff_interior .or. diff_none ) then
-            vals = sdata%rhs%dom(idom)%vecs(ielem)%getvar(ieqn,itime) - integral(:)%x_ad_
-            call sdata%rhs%dom(idom)%vecs(ielem)%setvar(ieqn,itime,vals)
+            !vals = sdata%rhs%dom(idom)%vecs(ielem)%getvar(ieqn,itime) - integral(:)%x_ad_
+            !call sdata%rhs%dom(idom)%vecs(ielem)%setvar(ieqn,itime,vals)
+            vals = -integral(:)%x_ad_
+            call sdata%rhs%store(vals,face_info,elem_info%nterms_s,elem_info%neqns,ieqn,itime)
         end if
 
         !
@@ -406,16 +429,6 @@ contains
             boundary_face   = (mesh%domain(idom)%faces(ielem,idiff)%ftype == BOUNDARY)
             chimera_face    = (mesh%domain(idom)%faces(ielem,idiff)%ftype == CHIMERA )
         end if
-
-
-        !
-        ! Initialize a face_info in case it is needed below
-        !
-        face_info%idomain_g  = elem_info%idomain_g
-        face_info%idomain_l  = elem_info%idomain_l
-        face_info%ielement_g = elem_info%ielement_g
-        face_info%ielement_l = elem_info%ielement_l
-        face_info%iface      = idiff
 
 
         !
@@ -478,6 +491,7 @@ contains
         type(AD_D),             intent(inout)   :: integral(:)
 
         real(rk)        :: vals(size(integral))
+        integer(ik)     :: nterms_s,nfields
 
         logical         :: boundary_face, chimera_face, conforming_face, diff_interior, diff_none, diff_exterior
         logical         :: add_flux = .false.
@@ -495,6 +509,9 @@ contains
             diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
                               (idiff == 3) .or. (idiff == 4) .or. &
                               (idiff == 5) .or. (idiff == 6) )
+
+            nterms_s = mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s
+            nfields  = mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns
 
             associate ( rhs => sdata%rhs%dom(idomain_l)%vecs, lhs => sdata%lhs)
 
@@ -516,8 +533,10 @@ contains
                       function_info%seed%itime == itime ) then
 
                     if (idepend == 1) then
-                        vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
-                        call rhs(ielement_l)%setvar(ieqn,itime,vals)
+                        !vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
+                        !call rhs(ielement_l)%setvar(ieqn,itime,vals)
+                        vals = integral(:)%x_ad_
+                        call sdata%rhs%store(vals,face_info,nterms_s,nfields,ieqn,itime)
                     end if
 
 
@@ -525,8 +544,10 @@ contains
                           (chimera_face .and. diff_none    ) ) then
 
                     if (idepend == 1) then
-                        vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
-                        call rhs(ielement_l)%setvar(ieqn,itime,vals)
+                        !vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
+                        !call rhs(ielement_l)%setvar(ieqn,itime,vals)
+                        vals = integral(:)%x_ad_
+                        call sdata%rhs%store(vals,face_info,nterms_s,nfields,ieqn,itime)
                     end if
 
 
@@ -541,8 +562,10 @@ contains
                     ! Store if needed
                     if ( add_flux ) then
                         ! Add to residual and store
-                        vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
-                        call rhs(ielement_l)%setvar(ieqn,itime,vals)
+                        !vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
+                        !call rhs(ielement_l)%setvar(ieqn,itime,vals)
+                        vals = integral(:)%x_ad_
+                        call sdata%rhs%store(vals,face_info,nterms_s,nfields,ieqn,itime)
 
                         ! Register flux was stored
                         call sdata%function_status%register_function_computed( face_info, function_info, ieqn)

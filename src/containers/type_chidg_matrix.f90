@@ -56,7 +56,6 @@ module type_chidg_matrix
         !procedure(store_interface), pointer, pass :: store_bc      => chidg_store_bc
         !procedure(store_interface), pointer, pass :: store_hb      => chidg_store_hb
         !procedure(clear_interface), pointer, pass :: clear         => chidg_clear
-
         procedure(store_interface), pointer, pass :: store         => petsc_store
         procedure(store_interface), pointer, pass :: store_chimera => petsc_store
         procedure(store_interface), pointer, pass :: store_bc      => petsc_store
@@ -206,16 +205,12 @@ contains
 
         ! Create matrix object
         call MatCreate(ChiDG_COMM%mpi_val, self%petsc_matrix, ierr)
-        if (ierr /= 0) then
-            call chidg_signal(FATAL,'chidg_matrix%petsc_init: error creating PETSc matrix.')
-        end if
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error creating PETSc matrix.')
 
 
         ! Set matrix type
         call MatSetType(self%petsc_matrix, 'aij', ierr)
-        if (ierr /= 0) then
-            call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting PETSc matrix type.')
-        end if
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting PETSc matrix type.')
 
 
 
@@ -764,46 +759,19 @@ contains
         PetscInt, allocatable   :: col_indices(:)
         
 
-!        idomain_l = face_info%idomain_l
-!
-!        ! Store linearization in associated domain domain_matrix_t
-!        call self%dom(idomain_l)%store(integral,face_info,seed,ivar,itime)
-
-
-!        ! Compute correct row offest for ivar
-!        irow_start = ( (ivar-1) * nterms )
-!        
-!        ! Loop through integral values, for each value store its derivative.
-!        ! The integral values here should be components of the RHS vector. 
-!        ! An array of partial derivatives from an AD_A variable should be stored 
-!        ! as a row in the block matrix
-!        do iarray = 1,size(integral)
-!            ! Do a += operation to add derivaties to any that are currently stored
-!            irow = irow_start + iarray
-!            self%data_(index)%mat(irow,:) = self%data_(index)%mat(irow,:) + integral(iarray)%xp_ad_
-!        end do
-
-
-!        row_index_start = face_info%idof_start
-!        col_index_start = seed%idof_start
-
-
-        print*, 'store - 1'
-
+        row_index_start = face_info%dof_start
+        col_index_start = seed%dof_start
         col_indices = [(i, i=col_index_start,(col_index_start+seed%neqns*seed%nterms_s-1),1)]
 
-        print*, 'store - 2'
-
-        print*, 'chidg_matrix%petsc_store: WARNING!!!!!!!!!!!! BAD INDICES!'
 
         nrows = 1
         ncols = size(integral(1)%xp_ad_)
         do iarray = 1,size(integral)
             ! subtract 1 from indices since petsc is 0-based
-            call MatSetValues(self%petsc_matrix,nrows,[row_index_start + iarray - 1],ncols,[col_index_start-1],integral(iarray)%xp_ad_,ADD_VALUES,ierr)
+            call MatSetValues(self%petsc_matrix,nrows,[row_index_start + iarray - 1],ncols,col_indices-1,integral(iarray)%xp_ad_,ADD_VALUES,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"chidg_matrix%petsc_store: error calling MatSetValues.")
         end do 
 
-        print*, 'store - 3'
 
 
         ! Update stamp

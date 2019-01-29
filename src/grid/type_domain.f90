@@ -514,6 +514,8 @@ contains
         self%nterms_s = nterms_s
         self%ntime    = ntime
 
+        print*, 'domain_dof_start: ', self%domain_dof_start
+
         !
         ! Call the numerics initialization procedure for each element
         !
@@ -834,6 +836,7 @@ contains
                                                    ineighbor_face,          &
                                                    ineighbor_neqns,         &
                                                    ineighbor_nterms_s,      &
+                                                   ineighbor_dof_start,     &
                                                    ineighbor_proc,          &
                                                    neighbor_grad1,          &
                                                    neighbor_grad2,          &
@@ -878,6 +881,7 @@ contains
                         ineighbor_face      = 0
                         ineighbor_neqns     = 0
                         ineighbor_nterms_s  = 0
+                        ineighbor_dof_start = 0
                         ineighbor_proc      = NO_PROC
 
                     end if
@@ -937,7 +941,8 @@ contains
                        ineighbor_domain_g, ineighbor_domain_l,              &
                        ineighbor_element_g, ineighbor_element_l,            &
                        ineighbor_face, ineighbor_neqns, ineighbor_nterms_s, &
-                       data(7), corner_indices(4), grad_size(2),            &
+                       ineighbor_dof_start,                                 &
+                       data(8), corner_indices(4), grad_size(2),            &
                        invmass_size(2), br2_face_size(2), br2_vol_size(2)
         logical     :: includes_corner_one, includes_corner_two, &
                        includes_corner_three, includes_corner_four, neighbor_element
@@ -971,6 +976,7 @@ contains
                 ineighbor_element_l = self%elems(ielem_l)%ielement_l
                 ineighbor_neqns     = self%elems(ielem_l)%neqns
                 ineighbor_nterms_s  = self%elems(ielem_l)%nterms_s
+                ineighbor_dof_start = self%elems(ielem_l)%dof_start
 
                 
                 !
@@ -982,7 +988,7 @@ contains
                 data = [ineighbor_domain_g,  ineighbor_domain_l,    &
                         ineighbor_element_g, ineighbor_element_l,   &
                         ineighbor_face,      ineighbor_neqns,       &
-                        ineighbor_nterms_s]
+                        ineighbor_nterms_s,  ineighbor_dof_start]
 
                 exit
             end if
@@ -998,7 +1004,7 @@ contains
             !
             ! Send Indices
             !
-            call MPI_Send(data,7,MPI_INTEGER4,iproc,4,ChiDG_COMM,ierr)
+            call MPI_Send(data,8,MPI_INTEGER4,iproc,4,ChiDG_COMM,ierr)
 
             !
             ! Send Element Data
@@ -1155,7 +1161,8 @@ contains
     subroutine find_neighbor_global(self,ielem_l,iface,ineighbor_domain_g,  ineighbor_domain_l,  &
                                                        ineighbor_element_g, ineighbor_element_l, &
                                                        ineighbor_face,      ineighbor_neqns,     &
-                                                       ineighbor_nterms_s,  ineighbor_proc,      &
+                                                       ineighbor_nterms_s,  ineighbor_dof_start, &
+                                                       ineighbor_proc,      &
                                                        neighbor_grad1, neighbor_grad2, neighbor_grad3, &
                                                        neighbor_br2_face, neighbor_br2_vol,      &
                                                        neighbor_invmass,    &
@@ -1172,6 +1179,7 @@ contains
         integer(ik),                    intent(inout)   :: ineighbor_face
         integer(ik),                    intent(inout)   :: ineighbor_neqns
         integer(ik),                    intent(inout)   :: ineighbor_nterms_s
+        integer(ik),                    intent(inout)   :: ineighbor_dof_start
         integer(ik),                    intent(inout)   :: ineighbor_proc
         real(rk),   allocatable,        intent(inout)   :: neighbor_grad1(:,:)
         real(rk),   allocatable,        intent(inout)   :: neighbor_grad2(:,:)
@@ -1184,7 +1192,7 @@ contains
         type(mpi_comm),                 intent(in)      :: ChiDG_COMM
 
         integer(ik) :: corner_one, corner_two, corner_three, corner_four,           &
-                       corner_indices(4), data(7), mapping, iproc, idomain_g, ierr, &
+                       corner_indices(4), data(8), mapping, iproc, idomain_g, ierr, &
                        grad_size(2), invmass_size(2), br2_face_size(2), br2_vol_size(2)
         logical     :: neighbor_element, has_domain
 
@@ -1235,7 +1243,7 @@ contains
                     call MPI_Recv(neighbor_element,1,MPI_LOGICAL,iproc,3,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
 
                     if (neighbor_element) then
-                        call MPI_Recv(data,7,MPI_INTEGER4,iproc,4,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(data,8,MPI_INTEGER4,iproc,4,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
                         ineighbor_domain_g  = data(1)
                         ineighbor_domain_l  = data(2)
                         ineighbor_element_g = data(3)
@@ -1243,6 +1251,7 @@ contains
                         ineighbor_face      = data(5)
                         ineighbor_neqns     = data(6)
                         ineighbor_nterms_s  = data(7)
+                        ineighbor_dof_start = data(8)
                         ineighbor_proc      = iproc
 
                         call MPI_Recv(grad_size,    2,MPI_INTEGER4,iproc,5,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)

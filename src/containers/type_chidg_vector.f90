@@ -1,9 +1,14 @@
 module type_chidg_vector
 #include <messenger.h>
+#include "petsc/finclude/petscmat.h"
+    use petscmat,                   only: PETSC_DETERMINE, VecCreate, VecSetType, VecSetSizes, VecSetUp, VecSetValues, tVec, ADD_VALUES
+
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, TWO, ONE
     use mod_chidg_mpi,              only: GROUP_MASTER, ChiDG_COMM, IRANK
     use type_mesh,                  only: mesh_t
+    use type_face_info,             only: face_info_t
+    use type_element_info,          only: element_info_t
     use type_function,              only: function_t
     use type_chidg_vector_send,     only: chidg_vector_send_t
     use type_chidg_vector_recv,     only: chidg_vector_recv_t
@@ -30,20 +35,47 @@ module type_chidg_vector
     !------------------------------------------------------------------------------------------
     type, public :: chidg_vector_t
 
+        ! PETSC
+        Vec         :: petsc_vector
+        PetscInt    :: petsc_start
+        PetscInt    :: petsc_end
+
+        ! ChiDG
         type(domain_vector_t),    allocatable   :: dom(:)       ! Local block vector storage
 
         type(chidg_vector_send_t)               :: send         ! What to send to other processors
         type(chidg_vector_recv_t)               :: recv         ! Receive data from other processors
 
+
+
+        ! backend dynamic procedures
+        !procedure(vector_init_interface),  pointer, pass :: init => chidg_init_vector
+        procedure(vector_init_interface),  pointer, pass :: init => petsc_init_vector
+
+!        procedure(init_recv_interface) pointer, pass :: init_recv => chidg_init_recv
+!        procedure(init_recv_interface), pointer, pass :: init_recv => petsc_init_recv
+
+!        procedure(vector_store_interface), pointer, pass :: store         => chidg_store_vector
+!        procedure(vector_clear_interface), pointer, pass :: clear         => chidg_clear_vector
+        procedure(vector_store_interface), pointer, pass :: store         => petsc_store_vector
+        procedure(vector_clear_interface), pointer, pass :: clear         => petsc_clear_vector
+
+        procedure(vector_getfield_interface), pointer, pass :: get_field => petsc_get_field
+
+
+
+
+
+
         integer(ik),    private                 :: ntime_       ! No. of time instances stored
 
     contains
 
-        generic,    public  :: init => initialize
-        procedure,  private :: initialize
+        !generic,    public  :: init => initialize
+        !procedure,  private :: initialize
 
         procedure,  public  :: project                          ! Project function to basis
-        procedure,  public  :: clear                            ! Zero the densevector data
+        !procedure,  public  :: clear                            ! Zero the densevector data
 
         generic,    public  :: norm => norm_local, norm_comm    ! Compute L2 vector norm
         procedure,  public  :: norm_local                       ! proc-local L2 vector norm
@@ -115,6 +147,62 @@ module type_chidg_vector
 
 
 
+    interface 
+        subroutine vector_init_interface(self,mesh,ntime)
+            import chidg_vector_t
+            import mesh_t
+            import ik
+            class(chidg_vector_t),  intent(inout)   :: self
+            type(mesh_t),           intent(inout)   :: mesh
+            integer(ik),            intent(in)      :: ntime
+        end subroutine vector_init_interface
+    end interface
+
+
+    interface 
+        subroutine vector_store_interface(self,values,face_info,nterms_s,nfields,ifield,itime)
+            import chidg_vector_t
+            import face_info_t
+            import rk
+            import ik
+            class(chidg_vector_t),  intent(inout)   :: self
+            real(rk),               intent(in)      :: values(:)
+            type(face_info_t),      intent(in)      :: face_info
+            integer(ik),            intent(in)      :: nterms_s
+            integer(ik),            intent(in)      :: nfields
+            integer(ik),            intent(in)      :: ifield
+            integer(ik),            intent(in)      :: itime
+        end subroutine vector_store_interface
+    end interface
+
+
+    interface 
+        function vector_getfield_interface(self,element_info,ifield,itime) result(values)
+            import chidg_vector_t
+            import element_info_t
+            import rk
+            import ik
+            class(chidg_vector_t),  intent(inout)   :: self
+            type(element_info_t),   intent(in)      :: element_info
+            integer(ik),            intent(in)      :: ifield
+            integer(ik),            intent(in)      :: itime
+            real(rk), allocatable   :: values(:)
+        end function vector_getfield_interface
+    end interface
+
+
+
+
+
+
+
+
+    interface 
+        subroutine vector_clear_interface(self)
+            import chidg_vector_t
+            class(chidg_vector_t),  intent(inout)   :: self
+        end subroutine vector_clear_interface
+    end interface
 
 
 
@@ -141,7 +229,7 @@ contains
     !!                      domain_vector_t subcomponent.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine initialize(self,mesh,ntime)
+    subroutine chidg_init_vector(self,mesh,ntime)
         class(chidg_vector_t),  intent(inout)   :: self
         type(mesh_t),           intent(inout)   :: mesh
         integer(ik),            intent(in)      :: ntime
@@ -178,8 +266,145 @@ contains
         ! Wait on outstanding mpi_reqests initiated during the send%init(mesh) call
         call self%send%init_wait()
 
-    end subroutine initialize
+    end subroutine chidg_init_vector
     !******************************************************************************************
+
+
+
+    !>  Allocate and initialize chidg_vector_t storage and data.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  mesh    Array of mesh_t instances used to initialize each 
+    !!                      domain_vector_t subcomponent.
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_init_vector(self,mesh,ntime)
+        class(chidg_vector_t),  intent(inout)   :: self
+        type(mesh_t),           intent(inout)   :: mesh
+        integer(ik),            intent(in)      :: ntime
+
+        integer(ik)     :: ndomains, idom, ielem
+        PetscErrorCode  ierr
+        PetscInt        nlocal_rows
+
+
+        ! Set ntime_ for the chidg_vector
+        self%ntime_ = ntime
+
+
+        ! Create vector object
+        call VecCreate(ChiDG_COMM%mpi_val, self%petsc_vector, ierr)
+        if (ierr /= 0) then
+            call chidg_signal(FATAL,'chidg_vector%petsc_init_vector: error creating PETSc vector.')
+        end if
+
+
+        ! Set vector type
+        call VecSetType(self%petsc_vector, 'standard', ierr)
+        if (ierr /= 0) then
+            call chidg_signal(FATAL,'chidg_vector%petsc_init_vector: error setting PETSc vector type.')
+        end if
+
+
+        ! Set vector size
+        ! Compute proc-local degress-of-freedom
+        nlocal_rows = 0
+        do idom = 1,mesh%ndomains()
+            do ielem = 1,mesh%domain(idom)%nelements()
+                nlocal_rows = nlocal_rows + mesh%domain(idom)%elems(ielem)%nterms_s * mesh%domain(idom)%elems(ielem)%neqns
+            end do !ielem
+        end do !idom
+        
+        call VecSetSizes(self%petsc_vector,nlocal_rows,PETSC_DETERMINE,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc vector sizes.')
+
+
+        ! Set up vector
+        call VecSetUp(self%petsc_vector,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error setting up PETSc vector.')
+
+
+    end subroutine petsc_init_vector
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/29/2019
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine petsc_store_vector(self,values,face_info,nterms_s,nfields,ifield,itime)
+        class(chidg_vector_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: values(:)
+        type(face_info_t),      intent(in)      :: face_info
+        integer(ik),            intent(in)      :: nterms_s
+        integer(ik),            intent(in)      :: nfields
+        integer(ik),            intent(in)      :: ifield
+        integer(ik),            intent(in)      :: itime
+
+        PetscErrorCode          :: ierr, i
+        PetscInt                :: index_start
+        PetscInt, allocatable   :: indices(:)
+
+        index_start = face_info%dof_start
+        indices = [(i, i=index_start,(index_start+nfields*nterms_s-1),1)]
+
+        call VecSetValues(self%petsc_vector,size(values),indices,values,ADD_VALUES,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_store_vector: error calling VecSetValues.')
+
+    end subroutine petsc_store_vector
+    !***********************************************************************************
+
+
+
+
+    function chidg_get_field(self,element_info,ifield,itime) result(values)
+        class(chidg_vector_t),  intent(inout)   :: self
+        type(element_info_t),   intent(in)      :: element_info
+        integer(ik),            intent(in)      :: ifield
+        integer(ik),            intent(in)      :: itime
+
+        real(rk), allocatable :: values(:)
+
+        values = self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%getvar(ifield,itime)
+
+    end function chidg_get_field
+
+
+
+
+
+
+
+
+
+    function petsc_get_field(self,element_info,ifield,itime) result(values)
+        class(chidg_vector_t),  intent(inout)   :: self
+        type(element_info_t),   intent(in)      :: element_info
+        integer(ik),            intent(in)      :: ifield
+        integer(ik),            intent(in)      :: itime
+
+        real(rk), allocatable :: values(:)
+
+    end function petsc_get_field
+
+
+
+
+
+
+
+
+
 
 
 
@@ -200,7 +425,7 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine project(self,mesh,fcn,ivar)
         class(chidg_vector_t),  intent(inout)   :: self
-        type(mesh_t),       intent(in)      :: mesh
+        type(mesh_t),           intent(in)      :: mesh
         class(function_t),      intent(inout)   :: fcn
         integer(ik),            intent(in)      :: ivar
 
@@ -209,24 +434,25 @@ contains
         real(rk),       allocatable :: fmodes(:)
         character(:),   allocatable :: user_msg
 
+        print*, 'WARNING! chidg_vector not projecting.'
 
-        ! Loop through elements in mesh and call function projection
-        do idom = 1,mesh%ndomains()
-
-            ! Check that variable index 'ivar' is valid
-            user_msg = 'project: variable index ivar exceeds the number of equations.'
-            if (ivar > mesh%domain(idom)%neqns ) call chidg_signal(FATAL,user_msg)
-
-            do ielem = 1,mesh%domain(idom)%nelem
-                do itime = 1,mesh%domain(idom)%ntime
-                    ! Call function projection
-                    fmodes = mesh%domain(idom)%elems(ielem)%project(fcn)
-
-                    ! Store the projected modes to the solution expansion
-                    call self%dom(idom)%vecs(ielem)%setvar(ivar,itime,fmodes)
-                end do ! itime
-            end do ! ielem
-        end do ! idomain
+!        ! Loop through elements in mesh and call function projection
+!        do idom = 1,mesh%ndomains()
+!
+!            ! Check that variable index 'ivar' is valid
+!            user_msg = 'project: variable index ivar exceeds the number of equations.'
+!            if (ivar > mesh%domain(idom)%neqns ) call chidg_signal(FATAL,user_msg)
+!
+!            do ielem = 1,mesh%domain(idom)%nelem
+!                do itime = 1,mesh%domain(idom)%ntime
+!                    ! Call function projection
+!                    fmodes = mesh%domain(idom)%elems(ielem)%project(fcn)
+!
+!                    ! Store the projected modes to the solution expansion
+!                    call self%dom(idom)%vecs(ielem)%setvar(ivar,itime,fmodes)
+!                end do ! itime
+!            end do ! ielem
+!        end do ! idomain
 
 
     end subroutine project
@@ -244,7 +470,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine clear(self)
+    subroutine chidg_clear_vector(self)
         class(chidg_vector_t),   intent(inout)   :: self
 
         integer :: idom
@@ -259,9 +485,25 @@ contains
         ! Call clear on recv storage
         call self%recv%clear()
 
-    end subroutine clear
+    end subroutine chidg_clear_vector
     !******************************************************************************************
 
+
+
+
+
+    !>  Set all floating-point vector entries to zero.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/29/2019
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_clear_vector(self)
+        class(chidg_vector_t),   intent(inout)   :: self
+
+
+    end subroutine petsc_clear_vector
+    !******************************************************************************************
 
 
 
@@ -458,33 +700,34 @@ contains
         type(mpi_request)   :: isend_handle
 
 
-        ! Loop through comms to send
-        isend = 1
-        do icomm = 1,size(self%send%comm)
-
-            ! Get processor rank we are sending to
-            iproc_send = self%send%comm(icomm)%proc
-
-            ! Loop through domains/elements to send
-            do idom_send = 1,self%send%comm(icomm)%dom_send%size()
-                idom = self%send%comm(icomm)%dom_send%at(idom_send)
-                do ielem_send = 1,self%send%comm(icomm)%elems_send(idom_send)%size()
-                    ielem = self%send%comm(icomm)%elems_send(idom_send)%at(ielem_send)
-
-                    ! Post non-blocking send message for the vector data
-                    data_size = size(self%dom(idom)%vecs(ielem)%vec)
-                    call MPI_ISend(self%dom(idom)%vecs(ielem)%vec, data_size, MPI_REAL8, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
-
-                    ! Add non-blocking send handle to list of things to wait on
-                    self%send%isend_handles(isend) = isend_handle
-
-                    ! Increment send counter
-                    isend = isend + 1
-
-                end do !ielem_send
-            end do !idom_send
-
-        end do ! icomm
+        print*, 'WARNING: NO COMM SEND!'
+!        ! Loop through comms to send
+!        isend = 1
+!        do icomm = 1,size(self%send%comm)
+!
+!            ! Get processor rank we are sending to
+!            iproc_send = self%send%comm(icomm)%proc
+!
+!            ! Loop through domains/elements to send
+!            do idom_send = 1,self%send%comm(icomm)%dom_send%size()
+!                idom = self%send%comm(icomm)%dom_send%at(idom_send)
+!                do ielem_send = 1,self%send%comm(icomm)%elems_send(idom_send)%size()
+!                    ielem = self%send%comm(icomm)%elems_send(idom_send)%at(ielem_send)
+!
+!                    ! Post non-blocking send message for the vector data
+!                    data_size = size(self%dom(idom)%vecs(ielem)%vec)
+!                    call MPI_ISend(self%dom(idom)%vecs(ielem)%vec, data_size, MPI_REAL8, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
+!
+!                    ! Add non-blocking send handle to list of things to wait on
+!                    self%send%isend_handles(isend) = isend_handle
+!
+!                    ! Increment send counter
+!                    isend = isend + 1
+!
+!                end do !ielem_send
+!            end do !idom_send
+!
+!        end do ! icomm
 
 
     end subroutine comm_send
@@ -516,24 +759,25 @@ contains
 
         real(rk), allocatable   :: test(:)
 
-        ! Receive data from each communicating processor
-        do icomm = 1,size(self%recv%comm)
-
-            ! Get process we are receiving from
-            proc_recv = self%recv%comm(icomm)%proc
-            
-            ! Recv each element chunk
-            do idom_recv = 1,size(self%recv%comm(icomm)%dom)
-                do ielem_recv = 1,size(self%recv%comm(icomm)%dom(idom_recv)%vecs)
-
-                    data_size = size(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec)
-                    call MPI_Recv(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-
-                end do ! ielem_recv
-            end do ! idom_recv
-
-
-        end do ! icomm
+        print*, 'WARNING: NO COMM RECV!'
+!        ! Receive data from each communicating processor
+!        do icomm = 1,size(self%recv%comm)
+!
+!            ! Get process we are receiving from
+!            proc_recv = self%recv%comm(icomm)%proc
+!            
+!            ! Recv each element chunk
+!            do idom_recv = 1,size(self%recv%comm(icomm)%dom)
+!                do ielem_recv = 1,size(self%recv%comm(icomm)%dom(idom_recv)%vecs)
+!
+!                    data_size = size(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec)
+!                    call MPI_Recv(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+!
+!                end do ! ielem_recv
+!            end do ! idom_recv
+!
+!
+!        end do ! icomm
 
     end subroutine comm_recv
     !*****************************************************************************************
@@ -559,8 +803,9 @@ contains
         integer(ik) :: nwait, ierr
 
 
-        nwait = size(self%send%isend_handles)
-        call MPI_Waitall(nwait, self%send%isend_handles, MPI_STATUSES_IGNORE, ierr)
+        print*, 'WARNING: NO COMM WAIT!'
+!        nwait = size(self%send%isend_handles)
+!        call MPI_Waitall(nwait, self%send%isend_handles, MPI_STATUSES_IGNORE, ierr)
 
     end subroutine comm_wait
     !*****************************************************************************************

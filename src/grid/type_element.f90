@@ -452,6 +452,7 @@ contains
         self%nterms_s    = nterms_s     ! number of terms in solution expansion
         self%neqns       = nfields      ! number of equations being solved
         self%ntime       = ntime        ! number of time steps in solution
+        self%dof_start   = dof_start
 
 
         !

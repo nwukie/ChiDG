@@ -125,21 +125,21 @@ contains
 
 
 
-        call worker%store_model_field('Realizability Source-11', 'value', src_11)
-        call worker%store_model_field('Realizability Source-22', 'value', src_22)
-        call worker%store_model_field('Realizability Source-33', 'value', src_33)
-        call worker%store_model_field('Realizability Source-12', 'value', src_12)
-        call worker%store_model_field('Realizability Source-13', 'value', src_13)
-        call worker%store_model_field('Realizability Source-23', 'value', src_23)
+        call worker%store_model_field('Realizability Source-11', 'value', ZERO*src_11)
+        call worker%store_model_field('Realizability Source-22', 'value', ZERO*src_22)
+        call worker%store_model_field('Realizability Source-33', 'value', ZERO*src_33)
+        call worker%store_model_field('Realizability Source-12', 'value', ZERO*src_12)
+        call worker%store_model_field('Realizability Source-13', 'value', ZERO*src_13)
+        call worker%store_model_field('Realizability Source-23', 'value', ZERO*src_23)
 
 
-        R_sust = (TWO/THREE)*SSG_LRRW_cmu*density*rstm_ssglrrw_k_infty*rstm_ssglrrw_omega_infty
+        R_sust = ZERO*(TWO/THREE)*SSG_LRRW_cmu*density*rstm_ssglrrw_k_infty*rstm_ssglrrw_omega_infty
         call worker%store_model_field('Sustaining Source-R', 'value', R_sust)
  
 
         omega     = worker%get_field('Density * Omega',    'value')/density
         beta_w    = worker%get_field('RSTMSSGLRRW Beta-w',    'value')
-        omega_sust = beta_w*density*rstm_ssglrrw_omega_infty**TWO*exp(-omega)
+        omega_sust = ZERO*beta_w*density*rstm_ssglrrw_omega_infty**TWO*exp(-omega)
 
         call worker%store_model_field('Sustaining Source-Omega', 'value', omega_sust)
     end subroutine compute

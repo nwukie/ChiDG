@@ -118,6 +118,15 @@ contains
         real_13 = rbar_13*sin_ramp(det_R, 0.0_rk, 10.0_rk*rstm_ssglrrw_k_infty)
         real_23 = rbar_23*sin_ramp(det_R, 0.0_rk, 10.0_rk*rstm_ssglrrw_k_infty)
 
+        real_11 = reynolds_11
+        real_22 = reynolds_22
+        real_33 = reynolds_33
+
+
+        real_12 = reynolds_12
+        real_13 = reynolds_13
+        real_23 = reynolds_23
+
         call worker%store_model_field('Reynolds-11', 'value', real_11)
         call worker%store_model_field('Reynolds-22', 'value', real_22)
         call worker%store_model_field('Reynolds-33', 'value', real_33)

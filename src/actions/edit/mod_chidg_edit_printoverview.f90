@@ -183,6 +183,30 @@ contains
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------
+    subroutine chidg_clear_screen()
+        
+        ! Calling execute_command_line with "clear"
+        ! seemed to be causing an error on some systems.
+        !call execute_command_line("clear")
+
+
+        ! Clear screen by printing ANSI code
+        print*, achar(27)//"[2J"
+
+        ! Move cursor to top left
+        print*, achar(27)//"[;H"
+
+
+    end subroutine chidg_clear_screen
+    !***************************************************************************
+
+
 
 
 

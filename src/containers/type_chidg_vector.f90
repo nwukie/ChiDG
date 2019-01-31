@@ -1,10 +1,13 @@
 module type_chidg_vector
 #include <messenger.h>
-#include "petsc/finclude/petscmat.h"
-    use petscmat,                   only: PETSC_DETERMINE, VecCreate, VecSetType, VecSetSizes, VecSetUp, VecSetValues, tVec, ADD_VALUES
+#include "petsc/finclude/petscvec.h"
+    use petscvec,                   only: PETSC_DETERMINE, VecCreate, VecSetType, VecSetSizes, VecSetUp, &
+                                          VecSetValues, tVec, ADD_VALUES, INSERT_VALUES, VecCopy,       &
+                                          VecAssemblyBegin, VecAssemblyEnd, VecDuplicate, NORM_2,VecGetArrayF90,    &
+                                          VecRestoreArrayF90, VecNorm, VecScale, VecWAXPY
 
     use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: ZERO, TWO, ONE
+    use mod_constants,              only: ZERO, TWO, ONE, NO_ID, NO_DATA
     use mod_chidg_mpi,              only: GROUP_MASTER, ChiDG_COMM, IRANK
     use type_mesh,                  only: mesh_t
     use type_face_info,             only: face_info_t
@@ -36,9 +39,9 @@ module type_chidg_vector
     type, public :: chidg_vector_t
 
         ! PETSC
-        Vec         :: petsc_vector
-        PetscInt    :: petsc_start
-        PetscInt    :: petsc_end
+        Vec     :: petsc_vector
+        logical :: petsc_vector_created = .false.
+
 
         ! ChiDG
         type(domain_vector_t),    allocatable   :: dom(:)       ! Local block vector storage
@@ -49,18 +52,21 @@ module type_chidg_vector
 
 
         ! backend dynamic procedures
-        !procedure(vector_init_interface),  pointer, pass :: init => chidg_init_vector
-        procedure(vector_init_interface),  pointer, pass :: init => petsc_init_vector
+        procedure(vector_init_interface),      pointer, pass   :: init          => chidg_init_vector
+        procedure(vector_store_interface),     pointer, pass   :: set_field     => chidg_set_field
+        procedure(vector_store_interface),     pointer, pass   :: add_field     => chidg_add_field
+        procedure(vector_getfield_interface),  pointer, pass   :: select_get_field     => chidg_get_field
+        procedure(vector_self_interface),      pointer, pass   :: clear         => chidg_clear_vector
+        procedure(vector_self_interface),      pointer, pass   :: assemble      => chidg_assemble_vector
+        procedure(vector_assign_interface),    pointer, nopass :: assign_vector => chidg_assign_vector
 
-!        procedure(init_recv_interface) pointer, pass :: init_recv => chidg_init_recv
-!        procedure(init_recv_interface), pointer, pass :: init_recv => petsc_init_recv
-
-!        procedure(vector_store_interface), pointer, pass :: store         => chidg_store_vector
-!        procedure(vector_clear_interface), pointer, pass :: clear         => chidg_clear_vector
-        procedure(vector_store_interface), pointer, pass :: store         => petsc_store_vector
-        procedure(vector_clear_interface), pointer, pass :: clear         => petsc_clear_vector
-
-        procedure(vector_getfield_interface), pointer, pass :: get_field => petsc_get_field
+!        procedure(vector_init_interface),     pointer, pass   :: init          => petsc_init_vector
+!        procedure(vector_store_interface),    pointer, pass   :: set_field     => petsc_set_field
+!        procedure(vector_store_interface),    pointer, pass   :: add_field     => petsc_add_field
+!        procedure(vector_getfield_interface), pointer, pass   :: select_get_field     => petsc_get_field
+!        procedure(vector_self_interface),     pointer, pass   :: clear         => petsc_clear_vector
+!        procedure(vector_self_interface),     pointer, pass   :: assemble      => petsc_assemble_vector
+!        procedure(vector_assign_interface),   pointer, nopass :: assign_vector => petsc_assign_vector
 
 
 
@@ -76,6 +82,8 @@ module type_chidg_vector
 
         procedure,  public  :: project                          ! Project function to basis
         !procedure,  public  :: clear                            ! Zero the densevector data
+
+        procedure, public :: get_field
 
         generic,    public  :: norm => norm_local, norm_comm    ! Compute L2 vector norm
         procedure,  public  :: norm_local                       ! proc-local L2 vector norm
@@ -101,7 +109,9 @@ module type_chidg_vector
         procedure,  public  :: prolong
                                                                     
 
-!        generic :: assignment(=) => 
+
+        procedure, public  :: assign_vector_public
+        generic :: assignment(=) => assign_vector_public
         
 
     end type chidg_vector_t
@@ -160,16 +170,14 @@ module type_chidg_vector
 
 
     interface 
-        subroutine vector_store_interface(self,values,face_info,nterms_s,nfields,ifield,itime)
+        subroutine vector_store_interface(self,values,element_info,ifield,itime)
             import chidg_vector_t
-            import face_info_t
+            import element_info_t
             import rk
             import ik
             class(chidg_vector_t),  intent(inout)   :: self
             real(rk),               intent(in)      :: values(:)
-            type(face_info_t),      intent(in)      :: face_info
-            integer(ik),            intent(in)      :: nterms_s
-            integer(ik),            intent(in)      :: nfields
+            type(element_info_t),   intent(in)      :: element_info
             integer(ik),            intent(in)      :: ifield
             integer(ik),            intent(in)      :: itime
         end subroutine vector_store_interface
@@ -177,20 +185,18 @@ module type_chidg_vector
 
 
     interface 
-        function vector_getfield_interface(self,element_info,ifield,itime) result(values)
+        subroutine vector_getfield_interface(self,element_info,ifield,itime,values)
             import chidg_vector_t
             import element_info_t
             import rk
             import ik
-            class(chidg_vector_t),  intent(inout)   :: self
-            type(element_info_t),   intent(in)      :: element_info
-            integer(ik),            intent(in)      :: ifield
-            integer(ik),            intent(in)      :: itime
-            real(rk), allocatable   :: values(:)
-        end function vector_getfield_interface
+            class(chidg_vector_t),  intent(inout),  target  :: self
+            type(element_info_t),   intent(in)              :: element_info
+            integer(ik),            intent(in)              :: ifield
+            integer(ik),            intent(in)              :: itime
+            real(rk), allocatable,  intent(inout)           :: values(:)
+        end subroutine vector_getfield_interface
     end interface
-
-
 
 
 
@@ -198,15 +204,26 @@ module type_chidg_vector
 
 
     interface 
-        subroutine vector_clear_interface(self)
+        subroutine vector_self_interface(self)
             import chidg_vector_t
             class(chidg_vector_t),  intent(inout)   :: self
-        end subroutine vector_clear_interface
+        end subroutine vector_self_interface
+    end interface
+
+
+    interface 
+        subroutine vector_assign_interface(vec_out,vec_in)
+            import chidg_vector_t
+            class(chidg_vector_t),  intent(inout)   :: vec_out
+            class(chidg_vector_t),  intent(in)      :: vec_in
+        end subroutine vector_assign_interface
     end interface
 
 
 
-
+    interface chidg_vector
+        module procedure new_chidg_vector
+    end interface
 
 
 
@@ -216,6 +233,29 @@ module type_chidg_vector
 
 contains
 
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------
+    function new_chidg_vector(storage) result(vec)
+        character(*),   intent(in)  :: storage
+
+        type(chidg_vector_t)    :: vec
+
+        select case(storage)
+            case('chidg')
+                call vector_assign_pointers_chidg(vec)
+            case('petsc')
+                call vector_assign_pointers_petsc(vec)
+            case default
+                call chidg_signal(FATAL,"new_chidg_vector: invalid parameter for 'storage'.")
+        end select
+
+    end function new_chidg_vector
+    !***********************************************************************************
 
 
 
@@ -302,7 +342,9 @@ contains
 
 
         ! Set vector type
-        call VecSetType(self%petsc_vector, 'standard', ierr)
+        !call VecSetType(self%petsc_vector, 'standard', ierr)
+        !call VecSetType(self%petsc_vector, 'mpi', ierr)
+        call VecSetType(self%petsc_vector, 'seq', ierr)
         if (ierr /= 0) then
             call chidg_signal(FATAL,'chidg_vector%petsc_init_vector: error setting PETSc vector type.')
         end if
@@ -318,18 +360,105 @@ contains
         end do !idom
         
         call VecSetSizes(self%petsc_vector,nlocal_rows,PETSC_DETERMINE,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc vector sizes.')
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error setting up PETSc vector sizes.')
+
+
+!        ghosts = mesh%get_ghost_indices()
+!        call VecCreateGhost(ChiDG_COMM%mpi_val,nlocal_rows,PETSC_DETERMINE,nghost,ghosts,self%petsc_vector,ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init_vector: error calling VecCreateGhost.')
 
 
         ! Set up vector
         call VecSetUp(self%petsc_vector,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error setting up PETSc vector.')
 
+        ! Indicate petsc vector was created
+        self%petsc_vector_created = .true.
+
 
     end subroutine petsc_init_vector
-    !******************************************************************************************
+    !*************************************************************************************
 
 
+    
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/30/2019
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine chidg_set_field(self,values,element_info,ifield,itime)
+        class(chidg_vector_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: values(:)
+        type(element_info_t),   intent(in)      :: element_info
+        integer(ik),            intent(in)      :: ifield
+        integer(ik),            intent(in)      :: itime
+
+        call self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%setvar(ifield,itime,values)
+
+    end subroutine chidg_set_field
+    !**************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/30/2019
+    !!
+    !-------------------------------------------------------------------------------------
+    !subroutine chidg_add_field(self,values,face_info,nterms_s,nfields,ifield,itime)
+    subroutine chidg_add_field(self,values,element_info,ifield,itime)
+        class(chidg_vector_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: values(:)
+        type(element_info_t),   intent(in)      :: element_info
+        integer(ik),            intent(in)      :: ifield
+        integer(ik),            intent(in)      :: itime
+
+        real(rk),   allocatable :: vals(:)
+
+        ! Access current field and add new contribution
+        vals = self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%getvar(ifield,itime) + values
+
+        ! Store updated values
+        call self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%setvar(ifield,itime,vals)
+
+    end subroutine chidg_add_field
+    !**************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/29/2019
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine petsc_set_field(self,values,element_info,ifield,itime)
+        class(chidg_vector_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: values(:)
+        type(element_info_t),   intent(in)      :: element_info
+        integer(ik),            intent(in)      :: ifield
+        integer(ik),            intent(in)      :: itime
+
+        PetscErrorCode          :: ierr, i
+        PetscInt                :: istart
+        PetscInt, allocatable   :: indices(:)
+
+        istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
+        indices = [(i, i=istart,(istart+element_info%nterms_s-1),1)]
+
+        ! Decrement by 1 for 0-based indexing
+        indices = indices - 1
+
+        call VecSetValues(self%petsc_vector,size(values),indices,values,INSERT_VALUES,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_set_field: error calling VecSetValues.')
+
+    end subroutine petsc_set_field
+    !***********************************************************************************
 
 
 
@@ -342,71 +471,135 @@ contains
     !!  @date   1/29/2019
     !!
     !-----------------------------------------------------------------------------------
-    subroutine petsc_store_vector(self,values,face_info,nterms_s,nfields,ifield,itime)
+    subroutine petsc_add_field(self,values,element_info,ifield,itime)
         class(chidg_vector_t),  intent(inout)   :: self
         real(rk),               intent(in)      :: values(:)
-        type(face_info_t),      intent(in)      :: face_info
-        integer(ik),            intent(in)      :: nterms_s
-        integer(ik),            intent(in)      :: nfields
+        type(element_info_t),   intent(in)      :: element_info
         integer(ik),            intent(in)      :: ifield
         integer(ik),            intent(in)      :: itime
 
         PetscErrorCode          :: ierr, i
-        PetscInt                :: index_start
+        PetscInt                :: istart
         PetscInt, allocatable   :: indices(:)
 
-        index_start = face_info%dof_start
-        indices = [(i, i=index_start,(index_start+nfields*nterms_s-1),1)]
+        istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
+        indices = [(i, i=istart,(istart+element_info%nterms_s-1),1)]
+
+        ! Decrement by 1 for 0-based indexing
+        indices = indices - 1
 
         call VecSetValues(self%petsc_vector,size(values),indices,values,ADD_VALUES,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_store_vector: error calling VecSetValues.')
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_add_vector: error calling VecSetValues.')
 
-    end subroutine petsc_store_vector
+    end subroutine petsc_add_field
     !***********************************************************************************
 
 
 
 
-    function chidg_get_field(self,element_info,ifield,itime) result(values)
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/30/2019
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine chidg_get_field(self,element_info,ifield,itime,values) 
+        class(chidg_vector_t),  intent(inout), target   :: self
+        type(element_info_t),   intent(in)              :: element_info
+        integer(ik),            intent(in)              :: ifield
+        integer(ik),            intent(in)              :: itime
+        real(rk), allocatable,  intent(inout)           :: values(:)
+
+        if (element_info%iproc /= IRANK) then
+            values = self%recv%comm(element_info%recv_comm)%dom(element_info%recv_domain)%vecs(element_info%recv_element)%getvar(ifield,itime)
+        else
+            values = self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%getvar(ifield,itime)
+        end if
+
+    end subroutine chidg_get_field
+    !***********************************************************************************
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/30/2019
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine petsc_get_field(self,element_info,ifield,itime,values)
+        class(chidg_vector_t),  intent(inout), target   :: self
+        type(element_info_t),   intent(in)              :: element_info
+        integer(ik),            intent(in)              :: ifield
+        integer(ik),            intent(in)              :: itime
+        real(rk), allocatable,  intent(inout)           :: values(:)
+
+        integer(ik)             :: istart, iend
+
+        PetscScalar, pointer :: array(:) => null()
+        PetscErrorCode  :: ierr
+
+        ! Get petsc array pointer
+        if (self%petsc_vector_created) then
+            call VecGetArrayF90(self%petsc_vector,array,ierr)
+            !call VecGetArrayReadF90(self%petsc_vector,array,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
+        else
+            call chidg_signal(FATAL,'chidg_vector%petsc_get_field: petsc vector not created.')
+        end if
+
+
+        ! Compute start and end indices for accessing modes of a variable
+        istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
+        iend = istart + (element_info%nterms_s-1)
+
+        ! Decrement by 1 for 0-based indexing
+        !istart = istart - 1
+        !iend   = iend - 1
+
+        ! Access modes
+!        print*, lbound(array), ubound(array)
+        values = array(istart:iend)
+
+    !    print*, 'Get Field: ', istart, iend, array(istart-1:iend+1)
+!        print*, 'Printing array...'
+!        print*, array
+
+
+        ! Restore petsc array
+        call VecRestoreArrayF90(self%petsc_vector,array,ierr)
+        !call VecRestoreArrayReadF90(self%petsc_vector,array,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
+
+
+    end subroutine petsc_get_field
+    !***********************************************************************************
+
+
+    function get_field(self,element_info,ifield,itime) result(values)
         class(chidg_vector_t),  intent(inout)   :: self
         type(element_info_t),   intent(in)      :: element_info
         integer(ik),            intent(in)      :: ifield
         integer(ik),            intent(in)      :: itime
 
-        real(rk), allocatable :: values(:)
+        real(rk),   allocatable :: values(:)
 
-        values = self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%getvar(ifield,itime)
+        call self%select_get_field(element_info,ifield,itime,values)
 
-    end function chidg_get_field
-
-
-
-
-
-
-
-
-
-    function petsc_get_field(self,element_info,ifield,itime) result(values)
-        class(chidg_vector_t),  intent(inout)   :: self
-        type(element_info_t),   intent(in)      :: element_info
-        integer(ik),            intent(in)      :: ifield
-        integer(ik),            intent(in)      :: itime
-
-        real(rk), allocatable :: values(:)
-
-    end function petsc_get_field
-
-
-
-
-
-
-
-
-
-
-
+    end function get_field
 
 
 
@@ -423,36 +616,59 @@ contains
     !!  TODO: Should itime be an input parameter here?
     !!
     !------------------------------------------------------------------------------------------
-    subroutine project(self,mesh,fcn,ivar)
+    subroutine project(self,mesh,fcn,ifield)
         class(chidg_vector_t),  intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh
         class(function_t),      intent(inout)   :: fcn
-        integer(ik),            intent(in)      :: ivar
+        integer(ik),            intent(in)      :: ifield
 
         integer(ik)                 :: idom, ielem, ierr
         integer(ik)                 :: itime
-        real(rk),       allocatable :: fmodes(:)
+        real(rk),       allocatable :: modes(:)
         character(:),   allocatable :: user_msg
+        type(element_info_t)    :: element_info
 
-        print*, 'WARNING! chidg_vector not projecting.'
 
-!        ! Loop through elements in mesh and call function projection
-!        do idom = 1,mesh%ndomains()
-!
-!            ! Check that variable index 'ivar' is valid
-!            user_msg = 'project: variable index ivar exceeds the number of equations.'
-!            if (ivar > mesh%domain(idom)%neqns ) call chidg_signal(FATAL,user_msg)
-!
-!            do ielem = 1,mesh%domain(idom)%nelem
-!                do itime = 1,mesh%domain(idom)%ntime
-!                    ! Call function projection
-!                    fmodes = mesh%domain(idom)%elems(ielem)%project(fcn)
-!
-!                    ! Store the projected modes to the solution expansion
-!                    call self%dom(idom)%vecs(ielem)%setvar(ivar,itime,fmodes)
-!                end do ! itime
-!            end do ! ielem
-!        end do ! idomain
+        ! Loop through elements in mesh and call function projection
+        do idom = 1,mesh%ndomains()
+
+            ! Check that variable index 'ifield' is valid
+            user_msg = 'project: variable index ifield exceeds the number of equations.'
+            if (ifield > mesh%domain(idom)%neqns ) call chidg_signal(FATAL,user_msg)
+
+            do ielem = 1,mesh%domain(idom)%nelem
+
+                element_info = element_info_t(idomain_g  = mesh%domain(idom)%elems(ielem)%idomain_g,    &
+                                              idomain_l  = mesh%domain(idom)%elems(ielem)%idomain_l,    &
+                                              ielement_g = mesh%domain(idom)%elems(ielem)%ielement_g,   &
+                                              ielement_l = mesh%domain(idom)%elems(ielem)%ielement_l,   &
+                                              iproc      = mesh%domain(idom)%elems(ielem)%iproc,        &
+                                              pelem_ID   = NO_ID,                                       &
+                                              eqn_ID     = mesh%domain(idom)%elems(ielem)%eqn_ID,       &
+                                              nfields    = mesh%domain(idom)%elems(ielem)%neqns,        &
+                                              nterms_s   = mesh%domain(idom)%elems(ielem)%nterms_s,     &
+                                              nterms_c   = NO_DATA,                                     &
+                                              dof_start  = mesh%domain(idom)%elems(ielem)%dof_start)
+
+
+                do itime = 1,mesh%domain(idom)%ntime
+                    ! Call function projection
+                    modes = mesh%domain(idom)%elems(ielem)%project(fcn)
+
+                    ! Store the projected modes to the solution expansion
+                    call self%set_field(modes,element_info,ifield,itime)
+
+                    call self%assemble()
+
+                    modes  = self%get_field(element_info,ifield,itime)
+
+                end do ! itime
+            end do ! ielem
+        end do ! idomain
+
+        
+        ! Assemble vector 
+        call self%assemble()
 
 
     end subroutine project
@@ -501,10 +717,53 @@ contains
     subroutine petsc_clear_vector(self)
         class(chidg_vector_t),   intent(inout)   :: self
 
+        PetscErrorCode :: perr
+
+        call VecSet(self%petsc_vector,ZERO,perr)
+        if (perr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_clear_vector: error calling VecSet.')
 
     end subroutine petsc_clear_vector
     !******************************************************************************************
 
+
+
+    !>  Set all floating-point vector entries to zero.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/29/2019
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine chidg_assemble_vector(self)
+        class(chidg_vector_t),   intent(inout)   :: self
+
+        call self%comm_send()
+        call self%comm_recv()
+        call self%comm_wait()
+
+    end subroutine chidg_assemble_vector
+    !******************************************************************************************
+
+
+
+    !>  Set all floating-point vector entries to zero.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/29/2019
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_assemble_vector(self)
+        class(chidg_vector_t),   intent(inout)   :: self
+
+        PetscErrorCode ierr
+
+        call VecAssemblyBegin(self%petsc_vector,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assmble_vector: error calling VecAssemblyBegin.')
+
+        call VecAssemblyEnd(self%petsc_vector,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assmble_vector: error calling VecAssemblyEnd.')
+
+    end subroutine petsc_assemble_vector
+    !******************************************************************************************
 
 
 
@@ -557,15 +816,26 @@ contains
         real(rk)    :: sumsqr, norm
         integer     :: ierr
 
-        norm = ZERO
+        PetscReal      :: petsc_norm
+        PetscErrorCode :: perr
 
-        ! Compute sum of the squared elements of the processor-local vector
-        sumsqr = self%sumsqr()
 
-        ! Reduce sumsqr across all procs, distribute result back to all
-        call MPI_AllReduce(sumsqr,norm,1,MPI_REAL8,MPI_SUM,comm,ierr)
+        if (self%petsc_vector_created) then
 
-        norm = sqrt(norm)
+            call VecNorm(self%petsc_vector,NORM_2,petsc_norm,perr)
+            if (perr /= 0) call chidg_signal(FATAL,'chidg_vector%norm_comm: error calling VecNorm.')
+            norm = real(petsc_norm,rk)
+
+        else
+
+            norm = ZERO
+            ! Compute sum of the squared elements of the processor-local vector
+            sumsqr = self%sumsqr()
+            ! Reduce sumsqr across all procs, distribute result back to all
+            call MPI_AllReduce(sumsqr,norm,1,MPI_REAL8,MPI_SUM,comm,ierr)
+            norm = sqrt(norm)
+        end if
+
 
     end function norm_comm
     !******************************************************************************************
@@ -596,17 +866,31 @@ contains
         real(rk), allocatable   :: sumsqr(:), norm(:)
         integer     :: ierr
 
-        ! Compute sum of the squared elements of the processor-local vector
-        sumsqr = self%sumsqr_fields()
+        PetscReal      :: petsc_norm
+        PetscErrorCode :: perr
 
-        ! Alloate norm
-        norm = sumsqr
-        norm = ZERO
+        if (self%petsc_vector_created) then
 
-        ! Reduce sumsqr across all procs, distribute result back to all
-        call MPI_AllReduce(sumsqr,norm,size(sumsqr),MPI_REAL8,MPI_SUM,comm,ierr)
+            allocate(norm(1))
+            call VecNorm(self%petsc_vector,NORM_2,petsc_norm,perr)
+            if (perr /= 0) call chidg_signal(FATAL,'chidg_vector%norm_fields_comm: error calling VecNorm.')
+            norm(1) = real(petsc_norm,rk)
 
-        norm = sqrt(norm)
+        else
+
+            ! Compute sum of the squared elements of the processor-local vector
+            sumsqr = self%sumsqr_fields()
+
+            ! Alloate norm
+            norm = sumsqr
+            norm = ZERO
+
+            ! Reduce sumsqr across all procs, distribute result back to all
+            call MPI_AllReduce(sumsqr,norm,size(sumsqr),MPI_REAL8,MPI_SUM,comm,ierr)
+
+            norm = sqrt(norm)
+        end if
+
 
     end function norm_fields_comm
     !******************************************************************************************
@@ -665,6 +949,7 @@ contains
         real(rk),   allocatable :: res(:)
         integer(ik) :: idom, ielem
 
+
         ! Allocate size of res based on assumption of same equation set across domains.
         res = self%dom(1)%sumsqr_fields()
         res = ZERO
@@ -673,6 +958,7 @@ contains
         do idom = 1,size(self%dom)
             res = res + self%dom(idom)%sumsqr_fields()
         end do ! idom
+
 
     end function sumsqr_fields
     !******************************************************************************************
@@ -1145,17 +1431,31 @@ contains
         type(chidg_vector_t) :: res
         integer(ik)         :: idom, ndom
 
-        ndom = size(left%dom)
+        PetscErrorCode :: perr
 
-        allocate(res%dom(ndom))
-
-        do idom = 1,size(left%dom)
-            res%dom(idom) = left%dom(idom) / right
-        end do
-
-        res%send = left%send
-        res%recv = left%recv
         res%ntime_ = left%ntime_
+
+        if (left%petsc_vector_created) then
+
+            ! Copy
+            res = left
+            ! Negate
+            call VecScale(res%petsc_vector,ONE/right,perr)
+            if (perr /= 0) call chidg_signal(FATAL,'chidg_vector%minus_chidg_vector: error calling VecScale.')
+
+        else
+
+            ndom = size(left%dom)
+
+            allocate(res%dom(ndom))
+
+            do idom = 1,size(left%dom)
+                res%dom(idom) = left%dom(idom) / right
+            end do
+
+            res%send = left%send
+            res%recv = left%recv
+        end if
 
     end function div_chidg_vector_real
     !****************************************************************************************
@@ -1177,18 +1477,30 @@ contains
         type(chidg_vector_t) :: res
         integer(ik)         :: idom, ndom
 
-        ndom = size(right%dom)
+        PetscErrorCode :: perr
 
-        allocate(res%dom(ndom))
-
-        do idom = 1,size(left%dom)
-            res%dom(idom) = left%dom(idom) + right%dom(idom)
-        end do
-
-
-        res%send = right%send
-        res%recv = right%recv
         res%ntime_ = right%ntime_
+
+        if (left%petsc_vector_created) then
+
+            call VecWAXPY(res%petsc_vector,ONE,right%petsc_vector,left%petsc_vector,perr)
+            if (perr /= 0) call chidg_signal(FATAL,'chidg_vector%sub_chidg_vector_chidg_vector: error calling VecAYPX.')
+
+        else
+
+            ndom = size(right%dom)
+
+            allocate(res%dom(ndom))
+
+            do idom = 1,size(left%dom)
+                res%dom(idom) = left%dom(idom) + right%dom(idom)
+            end do
+
+
+            res%send = right%send
+            res%recv = right%recv
+
+        end if
 
     end function add_chidg_vector_chidg_vector
     !****************************************************************************************
@@ -1210,17 +1522,28 @@ contains
         type(chidg_vector_t) :: res
         integer(ik)         :: idom, ndom
 
-        ndom = size(right%dom)
-        allocate(res%dom(ndom))
+        PetscErrorCode :: perr
 
-
-        do idom = 1,size(left%dom)
-            res%dom(idom) = left%dom(idom) - right%dom(idom)
-        end do
-
-        res%send = right%send
-        res%recv = right%recv
         res%ntime_ = right%ntime_
+
+        if (left%petsc_vector_created) then
+
+            call VecWAXPY(res%petsc_vector,-ONE,right%petsc_vector,left%petsc_vector,perr)
+            if (perr /= 0) call chidg_signal(FATAL,'chidg_vector%sub_chidg_vector_chidg_vector: error calling VecAYPX.')
+
+        else
+
+            ndom = size(right%dom)
+            allocate(res%dom(ndom))
+
+            do idom = 1,size(left%dom)
+                res%dom(idom) = left%dom(idom) - right%dom(idom)
+            end do
+
+            res%send = right%send
+            res%recv = right%recv
+
+        end if
 
     end function sub_chidg_vector_chidg_vector
     !****************************************************************************************
@@ -1240,19 +1563,119 @@ contains
         type(chidg_vector_t) :: res
         integer(ik)         :: idom, ndom
 
-        ndom = size(right%dom)
-        allocate(res%dom(ndom))
+        PetscErrorCode :: perr
 
-        do idom = 1,size(right%dom)
-            res%dom(idom) = (-ONE)*right%dom(idom)
-        end do
-
-        res%send   = right%send
-        res%recv   = right%recv
         res%ntime_ = right%ntime_
+
+        if (right%petsc_vector_created) then
+
+            ! Copy
+            res = right
+            ! Negate
+            call VecScale(res%petsc_vector,-ONE,perr)
+            if (perr /= 0) call chidg_signal(FATAL,'chidg_vector%minus_chidg_vector: error calling VecScale.')
+
+        else
+
+            ! ChiDG
+            ndom = size(right%dom)
+            allocate(res%dom(ndom))
+            do idom = 1,size(right%dom)
+                res%dom(idom) = (-ONE)*right%dom(idom)
+            end do
+            res%send   = right%send
+            res%recv   = right%recv
+
+        end if
 
     end function minus_chidg_vector
     !****************************************************************************************
+
+
+
+
+    subroutine chidg_assign_vector(vec_out,vec_in)
+        class(chidg_vector_t),  intent(inout)   :: vec_out
+        class(chidg_vector_t),  intent(in)      :: vec_in
+
+        if (allocated(vec_in%dom)) vec_out%dom = vec_in%dom
+        vec_out%send   = vec_in%send
+        vec_out%recv   = vec_in%recv
+        vec_out%ntime_ = vec_in%ntime_
+
+        ! Update procedure pointers
+        call vector_assign_pointers_chidg(vec_out)
+
+    end subroutine chidg_assign_vector
+
+
+    subroutine petsc_assign_vector(vec_out,vec_in)
+        class(chidg_vector_t),  intent(inout)   :: vec_out
+        class(chidg_vector_t),  intent(in)      :: vec_in
+
+        PetscErrorCode ierr
+
+
+        if (vec_in%petsc_vector_created) then
+
+            call VecDuplicate(vec_in%petsc_vector,vec_out%petsc_vector,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
+
+            call VecCopy(vec_in%petsc_vector,vec_out%petsc_vector,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecCopy.')
+
+            vec_out%petsc_vector_created = .true.
+        end if
+
+        vec_out%ntime_ = vec_in%ntime_
+
+        ! Update procedure pointers
+        call vector_assign_pointers_petsc(vec_out)
+
+    end subroutine petsc_assign_vector
+
+
+    subroutine assign_vector_public(vec_out,vec_in)
+        class(chidg_vector_t),  intent(inout) :: vec_out
+        class(chidg_vector_t),  intent(in)  :: vec_in
+
+        call vec_in%assign_vector(vec_out,vec_in)
+
+    end subroutine assign_vector_public
+
+
+
+
+    subroutine vector_assign_pointers_chidg(vec)
+        type(chidg_vector_t),   intent(inout)   :: vec
+
+        vec%init             => chidg_init_vector
+        vec%add_field        => chidg_add_field
+        vec%set_field        => chidg_set_field
+        vec%select_get_field => chidg_get_field
+        vec%clear            => chidg_clear_vector
+        vec%assemble         => chidg_assemble_vector
+        vec%assign_vector    => chidg_assign_vector
+
+    end subroutine vector_assign_pointers_chidg
+
+    subroutine vector_assign_pointers_petsc(vec)
+        type(chidg_vector_t),   intent(inout)   :: vec
+
+        vec%init             => petsc_init_vector
+        vec%clear            => petsc_clear_vector
+        vec%set_field        => petsc_set_field
+        vec%add_field        => petsc_add_field
+        vec%select_get_field => petsc_get_field
+        vec%assemble         => petsc_assemble_vector
+        vec%assign_vector    => petsc_assign_vector
+
+    end subroutine vector_assign_pointers_petsc
+
+
+
+
+
 
 
 

@@ -514,7 +514,6 @@ contains
         self%nterms_s = nterms_s
         self%ntime    = ntime
 
-        print*, 'domain_dof_start: ', self%domain_dof_start
 
         !
         ! Call the numerics initialization procedure for each element
@@ -524,7 +523,8 @@ contains
             if (ielem == 1) then
                 dof_start = self%domain_dof_start
             else
-                dof_start = self%elems(ielem-1)%dof_start + 1
+                !dof_start = self%elems(ielem-1)%dof_start + 1
+                dof_start = self%elems(ielem-1)%dof_start + nterms_s*neqns
             end if
 
             call self%elems(ielem)%init_sol(interpolation,level,self%nterms_s,self%neqns,ntime,dof_start)

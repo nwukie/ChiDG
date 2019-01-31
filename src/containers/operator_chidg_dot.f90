@@ -1,4 +1,8 @@
 module operator_chidg_dot
+#include <messenger.h>
+#include "petsc/finclude/petscvec.h"
+    use petscvec,               only: VecDot
+
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
     
@@ -52,20 +56,29 @@ contains
     !!
     !-----------------------------------------------------------------------------
     function dot_comm(a,b,comm) result(comm_dot)
-        type(chidg_vector_t),    intent(in)  :: a
-        type(chidg_vector_t),    intent(in)  :: b
+        type(chidg_vector_t),   intent(in)  :: a
+        type(chidg_vector_t),   intent(in)  :: b
         type(mpi_comm),         intent(in)  :: comm
 
         real(rk)    :: local_dot, comm_dot
         integer     :: ierr
 
+        PetscErrorCode :: perr
 
-        ! Compute the local vector dot-product
-        local_dot = dot_local(a,b)
+        if (a%petsc_vector_created) then
 
-        ! Reduce local dot-product values across processors, distribute result back to all
-        call MPI_AllReduce(local_dot,comm_dot,1,MPI_REAL8,MPI_SUM,comm,ierr)
+            call VecDot(a%petsc_vector,b%petsc_vector,comm_dot,perr)
+            if (perr /= 0) call chidg_signal(FATAL,'dot_comm: error calling petsc VecDot.')
 
+        else
+
+            ! Compute the local vector dot-product
+            local_dot = dot_local(a,b)
+
+            ! Reduce local dot-product values across processors, distribute result back to all
+            call MPI_AllReduce(local_dot,comm_dot,1,MPI_REAL8,MPI_SUM,comm,ierr)
+
+        end if
 
     end function dot_comm
     !******************************************************************************

@@ -1491,7 +1491,7 @@ contains
         ielement_l = self%element_info%ielement_l
         eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%element_info,self%function_info,self%iface,ifield,self%itime,integrand)
 
 
     end subroutine integrate_boundary_average
@@ -1538,7 +1538,7 @@ contains
         ielement_l = self%element_info%ielement_l
         eqn_ID     = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         ifield     = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,upwind)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%element_info,self%function_info,self%iface,ifield,self%itime,upwind)
 
 
     end subroutine integrate_boundary_upwind
@@ -1599,7 +1599,7 @@ contains
         ielement_l = self%element_info%ielement_l
         eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%element_info,self%function_info,self%iface,ifield,self%itime,integrand)
 
 
     end subroutine integrate_boundary_condition

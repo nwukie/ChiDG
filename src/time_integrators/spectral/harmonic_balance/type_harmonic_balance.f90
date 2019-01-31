@@ -15,7 +15,7 @@ module type_harmonic_balance
     use type_rvector,                   only: rvector_t
     use mod_HB_matrices,                only: calc_pseudo_spectral_operator
     use type_seed,                      only: seed_t
-    use type_face_info
+    use type_element_info,              only: element_info_t
     use type_chidg_vector
     use DNAD_D
 
@@ -135,7 +135,7 @@ contains
         real(rk),   allocatable :: temp_1(:), temp_2(:), D(:,:), temp_mat(:,:), hb_mat(:,:)
         type(chidg_vector_t)    :: rhs_tmp
         type(seed_t)            :: seed
-        type(face_info_t)       :: face
+        type(element_info_t)    :: elem_info
 
         
         associate ( rhs => data%sdata%rhs, lhs => data%sdata%lhs, q => data%sdata%q )
@@ -195,12 +195,26 @@ contains
 
 
                         ! LHS contribution
-                        face = face_info(data%mesh%domain(idom)%elems(ielem)%idomain_g,  &
-                                         data%mesh%domain(idom)%elems(ielem)%idomain_l,  &
-                                         data%mesh%domain(idom)%elems(ielem)%ielement_g, &
-                                         data%mesh%domain(idom)%elems(ielem)%ielement_l, &
-                                         NO_FACE,                                        &
-                                         data%mesh%domain(idom)%elems(ielem)%dof_start)
+                        !face = face_info(data%mesh%domain(idom)%elems(ielem)%idomain_g,  &
+                        !                 data%mesh%domain(idom)%elems(ielem)%idomain_l,  &
+                        !                 data%mesh%domain(idom)%elems(ielem)%ielement_g, &
+                        !                 data%mesh%domain(idom)%elems(ielem)%ielement_l, &
+                        !                 NO_FACE,                                        &
+                        !                 data%mesh%domain(idom)%elems(ielem)%dof_start)
+
+                        elem_info = element_info_t(idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g,  &
+                                                   idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l,  &
+                                                   ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g, &
+                                                   ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l, &
+                                                   iproc      = data%mesh%domain(idom)%elems(ielem)%iproc,      &
+                                                   pelem_ID   = NO_ID,                          &
+                                                   eqn_ID     = data%mesh%domain(idom)%elems(ielem)%eqn_ID,     &
+                                                   nfields    = data%mesh%domain(idom)%elems(ielem)%neqns,      &
+                                                   nterms_s   = data%mesh%domain(idom)%elems(ielem)%nterms_s,   &
+                                                   nterms_c   = data%mesh%domain(idom)%elems(ielem)%nterms_c,   &
+                                                   dof_start  = data%mesh%domain(idom)%elems(ielem)%dof_start)
+
+
 
 
                         call seed%init(data%mesh%domain(idom)%elems(ielem)%idomain_g,  &
@@ -218,7 +232,7 @@ contains
 
                         ! Store HB contribution for all fields to lhs at one time
                         if (itime_inner /= itime_outer) then
-                            call lhs%dom(idom)%store_hb_element(hb_mat,face,seed,itime_outer)
+                            call lhs%dom(idom)%store_hb_element(hb_mat,elem_info,seed,itime_outer)
                         end if
 
 

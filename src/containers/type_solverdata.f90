@@ -1,9 +1,12 @@
 module type_solverdata
 #include <messenger.h>
+#include "petsc/finclude/petscvec.h"
+    use petscvec,                           only: VecSet
+
     use mod_kinds,                          only: rk,ik
     use mod_constants,                      only: NFACES, ZERO
     use mod_string,                         only: string_t
-    use type_chidg_vector,                  only: chidg_vector_t
+    use type_chidg_vector,                  only: chidg_vector_t, chidg_vector
     use type_chidg_matrix,                  only: chidg_matrix_t
     use type_mesh,                          only: mesh_t
     use type_function_status,               only: function_status_t
@@ -27,12 +30,16 @@ module type_solverdata
         !
         ! Base solver data
         !
-        type(chidg_vector_t)             :: q               ! Solution vector
-        type(chidg_vector_t)             :: dq              ! Change in solution vector
-        type(chidg_vector_t)             :: rhs             ! Residual of the spatial scheme
-        type(chidg_matrix_t)             :: lhs             ! Linearization of the spatial scheme
+        type(chidg_vector_t)             :: q           ! Solution vector
+        type(chidg_vector_t)             :: dq          ! Change in solution vector
+        type(chidg_vector_t)             :: rhs         ! Residual of the spatial scheme
+        type(chidg_matrix_t)             :: lhs         ! Linearization of the spatial scheme
 
-
+!        type(chidg_vector_t)             :: q_petsc     ! Solution vector
+!        type(chidg_vector_t)             :: dq_petsc    ! Change in solution vector
+!        type(chidg_vector_t)             :: rhs_petsc   ! Residual of the spatial scheme
+!        type(chidg_matrix_t)             :: lhs         ! Linearization of the spatial scheme
+ 
         !
         ! Container for reading data
         !
@@ -155,8 +162,24 @@ contains
         type(equationset_function_data_t),  intent(in)      :: function_data(:)
         
 
+        PetscErrorCode :: perr
         integer(ik) :: ierr, ndom, maxelems, idom
         logical     :: increase_maxelems = .false.
+
+
+        ! Create vector
+        !self%q     = chidg_vector('chidg')
+        !self%dq    = chidg_vector('chidg')
+        !self%rhs   = chidg_vector('chidg')
+        !self%q_in  = chidg_vector('chidg')
+        !self%q_out = chidg_vector('chidg')
+
+        self%q     = chidg_vector('petsc')
+        self%dq    = chidg_vector('petsc')
+        self%rhs   = chidg_vector('petsc')
+        self%q_in  = chidg_vector('petsc')
+        self%q_out = chidg_vector('petsc')
+
 
 
         ! Initialize vectors
@@ -165,6 +188,13 @@ contains
         call self%rhs%init(  mesh,mesh%ntime_)
         call self%q_in%init( mesh,mesh%ntime_)
         call self%q_out%init(mesh,mesh%ntime_)
+
+        call VecSet(self%q%petsc_vector,     ZERO, perr)
+        call VecSet(self%dq%petsc_vector,    ZERO, perr)
+        call VecSet(self%rhs%petsc_vector,   ZERO, perr)
+        call VecSet(self%q_in%petsc_vector,  ZERO, perr)
+        call VecSet(self%q_out%petsc_vector, ZERO, perr)
+
 
 
         ! Initialize matrix and parallel recv data

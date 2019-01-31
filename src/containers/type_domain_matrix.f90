@@ -6,7 +6,7 @@ module type_domain_matrix
     use type_mesh,              only: mesh_t
     use type_densematrix,       only: densematrix_t
     use type_densematrix_vector,only: densematrix_vector_t
-    use type_face_info,         only: face_info_t
+    use type_element_info,      only: element_info_t
     use type_seed,              only: seed_t
     use type_ivector,           only: ivector_t
     use mod_chidg_mpi,          only: IRANK
@@ -670,17 +670,17 @@ contains
     !!  @param[in]  itime       Index of a time level for the linearization of the given element
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine store(self,integral,face_info,seed,ivar,itime)
+    subroutine store(self,integral,element_info,seed,ivar,itime)
         class(domain_matrix_t), intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
-        type(face_info_t),      intent(in)      :: face_info
+        type(element_info_t),   intent(in)      :: element_info
         type(seed_t),           intent(in)      :: seed
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: itime
 
         integer(ik) :: nterms, imat, ielement_l
 
-        ielement_l = face_info%ielement_l
+        ielement_l = element_info%ielement_l
 
         ! Get stored information for the block
         nterms = self%ldata(ielement_l,2)  
@@ -714,17 +714,17 @@ contains
     !!  @param[in]  itime       Index of a time level for the linearization of the given element
     !!
     !------------------------------------------------------------------------------------------
-    subroutine store_chimera(self,integral,face_info,seed,ivar,itime)
+    subroutine store_chimera(self,integral,element_info,seed,ivar,itime)
         class(domain_matrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_info_t),          intent(in)      :: face_info
+        type(element_info_t),          intent(in)      :: element_info
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar
         integer(ik),                intent(in)      :: itime
 
         integer(ik) :: nterms, imat, ielement_l
 
-        ielement_l = face_info%ielement_l
+        ielement_l = element_info%ielement_l
 
         ! Get stored information for the block
         nterms = self%ldata(ielement_l,2)
@@ -755,16 +755,16 @@ contains
     !!  @date   11/14/2016
     !!
     !!  @param[in]  integral    Array of modes with embedded partial derivatives 
-    !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
+    !!  @param[in]  face        element_info_t containing indices for the location of the face being linearized.
     !!  @param[in]  seed        seed_t containing indices of the element against which the linearization was computed.
     !!  @param[in]  ivar        Index of the variable
     !!  @param[in]  itime       Index of a time level for the linearization of the given element
     !!
     !------------------------------------------------------------------------------------
-    subroutine store_bc(self,integral,face,seed,ivar,itime)
+    subroutine store_bc(self,integral,element_info,seed,ivar,itime)
         class(domain_matrix_t),     intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_info_t),          intent(in)      :: face
+        type(element_info_t),       intent(in)      :: element_info
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar
         integer(ik),                intent(in)      :: itime
@@ -774,7 +774,7 @@ contains
 
         ! If cross-timelevel harmonic balance term store separately
         if (itime /= seed%itime) then
-            call self%store_hb(integral,face,seed,ivar,itime)
+            call self%store_hb(integral,element_info,seed,ivar,itime)
         else
 
             ! If ielem = ielem_d then the linearization is with respect to the local element. 
@@ -782,20 +782,20 @@ contains
             ! the self%bc_blks array. In general, the storage location is not important,
             ! but the ILU preconditioner expects the full diagonal contribution to be in 
             ! lblks.
-            local_coupling = (face%idomain_g == seed%idomain_g) .and. (face%ielement_g == seed%ielement_g)
+            local_coupling = (element_info%idomain_g == seed%idomain_g) .and. (element_info%ielement_g == seed%ielement_g)
 
             if ( local_coupling ) then
-                call self%store(integral,face,seed,ivar,itime)
+                call self%store(integral,element_info,seed,ivar,itime)
             else
 
                 ! Get stored information for the block
-                nterms = self%ldata(face%ielement_l,2)
+                nterms = self%ldata(element_info%ielement_l,2)
 
                 ! Find coupled bc densematrix location 
-                imat = self%bc_blks(face%ielement_l,itime)%loc(seed%idomain_g,seed%ielement_g,seed%itime)
+                imat = self%bc_blks(element_info%ielement_l,itime)%loc(seed%idomain_g,seed%ielement_g,seed%itime)
 
                 ! Store derivatives
-                call self%bc_blks(face%ielement_l,itime)%store(imat,ivar,nterms,integral)
+                call self%bc_blks(element_info%ielement_l,itime)%store(imat,ivar,nterms,integral)
 
             end if ! check local block.
 
@@ -815,17 +815,17 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   4/18/2018
     !!
-    !!  @param[in]  integral    Array of modes with embedded partial derivatives 
-    !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
-    !!  @param[in]  seed        seed_t containing indices of the element against which the linearization was computed.
-    !!  @param[in]  ivar        Index of the variable
-    !!  @param[in]  itime       Index of a time level for the linearization of the given element
+    !!  @param[in]  integral        Array of modes with embedded partial derivatives 
+    !!  @param[in]  element_info    element_info_t containing indices for the location of the face being linearized.
+    !!  @param[in]  seed            seed_t containing indices of the element against which the linearization was computed.
+    !!  @param[in]  ivar            Index of the variable
+    !!  @param[in]  itime           Index of a time level for the linearization of the given element
     !!
     !------------------------------------------------------------------------------------
-    subroutine store_hb(self,integral,face,seed,ivar,itime)
+    subroutine store_hb(self,integral,element_info,seed,ivar,itime)
         class(domain_matrix_t),     intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_info_t),          intent(in)      :: face
+        type(element_info_t),       intent(in)      :: element_info
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar
         integer(ik),                intent(in)      :: itime
@@ -833,7 +833,7 @@ contains
         integer(ik) :: ielement_l, imat, nterms
 
         ! Get stored information for the block
-        ielement_l = face%ielement_l
+        ielement_l = element_info%ielement_l
         nterms = self%ldata(ielement_l,2)
 
         ! Find coupled hb densematrix location 
@@ -865,17 +865,17 @@ contains
     !!  @param[in]  itime       Index of a time level for the linearization of the given element
     !!
     !------------------------------------------------------------------------------------
-    subroutine store_hb_element(self,contribution,face,seed,itime)
+    subroutine store_hb_element(self,contribution,element_info,seed,itime)
         class(domain_matrix_t),     intent(inout)   :: self
         real(rk),                   intent(in)      :: contribution(:,:)
-        type(face_info_t),          intent(in)      :: face
+        type(element_info_t),       intent(in)      :: element_info
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: itime
 
         integer(ik) :: ielement_l, imat
 
         ! Get stored information for the block
-        ielement_l = face%ielement_l
+        ielement_l = element_info%ielement_l
 
         ! Find coupled hb densematrix location 
         imat = self%hb_blks(ielement_l,itime)%loc(seed%idomain_g,seed%ielement_g,seed%itime)

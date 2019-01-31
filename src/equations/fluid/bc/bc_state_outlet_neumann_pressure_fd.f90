@@ -2,7 +2,7 @@ module bc_state_outlet_neumann_pressure_fd
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL, &
-                                      XI_MAX, ETA_MAX, ZETA_MAX
+                                      XI_MAX, ETA_MAX, ZETA_MAX, NO_ID
     use mod_fluid,              only: gam, Rgas
 
     use type_mesh,              only: mesh_t
@@ -10,7 +10,7 @@ module bc_state_outlet_neumann_pressure_fd
     use type_bc_patch,          only: bc_patch_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
-    use type_face_info,         only: face_info_t
+    use type_element_info,      only: element_info_t
     use mod_chidg_mpi,          only: IRANK
     use mod_interpolate,        only: interpolate_face_autodiff
     use mpi_f08,                only: MPI_REAL8, MPI_SUM, MPI_AllReduce, mpi_comm, &
@@ -135,9 +135,9 @@ contains
         integer(ik) :: ipatch, iface_bc, idomain_l, ielement_l, iface, ierr, itime, &
                        idensity, imom1, imom2, imom3, ienergy, group_ID, patch_ID, face_ID, &
                        icoupled, idomain_g_coupled, idomain_l_coupled, ielement_g_coupled,  &
-                       ielement_l_coupled, iface_coupled
+                       ielement_l_coupled, iface_coupled, coupled_iface
         real(rk)    :: face_area, total_area
-        type(face_info_t)   :: face_info
+        type(element_info_t)    :: coupled_element
 
 
         !
@@ -177,21 +177,38 @@ contains
             ielement_l_coupled = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled)
             iface_coupled      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(     icoupled)
 
-            face_info%idomain_g  = idomain_g_coupled
-            face_info%idomain_l  = idomain_l_coupled
-            face_info%ielement_g = ielement_g_coupled
-            face_info%ielement_l = ielement_l_coupled
-            face_info%iface      = iface_coupled
+            !face_info%idomain_g  = idomain_g_coupled
+            !face_info%idomain_l  = idomain_l_coupled
+            !face_info%ielement_g = ielement_g_coupled
+            !face_info%ielement_l = ielement_l_coupled
+            !face_info%iface      = iface_coupled
+            coupled_element = element_info_t(idomain_g    = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(icoupled),     &
+                                             idomain_l    = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(icoupled),     &
+                                             ielement_g   = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icoupled),    &
+                                             ielement_l   = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled),    &
+                                             iproc        = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(icoupled),          &
+                                             pelem_ID     = NO_ID,                                                                                          &
+                                             eqn_ID       = NO_ID,                                                                                          &
+                                             nfields      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%neqns(icoupled),         &
+                                             nterms_s     = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(icoupled),      &
+                                             nterms_c     = 0,                                                                                              &
+                                             dof_start    = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(icoupled),     &
+                                             recv_comm    = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(icoupled),     &
+                                             recv_domain  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(icoupled),   &
+                                             recv_element = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(icoupled))
+
+            coupled_iface = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(icoupled)
 
             
             !
             ! Interpolate coupled element solution on face of coupled element
             !
-            density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, idensity, itime, 'value', ME)
-            mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom1,    itime, 'value', ME)
-            mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom2,    itime, 'value', ME)
-            mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom3,    itime, 'value', ME)
-            energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, ienergy,  itime, 'value', ME)
+            density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,coupled_element, worker%function_info, coupled_iface, idensity, itime, 'value', ME)
+            mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,coupled_element, worker%function_info, coupled_iface, imom1,    itime, 'value', ME)
+            mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,coupled_element, worker%function_info, coupled_iface, imom2,    itime, 'value', ME)
+            mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,coupled_element, worker%function_info, coupled_iface, imom3,    itime, 'value', ME)
+            energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,coupled_element, worker%function_info, coupled_iface, ienergy,  itime, 'value', ME)
+
 
             if (worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%coordinate_system == CYLINDRICAL) then
                 mom2 = mom2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%interp_coords_def(:,1)

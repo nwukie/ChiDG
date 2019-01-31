@@ -19,12 +19,12 @@
 !!
 !!  Module utility routines:
 !!  ---------------------------------------
-!!      get_face_interpolation_info
-!!      get_face_interpolation_interpolator
-!!      get_face_interpolation_mask
-!!      get_face_interpolation_comm
-!!      get_face_interpolation_ndonors
-!!      get_face_interpolation_style
+!!      get_elem_interpolation_info
+!!      get_elem_interpolation_interpolator
+!!      get_elem_interpolation_mask
+!!      get_elem_interpolation_comm
+!!      get_elem_interpolation_ndonors
+!!      get_elem_interpolation_style
 !!      get_interpolation_nderiv
 !!
 !!
@@ -33,7 +33,7 @@ module mod_interpolate
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: CHIMERA, INTERIOR, BOUNDARY, &
-                                      ME, NEIGHBOR, ONE, ZERO
+                                      ME, NEIGHBOR, ONE, ZERO, NO_ID
                                   
     use mod_chidg_mpi,          only: IRANK
     use mod_DNAD_tools,         only: compute_neighbor_face
@@ -43,7 +43,7 @@ module mod_interpolate
 
     use type_mesh,              only: mesh_t
     use type_element_info,      only: element_info_t
-    use type_face_info,         only: face_info_t, face_info_constructor
+    use type_face_info,         only: face_info_constructor
     use type_edge_info,         only: edge_info_t
     use type_seed,              only: seed_t
     use type_function_info,     only: function_info_t
@@ -88,7 +88,7 @@ contains
     !-----------------------------------------------------------------------------------------
     function interpolate_element_autodiff(mesh,vector,elem_info,fcn_info,ifield,itime,interpolation_type,interpolator,mode_min,mode_max) result(var_gq)
         type(mesh_t),           intent(in)              :: mesh
-        type(chidg_vector_t),   intent(in)              :: vector
+        type(chidg_vector_t),   intent(inout)           :: vector
         type(element_info_t),   intent(in)              :: elem_info
         type(function_info_t),  intent(in)              :: fcn_info
         integer(ik),            intent(in)              :: ifield
@@ -139,7 +139,8 @@ contains
         !
         ! Retrieve modal coefficients representing ifield in vector to 'qtmp'
         !
-        qtmp = vector%dom(idom)%vecs(ielem)%getvar(ifield,itime)
+        !qtmp = vector%dom(idom)%vecs(ielem)%getvar(ifield,itime)
+        qtmp = vector%get_field(elem_info,ifield,itime)
 
 
         !
@@ -251,25 +252,26 @@ contains
     !!  @param[in]      itime                   Index for time step in solution
     !!
     !------------------------------------------------------------------------------------------
-    function interpolate_face_autodiff(mesh,vector,face_info,fcn_info, ifield, itime, interpolation_type, interpolation_source) result(var_gq)
+    function interpolate_face_autodiff(mesh,vector,elem_info,fcn_info, iface, ifield, itime, interpolation_type, interpolation_source) result(var_gq)
         type(mesh_t),           intent(in)              :: mesh
-        type(chidg_vector_t),   intent(in)              :: vector
-        type(face_info_t),      intent(in)              :: face_info
+        type(chidg_vector_t),   intent(inout)           :: vector
+        type(element_info_t),   intent(in)              :: elem_info
         type(function_info_t),  intent(in)              :: fcn_info
+        integer(ik),            intent(in)              :: iface
         integer(ik),            intent(in)              :: ifield
         integer(ik),            intent(in)              :: itime
         character(*),           intent(in)              :: interpolation_type
         integer(ik),            intent(in)              :: interpolation_source
 
-        type(face_info_t)   :: iface_info
-        type(recv_t)        :: recv_info
+        type(element_info_t) :: donor_info
+        type(recv_t)         :: recv_info
 
         type(AD_D),         allocatable :: qdiff(:), var_gq(:)
         real(rk),           allocatable :: qtmp(:)
         real(rk),           allocatable :: interpolator(:,:)
         character(:),       allocatable :: interpolation_style
 
-        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr, nnodes
+        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr, nnodes, donor_iface
         logical     :: differentiate_me, conforming_interpolation, chimera_interpolation, parallel_interpolation
 
 
@@ -282,21 +284,22 @@ contains
         !
         ! Allocate output array
         !
-        nnodes   = mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%basis_s%nnodes_face()
-        nterms_s = mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%basis_s%nterms_i()
+        nnodes   = mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%basis_s%nnodes_face()
+        nterms_s = mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%basis_s%nterms_i()
         allocate(var_gq(nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
+
 
         !
         ! Get number of donors for the interpolation
         !
-        ndonors = get_face_interpolation_ndonors(mesh,face_info,interpolation_source)
+        ndonors = get_elem_interpolation_ndonors(mesh,elem_info,iface,interpolation_source)
 
 
         !
         ! Get interpolation style. Conforming or Chimera
         !
-        interpolation_style = get_face_interpolation_style(mesh,face_info,interpolation_source)
+        interpolation_style = get_elem_interpolation_style(mesh,elem_info,iface,interpolation_source)
         conforming_interpolation = (interpolation_style == 'conforming')
         chimera_interpolation    = (interpolation_style == 'chimera')
 
@@ -315,14 +318,16 @@ contains
         !
         do idonor = 1,ndonors
 
+
             !
             ! Get face info for face being interpolated to(ME, NEIGHBOR), 
             ! interpolation matrix, and recv data for parallel access
             !
-            iface_info   = get_face_interpolation_info(        mesh,face_info,interpolation_source,idonor)
-            mask         = get_face_interpolation_mask(        mesh,face_info,interpolation_source,idonor)
-            recv_info    = get_face_interpolation_comm(        mesh,face_info,interpolation_source,idonor)
-            interpolator = get_face_interpolation_interpolator(mesh,face_info,interpolation_source,idonor,interpolation_type,iface_info)
+            donor_iface  = compute_neighbor_face(mesh,elem_info%idomain_l,elem_info%ielement_l,iface,idonor)         ! THIS PROBABLY NEEDS IMPROVED
+            donor_info   = get_elem_interpolation_info(        mesh,elem_info,iface,interpolation_source,idonor)
+            mask         = get_elem_interpolation_mask(        mesh,elem_info,iface,interpolation_source,idonor)
+            recv_info    = get_elem_interpolation_comm(        mesh,elem_info,iface,interpolation_source,idonor)
+            interpolator = get_elem_interpolation_interpolator(mesh,elem_info,iface,interpolation_source,idonor,interpolation_type,donor_info,donor_iface)
 
             parallel_interpolation = (recv_info%comm /= 0)
 
@@ -350,11 +355,17 @@ contains
             !
             ! Retrieve modal coefficients for ifield from vector
             !
-            if (parallel_interpolation) then
-                qtmp = vector%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ifield,itime)
-            else
-                qtmp = vector%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ifield,itime)
-            end if
+
+            ! CHIDG
+            !if (parallel_interpolation) then
+            !    qtmp = vector%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ifield,itime)
+            !else
+            !    qtmp = vector%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ifield,itime)
+            !end if
+
+            ! PETSC
+            qtmp = vector%get_field(elem_info,ifield,itime)
+
 
 
             !
@@ -375,8 +386,8 @@ contains
             !                     (iface_info%ielement_g == fcn_info%seed%ielement_g) )
             ! If the current element is being differentiated (ielem == ielem_seed)
             ! then copy the solution modes to local AD variable and seed derivatives
-            differentiate_me = ( (iface_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-                                 (iface_info%ielement_g == fcn_info%seed%ielement_g) .and. &
+            differentiate_me = ( (donor_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
+                                 (donor_info%ielement_g == fcn_info%seed%ielement_g) .and. &
                                  (itime                 == fcn_info%seed%itime) )
 
             if ( differentiate_me ) then
@@ -1136,18 +1147,19 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    function get_face_interpolation_info(mesh,face_info,interpolation_source,idonor) result(iface_info)
-        type(mesh_t),       intent(in)                  :: mesh
-        type(face_info_t),  intent(in)                  :: face_info
-        integer(ik),        intent(in)                  :: interpolation_source
-        integer(ik),        intent(in)                  :: idonor
+    function get_elem_interpolation_info(mesh,source_info,source_iface,interpolation_source,idonor) result(donor_info)
+        type(mesh_t),           intent(in)  :: mesh
+        type(element_info_t),   intent(in)  :: source_info
+        integer(ik),            intent(in)  :: source_iface
+        integer(ik),            intent(in)  :: interpolation_source
+        integer(ik),            intent(in)  :: idonor
 
-        type(face_info_t)   :: iface_info
-        integer(ik)         :: ChiID
-        logical             :: conforming_interpolation, chimera_interpolation, parallel_interpolation
+        type(element_info_t)    :: donor_info
+        integer(ik)             :: ChiID
+        logical                 :: conforming_interpolation, chimera_interpolation, parallel_interpolation
 
 
-        associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, iface => face_info%iface )
+        associate( idom => source_info%idomain_l, ielem => source_info%ielement_l, iface => source_iface)
 
         !
         ! Compute neighbor access indices
@@ -1155,11 +1167,13 @@ contains
         if ( interpolation_source == ME ) then
 
             ! Interpolate from ME element
-            iface_info%idomain_l  = face_info%idomain_l
-            iface_info%ielement_l = face_info%ielement_l
-            iface_info%idomain_g  = face_info%idomain_g
-            iface_info%ielement_g = face_info%ielement_g
-            iface_info%iface      = face_info%iface
+!            elem_info%idomain_l  = face_info%idomain_l
+!            elem_info%ielement_l = face_info%ielement_l
+!            elem_info%idomain_g  = face_info%idomain_g
+!            elem_info%ielement_g = face_info%ielement_g
+!            elem_info%iface      = face_info%iface
+            donor_info = source_info
+
 
         elseif ( interpolation_source == NEIGHBOR ) then
 
@@ -1168,25 +1182,59 @@ contains
 
             ! Interpolate from conforming NEIGHBOR element
             if ( conforming_interpolation ) then
-                iface_info%idomain_g  = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_g  
-                iface_info%idomain_l  = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_l
-                iface_info%ielement_g = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_g
-                iface_info%ielement_l = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_l
-                iface_info%iface      = compute_neighbor_face(mesh,idom,ielem,iface,idonor)         ! THIS PROBABLY NEEDS IMPROVED
+                !iface_info%idomain_g  = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_g  
+                !iface_info%idomain_l  = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_l
+                !iface_info%ielement_g = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_g
+                !iface_info%ielement_l = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_l
+                !iface_info%iface      = compute_neighbor_face(mesh,idom,ielem,iface,idonor)         ! THIS PROBABLY NEEDS IMPROVED
+
+                donor_info = element_info_t(idomain_g    = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_domain_g,    &
+                                            idomain_l    = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_domain_l,    &
+                                            ielement_g   = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_element_g,   &
+                                            ielement_l   = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_element_l,   &
+                                            iproc        = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_proc,        &
+                                            pelem_ID     = NO_ID,                                                                                               &
+                                            eqn_ID       = NO_ID,                                                                                               &
+                                            nfields      = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_neqns,       &
+                                            nterms_s     = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_nterms_s,    &
+                                            nterms_c     = 0,                                                                                                   &
+                                            dof_start    = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_dof_start,   &
+                                            recv_comm    = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_comm,             &
+                                            recv_domain  = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_domain,           &
+                                            recv_element = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_element)
+
+
+
 
             ! Interpolate from CHIMERA donor element
             elseif ( chimera_interpolation ) then
                 ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                iface_info%idomain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
-                iface_info%idomain_l  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
-                iface_info%ielement_g = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
-                iface_info%ielement_l = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
+                !iface_info%idomain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
+                !iface_info%idomain_l  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
+                !iface_info%ielement_g = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
+                !iface_info%ielement_l = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
+
+                donor_info = element_info_t(idomain_g    = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%idomain_g,      &
+                                            idomain_l    = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%idomain_l,      &
+                                            ielement_g   = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ielement_g,     &
+                                            ielement_l   = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ielement_l,     &
+                                            iproc        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%iproc,          &
+                                            pelem_ID     = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%pelem_ID,       &
+                                            eqn_ID       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%eqn_ID,         &
+                                            nfields      = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nfields,        &
+                                            nterms_s     = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nterms_s,       &
+                                            nterms_c     = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nterms_c,       &
+                                            dof_start    = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%dof_start,      &
+                                            recv_comm    = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_comm,      &
+                                            recv_domain  = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_domain,    &
+                                            recv_element = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_element)
+
             else
-                call chidg_signal(FATAL,"get_face_interpolation_info: neighbor conforming_interpolation nor chimera_interpolation were detected")
+                call chidg_signal(FATAL,"get_elem_interpolation_info: neighbor conforming_interpolation nor chimera_interpolation were detected")
             end if
 
         else
-            call chidg_signal(FATAL,"get_face_interpolation_info: invalid source. ME or NEIGHBOR.")
+            call chidg_signal(FATAL,"get_elem_interpolation_info: invalid source. ME or NEIGHBOR.")
         end if
 
 
@@ -1194,7 +1242,7 @@ contains
         end associate
 
 
-    end function get_face_interpolation_info
+    end function get_elem_interpolation_info
     !*****************************************************************************************
 
 
@@ -1229,13 +1277,15 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function get_face_interpolation_interpolator(mesh,source_face,interpolation_source,idonor,interpolation_type,donor_face) result(interpolator)
-        type(mesh_t),       intent(in)  :: mesh
-        type(face_info_t),  intent(in)  :: source_face
-        integer(ik),        intent(in)  :: interpolation_source
-        integer(ik),        intent(in)  :: idonor
-        type(face_info_t),  intent(in)  :: donor_face
-        character(*),       intent(in)  :: interpolation_type
+    function get_elem_interpolation_interpolator(mesh,source_elem,source_iface,interpolation_source,idonor,interpolation_type,donor_elem,donor_iface) result(interpolator)
+        type(mesh_t),           intent(in)  :: mesh
+        type(element_info_t),   intent(in)  :: source_elem
+        integer(ik),            intent(in)  :: source_iface
+        integer(ik),            intent(in)  :: interpolation_source
+        integer(ik),            intent(in)  :: idonor
+        type(element_info_t),   intent(in)  :: donor_elem
+        integer(ik),            intent(in)  :: donor_iface
+        character(*),           intent(in)  :: interpolation_type
 
         real(rk),       allocatable :: interpolator(:,:)
         integer(ik),    allocatable :: gq_node_indices(:)
@@ -1243,7 +1293,7 @@ contains
         logical                     :: conforming_interpolation, chimera_interpolation, parallel_interpolation
 
 
-        associate( idom => source_face%idomain_l, ielem => source_face%ielement_l, iface => source_face%iface )
+        associate( idom => source_elem%idomain_l, ielem => source_elem%ielement_l, iface => source_iface )
 
         !
         ! Compute neighbor access indices
@@ -1259,7 +1309,7 @@ contains
                 case('grad3')
                     interpolator = mesh%domain(idom)%faces(ielem,iface)%grad3
                 case default
-                    call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
+                    call chidg_signal(FATAL,"get_elem_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
             end select
 
 
@@ -1280,7 +1330,7 @@ contains
                 if (parallel_interpolation) then
                     select case(interpolation_type)
                         case('value')
-                            interpolator = mesh%domain(idom)%faces(ielem,iface)%basis_s%interpolator_face('Value',donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
+                            interpolator = mesh%domain(idom)%faces(ielem,iface)%basis_s%interpolator_face('Value',donor_iface)    ! THIS PROBABLY NEEDS IMPROVED
                         case('grad1')
                             interpolator = mesh%domain(idom)%faces(ielem,iface)%neighbor_grad1
                         case('grad2')
@@ -1288,20 +1338,20 @@ contains
                         case('grad3')
                             interpolator = mesh%domain(idom)%faces(ielem,iface)%neighbor_grad3
                         case default
-                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
+                            call chidg_signal(FATAL,"get_elem_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
                     end select
                 else
                     select case(interpolation_type)
                         case('value')
-                            interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%basis_s%interpolator_face('Value',donor_face%iface)
+                            interpolator = mesh%domain(donor_elem%idomain_l)%faces(donor_elem%ielement_l,donor_iface)%basis_s%interpolator_face('Value',donor_iface)
                         case('grad1')
-                            interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad1
+                            interpolator = mesh%domain(donor_elem%idomain_l)%faces(donor_elem%ielement_l,donor_iface)%grad1
                         case('grad2')
-                            interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad2
+                            interpolator = mesh%domain(donor_elem%idomain_l)%faces(donor_elem%ielement_l,donor_iface)%grad2
                         case('grad3')
-                            interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad3
+                            interpolator = mesh%domain(donor_elem%idomain_l)%faces(donor_elem%ielement_l,donor_iface)%grad3
                         case default
-                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
+                            call chidg_signal(FATAL,"get_elem_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
                     end select
                 end if
 
@@ -1319,17 +1369,17 @@ contains
                         case('grad3')
                             interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%grad3
                         case default
-                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
+                            call chidg_signal(FATAL,"get_elem_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
                     end select
 
             else
-                call chidg_signal(FATAL,"get_face_interpolation_interpolator: neighbor conforming_interpolation nor chimera_interpolation were detected")
+                call chidg_signal(FATAL,"get_elem_interpolation_interpolator: neighbor conforming_interpolation nor chimera_interpolation were detected")
             end if
 
 
 
         else
-            call chidg_signal(FATAL,"get_face_interpolation_interpolator: invalid source. ME or NEIGHBOR.")
+            call chidg_signal(FATAL,"get_elem_interpolation_interpolator: invalid source. ME or NEIGHBOR.")
         end if
 
 
@@ -1337,7 +1387,7 @@ contains
         end associate
 
 
-    end function get_face_interpolation_interpolator
+    end function get_elem_interpolation_interpolator
     !*****************************************************************************************
 
 
@@ -1362,11 +1412,12 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    function get_face_interpolation_mask(mesh,face_info,interpolation_source,idonor) result(mask)
-        type(mesh_t),       intent(in)                  :: mesh
-        type(face_info_t),  intent(in)                  :: face_info
-        integer(ik),        intent(in)                  :: interpolation_source
-        integer(ik),        intent(in)                  :: idonor
+    function get_elem_interpolation_mask(mesh,source_info,source_iface,interpolation_source,idonor) result(mask)
+        type(mesh_t),           intent(in)  :: mesh
+        type(element_info_t),   intent(in)  :: source_info
+        integer(ik),            intent(in)  :: source_iface
+        integer(ik),            intent(in)  :: interpolation_source
+        integer(ik),            intent(in)  :: idonor
 
         logical, allocatable :: mask(:) !< This gets returned if CHIMERA interpolation
 
@@ -1375,7 +1426,7 @@ contains
         integer(ik)                 :: inode, ChiID, nnodes, ierr
         logical                     :: chimera_interpolation
 
-        associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, iface => face_info%iface )
+        associate( idom => source_info%idomain_l, ielem => source_info%ielement_l, iface => source_iface )
 
 
         if ( interpolation_source == NEIGHBOR ) then
@@ -1413,7 +1464,7 @@ contains
 
         end associate
 
-    end function get_face_interpolation_mask
+    end function get_elem_interpolation_mask
     !*****************************************************************************************
 
 
@@ -1442,11 +1493,12 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    function get_face_interpolation_comm(mesh,face_info,interpolation_source,idonor) result(recv_info)
-        type(mesh_t),       intent(in)                  :: mesh
-        type(face_info_t),  intent(in)                  :: face_info
-        integer(ik),        intent(in)                  :: interpolation_source
-        integer(ik),        intent(in)                  :: idonor
+    function get_elem_interpolation_comm(mesh,source_info,source_iface,interpolation_source,idonor) result(recv_info)
+        type(mesh_t),           intent(in)  :: mesh
+        type(element_info_t),   intent(in)  :: source_info
+        integer(ik),            intent(in)  :: source_iface
+        integer(ik),            intent(in)  :: interpolation_source
+        integer(ik),            intent(in)  :: idonor
 
 
         type(recv_t)    :: recv_info                !< This gets set if REMOTE interpolation
@@ -1454,7 +1506,7 @@ contains
         logical         :: conforming_interpolation, chimera_interpolation, parallel_interpolation
 
 
-        associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, iface => face_info%iface )
+        associate( idom => source_info%idomain_l, ielem => source_info%ielement_l, iface => source_iface)
 
         !
         ! Initialize recv_info container to null, indicating LOCAL interpolation. 
@@ -1496,7 +1548,7 @@ contains
                 end if
 
             else
-                call chidg_signal(FATAL,"get_face_interpolation_comm: neighbor conforming_interpolation nor chimera_interpolation were detected")
+                call chidg_signal(FATAL,"get_elem_interpolation_comm: neighbor conforming_interpolation nor chimera_interpolation were detected")
             end if
 
 
@@ -1504,7 +1556,7 @@ contains
 
         end associate
 
-    end function get_face_interpolation_comm
+    end function get_elem_interpolation_comm
     !*****************************************************************************************
 
 
@@ -1530,15 +1582,16 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    function get_face_interpolation_ndonors(mesh,face_info,interpolation_source) result(ndonors)
-        type(mesh_t),       intent(in)  :: mesh
-        type(face_info_t),  intent(in)  :: face_info
-        integer(ik),        intent(in)  :: interpolation_source
+    function get_elem_interpolation_ndonors(mesh,source_info,source_iface,interpolation_source) result(ndonors)
+        type(mesh_t),           intent(in)  :: mesh
+        type(element_info_t),   intent(in)  :: source_info
+        integer(ik),            intent(in)  :: source_iface
+        integer(ik),            intent(in)  :: interpolation_source
 
         integer(ik) :: ndonors, ChiID
         logical     :: chimera_interpolation, conforming_interpolation
 
-        associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, iface => face_info%iface )
+        associate( idom => source_info%idomain_l, ielem => source_info%ielement_l, iface => source_iface)
 
 
         !
@@ -1570,16 +1623,16 @@ contains
 
 
             else
-                call chidg_signal(FATAL,"get_face_interpolation_ndonors: invalid value for 'face%ftype'")
+                call chidg_signal(FATAL,"get_elem_interpolation_ndonors: invalid value for 'face%ftype'")
             end if
 
         else
-            call chidg_signal(FATAL,"get_face_interpolation_ndonors: invalid value for incoming parameter 'source'")
+            call chidg_signal(FATAL,"get_elem_interpolation_ndonors: invalid value for incoming parameter 'source'")
         end if
 
         end associate
 
-    end function get_face_interpolation_ndonors
+    end function get_elem_interpolation_ndonors
     !*****************************************************************************************
 
 
@@ -1598,16 +1651,17 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function get_face_interpolation_style(mesh,face_info,interpolation_source) result(interpolation_style)
-        type(mesh_t),       intent(in)  :: mesh
-        type(face_info_t),  intent(in)  :: face_info
-        integer(ik),        intent(in)  :: interpolation_source
+    function get_elem_interpolation_style(mesh,source_info,source_iface,interpolation_source) result(interpolation_style)
+        type(mesh_t),           intent(in)  :: mesh
+        type(element_info_t),   intent(in)  :: source_info
+        integer(ik),            intent(in)  :: source_iface
+        integer(ik),            intent(in)  :: interpolation_source
 
-        character(len=:),   allocatable :: interpolation_style
-        logical                         :: conforming_interpolation, chimera_interpolation
+        character(:),   allocatable :: interpolation_style
+        logical                     :: conforming_interpolation, chimera_interpolation
 
 
-        associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, iface => face_info%iface )
+        associate( idom => source_info%idomain_l, ielem => source_info%ielement_l, iface => source_iface)
 
         if ( interpolation_source == ME ) then
             conforming_interpolation = ( (mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR) .or. &
@@ -1617,7 +1671,7 @@ contains
             chimera_interpolation    = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA  )
             conforming_interpolation = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
         else
-            call chidg_signal(FATAL,"get_face_interpolation_style: Invalid interpolation_source. ME or NEIGHBOR")
+            call chidg_signal(FATAL,"get_elem_interpolation_style: Invalid interpolation_source. ME or NEIGHBOR")
         end if
 
 
@@ -1627,12 +1681,12 @@ contains
         else if (chimera_interpolation) then
             interpolation_style = "chimera"
         else
-            call chidg_signal(FATAL,"get_face_interpolation_style: Error in selecting interpolation style")
+            call chidg_signal(FATAL,"get_elem_interpolation_style: Error in selecting interpolation style")
         end if
 
         end associate
 
-    end function get_face_interpolation_style
+    end function get_elem_interpolation_style
     !******************************************************************************************
 
 

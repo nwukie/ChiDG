@@ -621,8 +621,8 @@ contains
                         worker%function_info%ifcn   = ifcn
                         worker%function_info%idiff  = idiff
 
-                        compute_function       = worker%solverdata%function_status%compute_function(   worker%face_info(), worker%function_info )
-                        differentiate_function = worker%solverdata%function_status%linearize_function( worker%face_info(), worker%function_info )
+                        compute_function       = worker%solverdata%function_status%compute_function(   worker%element_info, worker%function_info, worker%iface)
+                        differentiate_function = worker%solverdata%function_status%linearize_function( worker%element_info, worker%function_info, worker%iface)
                         
 
                         if ( compute_function .or. differentiate_function ) then
@@ -731,8 +731,8 @@ contains
                         worker%function_info%ifcn   = ifcn
                         worker%function_info%idiff  = idiff
 
-                        compute_function     = worker%solverdata%function_status%compute_function(   worker%face_info(), worker%function_info )
-                        linearize_function   = worker%solverdata%function_status%linearize_function( worker%face_info(), worker%function_info )
+                        compute_function     = worker%solverdata%function_status%compute_function(   worker%element_info, worker%function_info, worker%iface )
+                        linearize_function   = worker%solverdata%function_status%linearize_function( worker%element_info, worker%function_info, worker%iface )
                         
                         if ( compute_function .or. linearize_function ) then
                             ! If we are differentiating, compute boundary flux once for each 

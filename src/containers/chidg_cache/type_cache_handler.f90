@@ -103,6 +103,7 @@ contains
 
         type(AD_D), allocatable, dimension(:) :: grad1_mom3, grad2_mom3, grad3_mom3
 
+
         !
         ! Check for valid indices
         !
@@ -111,7 +112,6 @@ contains
                         (worker%itime /= 0)
 
         if (.not. valid_indices) call chidg_signal(FATAL,"cache_handler%update: Bad domain/element/time indices were detected during update.")
-
 
 
         !
@@ -149,7 +149,6 @@ contains
         end select
 
 
-
         !
         ! Set range of faces to update
         !
@@ -170,7 +169,6 @@ contains
         call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l,differentiate,lift)
 
 
-
         !
         ! Determine if we want to update gradient terms in the cache
         !
@@ -180,13 +178,11 @@ contains
 !        compute_gradients = .true.
 
 
-
         !
         ! Update fields
         !
         call self%update_auxiliary_fields(worker,equation_set,bc_state_group,differentiate)
         call self%update_primary_fields(  worker,equation_set,bc_state_group,differentiate,compute_gradients,update_element, update_interior_faces, update_exterior_faces, face_min, face_max)
-
         if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
 
 
@@ -345,7 +341,6 @@ contains
 
             ! Update worker face index
             call worker%set_face(iface)
-
 
             ! Update face interior/exterior/bc states.
             if (update_interior_faces) call self%update_primary_interior(worker,equation_set,bc_state_group,differentiate,compute_gradients)
@@ -630,10 +625,10 @@ contains
             ! Interpolate modes to nodes on undeformed element
             ! NOTE: we always need to compute the graduent for interior faces for boundary conditions.
             !
-            value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'value',ME)
-            grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad1',ME)
-            grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad2',ME)
-            grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad3',ME)
+            value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ieqn,worker%itime,'value',ME)
+            grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ieqn,worker%itime,'grad1',ME)
+            grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ieqn,worker%itime,'grad2',ME)
+            grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ieqn,worker%itime,'grad3',ME)
 
 
             !
@@ -760,7 +755,7 @@ contains
                     !
 
                     ! Interpolate modes to nodes on undeformed element
-                    value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ifield,worker%itime,'value',NEIGHBOR)
+                    value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'value',NEIGHBOR)
 
                     ! Get ALE transformation data
                     ale_g = worker%get_det_jacobian_grid_face('value','face exterior')
@@ -780,9 +775,9 @@ contains
                         !
                         ! Interpolate modes to nodes on undeformed element
                         !
-                        grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ifield,worker%itime,'grad1',NEIGHBOR)
-                        grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ifield,worker%itime,'grad2',NEIGHBOR)
-                        grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ifield,worker%itime,'grad3',NEIGHBOR)
+                        grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad1',NEIGHBOR)
+                        grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad2',NEIGHBOR)
+                        grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad3',NEIGHBOR)
 
 
                         !
@@ -1113,10 +1108,10 @@ contains
             ! Interpolate modes to nodes
             ! NOTE: implicitly assuming only 1 field in the auxiliary field chidg_vector
             ifield = 1
-            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'value',ME)
-            grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad1',ME)
-            grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad2',ME)
-            grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad3',ME)
+            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'value',ME)
+            grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad1',ME)
+            grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad2',ME)
+            grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad3',ME)
 
             ! Store gq data in cache
             call worker%cache%set_data(field,'face interior',value_gq,'value',   0,worker%function_info%seed,iface)
@@ -1204,10 +1199,10 @@ contains
                 ! Interpolate modes to nodes
                 ! WARNING: implicitly assuming only 1 field in the auxiliary field chidg_vector
                 ifield = 1
-                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'value',NEIGHBOR)
-                grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad1',NEIGHBOR)
-                grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad2',NEIGHBOR)
-                grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad3',NEIGHBOR)
+                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'value',NEIGHBOR)
+                grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad1',NEIGHBOR)
+                grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad2',NEIGHBOR)
+                grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad3',NEIGHBOR)
 
                 ! Store gq data in cache
                 call worker%cache%set_data(field,'face exterior',value_gq,'value',   0,worker%function_info%seed,iface)
@@ -1298,10 +1293,10 @@ contains
                 !
                 ! Interpolate modes to nodes
                 ifield = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
-                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'value',ME)
-                grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad1',ME)
-                grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad2',ME)
-                grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad3',ME)
+                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'value',ME)
+                grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad1',ME)
+                grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad2',ME)
+                grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad3',ME)
 
                 ! Store gq data in cache
                 call worker%cache%set_data(field,'face exterior',value_gq,'value',   0,worker%function_info%seed,iface)

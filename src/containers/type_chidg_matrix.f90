@@ -2,15 +2,15 @@ module type_chidg_matrix
 #include <messenger.h>
 #include "petsc/finclude/petscmat.h"
     use petscmat,               only: PETSC_DECIDE, MatCreate, MatSetType, MatSetSizes, MatSetUp, MatSetValues, tMat, ADD_VALUES
+
     use mod_kinds,              only: rk, ik
-    
     use mod_constants,          only: NO_ID, ZERO
     use mod_chidg_mpi,          only: IRANK, ChiDG_COMM
     use mpi_f08,                only: MPI_AllReduce, MPI_SUM, MPI_INTEGER4
     use type_densematrix,       only: densematrix_t
     use type_domain_matrix,     only: domain_matrix_t
     use type_mesh,              only: mesh_t
-    use type_face_info,         only: face_info_t
+    use type_element_info,      only: element_info_t
     use type_seed,              only: seed_t
     use type_chidg_vector,      only: chidg_vector_t
     use DNAD_D
@@ -121,15 +121,15 @@ module type_chidg_matrix
 
 
     interface 
-        subroutine store_interface(self,integral,face_info,seed,ivar,itime)
+        subroutine store_interface(self,integral,element_info,seed,ivar,itime)
             import chidg_matrix_t
             import AD_D
-            import face_info_t
+            import element_info_t
             import seed_t
             import ik
             class(chidg_matrix_t),  intent(inout)   :: self
             type(AD_D),             intent(in)      :: integral(:)
-            type(face_info_t),      intent(in)      :: face_info
+            type(element_info_t),   intent(in)      :: element_info
             type(seed_t),           intent(in)      :: seed
             integer(ik),            intent(in)      :: ivar 
             integer(ik),            intent(in)      :: itime
@@ -710,25 +710,25 @@ contains
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial 
     !!                          derivatives for the linearization matrix.
-    !!  @param[in]  face_info   Information about where the coupling was computed and whom it
+    !!  @param[in]  element_info   Information about where the coupling was computed and whom it
     !!                          was computed with respect to.
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_store(self,integral,face_info,seed,ivar,itime)
+    subroutine chidg_store(self,integral,element_info,seed,ivar,itime)
         class(chidg_matrix_t),   intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
-        type(face_info_t),      intent(in)      :: face_info
+        type(element_info_t),      intent(in)      :: element_info
         type(seed_t),           intent(in)      :: seed
         integer(ik),            intent(in)      :: ivar 
         integer(ik),            intent(in)      :: itime
 
         integer(ik) :: idomain_l
 
-        idomain_l = face_info%idomain_l
+        idomain_l = element_info%idomain_l
 
         ! Store linearization in associated domain domain_matrix_t
-        call self%dom(idomain_l)%store(integral,face_info,seed,ivar,itime)
+        call self%dom(idomain_l)%store(integral,element_info,seed,ivar,itime)
 
         ! Update stamp
         call date_and_time(values=self%stamp)
@@ -744,10 +744,10 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine petsc_store(self,integral,face_info,seed,ivar,itime)
+    subroutine petsc_store(self,integral,element_info,seed,ivar,itime)
         class(chidg_matrix_t),  intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
-        type(face_info_t),      intent(in)      :: face_info
+        type(element_info_t),      intent(in)      :: element_info
         type(seed_t),           intent(in)      :: seed
         integer(ik),            intent(in)      :: ivar 
         integer(ik),            intent(in)      :: itime
@@ -759,7 +759,7 @@ contains
         PetscInt, allocatable   :: col_indices(:)
         
 
-        row_index_start = face_info%dof_start
+        row_index_start = element_info%dof_start
         col_index_start = seed%dof_start
         col_indices = [(i, i=col_index_start,(col_index_start+seed%neqns*seed%nterms_s-1),1)]
 
@@ -805,26 +805,26 @@ contains
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial 
     !!                          derivatives for the linearization matrix
-    !!  @param[in]  face        face_info_t containing the indices defining the Chimera face
+    !!  @param[in]  face        element_info_t containing the indices defining the Chimera face
     !!  @param[in]  seed        seed_t containing the indices defining the element against 
     !!                          which the Chimera face was linearized
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_store_chimera(self,integral,face_info,seed,ivar,itime)
+    subroutine chidg_store_chimera(self,integral,element_info,seed,ivar,itime)
         class(chidg_matrix_t),      intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_info_t),          intent(in)      :: face_info
+        type(element_info_t),       intent(in)      :: element_info
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar 
         integer(ik),                intent(in)      :: itime
 
         integer(ik) :: idomain_l
 
-        idomain_l = face_info%idomain_l
+        idomain_l = element_info%idomain_l
 
         ! Store linearization in associated domain domain_matrix_t
-        call self%dom(idomain_l)%store_chimera(integral,face_info,seed,ivar,itime)
+        call self%dom(idomain_l)%store_chimera(integral,element_info,seed,ivar,itime)
 
         ! Update stamp
         call date_and_time(values=self%stamp)
@@ -848,26 +848,26 @@ contains
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial
     !!                          derivatives for the linearization matrix
-    !!  @param[in]  face        face_info_t containing the indices defining the Chimera face
+    !!  @param[in]  face        element_info_t containing the indices defining the Chimera face
     !!  @param[in]  seed        seed_t containing the indices defining the element against 
     !!                          which the Chimera face was linearized
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_store_bc(self,integral,face_info,seed,ivar,itime)
+    subroutine chidg_store_bc(self,integral,element_info,seed,ivar,itime)
         class(chidg_matrix_t),      intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_info_t),          intent(in)      :: face_info
+        type(element_info_t),       intent(in)      :: element_info
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar 
         integer(ik),                intent(in)      :: itime
 
         integer(ik) :: idomain_l
 
-        idomain_l = face_info%idomain_l
+        idomain_l = element_info%idomain_l
 
         ! Store linearization in associated domain domain_matrix_t
-        call self%dom(idomain_l)%store_bc(integral,face_info,seed,ivar,itime)
+        call self%dom(idomain_l)%store_bc(integral,element_info,seed,ivar,itime)
 
         ! Update stamp
         call date_and_time(values=self%stamp)
@@ -887,26 +887,26 @@ contains
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial
     !!                          derivatives for the linearization matrix
-    !!  @param[in]  face        face_info_t containing the indices defining the Chimera face
+    !!  @param[in]  face        element_info_t containing the indices defining the Chimera face
     !!  @param[in]  seed        seed_t containing the indices defining the element against 
     !!                          which the Chimera face was linearized
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_store_hb(self,integral,face_info,seed,ivar,itime)
+    subroutine chidg_store_hb(self,integral,element_info,seed,ivar,itime)
         class(chidg_matrix_t),      intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_info_t),          intent(in)      :: face_info
+        type(element_info_t),       intent(in)      :: element_info
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar 
         integer(ik),                intent(in)      :: itime
 
         integer(ik) :: idomain_l
 
-        idomain_l = face_info%idomain_l
+        idomain_l = element_info%idomain_l
 
         ! Store linearization in associated domain domain_matrix_t
-        call self%dom(idomain_l)%store_hb(integral,face_info,seed,ivar,itime)
+        call self%dom(idomain_l)%store_hb(integral,element_info,seed,ivar,itime)
 
         ! Update stamp
         call date_and_time(values=self%stamp)

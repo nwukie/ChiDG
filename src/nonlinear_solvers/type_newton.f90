@@ -71,9 +71,9 @@ contains
         character(:),   allocatable :: user_msg
         integer(ik)             :: itime, niter, ierr, icfl
         real(rk)                :: cfl, timing, resid, resid_prev, resid0, resid_new,    &
-                                   alpha, f0, fn, forcing_term, residual_ratio
+                                   alpha, f0, fn, forcing_term, residual_ratio, testval
         real(rk), allocatable   :: cfln(:), rnorm0(:), rnorm(:), fn_fields(:)
-        type(chidg_vector_t)    :: b, qn, qold, q0, f_smooth
+        type(chidg_vector_t)    :: b, qn, qold, q0, f_smooth, test
         logical                 :: absolute_convergence, relative_convergence, stop_run, iteration_convergence
 
         type(solver_controller_t),  target  :: default_controller
@@ -91,6 +91,7 @@ contains
         call write_line("iter","|R(Q)|","CFL", "Linear Solver(niter)", "LHS Updated", "Preconditioner Updated", &
                         delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
+        print*, 'newton - 1'
 
         ! start timer
         call self%timer%reset()
@@ -108,6 +109,7 @@ contains
                 call chidg_signal(FATAL,"newton%solve: invalid smoother. 'default' or 'jacobi'.")
         end select
 
+        print*, 'newton - 2'
 
         associate ( q   => data%sdata%q,    &
                     dq  => data%sdata%dq,   &
@@ -132,11 +134,13 @@ contains
                    (.not. stop_run) )
             niter = niter + 1
 
+        print*, 'newton - 3'
 
             ! Store the value of the current inner iteration solution (k) 
             ! for the solution update (n+1), q_(n+1)_k
             qold = q
 
+        print*, 'newton - 4'
 
             ! Update Spatial Residual and Linearization (rhs, lin)
             residual_ratio = resid/resid_prev
@@ -146,6 +150,7 @@ contains
                                   differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
 
 
+        print*, 'newton - 4.1'
 
             if (niter == 1) then
                 rnorm0 = rhs%norm_fields(ChiDG_COMM)
@@ -153,6 +158,7 @@ contains
                 cfln = self%cfl0
             end if
 
+            print*, rnorm0
 
 
             ! Pseudo-transient continuation
@@ -214,6 +220,7 @@ contains
             end if
 
 
+            stop
 
 
             ! Solve system [lhs][dq] = [b] for newton step: [dq]

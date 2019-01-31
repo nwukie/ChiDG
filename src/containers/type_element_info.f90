@@ -21,10 +21,15 @@ module type_element_info
         integer(ik) :: pelem_ID   = NO_ID
 
         integer(ik) :: eqn_ID     = NO_ID
-        integer(ik) :: neqns      = NO_ID
+        integer(ik) :: nfields    = NO_ID
         integer(ik) :: nterms_s   = NO_ID
         integer(ik) :: nterms_c   = NO_ID
         integer(ik) :: dof_start  = NO_ID
+
+        ! access indices in chidg_vector
+        integer(ik) :: recv_comm    = NO_ID
+        integer(ik) :: recv_domain  = NO_ID
+        integer(ik) :: recv_element = NO_ID
 
     end type element_info_t
     !*********************************************************************

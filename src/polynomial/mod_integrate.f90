@@ -2,14 +2,13 @@ module mod_integrate
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, CHIMERA, &
-                                      NO_INTERIOR_NEIGHBOR, BOUNDARY, INTERIOR, ZERO
+                                      NO_INTERIOR_NEIGHBOR, BOUNDARY, INTERIOR, ZERO, NO_DATA, NO_ID
     use mod_chidg_mpi,          only: IRANK
 
     use type_mesh,              only: mesh_t
     use type_element,           only: element_t
     use type_face,              only: face_t
     use type_element_info,      only: element_info_t
-    use type_face_info,         only: face_info_t, face_info_constructor
     use type_function_info,     only: function_info_t
     use type_solverdata,        only: solverdata_t
     use type_seed,              only: seed_t
@@ -190,11 +189,12 @@ contains
     !!  @param[inout]   flux    function to integrate over the boundary
     !!
     !----------------------------------------------------------------------------------------
-    subroutine integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,ieqn,itime,integrand)
+    subroutine integrate_boundary_scalar_flux(mesh,sdata,element_info,function_info,iface,ieqn,itime,integrand)
         type(mesh_t),           intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
-        type(face_info_t),      intent(in)      :: face_info
+        type(element_info_t),   intent(in)      :: element_info
         type(function_info_t),  intent(in)      :: function_info
+        integer(ik),            intent(in)      :: iface
         integer(ik),            intent(in)      :: ieqn
         integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: integrand(:)
@@ -202,16 +202,16 @@ contains
         ! Data for applying to self and neighbor
         type(AD_D), allocatable     :: integral(:)
         type(AD_D), allocatable     :: integrand_n(:)
-        type(face_info_t)           :: face_n
         type(function_info_t)       :: function_n
-        integer(ik)                 :: ineighbor_element_l, ineighbor_face, ineighbor_proc, idiff_n, ierr
+        type(element_info_t)        :: element_info_n
+        integer(ik)                 :: ineighbor_element_l, ineighbor_face, ineighbor_proc, idiff_n, ierr, iface_n
         logical                     :: parallel_neighbor, diff_none, diff_interior, diff_exterior
 
 
 
-        associate ( idomain_l   => face_info%idomain_l,     &
-                    ielement_l  => face_info%ielement_l,    &
-                    iface       => face_info%iface,         &
+        associate ( idomain_l   => element_info%idomain_l,     &
+                    ielement_l  => element_info%ielement_l,    &
+                    !iface       => iface,         &
                     ifcn        => function_info%ifcn,      &
                     idonor      => function_info%idepend,   &
                     idiff       => function_info%idiff )
@@ -249,8 +249,8 @@ contains
             integral = matmul(valtrans,integrand)
 
 
-            call store_boundary_integral_residual(     mesh,sdata,face_info,function_info,ieqn,itime,integral)
-            call store_boundary_integral_linearization(mesh,sdata,face_info,function_info,ieqn,itime,integral)
+            call store_boundary_integral_residual(     mesh,sdata,element_info,function_info,iface,ieqn,itime,integral)
+            call store_boundary_integral_linearization(mesh,sdata,element_info,function_info,iface,ieqn,itime,integral)
 
 
         end associate
@@ -270,12 +270,28 @@ contains
                 !face_n%ielement_g = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
                 !face_n%ielement_l = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
                 !face_n%iface      = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
-                face_n = face_info_constructor(mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g, &
-                                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l, &
-                                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g, &
-                                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l, &
-                                               mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face(), &
-                                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start)
+                !face_n = face_info_constructor(mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g, &
+                !                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l, &
+                !                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g, &
+                !                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l, &
+                !                               mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face(), &
+                !                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start)
+
+                element_info_n = element_info_t(idomain_g  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,     &
+                                                idomain_l  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,     &
+                                                ielement_g = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,    &
+                                                ielement_l = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,    &
+                                                iproc      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,         &
+                                                pelem_ID   = NO_ID,                                                                 &
+                                                eqn_ID     = NO_ID,                                                                 &
+                                                nfields    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,        &
+                                                nterms_s   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,     &
+                                                nterms_c   = NO_DATA,                                                               &
+                                                dof_start  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start)
+
+                iface_n = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
+
+
                     
 
                 !
@@ -316,8 +332,8 @@ contains
                     !
                     integral = -matmul(valtrans_n,integrand_n)
 
-                    call store_boundary_integral_residual(     mesh,sdata,face_n,function_n,ieqn,itime,integral)
-                    call store_boundary_integral_linearization(mesh,sdata,face_n,function_n,ieqn,itime,integral)
+                    call store_boundary_integral_residual(     mesh,sdata,element_info_n,function_n,iface_n,ieqn,itime,integral)
+                    call store_boundary_integral_linearization(mesh,sdata,element_info_n,function_n,iface_n,ieqn,itime,integral)
 
                 end associate
 
@@ -367,7 +383,6 @@ contains
         integer(ik)         :: i
         logical             :: conforming_face, boundary_face, chimera_face, &
                                diff_none, diff_interior, diff_exterior
-        type(face_info_t)   :: face_info
         real(rk)            :: vals(size(integral))
 
         associate ( idom  => elem_info%idomain_l,   &
@@ -382,20 +397,6 @@ contains
                           (idiff == 5) .or. (idiff == 6) )
 
 
-
-        !
-        ! Initialize a face_info in case it is needed below
-        !
-        !face_info%idomain_g  = elem_info%idomain_g
-        !face_info%idomain_l  = elem_info%idomain_l
-        !face_info%ielement_g = elem_info%ielement_g
-        !face_info%ielement_l = elem_info%ielement_l
-        !face_info%dof_start  = elem_info%dof_start
-        !face_info%iface      = idiff
-        face_info = face_info_constructor(elem_info%idomain_g,elem_info%idomain_l, &
-                                          elem_info%ielement_g, elem_info%ielement_l, &
-                                          idiff, elem_info%dof_start)
-
         !
         ! Only store rhs once. 
         !   - If we are differentiating things, only apply function once, when wrt interior
@@ -407,7 +408,7 @@ contains
             !vals = sdata%rhs%dom(idom)%vecs(ielem)%getvar(ieqn,itime) - integral(:)%x_ad_
             !call sdata%rhs%dom(idom)%vecs(ielem)%setvar(ieqn,itime,vals)
             vals = -integral(:)%x_ad_
-            call sdata%rhs%store(vals,face_info,elem_info%nterms_s,elem_info%neqns,ieqn,itime)
+            call sdata%rhs%add_field(vals,elem_info,ieqn,itime)
         end if
 
         !
@@ -435,14 +436,14 @@ contains
         ! Store linearization
         !
         if ( diff_interior ) then
-            call sdata%lhs%store(integral,face_info,fcn_info%seed,ieqn,itime)
+            call sdata%lhs%store(integral,elem_info,fcn_info%seed,ieqn,itime)
 
         else if ( diff_exterior .and. conforming_face ) then
-            call sdata%lhs%store(integral,face_info,fcn_info%seed,ieqn,itime)
+            call sdata%lhs%store(integral,elem_info,fcn_info%seed,ieqn,itime)
         else if ( diff_exterior .and. chimera_face    ) then
-            call sdata%lhs%store_chimera(integral,face_info,fcn_info%seed,ieqn,itime)
+            call sdata%lhs%store_chimera(integral,elem_info,fcn_info%seed,ieqn,itime)
         else if ( diff_exterior .and. boundary_face   ) then
-            call sdata%lhs%store_bc(integral,face_info,fcn_info%seed,ieqn,itime)
+            call sdata%lhs%store_bc(integral,elem_info,fcn_info%seed,ieqn,itime)
 
         else if ( diff_none ) then
             ! No derivatives to store
@@ -481,11 +482,12 @@ contains
     !!  @date   11/5/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine store_boundary_integral_residual(mesh,sdata,face_info,function_info,ieqn,itime,integral)
+    subroutine store_boundary_integral_residual(mesh,sdata,elem_info,function_info,iface,ieqn,itime,integral)
         type(mesh_t),           intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
-        type(face_info_t),      intent(in)      :: face_info
+        type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: function_info
+        integer(ik),            intent(in)      :: iface
         integer(ik),            intent(in)      :: ieqn
         integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: integral(:)
@@ -497,7 +499,7 @@ contains
         logical         :: add_flux = .false.
 
 
-        associate ( idomain_l  => face_info%idomain_l, ielement_l  => face_info%ielement_l, iface => face_info%iface, &
+        associate ( idomain_l  => elem_info%idomain_l, ielement_l  => elem_info%ielement_l,     &
                     ifcn  => function_info%ifcn,       idepend => function_info%idepend,     idiff => function_info%idiff )
 
             conforming_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
@@ -536,7 +538,7 @@ contains
                         !vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
                         !call rhs(ielement_l)%setvar(ieqn,itime,vals)
                         vals = integral(:)%x_ad_
-                        call sdata%rhs%store(vals,face_info,nterms_s,nfields,ieqn,itime)
+                        call sdata%rhs%add_field(vals,elem_info,ieqn,itime)
                     end if
 
 
@@ -547,7 +549,7 @@ contains
                         !vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
                         !call rhs(ielement_l)%setvar(ieqn,itime,vals)
                         vals = integral(:)%x_ad_
-                        call sdata%rhs%store(vals,face_info,nterms_s,nfields,ieqn,itime)
+                        call sdata%rhs%add_field(vals,elem_info,ieqn,itime)
                     end if
 
 
@@ -556,7 +558,7 @@ contains
                     !
                     ! Check if particular flux function has been added already
                     !
-                    add_flux = sdata%function_status%compute_function_equation( face_info, function_info, ieqn)
+                    add_flux = sdata%function_status%compute_function_equation( elem_info, function_info, iface, ieqn)
 
 
                     ! Store if needed
@@ -565,10 +567,10 @@ contains
                         !vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
                         !call rhs(ielement_l)%setvar(ieqn,itime,vals)
                         vals = integral(:)%x_ad_
-                        call sdata%rhs%store(vals,face_info,nterms_s,nfields,ieqn,itime)
+                        call sdata%rhs%add_field(vals,elem_info,ieqn,itime)
 
                         ! Register flux was stored
-                        call sdata%function_status%register_function_computed( face_info, function_info, ieqn)
+                        call sdata%function_status%register_function_computed( elem_info, function_info, iface, ieqn)
                     end if
 
                 end if
@@ -601,23 +603,24 @@ contains
     !!  @param[in]      idiff       Block index for the correct linearization block for the current element
     !!
     !---------------------------------------------------------------------------------------
-    subroutine store_boundary_integral_linearization(mesh,sdata,face_info,function_info,ieqn,itime,integral)
+    subroutine store_boundary_integral_linearization(mesh,sdata,elem_info,function_info,iface,ieqn,itime,integral)
         type(mesh_t),           intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
-        type(face_info_t),      intent(in)      :: face_info
+        type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: function_info
+        integer(ik),            intent(in)      :: iface
         integer(ik),            intent(in)      :: ieqn
         integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: integral(:)
 
-        integer(ik)                 :: i, idomain_l, ielement_l, iface, ChiID
+        integer(ik)                 :: i, idomain_l, ielement_l, ChiID
         integer(ik)                 :: idiff, ifcn
         real(rk)                    :: vals(size(integral))
 
         logical :: conforming_face, boundary_face, chimera_face, &
                    diff_none, diff_interior, diff_exterior, add_linearization
 
-        associate ( idomain_l => face_info%idomain_l, ielement_l => face_info%ielement_l,  iface => face_info%iface, &
+        associate ( idomain_l => elem_info%idomain_l, ielement_l => elem_info%ielement_l,  &
                     ifcn      => function_info%ifcn,  idepend    => function_info%idepend, idiff => function_info%idiff, seed => function_info%seed )
 
         
@@ -640,34 +643,34 @@ contains
 
                 if (diff_exterior) then
                     ! Store linearization of Chimera boundary donor elements.
-                    call lhs%store_chimera(integral,face_info,seed,ieqn,itime)
+                    call lhs%store_chimera(integral,elem_info,seed,ieqn,itime)
                 else
                     ! Store linearization of Chimera boundary receiver element. Since this could be computed multiple times,
                     ! we just store it once.
                     if (idepend == 1) then
-                        call lhs%store(integral,face_info,seed,ieqn,itime)
+                        call lhs%store(integral,elem_info,seed,ieqn,itime)
                     end if
                 end if
 
 
 
             else if ( boundary_face ) then
-                call lhs%store_bc(integral,face_info,seed,ieqn,itime)
+                call lhs%store_bc(integral,elem_info,seed,ieqn,itime)
 
 
 
             else if ( conforming_face ) then
 
 
-                add_linearization = sdata%function_status%linearize_function_equation( face_info, function_info, ieqn)
+                add_linearization = sdata%function_status%linearize_function_equation( elem_info, function_info, iface, ieqn)
 
                 ! Store linearization if not already stored
                 if ( add_linearization ) then
                     ! Store linearization
-                    call lhs%store(integral,face_info,seed,ieqn,itime)
+                    call lhs%store(integral,elem_info,seed,ieqn,itime)
 
                     ! Register flux as linearized
-                    call sdata%function_status%register_function_linearized( face_info, function_info, ieqn)
+                    call sdata%function_status%register_function_linearized( elem_info, function_info, iface, ieqn)
                 end if
 
 

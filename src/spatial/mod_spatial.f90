@@ -74,9 +74,10 @@ contains
 
         ! Communicate solution vector
         call comm_timer%start()
-        call data%sdata%q%comm_send()
-        call data%sdata%q%comm_recv()
-        call data%sdata%q%comm_wait()
+        !call data%sdata%q%comm_send()
+        !call data%sdata%q%comm_recv()
+        !call data%sdata%q%comm_wait()
+        call data%sdata%q%assemble()
         call comm_timer%stop()
 
 
@@ -108,14 +109,21 @@ contains
                 associate ( domain => data%mesh%domain(idom), eqnset => data%eqnset(eqn_ID) )
 
 
-                elem_info%idomain_g  = domain%elems(ielem)%idomain_g
-                elem_info%idomain_l  = domain%elems(ielem)%idomain_l
-                elem_info%ielement_g = domain%elems(ielem)%ielement_g
-                elem_info%ielement_l = domain%elems(ielem)%ielement_l
-                elem_info%neqns      = domain%elems(ielem)%neqns
-                elem_info%nterms_s   = domain%elems(ielem)%nterms_s
-                elem_info%nterms_c   = domain%elems(ielem)%nterms_c
-                elem_info%dof_start  = domain%elems(ielem)%dof_start
+                elem_info = element_info_t(idomain_g    = domain%elems(ielem)%idomain_g,    &
+                                           idomain_l    = domain%elems(ielem)%idomain_l,    &
+                                           ielement_g   = domain%elems(ielem)%ielement_g,   &
+                                           ielement_l   = domain%elems(ielem)%ielement_l,   &
+                                           iproc        = domain%elems(ielem)%iproc,        &
+                                           pelem_ID     = NO_ID,                            &
+                                           eqn_ID       = domain%elems(ielem)%eqn_ID,       &
+                                           nfields      = domain%elems(ielem)%neqns,        &
+                                           nterms_s     = domain%elems(ielem)%nterms_s,     &
+                                           nterms_c     = domain%elems(ielem)%nterms_c,     &
+                                           dof_start    = domain%elems(ielem)%dof_start,    &
+                                           recv_comm    = domain%elems(ielem)%recv_comm,    &
+                                           recv_domain  = domain%elems(ielem)%recv_domain,  &
+                                           recv_element = domain%elems(ielem)%recv_element)
+
                 call worker%set_element(elem_info)
 
 
@@ -140,6 +148,7 @@ contains
                     call eqnset%compute_bc_operators(worker,data%bc_state_group, differentiate)
 
                 end do  ! faces loop
+
                 
                 ! Compute contributions from volume integrals
                 call eqnset%compute_volume_advective_operators(worker, differentiate)
@@ -165,6 +174,7 @@ contains
         end do  ! idom
 
 
+        call data%sdata%rhs%assemble()
 
 
         ! Synchronize

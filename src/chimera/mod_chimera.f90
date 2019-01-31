@@ -380,7 +380,7 @@ contains
                                 donor%ielement_l = parallel_indices(4)
                                 donor%iproc      = parallel_indices(5)
                                 donor%eqn_ID     = parallel_indices(6)
-                                donor%neqns      = parallel_indices(7)
+                                donor%nfields    = parallel_indices(7)
                                 donor%nterms_s   = parallel_indices(8)
                                 donor%nterms_c   = parallel_indices(9)
                                 donor%dof_start  = parallel_indices(10)
@@ -418,7 +418,7 @@ contains
                             ! Add donor
                             !
                             donor_ID = mesh%domain(idom)%chimera%recv(ichimera_face)%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, donor%iproc)
-                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%set_properties(donor%nterms_c,donor%nterms_s,donor%neqns,donor%eqn_ID,donor%dof_start)
+                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%set_properties(donor%nterms_c,donor%nterms_s,donor%nfields,donor%eqn_ID,donor%dof_start)
                             call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%add_node(igq,donor_coord,donor_metric,donor_jinv)
 
 
@@ -526,7 +526,7 @@ contains
                             parallel_indices(4)  = donor%ielement_l
                             parallel_indices(5)  = donor%iproc
                             parallel_indices(6)  = donor%eqn_ID
-                            parallel_indices(7)  = donor%neqns
+                            parallel_indices(7)  = donor%nfields
                             parallel_indices(8)  = donor%nterms_s
                             parallel_indices(9)  = donor%nterms_c
                             parallel_indices(10) = donor%dof_start
@@ -959,7 +959,7 @@ contains
             donor_element%ielement_l = candidate_elements_l%at(idonor)
             donor_element%iproc      = IRANK
             donor_element%eqn_ID     = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%eqn_ID
-            donor_element%neqns      = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
+            donor_element%nfields    = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
             donor_element%nterms_s   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
             donor_element%nterms_c   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
             donor_element%dof_start  = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%dof_start
@@ -995,7 +995,7 @@ contains
             donor_element%ielement_l = candidate_elements_l%at(idonor)
             donor_element%iproc      = IRANK
             donor_element%eqn_ID     = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%eqn_ID
-            donor_element%neqns      = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
+            donor_element%nfields    = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
             donor_element%nterms_s   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
             donor_element%nterms_c   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
             donor_element%dof_start  = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%dof_start

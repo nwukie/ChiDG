@@ -79,7 +79,7 @@ contains
             p_m, p_p,                               &
             q_m, q_p,                               &
             r_m, r_p,                               &
-            dissipation_u, dissipation_p, dissipation_q, dissipation_r, sumsqr_m, sumsqr_p, mag_m, mag_p
+            dissipation_u, dissipation_p, dissipation_q, dissipation_r, sumsqr_m, sumsqr_p, mag_m, mag_p, wave_speed
             
 
         !
@@ -117,9 +117,12 @@ contains
         !
         ! Compute dissipation
         !
-        !wave_speed  = 1._rk
-        !dissipation_u = -HALF*wave_speed*(u_p-u_m)
-        !dissipation_p = -HALF*wave_speed*(p_p-p_m)
+!        wave_speed = u_m
+!        wave_speed  = 1._rk
+!        dissipation_u = -HALF*wave_speed*(u_p-u_m)
+!        dissipation_p = -HALF*wave_speed*(p_p-p_m)
+!        dissipation_q = -HALF*wave_speed*(q_p-q_m)
+!        dissipation_r = -HALF*wave_speed*(r_p-r_m)
         dissipation_u = -HALF*max(mag_m,mag_p)*(u_p-u_m)
         dissipation_p = -HALF*max(mag_m,mag_p)*(p_p-p_m)
         dissipation_q = -HALF*max(mag_m,mag_p)*(q_p-q_m)

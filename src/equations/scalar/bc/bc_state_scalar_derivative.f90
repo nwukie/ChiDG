@@ -91,22 +91,30 @@ contains
         type(mpi_comm),             intent(in)      :: bc_COMM
 
 
-        type(AD_D), allocatable, dimension(:)   :: u_bc, grad1u_bc, grad2u_bc, grad3u_bc
+        type(AD_D), allocatable, dimension(:)   :: u_bc, grad1u_bc, grad2u_bc, grad3u_bc, mag
         real(rk),   allocatable, dimension(:)   :: normal_gradient
 
 
         !
         ! Get 'u' value from face interior to extrapolate
         !
-        u_bc = worker%get_field('u', 'value', 'face interior')
+        u_bc      = worker%get_field('u', 'value', 'face interior')
+        grad1u_bc = worker%get_field('u', 'grad1', 'face interior')
+        grad2u_bc = worker%get_field('u', 'grad2', 'face interior')
+        grad3u_bc = worker%get_field('u', 'grad3', 'face interior')
 
 
         !
         ! Initialize derivative arrays
         !
-        grad1u_bc = ZERO*u_bc
-        grad2u_bc = ZERO*u_bc
-        grad3u_bc = ZERO*u_bc
+!        grad1u_bc = ZERO*u_bc
+!        grad2u_bc = ZERO*u_bc
+!        grad3u_bc = ZERO*u_bc
+!
+!        mag = sqrt(grad1u_bc*grad1u_bc + grad2u_bc*grad2u_bc + grad3u_bc*grad3u_bc)
+!        grad1u_bc = grad1u_bc / mag
+!        grad2u_bc = grad2u_bc / mag
+!        grad3u_bc = grad3u_bc / mag
 
 
         

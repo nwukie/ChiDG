@@ -139,7 +139,6 @@ contains
         !
         ! Retrieve modal coefficients representing ifield in vector to 'qtmp'
         !
-        !qtmp = vector%dom(idom)%vecs(ielem)%getvar(ifield,itime)
         qtmp = vector%get_field(elem_info,ifield,itime)
 
 
@@ -355,16 +354,7 @@ contains
             !
             ! Retrieve modal coefficients for ifield from vector
             !
-
-            ! CHIDG
-            !if (parallel_interpolation) then
-            !    qtmp = vector%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ifield,itime)
-            !else
-            !    qtmp = vector%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ifield,itime)
-            !end if
-
-            ! PETSC
-            qtmp = vector%get_field(elem_info,ifield,itime)
+            qtmp = vector%get_field(donor_info,ifield,itime)
 
 
 
@@ -600,7 +590,7 @@ contains
     !----------------------------------------------------------------------------------------
     function interpolate_element_standard(mesh,q,idomain_l,ielement_l,ifield,itime,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh
-        type(chidg_vector_t),   intent(in)      :: q
+        type(chidg_vector_t),   intent(inout)   :: q
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
         integer(ik),            intent(in)      :: ifield
@@ -608,6 +598,20 @@ contains
         character(*),           intent(in)      :: interpolation_type
 
         real(rk),   allocatable :: var_gq(:)
+        type(element_info_t)    :: element_info
+
+        element_info = element_info_t(idomain_g  = mesh%domain(idomain_l)%elems(ielement_l)%idomain_g,    &
+                                      idomain_l  = mesh%domain(idomain_l)%elems(ielement_l)%idomain_l,    &
+                                      ielement_g = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g,   &
+                                      ielement_l = mesh%domain(idomain_l)%elems(ielement_l)%ielement_l,   &
+                                      iproc      = mesh%domain(idomain_l)%elems(ielement_l)%iproc,        &
+                                      pelem_ID   = NO_ID,                                            &
+                                      eqn_ID     = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID,       &
+                                      nfields    = mesh%domain(idomain_l)%elems(ielement_l)%neqns,        &
+                                      nterms_s   = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,     &
+                                      nterms_c   = mesh%domain(idomain_l)%elems(ielement_l)%nterms_c,     &
+                                      dof_start  = mesh%domain(idomain_l)%elems(ielement_l)%dof_start)
+
 
 
         !
@@ -617,13 +621,14 @@ contains
         !
         select case (interpolation_type)
             case('value')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
+                !var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'), q%get_field(element_info,ifield,itime))
             case('grad1')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad1,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad1,      q%get_field(element_info,ifield,itime))
             case('grad2')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad2,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad2,      q%get_field(element_info,ifield,itime))
             case('grad3')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad3,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad3,      q%get_field(element_info,ifield,itime))
             case default
                 call chidg_signal(FATAL,"interpolate_element_standard: invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
         end select
@@ -650,18 +655,35 @@ contains
     !-----------------------------------------------------------------------------------------
     function interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ifield,itime) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh
-        type(chidg_vector_t),   intent(in)      :: q
-        integer(ik),            intent(in)      :: idomain_l, ielement_l, iface, ifield
+        type(chidg_vector_t),   intent(inout)   :: q
+        integer(ik),            intent(in)      :: idomain_l
+        integer(ik),            intent(in)      :: ielement_l
+        integer(ik),            intent(in)      :: iface
+        integer(ik),            intent(in)      :: ifield
         integer(ik),            intent(in)      :: itime
 
         real(rk),   allocatable :: var_gq(:)
+        type(element_info_t)    :: element_info
+
+        element_info = element_info_t(idomain_g  = mesh%domain(idomain_l)%elems(ielement_l)%idomain_g,    &
+                                      idomain_l  = mesh%domain(idomain_l)%elems(ielement_l)%idomain_l,    &
+                                      ielement_g = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g,   &
+                                      ielement_l = mesh%domain(idomain_l)%elems(ielement_l)%ielement_l,   &
+                                      iproc      = mesh%domain(idomain_l)%elems(ielement_l)%iproc,        &
+                                      pelem_ID   = NO_ID,                                            &
+                                      eqn_ID     = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID,       &
+                                      nfields    = mesh%domain(idomain_l)%elems(ielement_l)%neqns,        &
+                                      nterms_s   = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,     &
+                                      nterms_c   = mesh%domain(idomain_l)%elems(ielement_l)%nterms_c,     &
+                                      dof_start  = mesh%domain(idomain_l)%elems(ielement_l)%dof_start)
 
         !
         ! Use quadrature instance to compute variable at quadrature nodes.
         ! This takes the form of a matrix multiplication of the face quadrature matrix
         ! with the array of modes for the given variable
         !
-        var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
+        !var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
+        var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface), q%get_field(element_info,ifield,itime))
 
 
     end function interpolate_face_standard

@@ -88,6 +88,7 @@ contains
             rhoE = interpolate_element_standard(mesh,sdata%q,idomain,ielem,irhoE,itime, 'value')
 
 
+
             !
             ! Account for Cylindrical coordinates. Get tangential momentum from angular momentum
             !
@@ -136,11 +137,11 @@ contains
             lam = sum(vmag)/size(vmag) + sum(c)/size(vmag)
 
 
+
             !
             ! Compute element spacing parameter
             !
             h = mesh%domain(idomain)%elems(ielem)%vol**(THIRD)
-
 
             !
             ! Compute elemen-local timestep

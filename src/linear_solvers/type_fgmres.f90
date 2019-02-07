@@ -1,5 +1,9 @@
 module type_fgmres
 #include <messenger.h>
+#include "petsc/finclude/petscvec.h"
+    use petscvec,               only: VecAXPY
+
+
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
     use mod_inv,                only: inv
@@ -185,6 +189,7 @@ contains
                 norm_before = w%norm(ChiDG_COMM)
 
 
+
                 ! Orthogonalize once. Classical Gram-Schmidt
                 call self%timer_dot%start()
                 if (self%orthogonalization == 'CGS') then
@@ -195,6 +200,8 @@ contains
                 call self%timer_dot%stop()
                 ! End Orthogonalize once.
 
+!                print*, 'PC : MV : DOT'
+!                print*, self%timer_precon%elapsed(), self%timer_mv%elapsed(), self%timer_dot%elapsed()
 
 
                 ! Selective Reorthogonalization
@@ -376,11 +383,26 @@ contains
         real(rk),               intent(inout)   :: htmp(:)
 
         integer(ik) :: i
+        type(timer_t)   :: timer_dot, timer_axpy
+        PetscErrorCode :: perr
 
-        do i = 1,j
-            htmp(i) = dot(w,v(i),ChiDG_COMM)
-            w = w - htmp(i)*v(i)
-        end do
+!        if (w%petsc_vector_created) then
+            do i = 1,j
+                call timer_dot%start()
+                htmp(i) = dot(w,v(i),ChiDG_COMM)
+                call timer_dot%stop()
+                call timer_axpy%start()
+                call VecAXPY(w%petsc_vector,-htmp(i),v(i)%petsc_vector,perr)
+                call timer_axpy%stop()
+            end do
+
+            !print*, timer_dot%elapsed(), timer_axpy%elapsed()
+!        else 
+!            do i = 1,j
+!                htmp(i) = dot(w,v(i),ChiDG_COMM)
+!                w = w - htmp(i)*v(i)
+!            end do
+!        end if
 
         h(1:j,j) = h(1:j,j) + htmp(1:j)
 
@@ -454,18 +476,20 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine print_report(self,A,x,b)
-        class(fgmres_t),    intent(inout)   :: self
+        class(fgmres_t),        intent(inout)   :: self
         type(chidg_matrix_t),   intent(inout)   :: A
         type(chidg_vector_t),   intent(inout)   :: x
         type(chidg_vector_t),   intent(in)      :: b
 
         real(rk) :: err
 
+
         err = self%error(A,x,b)
         call self%timer%stop()
         call write_line('   Linear Solver Error: ',         err,                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
         call write_line('   Linear Solver compute time: ',  self%timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
         call write_line('   Linear Solver Iterations: ',    self%niter,           delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
+
 
         call write_line('   Preconditioner time: ',           self%timer_precon%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         call write_line('       Precon time per iteration: ', self%timer_precon%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
@@ -474,6 +498,7 @@ contains
         call write_line('   MV time: ',                   self%timer_mv%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         call write_line('       MV time per iteration: ', self%timer_mv%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
 
+
         call write_line('   MV comm time: ',                   timer_comm%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         call write_line('       MV comm time per iteration: ', timer_comm%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         call write_line('   MV blas time: ',                   timer_blas%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
@@ -481,8 +506,10 @@ contains
         call timer_comm%reset()
         call timer_blas%reset()
 
+
         call write_line('   Dot time: ',  self%timer_dot%elapsed(),  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         call write_line('   Norm time: ', self%timer_norm%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
+
 
     end subroutine print_report
     !*******************************************************************************************

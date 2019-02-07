@@ -74,9 +74,6 @@ contains
 
         ! Communicate solution vector
         call comm_timer%start()
-        !call data%sdata%q%comm_send()
-        !call data%sdata%q%comm_recv()
-        !call data%sdata%q%comm_wait()
         call data%sdata%q%assemble()
         call comm_timer%stop()
 
@@ -175,6 +172,7 @@ contains
 
 
         call data%sdata%rhs%assemble()
+        if (differentiate) call data%sdata%lhs%assemble()
 
 
         ! Synchronize

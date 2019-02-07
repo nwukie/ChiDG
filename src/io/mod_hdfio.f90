@@ -51,7 +51,7 @@
 module mod_hdfio
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik,rdouble
-    use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
+    use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC, NO_ID
     use mod_bc,                     only: create_bc
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
 
@@ -59,6 +59,7 @@ module mod_hdfio
     use mod_string,                 only: string_t
     use type_chidg_data,            only: chidg_data_t
     use type_meshdata,              only: meshdata_t
+    use type_element_info,          only: element_info_t
     use type_domain_patch_data,     only: domain_patch_data_t
     use type_bc_state_group,        only: bc_state_group_t
     use type_bc_state,              only: bc_state_t
@@ -386,7 +387,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine write_fields_hdf(data,file_name,field)
-        type(chidg_data_t), intent(in)              :: data
+        type(chidg_data_t), intent(inout)           :: data
         character(*),       intent(in)              :: file_name
         character(*),       intent(in), optional    :: field
 
@@ -549,6 +550,7 @@ contains
         real(rdouble),  allocatable, target :: var(:,:,:)
         real(rdouble),  allocatable         :: bufferterms(:)
         type(c_ptr)                         :: cp_var
+        type(element_info_t)                :: element_info
 
         integer(ik)                         :: ielem_g, aux_vector_index, eqn_ID
         integer                             :: type, ierr, nterms_1d, nterms_s, order,  &
@@ -639,15 +641,29 @@ contains
         do ielem = 1,data%mesh%domain(idom)%nelem
             eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
 
+            element_info = element_info_t(idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g,    &
+                                          idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l,    &
+                                          ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g,   &
+                                          ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l,   &
+                                          iproc      = data%mesh%domain(idom)%elems(ielem)%iproc,        &
+                                          pelem_ID   = NO_ID,                                            &
+                                          eqn_ID     = data%mesh%domain(idom)%elems(ielem)%eqn_ID,       &
+                                          nfields    = data%mesh%domain(idom)%elems(ielem)%neqns,        &
+                                          nterms_s   = data%mesh%domain(idom)%elems(ielem)%nterms_s,     &
+                                          nterms_c   = data%mesh%domain(idom)%elems(ielem)%nterms_c,     &
+                                          dof_start  = data%mesh%domain(idom)%elems(ielem)%dof_start)
+
+
 
             !
             ! Get number of terms initialized for the current element
             !
-            if (field_type == 'Primary') then
-                nterms_ielem = data%sdata%q_in%dom(idom)%vecs(ielem)%nterms()
-            else if (field_type == 'Auxiliary') then
-                nterms_ielem = data%sdata%auxiliary_field(aux_vector_index)%dom(idom)%vecs(ielem)%nterms() 
-            end if
+            !if (field_type == 'Primary') then
+            !    nterms_ielem = data%sdata%q_in%dom(idom)%vecs(ielem)%nterms()
+            !else if (field_type == 'Auxiliary') then
+            !    nterms_ielem = data%sdata%auxiliary_field(aux_vector_index)%dom(idom)%vecs(ielem)%nterms() 
+            !end if
+            nterms_ielem = data%mesh%domain(idom)%elems(ielem)%nterms_s
 
 
             !
@@ -714,11 +730,13 @@ contains
             ! Store modes in ChiDG Vector
             if (field_type == 'Primary') then
                 ivar = data%eqnset(eqn_ID)%prop%get_primary_field_index(trim(field_name))
-                call data%sdata%q_in%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
+                !call data%sdata%q_in%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
+                call data%sdata%q_in%set_field(real(bufferterms,rk),element_info,ivar,itime)
             else if (field_type == 'Auxiliary') then
                 ! Implicitly assuming that an auxiliary field chidgVector contains only one field.
                 ivar = 1
-                call data%sdata%auxiliary_field(aux_vector_index)%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
+                !call data%sdata%auxiliary_field(aux_vector_index)%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
+                call data%sdata%auxiliary_field(aux_vector_index)%set_field(real(bufferterms,rk),element_info,ivar,itime) 
             end if
 
 
@@ -778,7 +796,7 @@ contains
     !----------------------------------------------------------------------------------------
     subroutine write_domain_field_hdf(domain_id,data,field_name,itime,attribute_name,attribute_value)
         integer(HID_T),     intent(in)              :: domain_id
-        type(chidg_data_t), intent(in)              :: data
+        type(chidg_data_t), intent(inout)           :: data
         character(*),       intent(in)              :: field_name
         integer(ik),        intent(in)              :: itime
         character(*),       intent(in), optional    :: attribute_name
@@ -789,6 +807,8 @@ contains
         integer(HID_T)   :: gid, sid, did, crp_list, memspace, filespace
         integer(HSIZE_T) :: edims(2), maxdims(3), dims(3), dimsm(3), dimsc(3), &
                             start(3), count(3)
+
+        type(element_info_t)    :: element_info
 
         integer                             :: ndims, ibuf(1)
         character(100)                      :: cbuf, var_grp, ctime
@@ -887,6 +907,21 @@ contains
 
         do ielem = 1,data%mesh%domain(idom)%nelem
 
+
+            element_info = element_info_t(idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g,    &
+                                          idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l,    &
+                                          ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g,   &
+                                          ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l,   &
+                                          iproc      = data%mesh%domain(idom)%elems(ielem)%iproc,        &
+                                          pelem_ID   = NO_ID,                                       &
+                                          eqn_ID     = data%mesh%domain(idom)%elems(ielem)%eqn_ID,       &
+                                          nfields    = data%mesh%domain(idom)%elems(ielem)%neqns,        &
+                                          nterms_s   = data%mesh%domain(idom)%elems(ielem)%nterms_s,     &
+                                          nterms_c   = data%mesh%domain(idom)%elems(ielem)%nterms_c,     &
+                                          dof_start  = data%mesh%domain(idom)%elems(ielem)%dof_start)
+
+
+
             !
             ! Get field integer index from field character string
             !
@@ -918,7 +953,8 @@ contains
             !
             ! Write modes
             !
-            var(:,1,1) = real(data%sdata%q%dom(idom)%vecs(ielem)%getvar(ivar,itime),rdouble)
+            !var(:,1,1) = real(data%sdata%q%dom(idom)%vecs(ielem)%getvar(ivar,itime),rdouble)
+            var(:,1,1) = real(data%sdata%q%get_field(element_info,ivar,itime),rdouble)
             cp_var = c_loc(var(1,1,1))
             call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)
 

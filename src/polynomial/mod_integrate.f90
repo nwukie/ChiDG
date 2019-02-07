@@ -208,7 +208,6 @@ contains
         logical                     :: parallel_neighbor, diff_none, diff_interior, diff_exterior
 
 
-
         associate ( idomain_l   => element_info%idomain_l,     &
                     ielement_l  => element_info%ielement_l,    &
                     !iface       => iface,         &
@@ -257,8 +256,6 @@ contains
 
 
 
-
-
         !
         ! Integrate and apply second time if there is a neighbor
         !
@@ -290,7 +287,6 @@ contains
                                                 dof_start  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start)
 
                 iface_n = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
-
 
                     
 

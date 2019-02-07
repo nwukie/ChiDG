@@ -92,9 +92,19 @@ contains
 
         if (x%petsc_vector_created) then
 
+            call timer_comm%start()
+            call timer_comm%stop()
+
+            call timer_blas%start()
+
+            res = x
+            call res%clear()
+
             call MatMult(A%petsc_matrix,x%petsc_vector,res%petsc_vector,perr)
             if (perr /= 0) call chidg_signal(FATAL,'chidg_mv: error calling petsc MatMult.')
             res%petsc_vector_created = .true.
+
+            call timer_blas%stop()
 
         else
 

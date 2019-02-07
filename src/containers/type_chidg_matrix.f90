@@ -1,7 +1,7 @@
 module type_chidg_matrix
 #include <messenger.h>
 #include "petsc/finclude/petscmat.h"
-    use petscmat,               only: PETSC_DECIDE, MatCreate, MatSetType, MatSetSizes, MatSetUp, MatSetValues, tMat, ADD_VALUES
+    use petscmat,               only: PETSC_DECIDE, MatCreate, MatSetType, MatSetSizes, MatSetUp, MatSetValues, tMat, ADD_VALUES, MatAssemblyBegin, MatAssemblyEnd, MAT_FINAL_ASSEMBLY, MatZeroEntries, MatSeqAIJSetPreallocation, MatMPIAIJSetPreallocation, PETSC_NULL_INTEGER, MatSetOption, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE
 
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: NO_ID, ZERO
@@ -49,18 +49,20 @@ module type_chidg_matrix
         procedure(init_interface),  pointer, pass :: init => petsc_init
 
         !procedure(init_recv_interface) pointer, pass :: init_recv => chidg_init_recv
-        procedure(init_recv_interface), pointer, pass :: init_recv => petsc_init_recv
+        !procedure(init_recv_interface), pointer, pass :: assemble => chidg_assemble
 
         !procedure(store_interface), pointer, pass :: store         => chidg_store
         !procedure(store_interface), pointer, pass :: store_chimera => chidg_store_chimera
         !procedure(store_interface), pointer, pass :: store_bc      => chidg_store_bc
         !procedure(store_interface), pointer, pass :: store_hb      => chidg_store_hb
         !procedure(clear_interface), pointer, pass :: clear         => chidg_clear
-        procedure(store_interface), pointer, pass :: store         => petsc_store
-        procedure(store_interface), pointer, pass :: store_chimera => petsc_store
-        procedure(store_interface), pointer, pass :: store_bc      => petsc_store
-        procedure(store_interface), pointer, pass :: store_hb      => petsc_store
-        procedure(clear_interface), pointer, pass :: clear         => petsc_clear
+        procedure(store_interface),     pointer, pass :: store         => petsc_store
+        procedure(store_interface),     pointer, pass :: store_chimera => petsc_store
+        procedure(store_interface),     pointer, pass :: store_bc      => petsc_store
+        procedure(store_interface),     pointer, pass :: store_hb      => petsc_store
+        procedure(clear_interface),     pointer, pass :: clear         => petsc_clear
+        procedure(clear_interface),     pointer, pass :: assemble      => petsc_assemble
+        procedure(init_recv_interface), pointer, pass :: init_recv     => petsc_init_recv
 
 
         ! Stamp for uniqueness
@@ -201,16 +203,12 @@ contains
 
         integer(ik)     :: ndomains, idom, ielem
         PetscErrorCode  ierr
-        PetscInt        nlocal_rows, nlocal_cols, nglobal_rows, nglobal_cols
+        PetscInt        nlocal_rows, nlocal_cols, nglobal_rows, nglobal_cols, ncoupled_elements, dof_per_element, nnonzeros_per_row
+
 
         ! Create matrix object
         call MatCreate(ChiDG_COMM%mpi_val, self%petsc_matrix, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error creating PETSc matrix.')
-
-
-        ! Set matrix type
-        call MatSetType(self%petsc_matrix, 'aij', ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting PETSc matrix type.')
 
 
 
@@ -229,51 +227,59 @@ contains
 
         ! Compute global degrees-of-freedom via reduction
         call MPI_AllReduce(nlocal_rows,nglobal_rows,1,MPI_INTEGER4,MPI_SUM,ChiDG_COMM,ierr)
-        if (ierr /= 0) then
-            call chidg_signal(FATAL,'chidg_matrix%petsc_init: error reducing global degrees-of-freedom.')
-        end if
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error reducing global degrees-of-freedom.')
         
 
         nlocal_cols  = PETSC_DECIDE
         nglobal_cols = nglobal_rows
         call MatSetSizes(self%petsc_matrix,nlocal_rows,nlocal_cols,nglobal_rows,nglobal_cols,ierr)
-        if (ierr /= 0) then
-            call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc matrix sizes.')
-        end if
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc matrix sizes.')
         !---------------------------------------------
 
 
-        ! Set up matrix
-        call MatSetUp(self%petsc_matrix,ierr)
-        if (ierr /= 0) then
-            call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc matrix.')
-        end if
+
+        ! Set matrix type
+        call MatSetType(self%petsc_matrix, 'aij', ierr)
+!        call MatSetType(self%petsc_matrix, 'baij', ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting PETSc matrix type.')
+
+
+
+
+        ! Preallocation
+        ncoupled_elements = 1 + 6
+        dof_per_element = mesh%domain(1)%elems(1)%nterms_s * mesh%domain(1)%elems(1)%neqns
+        nnonzeros_per_row = dof_per_element * ncoupled_elements
+
+
+        call MatMPIAIJSetPreallocation(self%petsc_matrix,nnonzeros_per_row,PETSC_NULL_INTEGER,nnonzeros_per_row,PETSC_NULL_INTEGER,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqAIJSetPreallocation.')
+        call MatSeqAIJSetPreallocation(self%petsc_matrix,nnonzeros_per_row,PETSC_NULL_INTEGER,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqAIJSetPreallocation.')
+
+
+!        call MatMPIBAIJSetPreallocation(self%petsc_matrix,dof_per_element,nnonzeros_per_row,PETSC_NULL_INTEGER,nnonzeros_per_row,PETSC_NULL_INTEGER,ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqAIJSetPreallocation.')
+!        call MatSeqBAIJSetPreallocation(self%petsc_matrix,dof_per_element,nnonzeros_per_row,PETSC_NULL_INTEGER,ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqAIJSetPreallocation.')
+
+
+        call MatSetBlockSize(self%petsc_matrix, dof_per_element, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSetBlockSize.')
+
+
+
+!        ! Set up matrix
+!        call MatSetUp(self%petsc_matrix,ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc matrix.')
 
 
         ! Determine global ownership range
         call MatGetOwnershipRange(self%petsc_matrix,self%petsc_start,self%petsc_end,ierr)
-        if (ierr /= 0) then
-            call chidg_signal(FATAL,'chidg_matrix%petsc_init: error getting PETSc matrix ownership range.')
-        end if
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error getting PETSc matrix ownership range.')
 
 
-
-
-!        ! Deallocate storage if necessary in case this is being called as a 
-!        ! reinitialization routine.
-!        if (allocated(self%dom)) deallocate(self%dom)
-!
-!        ! Allocate domain_matrix_t for each domain
-!        ndomains = mesh%ndomains()
-!        allocate(self%dom(ndomains), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!        ! Call initialization procedure for each domain_matrix_t
-!        do idom = 1,ndomains
-!             call self%dom(idom)%init(mesh,idom,mtype=mtype)
-!        end do
-
-
+        call self%clear()
 
 
         ! Set initialization to true
@@ -675,6 +681,28 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/1/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_assemble(self)
+        class(chidg_matrix_t),   intent(inout)   :: self
+
+        PetscErrorCode :: perr
+
+        call MatAssemblyBegin(self%petsc_matrix,MAT_FINAL_ASSEMBLY,perr)
+        call MatAssemblyEnd(self%petsc_matrix,MAT_FINAL_ASSEMBLY,perr)
+
+    end subroutine petsc_assemble
+    !*******************************************************************************************
+
+
+
+
+
+
 
 
 
@@ -715,12 +743,12 @@ contains
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_store(self,integral,element_info,seed,ivar,itime)
-        class(chidg_matrix_t),   intent(inout)   :: self
+    subroutine chidg_store(self,integral,element_info,seed,ifield,itime)
+        class(chidg_matrix_t),  intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
-        type(element_info_t),      intent(in)      :: element_info
+        type(element_info_t),   intent(in)      :: element_info
         type(seed_t),           intent(in)      :: seed
-        integer(ik),            intent(in)      :: ivar 
+        integer(ik),            intent(in)      :: ifield
         integer(ik),            intent(in)      :: itime
 
         integer(ik) :: idomain_l
@@ -728,7 +756,7 @@ contains
         idomain_l = element_info%idomain_l
 
         ! Store linearization in associated domain domain_matrix_t
-        call self%dom(idomain_l)%store(integral,element_info,seed,ivar,itime)
+        call self%dom(idomain_l)%store(integral,element_info,seed,ifield,itime)
 
         ! Update stamp
         call date_and_time(values=self%stamp)
@@ -744,12 +772,12 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine petsc_store(self,integral,element_info,seed,ivar,itime)
+    subroutine petsc_store(self,integral,element_info,seed,ifield,itime)
         class(chidg_matrix_t),  intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
-        type(element_info_t),      intent(in)      :: element_info
+        type(element_info_t),   intent(in)      :: element_info
         type(seed_t),           intent(in)      :: seed
-        integer(ik),            intent(in)      :: ivar 
+        integer(ik),            intent(in)      :: ifield
         integer(ik),            intent(in)      :: itime
 
         integer(ik) :: iarray, i
@@ -758,21 +786,17 @@ contains
         PetscInt                :: nrows, ncols, row_index_start, col_index_start
         PetscInt, allocatable   :: col_indices(:)
         
-
-        row_index_start = element_info%dof_start
+        row_index_start = element_info%dof_start + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
         col_index_start = seed%dof_start
         col_indices = [(i, i=col_index_start,(col_index_start+seed%neqns*seed%nterms_s-1),1)]
-
 
         nrows = 1
         ncols = size(integral(1)%xp_ad_)
         do iarray = 1,size(integral)
             ! subtract 1 from indices since petsc is 0-based
-            call MatSetValues(self%petsc_matrix,nrows,[row_index_start + iarray - 1],ncols,col_indices-1,integral(iarray)%xp_ad_,ADD_VALUES,ierr)
+            call MatSetValues(self%petsc_matrix,nrows,[row_index_start + (iarray-1) - 1],ncols,col_indices-1,integral(iarray)%xp_ad_,ADD_VALUES,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"chidg_matrix%petsc_store: error calling MatSetValues.")
         end do 
-
-
 
         ! Update stamp
         call date_and_time(values=self%stamp)
@@ -951,7 +975,10 @@ contains
     subroutine petsc_clear(self)
         class(chidg_matrix_t),   intent(inout)   :: self
 
-        print*, 'WARNING!!!!! no implementation for petsc_clear'
+        PetscErrorCode :: perr
+
+        call MatZeroEntries(self%petsc_matrix,perr)
+        if (perr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_clear: error calling MatZeroEntries.')
     
     end subroutine petsc_clear
     !**********************************************************************************

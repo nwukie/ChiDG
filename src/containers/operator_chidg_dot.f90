@@ -60,25 +60,29 @@ contains
         type(chidg_vector_t),   intent(in)  :: b
         type(mpi_comm),         intent(in)  :: comm
 
-        real(rk)    :: local_dot, comm_dot
-        integer     :: ierr
+!        PetscScalar :: petsc_dot
+!        real(rk)    :: local_dot, comm_dot
+        real(rk)    :: comm_dot
+!        integer     :: ierr
 
         PetscErrorCode :: perr
 
-        if (a%petsc_vector_created) then
-
+!        if (a%petsc_vector_created) then
+            
+            !call VecDot(a%petsc_vector,b%petsc_vector,petsc_dot,perr)
             call VecDot(a%petsc_vector,b%petsc_vector,comm_dot,perr)
-            if (perr /= 0) call chidg_signal(FATAL,'dot_comm: error calling petsc VecDot.')
+!            if (perr /= 0) call chidg_signal(FATAL,'dot_comm: error calling petsc VecDot.')
+!            comm_dot = real(petsc_dot,rk)
 
-        else
-
-            ! Compute the local vector dot-product
-            local_dot = dot_local(a,b)
-
-            ! Reduce local dot-product values across processors, distribute result back to all
-            call MPI_AllReduce(local_dot,comm_dot,1,MPI_REAL8,MPI_SUM,comm,ierr)
-
-        end if
+!        else
+!
+!            ! Compute the local vector dot-product
+!            local_dot = dot_local(a,b)
+!
+!            ! Reduce local dot-product values across processors, distribute result back to all
+!            call MPI_AllReduce(local_dot,comm_dot,1,MPI_REAL8,MPI_SUM,comm,ierr)
+!
+!        end if
 
     end function dot_comm
     !******************************************************************************

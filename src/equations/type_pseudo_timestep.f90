@@ -88,7 +88,7 @@ contains
     subroutine compute(self,idomain,mesh,prop,sdata,cfl,itime)
         class(default_pseudo_timestep_t),   intent(in)      :: self
         integer(ik),                        intent(in)      :: idomain
-        type(mesh_t),                   intent(inout)   :: mesh
+        type(mesh_t),                       intent(inout)   :: mesh
         type(properties_t),                 intent(in)      :: prop
         type(solverdata_t),                 intent(inout)   :: sdata
         real(rk),                           intent(in)      :: cfl(:)
@@ -112,10 +112,13 @@ contains
             !
             ! Compute elemen-local timestep
             !
-            !sdata%dt(idomain,ielem) = cfl*h
-            do ieqn = 1,size(cfl)
-                mesh%domain(idomain)%elems(ielem)%dtau(ieqn) = cfl(ieqn)*h
-            end do
+            if (size(cfl) == 1) then
+                mesh%domain(idomain)%elems(ielem)%dtau = cfl*h
+            else
+                do ieqn = 1,size(cfl)
+                    mesh%domain(idomain)%elems(ielem)%dtau(ieqn) = cfl(ieqn)*h
+                end do
+            end if
 
 
         end do  ! ielem

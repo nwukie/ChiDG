@@ -1058,16 +1058,16 @@ contains
                                                       ineighbor_element_g,ineighbor_element_l,  &
                                                       ineighbor_face,     ineighbor_proc,       &
                                                       neighbor_status)
-        class(domain_t),                  intent(inout)   :: self
-        integer(ik),                    intent(in)      :: ielem_l
-        integer(ik),                    intent(in)      :: iface
-        integer(ik),                    intent(inout)   :: ineighbor_domain_g
-        integer(ik),                    intent(inout)   :: ineighbor_domain_l
-        integer(ik),                    intent(inout)   :: ineighbor_element_g
-        integer(ik),                    intent(inout)   :: ineighbor_element_l
-        integer(ik),                    intent(inout)   :: ineighbor_face
-        integer(ik),                    intent(inout)   :: ineighbor_proc
-        integer(ik),                    intent(inout)   :: neighbor_status
+        class(domain_t),    intent(inout)   :: self
+        integer(ik),        intent(in)      :: ielem_l
+        integer(ik),        intent(in)      :: iface
+        integer(ik),        intent(inout)   :: ineighbor_domain_g
+        integer(ik),        intent(inout)   :: ineighbor_domain_l
+        integer(ik),        intent(inout)   :: ineighbor_element_g
+        integer(ik),        intent(inout)   :: ineighbor_element_l
+        integer(ik),        intent(inout)   :: ineighbor_face
+        integer(ik),        intent(inout)   :: ineighbor_proc
+        integer(ik),        intent(inout)   :: neighbor_status
 
         integer(ik),    allocatable :: element_nodes(:)
         integer(ik) :: corner_one, corner_two, corner_three, corner_four,   &

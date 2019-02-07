@@ -201,7 +201,8 @@ contains
         r = self%residual(A,x,b)
 
         ! Compute norm
-        err = r%norm()
+        !err = r%norm()
+        err = r%norm(ChiDG_COMM)
 
     end function error
     !*************************************************************************************************

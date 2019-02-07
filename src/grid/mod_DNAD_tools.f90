@@ -190,10 +190,10 @@ contains
     !---------------------------------------------------------------------------------------------------------
     function compute_neighbor_face(mesh,idom,ielem,iface,idonor) result(iface_n)
         type(mesh_t),   intent(in)  :: mesh
-        integer(ik),        intent(in)  :: idom
-        integer(ik),        intent(in)  :: ielem
-        integer(ik),        intent(in)  :: iface
-        integer(ik),        intent(in)  :: idonor
+        integer(ik),    intent(in)  :: idom
+        integer(ik),    intent(in)  :: ielem
+        integer(ik),    intent(in)  :: iface
+        integer(ik),    intent(in)  :: idonor
 
         integer(ik) :: iface_n
         logical     :: chimera_face

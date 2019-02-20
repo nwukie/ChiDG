@@ -1068,8 +1068,8 @@ contains
         buffer = self%nelements_per_proc
 
 
-        ! Fill current RANK entry
-        self%nelements_per_proc(IRANK) = self%nelements()
+        ! Fill current RANK entry. Index from 1, so add 1 since IRANK is referenced from 0
+        self%nelements_per_proc(IRANK+1) = self%nelements()
 
 
         ! Reduce results

@@ -753,14 +753,12 @@ contains
 
 
                         ! Retrieve field
-                        !field = scaled_vector%dom(idom)%vecs(ielem)%getvar(ifield,itime)
                         field = scaled_vector%get_field(element_info,ifield,itime)
 
                         ! Scale field by (M/dtau)
                         field = matmul(data%mesh%domain(idom)%elems(ielem)%mass/dtau,field)
 
                         ! Store scaled field 
-                        !call scaled_vector%dom(idom)%vecs(ielem)%setvar(ifield,itime,field)
                         call scaled_vector%set_field(field,element_info,ifield,itime)
 
                     end do !ifield

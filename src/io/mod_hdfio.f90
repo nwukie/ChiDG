@@ -336,7 +336,7 @@ contains
 
                 ! Open file
                 fid = open_file_hdf(filename)
-                do itime = 1, ntime
+                do itime = 1,ntime
                     do idom = 1,ndomains
 
                         ! Get domain name and number of primary fields
@@ -1012,29 +1012,20 @@ contains
         integer(HID_T)          :: fid
         integer                 :: ierr, nconn
 
-
         fid = open_file_hdf(filename)
 
-
-        !
-        !  Allocate for number of domains in the partition
-        !
+        ! Allocate for number of domains in the partition
         nconn = size(partition%connectivities)
         allocate(patch_data(nconn), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-        !
         ! Read domain patches
-        !
         call read_patches_hdf(fid,patch_data,partition)
 
 
-        !
         ! Read boundary condition state groups
-        !
         call read_bc_state_groups_hdf(fid,bc_state_groups,partition)
-
 
 
         call close_file_hdf(fid)
@@ -1068,16 +1059,10 @@ contains
         type(chidg_data_t), intent(in)  :: data
         character(*),       intent(in)  :: file_name
 
-
-        !
         ! Read domain patches
-        !
         call write_patches_hdf(data,file_name)
 
-
-        !
         ! Read boundary condition state groups
-        !
         call write_bc_state_groups_hdf(data,file_name)
 
     end subroutine write_boundaryconditions_hdf
@@ -1173,7 +1158,6 @@ contains
 
                 ! Close face boundary condition group
                 call close_patch_hdf(patch_id)
-
 
             end do ! ipatch
 

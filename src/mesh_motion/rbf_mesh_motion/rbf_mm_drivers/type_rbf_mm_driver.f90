@@ -14,21 +14,28 @@ module type_rbf_mm_driver
     use mod_kinds,              only: ik, rk
     implicit none
 
+
+
+    !>
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------
     type, public, abstract :: rbf_mm_driver_t
-
-
         character(len=:),       allocatable, private    :: name_
-
     contains
 
         procedure(init_interface),          deferred    :: init             !< Initialize function and register options
-        procedure(compute_disp_interface),  deferred    :: compute_disp          !< Elemental function definition
-        procedure(compute_vel_interface),   deferred    :: compute_vel          !< Elemental function definition
+        procedure(compute_disp_interface),  deferred    :: compute_disp     !< Elemental function definition
+        procedure(compute_vel_interface),   deferred    :: compute_vel      !< Elemental function definition
 
         procedure                                       :: set_name         !< Add function name. Only use for initialization
         procedure                                       :: get_name         !< Return the function name
 
     end type rbf_mm_driver_t
+    !*********************************************************************
+
+
 
     abstract interface
         subroutine init_interface(self)
@@ -44,13 +51,10 @@ module type_rbf_mm_driver
         function compute_disp_interface(self, time, node) result(val)
             use mod_kinds,  only: rk
             import rbf_mm_driver_t
-
-            class(rbf_mm_driver_t),  intent(inout)      :: self
-            real(rk),                intent(in)          :: time
-            real(rk),                intent(in)          :: node(3)
-
-            real(rk)                                    :: val(3)
-
+            class(rbf_mm_driver_t),  intent(inout)  :: self
+            real(rk),                intent(in)     :: time
+            real(rk),                intent(in)     :: node(3)
+            real(rk)                                :: val(3)
         end function 
     end interface
 
@@ -58,15 +62,11 @@ module type_rbf_mm_driver
         function compute_vel_interface(self, time, node) result(val)
             use mod_kinds,  only: rk
             import rbf_mm_driver_t
-
-            class(rbf_mm_driver_t),  intent(inout)      :: self
-            real(rk),                intent(in)          :: time
-            real(rk),                intent(in)          :: node(3)
-
-            real(rk)                                    :: val(3)
-
+            class(rbf_mm_driver_t),  intent(inout)  :: self
+            real(rk),                intent(in)     :: time
+            real(rk),                intent(in)     :: node(3)
+            real(rk)                                :: val(3)
         end function
-
     end interface
 
 

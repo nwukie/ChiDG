@@ -702,28 +702,34 @@ contains
 
         !!!-------------------------  REVISIT  --------------------------------!!!
         if (IRANK == GLOBAL_MASTER) then
+
             call read_global_nodes_hdf(grid_file,global_nodes)
             nnodes = size(global_nodes(:,1))
             ndoms = size(connectivities)
-            allocate(nelems_per_domain(size(connectivities)))
-            allocate(nnodes_per_domain(size(connectivities)))
+
+            allocate(nelems_per_domain(size(connectivities)), &
+                     nnodes_per_domain(size(connectivities)), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
             do idom = 1, size(connectivities)
                 nelems_per_domain(idom) = connectivities(idom)%nelements
                 nnodes_per_domain(idom) = connectivities(idom)%nnodes
             end do
+
         end if
 
 
         call MPI_Bcast(ndoms,  1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
         call MPI_Bcast(nnodes, 1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
         if (IRANK /= GLOBAL_MASTER) then
-            allocate(nelems_per_domain(ndoms))
-            allocate(nnodes_per_domain(ndoms))
-            allocate(global_nodes(nnodes,3))
+            allocate(nelems_per_domain(ndoms), &
+                     nnodes_per_domain(ndoms), &
+                     global_nodes(nnodes,3), stat=ierr)
+            if (ierr /= 0) call AllocationError
         end if
-        call MPI_Bcast(nelems_per_domain, ndoms, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
-        call MPI_Bcast(nnodes_per_domain, ndoms, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
-        call MPI_Bcast(global_nodes, 3*nnodes, MPI_REAL8, GLOBAL_MASTER, ChiDG_COMM, ierr)
+        call MPI_Bcast(nelems_per_domain, ndoms,    MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
+        call MPI_Bcast(nnodes_per_domain, ndoms,    MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
+        call MPI_Bcast(global_nodes,      3*nnodes, MPI_REAL8,    GLOBAL_MASTER, ChiDG_COMM, ierr)
 
         call self%data%sdata%set_nelems_per_domain(nelems_per_domain)
         call self%data%sdata%set_nnodes_per_domain(nnodes_per_domain)
@@ -785,11 +791,13 @@ contains
 
         ! Wait for all processors to finish initializing their meshes, then communicate RBF info.
         nelems = sum(nelems_per_domain)
-        allocate(rbf_center_recv(nelems,3))
-        allocate(rbf_radius_recv(nelems,3))
+        allocate(rbf_center_recv(nelems,3), &
+                 rbf_radius_recv(nelems,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
-        rbf_center_recv = ZERO
-        rbf_radius_recv = ZERO
+
+!        rbf_center_recv = ZERO
+!        rbf_radius_recv = ZERO
         rbf_center_sendv = self%data%sdata%rbf_center
         rbf_radius_sendv = self%data%sdata%rbf_radius
         call MPI_Allreduce(rbf_center_sendv, rbf_center_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
@@ -843,6 +851,8 @@ contains
         call write_line(' ',                                  ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('   Reading boundary conditions... ', ltrim=.false., io_proc=GLOBAL_MASTER)
 
+!        print*, 'read_mesh_boundary_conditions - 1'
+
 
         ! Call boundary condition reader based on file extension
         do iread = 0,NRANK-1
@@ -854,6 +864,7 @@ contains
             call MPI_Barrier(ChiDG_COMM,ierr)
         end do
 
+!        print*, 'read_mesh_boundary_conditions - 2'
 
 
         ! Add all boundary condition state groups
@@ -869,6 +880,7 @@ contains
       
         end do !ibc
 
+!        print*, 'read_mesh_boundary_conditions - 3'
 
         ! Add boundary condition patch groups
         call write_line('   processing patches...', ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -890,6 +902,7 @@ contains
             end do !iface
         end do !ipatch
 
+!        print*, 'read_mesh_boundary_conditions - 4'
 
         call write_line('   Done reading boundary conditions.', ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line(' ',                                    ltrim=.false., io_proc=GLOBAL_MASTER)

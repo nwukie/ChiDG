@@ -35,8 +35,6 @@ module type_chidg_matrix
 
         ! PETSC
         Mat         :: petsc_matrix
-        PetscInt    :: petsc_start
-        PetscInt    :: petsc_end
 
         ! ChiDG
         type(domain_matrix_t), allocatable    :: dom(:) ! Array of domain-matrices. One for each domain
@@ -274,11 +272,6 @@ contains
 !        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc matrix.')
 
 
-        ! Determine global ownership range
-        call MatGetOwnershipRange(self%petsc_matrix,self%petsc_start,self%petsc_end,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error getting PETSc matrix ownership range.')
-
-
         call self%clear()
 
 
@@ -287,20 +280,6 @@ contains
 
     end subroutine petsc_init
     !******************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -511,68 +511,65 @@ contains
             nterms_s = mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s
             nfields  = mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns
 
-            associate ( rhs => sdata%rhs%dom(idomain_l)%vecs, lhs => sdata%lhs)
+            !
+            ! Only store rhs once. 
+            !
+            !   For BOUNDARY faces: only store if diff_exterior or diff_none, since the boundary integrals only get computed
+            !                       for these cases, not diff_interior actually. This is because the interior element is 
+            !                       registered with the boundary condition as a coupled element, and these get computed for
+            !                       icompute = [iface] and not icompute = [DIAG]. Only store for idepend == 1, since 
+            !                       could be computed multiple times.
+            !
+            !   For CHIMERA faces: only store if diff_interior or diff_none. Only store for idepend == 1, since could be
+            !                      computed multiple times. The residual should be the same for any value of idepend, 
+            !                      only the derivatives will change.
+            !
+            if ( ((boundary_face .and. diff_exterior) .or. &
+                  (boundary_face .and. diff_none    )) .and. &
+                  function_info%seed%itime == itime ) then
 
-                !
-                ! Only store rhs once. 
-                !
-                !   For BOUNDARY faces: only store if diff_exterior or diff_none, since the boundary integrals only get computed
-                !                       for these cases, not diff_interior actually. This is because the interior element is 
-                !                       registered with the boundary condition as a coupled element, and these get computed for
-                !                       icompute = [iface] and not icompute = [DIAG]. Only store for idepend == 1, since 
-                !                       could be computed multiple times.
-                !
-                !   For CHIMERA faces: only store if diff_interior or diff_none. Only store for idepend == 1, since could be
-                !                      computed multiple times. The residual should be the same for any value of idepend, 
-                !                      only the derivatives will change.
-                !
-                if ( ((boundary_face .and. diff_exterior) .or. &
-                      (boundary_face .and. diff_none    )) .and. &
-                      function_info%seed%itime == itime ) then
-
-                    if (idepend == 1) then
-                        !vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
-                        !call rhs(ielement_l)%setvar(ieqn,itime,vals)
-                        vals = integral(:)%x_ad_
-                        call sdata%rhs%add_field(vals,elem_info,ieqn,itime)
-                    end if
-
-
-                else if ( (chimera_face .and. diff_interior) .or. &
-                          (chimera_face .and. diff_none    ) ) then
-
-                    if (idepend == 1) then
-                        !vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
-                        !call rhs(ielement_l)%setvar(ieqn,itime,vals)
-                        vals = integral(:)%x_ad_
-                        call sdata%rhs%add_field(vals,elem_info,ieqn,itime)
-                    end if
-
-
-                else if ( conforming_face ) then
-
-                    !
-                    ! Check if particular flux function has been added already
-                    !
-                    add_flux = sdata%function_status%compute_function_equation( elem_info, function_info, iface, ieqn)
-
-
-                    ! Store if needed
-                    if ( add_flux ) then
-                        ! Add to residual and store
-                        !vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
-                        !call rhs(ielement_l)%setvar(ieqn,itime,vals)
-                        vals = integral(:)%x_ad_
-                        call sdata%rhs%add_field(vals,elem_info,ieqn,itime)
-
-                        ! Register flux was stored
-                        call sdata%function_status%register_function_computed( elem_info, function_info, iface, ieqn)
-                    end if
-
+                if (idepend == 1) then
+                    !vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
+                    !call rhs(ielement_l)%setvar(ieqn,itime,vals)
+                    vals = integral(:)%x_ad_
+                    call sdata%rhs%add_field(vals,elem_info,ieqn,itime)
                 end if
 
 
-            end associate
+            else if ( (chimera_face .and. diff_interior) .or. &
+                      (chimera_face .and. diff_none    ) ) then
+
+                if (idepend == 1) then
+                    !vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
+                    !call rhs(ielement_l)%setvar(ieqn,itime,vals)
+                    vals = integral(:)%x_ad_
+                    call sdata%rhs%add_field(vals,elem_info,ieqn,itime)
+                end if
+
+
+            else if ( conforming_face ) then
+
+                !
+                ! Check if particular flux function has been added already
+                !
+                add_flux = sdata%function_status%compute_function_equation( elem_info, function_info, iface, ieqn)
+
+
+                ! Store if needed
+                if ( add_flux ) then
+                    ! Add to residual and store
+                    !vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
+                    !call rhs(ielement_l)%setvar(ieqn,itime,vals)
+                    vals = integral(:)%x_ad_
+                    call sdata%rhs%add_field(vals,elem_info,ieqn,itime)
+
+                    ! Register flux was stored
+                    call sdata%function_status%register_function_computed( elem_info, function_info, iface, ieqn)
+                end if
+
+            end if
+
+
         end associate
 
     end subroutine store_boundary_integral_residual
@@ -630,7 +627,7 @@ contains
                           (idiff == 3) .or. (idiff == 4) .or. &
                           (idiff == 5) .or. (idiff == 6) )
 
-        associate ( rhs => sdata%rhs%dom(idomain_l)%vecs, lhs => sdata%lhs)
+        associate ( lhs => sdata%lhs)
 
         if (diff_interior .or. diff_exterior) then
 

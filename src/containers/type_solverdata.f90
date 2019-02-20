@@ -77,7 +77,7 @@ module type_solverdata
         ! RBF-related information
         !
         integer(ik),    allocatable :: nelems_per_domain(:)
-        real(ik),       allocatable :: rbf_center(:,:), rbf_radius(:,:), &
+        real(rk),       allocatable :: rbf_center(:,:), rbf_radius(:,:), &
                                        rbf_artificial_bulk_viscosity(:), &
                                        rbf_artificial_shear_viscosity(:), &
                                        rbf_artificial_thermal_conductivity(:)
@@ -87,7 +87,7 @@ module type_solverdata
         ! Vertex-based smoothing information
         !
         integer(ik),    allocatable :: nnodes_per_domain(:)
-        real(ik),       allocatable :: vertex_artificial_bulk_viscosity(:), &
+        real(rk),       allocatable :: vertex_artificial_bulk_viscosity(:), &
                                        vertex_artificial_shear_viscosity(:), &
                                        vertex_artificial_thermal_conductivity(:)
 
@@ -461,7 +461,7 @@ contains
         class(solverdata_t),    intent(inout)           :: self
         integer(ik),           intent(in)              :: nelems_per_domain(:)
 
-        integer(ik)     :: nelems
+        integer(ik) :: nelems, ierr
 
         if (allocated(self%nelems_per_domain)) deallocate(self%nelems_per_domain)
 
@@ -472,26 +472,30 @@ contains
         if (allocated(self%rbf_radius)) deallocate(self%rbf_radius)
 
 
-        allocate(self%rbf_center(nelems, 3))
-        allocate(self%rbf_radius(nelems, 3))
+        allocate(self%rbf_center(nelems, 3), &
+                 self%rbf_radius(nelems, 3), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
-        if (allocated(self%rbf_artificial_bulk_viscosity)) deallocate(self%rbf_artificial_bulk_viscosity)
-        if (allocated(self%rbf_artificial_shear_viscosity)) deallocate(self%rbf_artificial_shear_viscosity)
+        if (allocated(self%rbf_artificial_bulk_viscosity))       deallocate(self%rbf_artificial_bulk_viscosity)
+        if (allocated(self%rbf_artificial_shear_viscosity))      deallocate(self%rbf_artificial_shear_viscosity)
         if (allocated(self%rbf_artificial_thermal_conductivity)) deallocate(self%rbf_artificial_thermal_conductivity)
 
 
-        allocate(self%rbf_artificial_bulk_viscosity(nelems))
-        allocate(self%rbf_artificial_shear_viscosity(nelems))
-        allocate(self%rbf_artificial_thermal_conductivity(nelems))
+        allocate(self%rbf_artificial_bulk_viscosity(nelems),    &
+                 self%rbf_artificial_shear_viscosity(nelems),   &
+                 self%rbf_artificial_thermal_conductivity(nelems), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
         
 
         if (allocated(self%mesh_size_elem)) deallocate(self%mesh_size_elem)
-        allocate(self%mesh_size_elem(nelems, 3))
+        allocate(self%mesh_size_elem(nelems, 3), stat=ierr)
+        if (ierr /= 0) call AllocationError
         self%mesh_size_elem = ZERO
 
         if (allocated(self%min_mesh_size_elem)) deallocate(self%min_mesh_size_elem)
-        allocate(self%min_mesh_size_elem(nelems))
+        allocate(self%min_mesh_size_elem(nelems), stat=ierr)
+        if (ierr /= 0) call AllocationError
         self%min_mesh_size_elem = ZERO
 
     end subroutine set_nelems_per_domain

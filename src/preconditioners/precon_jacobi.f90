@@ -2,9 +2,10 @@ module precon_jacobi
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: DIAG
+    use mod_io,                 only: backend
     use type_preconditioner,    only: preconditioner_t
-    use type_chidg_matrix,       only: chidg_matrix_t
-    use type_chidg_vector,       only: chidg_vector_t
+    use type_chidg_matrix,      only: chidg_matrix_t, chidg_matrix
+    use type_chidg_vector,      only: chidg_vector_t
     use type_chidg_data,        only: chidg_data_t
     use type_densematrix,       only: densematrix_t
 
@@ -51,6 +52,7 @@ contains
         class(precon_jacobi_t), intent(inout)   :: self
         type(chidg_data_t),     intent(in)      :: data
 
+        self%D = chidg_matrix(trim(backend))
         call self%D%init(data%mesh,mtype='Diagonal')
 
     end subroutine init

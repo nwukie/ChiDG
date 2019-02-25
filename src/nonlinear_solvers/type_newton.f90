@@ -1,20 +1,7 @@
 module type_newton
 #include <messenger.h>
-#include "petsc/finclude/petscksp.h"
-#include "petsc/finclude/petscpc.h"
 #include "petsc/finclude/petscmat.h"
     use petscmat,               only: MatSetValues, ADD_VALUES
-
-
-
-    use petscksp,               only: tKSP, KSPCreate, KSPSolve, KSPSetOperators, KSPSetType, KSPGetPC, KSPSetUp, &
-                                      KSPSetTolerances, PETSC_DEFAULT_INTEGER, PETSC_DEFAULT_REAL, KSPGMRESSetRestart, &
-                                      KSPGMRESSetCGSRefinementType, KSP_GMRES_CGS_REFINE_ALWAYS, KSP_GMRES_CGS_REFINE_IFNEEDED, &
-                                      KSPGetIterationNumber
-
-    use petscpc,                only: tPC, PCSetType, PCFactorSetLevels, PCFactorSetShiftType, MAT_SHIFT_POSITIVE_DEFINITE
-!    use petscpc,                only: PCSetType, tPC, PCFactorSetLevels, PCGAMGAGG, PCHYPRE
-!    use petscpc,                only: PCHYPRE, PCSetType
 
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO
@@ -100,11 +87,6 @@ contains
         type(precon_jacobi_t),      target  :: jacobi
         type(timer_t)                       :: timer_linear
 
-        PetscErrorCode :: perr
-
-        KSP :: ksp
-        PC  :: pc
-
 
         ! Default controller
         controller => default_controller
@@ -169,110 +151,6 @@ contains
             call system%assemble( data,             &
                                   timing=timing,    &
                                   differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
-
-
-
-
-            if (niter == 1) then
-
-
-                call KSPCreate(ChiDG_COMM%mpi_val,ksp,perr)
-                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling KSPCreate.')
-
-                call KSPSetOperators(ksp,data%sdata%lhs%petsc_matrix,data%sdata%lhs%petsc_matrix,perr)
-                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling KSPSetOperators.')
-
-                call KSPSetType(ksp,KSPGMRES,perr)
-                !call KSPSetType(ksp,KSPDGMRES,perr)
-                !call KSPSetType(ksp,KSPBCGS,perr)
-                !call KSPSetType(ksp,KSPGCR,perr)
-                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling KSPSetType.')
-
-                
-                !*******    Preconditioners   *********!
-                call KSPGetPC(ksp,pc,perr)
-                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling KSPGetPC.')
-
-!                call PCSetType(pc,'none',perr)
-!                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling PCSetType.')
-
-!                call PCSetType(pc,'gamg',perr)
-!                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling PCSetType.')
-!                call PCGAMGSetType(gc, PCGAMGAGG, perr)
-!                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling PCGAMGSetType.')
-
-!                call PCSetType(pc, PCHYPRE, perr)
-!                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling PCSetType.')
-!                call PCHYPRESetType(pc,'boomeramg', perr)
-!                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling PCHYPRESetType.')
-!                call PCHYPRESetType(pc,'parasails', perr)
-!                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling PCHYPRESetType.')
-
-!                call PCSetType(pc, PCSOR, perr)
-!                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling PCSetType.')
-
-!                call PCSetType(pc,'jacobi',perr)
-!                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling PCSetType.')
-
-!                call PCSetType(pc,'ilu',perr)
-!                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling PCSetType.')
-!                call PCFactorSetShiftType(pc, MAT_SHIFT_POSITIVE_DEFINITE, perr)
-!                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling PCFactorSetShiftType.')
-!                call PCFactorSetLevels(pc,0,perr)
-!                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling PCFactorSetLevels.')
-
-!                call PCSetType(pc,PCSPAI,perr)
-!                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling PCSetType.')
-                !*******    Preconditioners   *********!
-
-
-
-
-
-
-                call KSPSetFromOptions(ksp,perr)
-                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling KSPSetFromOptions.')
-
-                call KSPSetTolerances(ksp, linear_solver%rtol, linear_solver%tol, PETSC_DEFAULT_REAL, PETSC_DEFAULT_INTEGER, perr)
-                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling KSPSetTolerances.')
-
-                call KSPGMRESSetRestart(ksp, linear_solver%nkrylov, perr)
-                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling KSPGMRESSetRestart.')
-                
-                call KSPGMRESSetCGSRefinementType(ksp, KSP_GMRES_CGS_REFINE_ALWAYS, perr)
-                !call KSPGMRESSetCGSRefinementType(ksp, KSP_GMRES_CGS_REFINE_IFNEEDED, perr)
-                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling KSPGMRESCGSSetRefinementType.')
-
-                call KSPSetUp(ksp,perr)
-                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling KSPSetUp.')
-
-            else
-
-                call KSPSetOperators(ksp,data%sdata%lhs%petsc_matrix,data%sdata%lhs%petsc_matrix,perr)
-                if (perr /= 0) call chidg_signal(FATAL,'newton: error calling KSPSetOperators.')
-
-            end if
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -353,32 +231,9 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            !call linear_solver%solve(lhs,dq,b,preconditioner,controller,data)
-
             call timer_linear%start()
-            call KSPSolve(ksp,b%petsc_vector,dq%petsc_vector,perr)
+            call linear_solver%solve(lhs,dq,b,preconditioner,controller,data)
             call timer_linear%stop()
-            if (perr /= 0) call chidg_signal(FATAL,'newton: error calling KSPSolve.')
-            call KSPGetIterationNumber(ksp, linear_solver%niter, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'newton: error calling KSPGetIterationNumber.')
-
 
 
             ! Line Search for appropriate step
@@ -412,7 +267,6 @@ contains
 
             ! Record iteration data
             call self%matrix_iterations%push_back(linear_solver%niter)
-            !call self%matrix_time%push_back(linear_solver%timer%elapsed())
             call self%matrix_time%push_back(timer_linear%elapsed())
             call timer_linear%reset()
 
@@ -558,10 +412,10 @@ contains
         type(chidg_data_t), intent(inout)   :: data
         real(rk),           intent(in)      :: cfln(:)
 
-        integer(ik)                 :: idom, ielem, eqn_ID, itime, ifield, nterms, rstart, rend, cstart, cend, imat, dof_start, nrows, ncols, iarray, row_index_start, col_index_start, i
-        integer(ik), allocatable, dimension(:) :: col_indices, row_indices
-        real(rk)                    :: dtau
-        real(rk), allocatable       :: mat(:,:)
+        PetscInt                            :: idom, ielem, eqn_ID, itime, ifield, nterms, rstart, rend, cstart, cend, imat, dof_start, nrows, ncols, iarray, row_index_start, col_index_start, i
+        PetscInt, allocatable, dimension(:) :: col_indices, row_indices
+        real(rk)                            :: dtau
+        real(rk), allocatable               :: mat(:,:)
 
         PetscErrorCode :: ierr
 

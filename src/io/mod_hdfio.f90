@@ -364,6 +364,10 @@ contains
         end do ! iread
 
 
+        ! Assemble
+        call data%sdata%q_in%assemble()
+
+
     end subroutine read_fields_hdf
     !****************************************************************************************
 

@@ -6,8 +6,9 @@ module type_solverdata
     use mod_kinds,                          only: rk,ik
     use mod_constants,                      only: NFACES, ZERO
     use mod_string,                         only: string_t
+    use mod_io,                             only: backend
     use type_chidg_vector,                  only: chidg_vector_t, chidg_vector
-    use type_chidg_matrix,                  only: chidg_matrix_t
+    use type_chidg_matrix,                  only: chidg_matrix_t, chidg_matrix
     use type_mesh,                          only: mesh_t
     use type_function_status,               only: function_status_t
     use type_equationset_function_data,     only: equationset_function_data_t
@@ -27,55 +28,34 @@ module type_solverdata
     !------------------------------------------------------------------------------------------
     type, public  :: solverdata_t
 
-        !
         ! Base solver data
-        !
-        type(chidg_vector_t)             :: q           ! Solution vector
-        type(chidg_vector_t)             :: dq          ! Change in solution vector
-        type(chidg_vector_t)             :: rhs         ! Residual of the spatial scheme
-        type(chidg_matrix_t)             :: lhs         ! Linearization of the spatial scheme
+        type(chidg_vector_t)            :: q           ! Solution vector
+        type(chidg_vector_t)            :: dq          ! Change in solution vector
+        type(chidg_vector_t)            :: rhs         ! Residual of the spatial scheme
+        type(chidg_matrix_t)            :: lhs         ! Linearization of the spatial scheme
 
-!        type(chidg_vector_t)             :: q_petsc     ! Solution vector
-!        type(chidg_vector_t)             :: dq_petsc    ! Change in solution vector
-!        type(chidg_vector_t)             :: rhs_petsc   ! Residual of the spatial scheme
-!        type(chidg_matrix_t)             :: lhs         ! Linearization of the spatial scheme
  
-        !
         ! Container for reading data
-        !
-        type(chidg_vector_t)            :: q_in
+        type(chidg_vector_t)            :: q_in     ! For reading data
+        type(chidg_vector_t)            :: q_out    ! For post-processing
 
         
-        !
-        ! Container for storing data for post processing
-        !
-        type(chidg_vector_t)            :: q_out
-
-
-        !
         ! Auxiliary fields
-        !
         type(string_t),         allocatable :: auxiliary_field_name(:)
         type(chidg_vector_t),   allocatable :: auxiliary_field(:)
 
-        !
         ! Time information
-        !
-        !real(rk)                        :: t               ! Global time
-        real(rk),   allocatable         :: dt(:,:)         ! Element-local time-step, (ndomains,maxelems)
+        real(rk),       allocatable :: dt(:,:)         ! Element-local time-step, (ndomains,maxelems)
 
 
-        !
         ! Mesh size information
-        !
         real(rk),       allocatable :: mesh_size_elem(:,:), mesh_size_vertex(:,:),      &
                                        min_mesh_size_elem(:), min_mesh_size_vertex(:),  &
                                        avg_mesh_size_vertex(:), sum_mesh_size_vertex(:)
         integer(ik),    allocatable :: num_elements_touching_vertex(:)
 
-        !
+
         ! RBF-related information
-        !
         integer(ik),    allocatable :: nelems_per_domain(:)
         real(rk),       allocatable :: rbf_center(:,:), rbf_radius(:,:), &
                                        rbf_artificial_bulk_viscosity(:), &
@@ -83,9 +63,7 @@ module type_solverdata
                                        rbf_artificial_thermal_conductivity(:)
 
 
-        !
         ! Vertex-based smoothing information
-        !
         integer(ik),    allocatable :: nnodes_per_domain(:)
         real(rk),       allocatable :: vertex_artificial_bulk_viscosity(:), &
                                        vertex_artificial_shear_viscosity(:), &
@@ -93,14 +71,11 @@ module type_solverdata
 
 
         ! Global nodes array - used for octree operation
-        real(rk), allocatable :: global_nodes(:,:)
+        real(rk),       allocatable :: global_nodes(:,:)
 
 
 
-
-        !
         ! Function registration
-        !
         type(function_status_t)         :: function_status ! Status of function residuals and linearizations
 
 
@@ -167,19 +142,14 @@ contains
         logical     :: increase_maxelems = .false.
 
 
-        ! Create vector
-        !self%q     = chidg_vector('chidg')
-        !self%dq    = chidg_vector('chidg')
-        !self%rhs   = chidg_vector('chidg')
-        !self%q_in  = chidg_vector('chidg')
-        !self%q_out = chidg_vector('chidg')
+        ! Create vector/matrix containers
+        self%q     = chidg_vector(trim(backend))
+        self%dq    = chidg_vector(trim(backend))
+        self%rhs   = chidg_vector(trim(backend))
+        self%q_in  = chidg_vector(trim(backend))
+        self%q_out = chidg_vector(trim(backend))
 
-        self%q     = chidg_vector('petsc')
-        self%dq    = chidg_vector('petsc')
-        self%rhs   = chidg_vector('petsc')
-        self%q_in  = chidg_vector('petsc')
-        self%q_out = chidg_vector('petsc')
-
+        self%lhs   = chidg_matrix(trim(backend))
 
 
         ! Initialize vectors
@@ -189,58 +159,34 @@ contains
         call self%q_in%init( mesh,mesh%ntime_)
         call self%q_out%init(mesh,mesh%ntime_)
 
-        call VecSet(self%q%petsc_vector,     ZERO, perr)
-        call VecSet(self%dq%petsc_vector,    ZERO, perr)
-        call VecSet(self%rhs%petsc_vector,   ZERO, perr)
-        call VecSet(self%q_in%petsc_vector,  ZERO, perr)
-        call VecSet(self%q_out%petsc_vector, ZERO, perr)
-
-
 
         ! Initialize matrix and parallel recv data
         call self%lhs%init(mesh,'full')
         call self%lhs%init_recv(self%rhs)
 
 
-
-
-    
-        !
         ! Find maximum number of elements in any domain
-        !
         ndom = mesh%ndomains()
         maxelems = 0
         do idom = 1,ndom
-
             increase_maxelems = ( mesh%domain(idom)%nelem > maxelems )
-
             if (increase_maxelems) then
                 maxelems = mesh%domain(idom)%nelem
             end if
-
         end do
 
 
-
-        !
         ! Allocate timestep storage
-        !
         if (allocated(self%dt)) deallocate(self%dt)
         allocate(self%dt(ndom,maxelems),stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-
-        !
         ! Initialize storage on flux and linearization registration
-        !
         call self%function_status%init( mesh, function_data)
 
         
-
-        !
         ! Confirm solver initialization
-        !
         self%solverInitialized = .true.
 
     end subroutine init_base

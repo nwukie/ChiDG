@@ -386,7 +386,7 @@ contains
         type(timer_t)   :: timer_dot, timer_axpy
         PetscErrorCode :: perr
 
-!        if (w%petsc_vector_created) then
+        if (w%petsc_vector_created) then
             do i = 1,j
                 call timer_dot%start()
                 htmp(i) = dot(w,v(i),ChiDG_COMM)
@@ -397,12 +397,12 @@ contains
             end do
 
             !print*, timer_dot%elapsed(), timer_axpy%elapsed()
-!        else 
-!            do i = 1,j
-!                htmp(i) = dot(w,v(i),ChiDG_COMM)
-!                w = w - htmp(i)*v(i)
-!            end do
-!        end if
+        else 
+            do i = 1,j
+                htmp(i) = dot(w,v(i),ChiDG_COMM)
+                w = w - htmp(i)*v(i)
+            end do
+        end if
 
         h(1:j,j) = h(1:j,j) + htmp(1:j)
 

@@ -59,13 +59,13 @@ module precon_RASILU0
                                           ETA_MAX, ZETA_MAX, ONE
     use mod_inv,                    only: inv
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
-    use mod_io,                     only: verbosity
+    use mod_io,                     only: verbosity, backend
 
     use type_RASILU0_send,          only: RASILU0_send_t
     use type_RASILU0_recv,          only: RASILU0_recv_t
     use type_preconditioner,        only: preconditioner_t
     use type_chidg_data,            only: chidg_data_t
-    use type_chidg_matrix,          only: chidg_matrix_t
+    use type_chidg_matrix,          only: chidg_matrix_t, chidg_matrix
     use type_chidg_vector,          only: chidg_vector_t
 
     use type_mpi_request_vector,    only: mpi_request_vector_t
@@ -134,6 +134,7 @@ contains
         !
         ! Initialize Lower-Diagonal matrix for processor-local data
         !
+        self%LD = chidg_matrix(trim(backend))
         call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
         self%initialized = .true.
 

@@ -51,60 +51,39 @@ contains
     !----------------------------------------------------------------------------------
     subroutine chidg_mpi_init(comm)
         type(mpi_comm), intent(in), optional    :: comm
+
         integer :: ierr
-
-        PetscErrorCode perr
-
+        PetscErrorCode :: perr
 
 
-
-        !
         ! Check if MPI_Init has been called already or by someone else
-        !
         call MPI_Initialized(mpi_is_initialized,ierr)
 
 
-        !
         ! Initialize MPI
-        !
         if ( .not. mpi_is_initialized ) call MPI_Init(ierr)
 
 
-
-        !
-        ! Initialize IRANK, NRANK
-        !
+        ! Option to use incoming communicator instead of MPI_COMM_WORLD
         if (present(comm)) then
             ChiDG_COMM = comm
         else
             ChiDG_COMM = MPI_COMM_WORLD
         end if
 
+
+        ! Initialize IRANK, NRANK 
         call MPI_Comm_Size(ChiDG_COMM,NRANK,ierr)
         call MPI_Comm_Rank(ChiDG_COMM,IRANK,ierr)
 
 
-
-
         ! Initialize PETSc
-        !if (petsc) then
         PETSC_COMM_WORLD = ChiDG_COMM%mpi_val
         call PetscInitialize(PETSC_NULL_CHARACTER,perr)
         if (perr .ne. 0) then
           print*,'Unable to initialize PETSc'
           stop
         endif
-
-        !n   = 20
-        !one = 1.0
-        !call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-n',n,flg,perr)
-
-
-
-
-
-
-
 
 
     end subroutine chidg_mpi_init
@@ -125,7 +104,9 @@ contains
     !!
     !----------------------------------------------------------------------------------
     subroutine chidg_mpi_finalize()
+
         integer :: ierr
+
 
         !
         ! Check if MPI_Finalize has been called already or by someone else
@@ -141,11 +122,13 @@ contains
         !
         ! Initialize MPI
         !
-        if ( .not. mpi_is_finalized ) call MPI_Finalize(ierr)
-        if (ierr /= 0) then
-            print*, '********************* WARNING ******************'
-            print*, 'chidg_mpi_finalize: MPI_Finalize returned error.'
-            print*, '************************************************'
+        if ( .not. mpi_is_finalized ) then
+            call MPI_Finalize(ierr)
+            if (ierr /= 0) then
+                print*, '********************* WARNING ******************'
+                print*, 'chidg_mpi_finalize: MPI_Finalize returned error.'
+                print*, '************************************************'
+            end if
         end if
 
 

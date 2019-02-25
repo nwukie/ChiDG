@@ -125,7 +125,6 @@ contains
         grad3u_bc = normal_gradient*worker%unit_normal(3)
 
 
-
         ! Store
         call worker%store_bc_state('u', u_bc,      'value')
         call worker%store_bc_state('u', grad1u_bc, 'grad1')

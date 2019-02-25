@@ -5,10 +5,12 @@ module mod_linear_solver
     use type_dict,          only: dict_t
 
     use type_fgmres,                only: fgmres_t
+    use type_petsc_linear,          only: petsc_linear_t
     use type_fgmres_cgs_mg_correct, only: fgmres_cgs_mg_correct_t
     implicit none
 
     type(fgmres_t)                  :: FGMRES
+    type(petsc_linear_t)            :: PETSC_LINEAR
     type(fgmres_cgs_mg_correct_t)   :: FGMRES_CGS_MG_CORRECT
 
 contains
@@ -33,6 +35,9 @@ contains
         select case (trim(lstring))
             case ('fgmres','FGMRES')
                 allocate(lsolver, source=FGMRES, stat=ierr)
+
+            case ('petsc','PETSC')
+                allocate(lsolver, source=PETSC_LINEAR, stat=ierr)
 
             case ('fgmres_cgs_mg_correct', 'FGMRES_CGS_MG_CORRECT')
                 allocate(lsolver, source=FGMRES_CGS_MG_CORRECT, stat=ierr)

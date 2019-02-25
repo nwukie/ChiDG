@@ -4,11 +4,11 @@ module precon_ILU0
     use mod_constants,          only: DIAG, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, ONE
     use mod_inv,                only: inv
     use mod_chidg_mpi,          only: IRANK
-    use mod_io,                 only: verbosity
+    use mod_io,                 only: verbosity, backend
 
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_data,        only: chidg_data_t
-    use type_chidg_matrix,      only: chidg_matrix_t
+    use type_chidg_matrix,      only: chidg_matrix_t, chidg_matrix
     use type_chidg_vector,      only: chidg_vector_t
     implicit none
 
@@ -59,6 +59,7 @@ contains
         class(precon_ILU0_t),    intent(inout)   :: self
         type(chidg_data_t),         intent(in)      :: data
 
+        self%LD = chidg_matrix(trim(backend))
         call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
         call self%LD%clear()
 

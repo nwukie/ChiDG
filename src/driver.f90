@@ -52,7 +52,6 @@ program driver
         call chidg%start_up('core')
 
 
-
         ! Set ChiDG Algorithms, Accuracy
         call chidg%set('Time Integrator' , algorithm=time_integrator                   )
         call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)

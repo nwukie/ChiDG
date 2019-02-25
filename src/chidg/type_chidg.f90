@@ -273,10 +273,17 @@ contains
                     call log_finalize()
                     call close_hdf()
 
+                    ! Tear down. Maybe things need deallocated from another library 
+                    ! before we deallocate here. (e.g. petsc)
+                    if (allocated(self%linear_solver)) call self%linear_solver%tear_down()
+
+                    ! Deallocate algorithms
                     if (allocated(self%time_integrator))  deallocate(self%time_integrator)
                     if (allocated(self%preconditioner))   deallocate(self%preconditioner)
                     if (allocated(self%linear_solver))    deallocate(self%linear_solver)
                     if (allocated(self%nonlinear_solver)) deallocate(self%nonlinear_solver)
+
+                    ! Release storage
                     call self%data%release()
 
 
@@ -851,8 +858,6 @@ contains
         call write_line(' ',                                  ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('   Reading boundary conditions... ', ltrim=.false., io_proc=GLOBAL_MASTER)
 
-!        print*, 'read_mesh_boundary_conditions - 1'
-
 
         ! Call boundary condition reader based on file extension
         do iread = 0,NRANK-1
@@ -863,8 +868,6 @@ contains
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
         end do
-
-!        print*, 'read_mesh_boundary_conditions - 2'
 
 
         ! Add all boundary condition state groups
@@ -880,7 +883,6 @@ contains
       
         end do !ibc
 
-!        print*, 'read_mesh_boundary_conditions - 3'
 
         ! Add boundary condition patch groups
         call write_line('   processing patches...', ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -902,7 +904,6 @@ contains
             end do !iface
         end do !ipatch
 
-!        print*, 'read_mesh_boundary_conditions - 4'
 
         call write_line('   Done reading boundary conditions.', ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line(' ',                                    ltrim=.false., io_proc=GLOBAL_MASTER)

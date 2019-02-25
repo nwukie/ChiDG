@@ -1,10 +1,10 @@
 module type_chidg_vector
 #include <messenger.h>
 #include "petsc/finclude/petscvec.h"
-    use petscvec,                   only: PETSC_DETERMINE, VecCreate, VecSetType, VecSetSizes, VecSetUp, &
-                                          VecSetValues, tVec, tVecScatter, ADD_VALUES, INSERT_VALUES, VecCopy,       &
-                                          VecAssemblyBegin, VecAssemblyEnd, VecDuplicate, NORM_2,VecGetArrayF90,    &
-                                          VecRestoreArrayF90, VecNorm, VecScale, VecWAXPY, VecReciprocal, VecDestroy, &
+    use petscvec,                   only: PETSC_DETERMINE, VecCreate, VecSetType, VecSetSizes, VecSetUp,                &
+                                          VecSetValues, tVec, tVecScatter, ADD_VALUES, INSERT_VALUES, VecCopy,          &
+                                          VecAssemblyBegin, VecAssemblyEnd, VecDuplicate, NORM_2,VecGetArrayF90,        &
+                                          VecRestoreArrayF90, VecNorm, VecScale, VecWAXPY, VecReciprocal, VecDestroy,   &
                                           VecScatterCreateToAll, VecScatterBegin, VecScatterEnd, SCATTER_FORWARD
 
     use mod_kinds,                  only: rk, ik
@@ -63,28 +63,21 @@ module type_chidg_vector
         procedure(vector_self_interface),      pointer, pass   :: assemble         => chidg_assemble_vector
         procedure(vector_assign_interface),    pointer, nopass :: assign_vector    => chidg_assign_vector
 
-!        procedure(vector_init_interface),     pointer, pass   :: init          => petsc_init_vector
-!        procedure(vector_store_interface),    pointer, pass   :: set_field     => petsc_set_field
-!        procedure(vector_store_interface),    pointer, pass   :: add_field     => petsc_add_field
-!        procedure(vector_getfield_interface), pointer, pass   :: select_get_field     => petsc_get_field
-!        procedure(vector_self_interface),     pointer, pass   :: clear         => petsc_clear_vector
-!        procedure(vector_self_interface),     pointer, pass   :: assemble      => petsc_assemble_vector
-!        procedure(vector_assign_interface),   pointer, nopass :: assign_vector => petsc_assign_vector
-
-
-
-
+!        procedure(vector_init_interface),     pointer, pass   :: init             => petsc_init_vector
+!        procedure(vector_store_interface),    pointer, pass   :: set_field        => petsc_set_field
+!        procedure(vector_store_interface),    pointer, pass   :: add_field        => petsc_add_field
+!        procedure(vector_getfield_interface), pointer, pass   :: select_get_field => petsc_get_field
+!        procedure(vector_self_interface),     pointer, pass   :: clear            => petsc_clear_vector
+!        procedure(vector_self_interface),     pointer, pass   :: assemble         => petsc_assemble_vector
+!        procedure(vector_assign_interface),   pointer, nopass :: assign_vector    => petsc_assign_vector
 
 
         integer(ik),    private                 :: ntime_       ! No. of time instances stored
 
     contains
 
-        !generic,    public  :: init => initialize
-        !procedure,  private :: initialize
 
         procedure,  public  :: project                          ! Project function to basis
-        !procedure,  public  :: clear                            ! Zero the densevector data
 
         procedure, public :: get_field
 
@@ -112,6 +105,7 @@ module type_chidg_vector
         procedure,  public  :: prolong
                                                                     
 
+        final               :: destroy
 
         procedure, public  :: assign_vector_public
         generic :: assignment(=) => assign_vector_public
@@ -249,12 +243,12 @@ contains
         type(chidg_vector_t)    :: vec
 
         select case(storage)
-            case('chidg')
+            case('native')
                 call vector_assign_pointers_chidg(vec)
             case('petsc')
                 call vector_assign_pointers_petsc(vec)
             case default
-                call chidg_signal(FATAL,"new_chidg_vector: invalid parameter for 'storage'.")
+                call chidg_signal_one(FATAL,"new_chidg_vector: invalid parameter for 'storage'.",trim(storage))
         end select
 
     end function new_chidg_vector
@@ -332,29 +326,22 @@ contains
         PetscErrorCode  ierr
         PetscInt        nlocal_rows
 
-
         ! If previously allocated, destroy and reinitialize
         if (self%petsc_vector_created) then
             call VecDestroy(self%petsc_vector,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecDestroy.')
         end if
 
-
         ! Set ntime_ for the chidg_vector
         self%ntime_ = ntime
-
 
         ! Create vector object
         call VecCreate(ChiDG_COMM%mpi_val, self%petsc_vector, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init_vector: error creating PETSc vector.')
 
-
         ! Set vector type
         call VecSetType(self%petsc_vector, 'standard', ierr)
-        !call VecSetType(self%petsc_vector, 'mpi', ierr)
-        !call VecSetType(self%petsc_vector, 'seq', ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init_vector: error calling VecSetType.')
-
 
         ! Set vector size
         ! Compute proc-local degress-of-freedom
@@ -365,22 +352,19 @@ contains
             end do !ielem
         end do !idom
         
-
         call VecSetSizes(self%petsc_vector,nlocal_rows,PETSC_DETERMINE,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecSetSizes.')
-
 
         ! Set up vector
         call VecSetUp(self%petsc_vector,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecSetUp.')
 
-
-
         ! Initialize parallel scatter to all
         call VecScatterCreateToAll(self%petsc_vector, self%petsc_scatter, self%petsc_vector_recv, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecScatterCreateToAll.')
 
-
+        ! Clear vector storage
+        call self%clear()
 
         ! Indicate petsc vector was created
         self%petsc_vector_created = .true.
@@ -996,34 +980,33 @@ contains
         type(mpi_request)   :: isend_handle
 
 
-        print*, 'WARNING: NO COMM SEND!'
-!        ! Loop through comms to send
-!        isend = 1
-!        do icomm = 1,size(self%send%comm)
-!
-!            ! Get processor rank we are sending to
-!            iproc_send = self%send%comm(icomm)%proc
-!
-!            ! Loop through domains/elements to send
-!            do idom_send = 1,self%send%comm(icomm)%dom_send%size()
-!                idom = self%send%comm(icomm)%dom_send%at(idom_send)
-!                do ielem_send = 1,self%send%comm(icomm)%elems_send(idom_send)%size()
-!                    ielem = self%send%comm(icomm)%elems_send(idom_send)%at(ielem_send)
-!
-!                    ! Post non-blocking send message for the vector data
-!                    data_size = size(self%dom(idom)%vecs(ielem)%vec)
-!                    call MPI_ISend(self%dom(idom)%vecs(ielem)%vec, data_size, MPI_REAL8, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
-!
-!                    ! Add non-blocking send handle to list of things to wait on
-!                    self%send%isend_handles(isend) = isend_handle
-!
-!                    ! Increment send counter
-!                    isend = isend + 1
-!
-!                end do !ielem_send
-!            end do !idom_send
-!
-!        end do ! icomm
+        ! Loop through comms to send
+        isend = 1
+        do icomm = 1,size(self%send%comm)
+
+            ! Get processor rank we are sending to
+            iproc_send = self%send%comm(icomm)%proc
+
+            ! Loop through domains/elements to send
+            do idom_send = 1,self%send%comm(icomm)%dom_send%size()
+                idom = self%send%comm(icomm)%dom_send%at(idom_send)
+                do ielem_send = 1,self%send%comm(icomm)%elems_send(idom_send)%size()
+                    ielem = self%send%comm(icomm)%elems_send(idom_send)%at(ielem_send)
+
+                    ! Post non-blocking send message for the vector data
+                    data_size = size(self%dom(idom)%vecs(ielem)%vec)
+                    call MPI_ISend(self%dom(idom)%vecs(ielem)%vec, data_size, MPI_REAL8, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
+
+                    ! Add non-blocking send handle to list of things to wait on
+                    self%send%isend_handles(isend) = isend_handle
+
+                    ! Increment send counter
+                    isend = isend + 1
+
+                end do !ielem_send
+            end do !idom_send
+
+        end do ! icomm
 
 
     end subroutine comm_send
@@ -1055,25 +1038,23 @@ contains
 
         real(rk), allocatable   :: test(:)
 
-        print*, 'WARNING: NO COMM RECV!'
-!        ! Receive data from each communicating processor
-!        do icomm = 1,size(self%recv%comm)
-!
-!            ! Get process we are receiving from
-!            proc_recv = self%recv%comm(icomm)%proc
-!            
-!            ! Recv each element chunk
-!            do idom_recv = 1,size(self%recv%comm(icomm)%dom)
-!                do ielem_recv = 1,size(self%recv%comm(icomm)%dom(idom_recv)%vecs)
-!
-!                    data_size = size(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec)
-!                    call MPI_Recv(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-!
-!                end do ! ielem_recv
-!            end do ! idom_recv
-!
-!
-!        end do ! icomm
+        ! Receive data from each communicating processor
+        do icomm = 1,size(self%recv%comm)
+
+            ! Get process we are receiving from
+            proc_recv = self%recv%comm(icomm)%proc
+            
+            ! Recv each element chunk
+            do idom_recv = 1,size(self%recv%comm(icomm)%dom)
+                do ielem_recv = 1,size(self%recv%comm(icomm)%dom(idom_recv)%vecs)
+
+                    data_size = size(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec)
+                    call MPI_Recv(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+
+                end do ! ielem_recv
+            end do ! idom_recv
+
+        end do ! icomm
 
     end subroutine comm_recv
     !*****************************************************************************************
@@ -1098,10 +1079,8 @@ contains
 
         integer(ik) :: nwait, ierr
 
-
-        print*, 'WARNING: NO COMM WAIT!'
-!        nwait = size(self%send%isend_handles)
-!        call MPI_Waitall(nwait, self%send%isend_handles, MPI_STATUSES_IGNORE, ierr)
+        nwait = size(self%send%isend_handles)
+        call MPI_Waitall(nwait, self%send%isend_handles, MPI_STATUSES_IGNORE, ierr)
 
     end subroutine comm_wait
     !*****************************************************************************************
@@ -1154,7 +1133,14 @@ contains
     subroutine release(self)
         class(chidg_vector_t),  intent(inout)   :: self
 
+        PetscErrorCode :: ierr
+
         if (allocated(self%dom)) deallocate(self%dom)
+
+        if (self%petsc_vector_created) then
+            call VecDestroy(self%petsc_vector,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%release: error calling VecDestroy.')
+        end if
 
     end subroutine release
     !****************************************************************************************
@@ -1757,7 +1743,24 @@ contains
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !-------------------------------------------------
+    subroutine destroy(self)
+        type(chidg_vector_t),   intent(inout)   :: self
 
+        PetscErrorCode :: ierr
+
+        if (self%petsc_vector_created) then
+            call VecDestroy(self%petsc_vector,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecDestroy.')
+        end if
+
+
+    end subroutine destroy
+    !*************************************************
 
 
 

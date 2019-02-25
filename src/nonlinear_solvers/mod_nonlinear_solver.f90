@@ -6,6 +6,7 @@ module mod_nonlinear_solver
 
     ! Import solverdata types
     use type_newton,            only: newton_t
+    use type_petsc_nonlinear,   only: petsc_nonlinear_t
     use type_jfnk,              only: jfnk_t
     use type_quasi_newton_sst,  only: quasi_newton_sst_t
     use type_quasi_newton_rs,   only: quasi_newton_rs_t
@@ -14,6 +15,7 @@ module mod_nonlinear_solver
 
     ! Instantiate solver types for sourcing
     type(newton_t)              :: NEWTON
+    type(petsc_nonlinear_t)     :: PETSC_NONLINEAR
     type(jfnk_t)                :: JFNK 
     type(quasi_newton_sst_t)    :: QUASI_NEWTON_SST
     type(quasi_newton_rs_t)     :: QUASI_NEWTON_RS
@@ -45,6 +47,9 @@ contains
 
             case ('newton','Newton','NEWTON')
                 allocate(instance, source=NEWTON)
+
+            case ('petsc','PETSC')
+                allocate(instance, source=PETSC_NONLINEAR)
 
             case ('jfnk','Jfnk','JFNK')
                 allocate(instance, source=JFNK)

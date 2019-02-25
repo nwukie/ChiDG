@@ -45,6 +45,7 @@ module type_linear_solver
     contains
     
         procedure   :: init
+        procedure   :: tear_down
         procedure   :: set
 
         procedure(solve_interface), deferred :: solve
@@ -209,5 +210,18 @@ contains
 
 
 
+
+    !>  Tear down activities.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/25/2019
+    !!
+    !-------------------------------------------------------------------------------------------------
+    subroutine tear_down(self)
+        class(linear_solver_t),  intent(inout)  :: self
+
+
+    end subroutine tear_down
+    !*************************************************************************************************
 
 end module type_linear_solver

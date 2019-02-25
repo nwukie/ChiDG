@@ -33,6 +33,10 @@ module mod_io
     integer(ik),            save    :: time_steps       = 100
     integer(ik),            save    :: ntime_instances  = 1         !TODO: probably we should ask for the entire time of the analysis rather than dt and how many steps
     real(rk),               save    :: frequencies(100) = ZERO
+
+    ! Infrastructure
+    character(len=100),     save    :: backend = 'native'
+
    
     ! Nonlinear solver parameters
     !   ntol         : absolute convergence tolerance
@@ -140,6 +144,8 @@ module mod_io
                                         time_steps,         &
                                         ntime_instances,    &
                                         frequencies
+
+    namelist /infrastructure/           backend
 
 
     namelist /nonlinear_solve/          nonlinear_solver,   &
@@ -258,25 +264,6 @@ contains
 
 
         ! Read namelist input for parameter initialization
-!        open(newunit=file_unit,form='formatted',file="chidg.nml")
-!        read(file_unit,nml=files,           iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'files' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=space,           iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'space' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=quadrature,      iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'quadrature' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=time,            iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'time' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=nonlinear_solve, iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'nonlinear_solve' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=linear_solve,    iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'linear_solve' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=io,              iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'io' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=initial,         iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'initial' namelist from 'chidg.nml'.")
-!        close(file_unit)
-
         open(newunit=file_unit,form='formatted',file="chidg.nml")
         read(file_unit,nml=files,           iostat=msg)
         if (msg/=0) call handle_namelist_error(file_unit,msg)
@@ -300,6 +287,8 @@ contains
         if (namelist_read_error) call chidg_abort()
 
 
+        ! Must use PETSC storage if using petsc nonlinear/linear solvers
+        if (trim(nonlinear_solver) == 'petsc' .or. trim(linear_solver) == 'petsc') backend = 'petsc'
 
 
 

@@ -5,7 +5,7 @@ module type_chidg_matrix
                                       MatSetValues, tMat, ADD_VALUES, MatAssemblyBegin, MatAssemblyEnd, &
                                       MAT_FINAL_ASSEMBLY, MatZeroEntries, MatSeqAIJSetPreallocation,    &
                                       MatMPIAIJSetPreallocation, PETSC_NULL_INTEGER, MatSetOption,      &
-                                      MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, MatDestroy
+                                      MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, MatDestroy, MatGetSize, MatGetLocalSize
 
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: NO_ID, ZERO
@@ -803,7 +803,9 @@ contains
 
         integer(ik)     :: ndomains, idom, ielem
         PetscErrorCode  :: ierr
-        PetscInt        :: nlocal_rows, nlocal_cols, nglobal_rows, nglobal_cols, dof_per_element, nlocal_coupling, nparallel_coupling
+        PetscInt        :: nlocal_rows, nlocal_cols, nglobal_rows, nglobal_cols,    &
+                           dof_per_element, nlocal_coupling, nparallel_coupling,    &
+                           aij_nnonzeros_per_row_local, aij_nnonzeros_per_row_parallel
 
 
         ! Create matrix object
@@ -831,8 +833,10 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error reducing global degrees-of-freedom.')
         
 
-        nlocal_cols  = PETSC_DECIDE
+        nlocal_cols  = nlocal_rows ! local partition is square
         nglobal_cols = nglobal_rows
+
+
         call MatSetSizes(self%petsc_matrix,nlocal_rows,nlocal_cols,nglobal_rows,nglobal_cols,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc matrix sizes.')
         !---------------------------------------------
@@ -850,13 +854,16 @@ contains
         ! Preallocation
         dof_per_element = mesh%domain(1)%elems(1)%nterms_s * mesh%domain(1)%elems(1)%neqns
         nlocal_coupling = 8
-        nparallel_coupling = 3
+        nparallel_coupling = 8
+
+        aij_nnonzeros_per_row_local    = nlocal_coupling    * dof_per_element
+        aij_nnonzeros_per_row_parallel = nparallel_coupling * dof_per_element
 
 
-        ! WARNING! might need to change preallocation approach for AIJ. currently set for BAIJ
-!        call MatMPIAIJSetPreallocation(self%petsc_matrix,nnonzeros_per_row,PETSC_NULL_INTEGER,nnonzeros_per_row,PETSC_NULL_INTEGER,ierr)
+!        ! WARNING! might need to change preallocation approach for AIJ. currently set for BAIJ
+!        call MatMPIAIJSetPreallocation(self%petsc_matrix,aij_nnonzeros_per_row_local,PETSC_NULL_INTEGER,aij_nnonzeros_per_row_parallel,PETSC_NULL_INTEGER,ierr)
 !        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatMPIAIJSetPreallocation.')
-!        call MatSeqAIJSetPreallocation(self%petsc_matrix,nnonzeros_per_row,PETSC_NULL_INTEGER,ierr)
+!        call MatSeqAIJSetPreallocation(self%petsc_matrix,aij_nnonzeros_per_row_local,PETSC_NULL_INTEGER,ierr)
 !        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqAIJSetPreallocation.')
 
 

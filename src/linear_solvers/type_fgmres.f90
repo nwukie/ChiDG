@@ -90,6 +90,7 @@ contains
 
         type(fgmres_t) :: fgmres
 
+
         ! Inner fgmres iteration parameters
         if (self%inner_fgmres) then
             fgmres%nkrylov           = self%inner_nkrylov
@@ -100,7 +101,6 @@ contains
             fgmres%orthogonalization = self%inner_orthogonalization
             fgmres%inner_fgmres      = .false.
         end if
-
 
 
         ! Reset/Start timers
@@ -154,7 +154,8 @@ contains
 
 
             ! Compute initial residual r0, residual norm, and normalized r0
-            r0     = self%residual(A,x0,b)
+            !r0     = self%residual(A,x0,b)
+            r0     = self%residual(A,x,b)
             r0norm = r0%norm(ChiDG_COMM)
             v(1)   = r0/r0norm
             p(1)   = r0norm
@@ -165,6 +166,7 @@ contains
             nvecs = 0
             do j = 1,self%nkrylov
                 nvecs = nvecs + 1
+
 
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 call self%timer_precon%start()

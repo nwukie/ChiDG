@@ -63,15 +63,6 @@ module type_chidg_vector
         procedure(vector_self_interface),      pointer, pass   :: assemble         => chidg_assemble_vector
         procedure(vector_assign_interface),    pointer, nopass :: assign_vector    => chidg_assign_vector
 
-!        procedure(vector_init_interface),     pointer, pass   :: init             => petsc_init_vector
-!        procedure(vector_store_interface),    pointer, pass   :: set_field        => petsc_set_field
-!        procedure(vector_store_interface),    pointer, pass   :: add_field        => petsc_add_field
-!        procedure(vector_getfield_interface), pointer, pass   :: select_get_field => petsc_get_field
-!        procedure(vector_self_interface),     pointer, pass   :: clear            => petsc_clear_vector
-!        procedure(vector_self_interface),     pointer, pass   :: assemble         => petsc_assemble_vector
-!        procedure(vector_assign_interface),   pointer, nopass :: assign_vector    => petsc_assign_vector
-
-
         integer(ik),    private                 :: ntime_       ! No. of time instances stored
 
     contains
@@ -324,7 +315,7 @@ contains
 
         integer(ik)     :: ndomains, idom, ielem
         PetscErrorCode  ierr
-        PetscInt        nlocal_rows
+        PetscInt        nlocal_rows, nglobal_rows
 
         ! If previously allocated, destroy and reinitialize
         if (self%petsc_vector_created) then
@@ -351,8 +342,12 @@ contains
                 nlocal_rows = nlocal_rows + mesh%domain(idom)%elems(ielem)%nterms_s * mesh%domain(idom)%elems(ielem)%neqns
             end do !ielem
         end do !idom
-        
-        call VecSetSizes(self%petsc_vector,nlocal_rows,PETSC_DETERMINE,ierr)
+
+        ! Compute global degrees-of-freedom via reduction
+        call MPI_AllReduce(nlocal_rows,nglobal_rows,1,MPI_INTEGER4,MPI_SUM,ChiDG_COMM,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error reducing global degrees-of-freedom.')
+
+        call VecSetSizes(self%petsc_vector,nlocal_rows,nglobal_rows,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecSetSizes.')
 
         ! Set up vector
@@ -1678,14 +1673,20 @@ contains
 
                 call VecCopy(vec_in%petsc_vector,vec_out%petsc_vector,ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecCopy.')
+                call VecCopy(vec_in%petsc_vector_recv,vec_out%petsc_vector_recv,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecCopy.')
 
             ! If not already created, duplicate storage, then copy.
             else
 
                 call VecDuplicate(vec_in%petsc_vector,vec_out%petsc_vector,ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
+                call VecDuplicate(vec_in%petsc_vector_recv,vec_out%petsc_vector_recv,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
 
                 call VecCopy(vec_in%petsc_vector,vec_out%petsc_vector,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecCopy.')
+                call VecCopy(vec_in%petsc_vector_recv,vec_out%petsc_vector_recv,ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecCopy.')
 
             end if

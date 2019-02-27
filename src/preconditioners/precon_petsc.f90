@@ -19,10 +19,13 @@ module precon_petsc
 
 
 
-    !>  ILU0 preconditioner
+    !>  Use petsc preconditioner that can be configured from the command line.
+    !!
+    !!  Command line examples:
+    !!      -pc_type asm -sub_pc_type ilu -sub_pc_factor_levels 1 -sub_ksp_type preonly
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/24/2016
+    !!  @date   2/27/2019
     !!
     !!
     !-------------------------------------------------------------------------------------------
@@ -71,6 +74,7 @@ contains
                 call chidg_signal(FATAL,"precon_petsc%init: tried to use petsc preconditioner with native containers. Must use backend = 'petsc'.")
 
             case('petsc')
+
                 call PCCreate(ChiDG_COMM%mpi_val,self%pc,perr)
                 if (perr /= 0) call chidg_signal(FATAL,'precon_petsc%init: error calling PCCreate.')
 
@@ -79,7 +83,6 @@ contains
 
                 call PCSetFromOptions(self%pc,perr)
                 if (perr /= 0) call chidg_signal(FATAL,'petsc_petsc%init: error calling PCSetFromOptions.')
-
 
                 self%petsc_initialized = .true.
 

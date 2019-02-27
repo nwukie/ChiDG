@@ -1,7 +1,9 @@
 module type_solverdata
 #include <messenger.h>
 #include "petsc/finclude/petscvec.h"
+#include "petsc/finclude/petscmat.h"
     use petscvec,                           only: VecSet
+    use petscmat,                           only: MatMult
 
     use mod_kinds,                          only: rk,ik
     use mod_constants,                      only: NFACES, ZERO

@@ -1,7 +1,7 @@
 module type_fgmres
 #include <messenger.h>
 #include "petsc/finclude/petscvec.h"
-    use petscvec,               only: VecAXPY
+    use petscvec,               only: VecAXPY, VecMDOT, VecMAXPY
 
 
     use mod_kinds,              only: rk, ik
@@ -166,11 +166,9 @@ contains
             do j = 1,self%nkrylov
                 nvecs = nvecs + 1
 
-
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 call self%timer_precon%start()
                 z(j) = M%apply(A,v(j))
-
 
 
                 ! Inner fgmres correction
@@ -338,21 +336,40 @@ contains
         real(rk),               intent(inout)   :: h(:,:)
         real(rk),               intent(inout)   :: htmp(:)
 
-        integer(ik) :: i, ierr
-        real(rk)    :: dot_tmp(j)
+        integer(ik)    :: i, ierr
+        real(rk)       :: dot_tmp(j)
+        PetscErrorCode :: perr
 
-        do i = 1,j
-            dot_tmp(i) = dot(w,v(i))
-        end do
 
-        ! Reduce local dot-product values across processors, distribute result back to all
-        call MPI_AllReduce(dot_tmp,htmp,j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+        if (w%petsc_vector_created) then
 
-        h(1:j,j) = h(1:j,j) + htmp(1:j)
+            call VecMDot(w%petsc_vector, j, v(:)%petsc_vector, dot_tmp, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMDot.')
 
-        do i = 1,j
-            w = w - htmp(i)*v(i)
-        end do
+            ! Add to h
+            h(1:j,j) = h(1:j,j) + dot_tmp(1:j)
+
+            ! Subtract from w
+            dot_tmp = -dot_tmp
+            call VecMAXPY(w%petsc_vector, j, dot_tmp, v(:)%petsc_vector, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMAXPY.')
+
+        else
+
+            do i = 1,j
+                dot_tmp(i) = dot(w,v(i))
+            end do
+
+            ! Reduce local dot-product values across processors, distribute result back to all
+            call MPI_AllReduce(dot_tmp,htmp,j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+
+            h(1:j,j) = h(1:j,j) + htmp(1:j)
+
+            do i = 1,j
+                w = w - htmp(i)*v(i)
+            end do
+
+        end if
 
     end subroutine classical_gram_schmidt
     !****************************************************************************************
@@ -382,21 +399,15 @@ contains
         real(rk),               intent(inout)   :: h(:,:)
         real(rk),               intent(inout)   :: htmp(:)
 
-        integer(ik) :: i
-        type(timer_t)   :: timer_dot, timer_axpy
-        PetscErrorCode :: perr
+        integer(ik)     :: i
+        PetscErrorCode  :: perr
 
         if (w%petsc_vector_created) then
             do i = 1,j
-                call timer_dot%start()
                 htmp(i) = dot(w,v(i),ChiDG_COMM)
-                call timer_dot%stop()
-                call timer_axpy%start()
                 call VecAXPY(w%petsc_vector,-htmp(i),v(i)%petsc_vector,perr)
-                call timer_axpy%stop()
             end do
 
-            !print*, timer_dot%elapsed(), timer_axpy%elapsed()
         else 
             do i = 1,j
                 htmp(i) = dot(w,v(i),ChiDG_COMM)

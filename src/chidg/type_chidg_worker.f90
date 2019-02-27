@@ -803,7 +803,8 @@ contains
             !    stabilization   = real(NFACES,rk)
             case('boundary')
                 cache_component = 'face exterior'
-                lift_source     = 'face interior'
+                !lift_source     = 'face interior'
+                lift_source     = 'face exterior'
                 lift_nodes      = 'lift face'
                 lift_face_min   = iface_use
                 lift_face_max   = iface_use

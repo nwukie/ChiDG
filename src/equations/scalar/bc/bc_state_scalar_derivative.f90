@@ -91,7 +91,7 @@ contains
         type(mpi_comm),             intent(in)      :: bc_COMM
 
 
-        type(AD_D), allocatable, dimension(:)   :: u_bc, grad1u_bc, grad2u_bc, grad3u_bc, mag
+        type(AD_D), allocatable, dimension(:)   :: u_bc, grad1u_bc, grad2u_bc, grad3u_bc, grad1u_t, grad2u_t, grad3u_t
         real(rk),   allocatable, dimension(:)   :: normal_gradient
 
 
@@ -107,22 +107,31 @@ contains
         !
         ! Initialize derivative arrays
         !
-!        grad1u_bc = ZERO*u_bc
-!        grad2u_bc = ZERO*u_bc
-!        grad3u_bc = ZERO*u_bc
-!
-!        mag = sqrt(grad1u_bc*grad1u_bc + grad2u_bc*grad2u_bc + grad3u_bc*grad3u_bc)
-!        grad1u_bc = grad1u_bc / mag
-!        grad2u_bc = grad2u_bc / mag
-!        grad3u_bc = grad3u_bc / mag
 
-
-        
-        ! Retrieve normal gradient and get components
+        ! Normal gradient by taking advantage of the fact that only the normal component
+        ! is felt in the flux anyways since it is dotted with the normal vector. So, just
+        ! compose the boundary gradient from the normal component of the gradient.
         normal_gradient = self%bcproperties%compute("Normal Gradient",worker%time(),worker%coords())
         grad1u_bc = normal_gradient*worker%unit_normal(1)
         grad2u_bc = normal_gradient*worker%unit_normal(2)
         grad3u_bc = normal_gradient*worker%unit_normal(3)
+
+
+
+!        ! Normal gradient by extrapolating tangential and adding back normal
+!        normal_gradient = self%bcproperties%compute("Normal Gradient",worker%time(),worker%coords())
+!
+!
+!        ! Subtract the normal component of the gradient to leave the tangential part
+!        grad1u_t = grad1u_bc - (grad1u_bc*worker%unit_normal(1))*worker%unit_normal(1)
+!        grad2u_t = grad2u_bc - (grad2u_bc*worker%unit_normal(2))*worker%unit_normal(2)
+!        grad3u_t = grad3u_bc - (grad3u_bc*worker%unit_normal(3))*worker%unit_normal(3)
+!
+!
+!        ! Add back the prescribed normal component of the gradient to the tangential part to get the total
+!        grad1u_bc = grad1u_t + normal_gradient*worker%unit_normal(1)
+!        grad2u_bc = grad2u_t + normal_gradient*worker%unit_normal(2)
+!        grad3u_bc = grad3u_t + normal_gradient*worker%unit_normal(3)
 
 
         ! Store
@@ -130,10 +139,6 @@ contains
         call worker%store_bc_state('u', grad1u_bc, 'grad1')
         call worker%store_bc_state('u', grad2u_bc, 'grad2')
         call worker%store_bc_state('u', grad3u_bc, 'grad3')
-
-
-
-
 
 
     end subroutine compute_bc_state

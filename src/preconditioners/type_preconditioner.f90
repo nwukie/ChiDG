@@ -28,8 +28,7 @@ module type_preconditioner
         procedure   :: init
         procedure   :: update
         procedure   :: apply
-
-
+        procedure   :: tear_down
     end type preconditioner_t
 
 
@@ -99,10 +98,7 @@ contains
 
         type(chidg_vector_t)     :: z
 
-
-        !
         ! Default - no preconditioning
-        !
         z = v
 
     end function apply
@@ -111,6 +107,17 @@ contains
 
 
 
+    !> Default empty initialization routine
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   2/26/2019
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine tear_down(self)
+        class(preconditioner_t),    intent(inout)   :: self
+
+    end subroutine tear_down
+    !**************************************************************************************
 
 
 

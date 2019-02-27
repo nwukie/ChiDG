@@ -1237,6 +1237,7 @@ contains
         if (self%petsc_matrix_created) then
             call MatDestroy(self%petsc_matrix,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%release: error calling MatDestroy.')
+            self%petsc_matrix_created = .false.
         end if
 
 
@@ -1262,6 +1263,7 @@ contains
         if (self%petsc_matrix_created) then
             call MatDestroy(self%petsc_matrix,perr)
             if (perr /= 0) call chidg_signal(FATAL,'chidg_matrix%destructor: error calling MatDestroy.')
+            self%petsc_matrix_created = .false.
         end if
 
     end subroutine destructor

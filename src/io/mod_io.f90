@@ -35,7 +35,7 @@ module mod_io
     real(rk),               save    :: frequencies(100) = ZERO
 
     ! Infrastructure
-    character(len=100),     save    :: backend = 'native'
+    character(len=100),     save    :: backend          = 'native'
 
    
     ! Nonlinear solver parameters
@@ -272,6 +272,8 @@ contains
         read(file_unit,nml=quadrature,      iostat=msg)
         if (msg/=0) call handle_namelist_error(file_unit,msg)
         read(file_unit,nml=time,            iostat=msg)
+        if (msg/=0) call handle_namelist_error(file_unit,msg)
+        read(file_unit,nml=infrastructure,  iostat=msg)
         if (msg/=0) call handle_namelist_error(file_unit,msg)
         read(file_unit,nml=nonlinear_solve, iostat=msg)
         if (msg/=0) call handle_namelist_error(file_unit,msg)

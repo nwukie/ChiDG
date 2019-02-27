@@ -12,5 +12,6 @@ add_lib_sources(
                 precon_HB.f90
                 precon_line.f90
                 precon_schur_element.f90
+                precon_petsc.f90
                 )
 

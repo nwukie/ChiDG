@@ -2449,7 +2449,7 @@ contains
             var_p = var_p*ale_g_p
 
             ! Difference. Relative to exterior element, so reversed
-            var_diff = HALF*(var_m - var_p) 
+            var_diff = (var_m - var_p) 
             !var_diff = HALF*(var_p - var_m) 
 
 

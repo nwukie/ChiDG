@@ -158,22 +158,13 @@ contains
         type(equation_set_t)                :: hyperbolized_poisson_eqn
         type(hyperbolized_poisson_source_t) :: hyperbolized_poisson_source
         
-        !
         ! Set equationset name.
-        !
         call hyperbolized_poisson_eqn%set_name("Hyperbolized Poisson")
         
-
-
-        !
         ! Register p-Poisson model and wall distance source term
-        !
         call operator_factory%register(hyperbolized_poisson_source)
 
-
-        !
         ! Add spatial operators
-        !
         select case (trim(blueprint))
 
             case('default')

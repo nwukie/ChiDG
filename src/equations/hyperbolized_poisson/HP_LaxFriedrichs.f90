@@ -1,7 +1,7 @@
 module HP_LaxFriedrichs
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO,ONE,TWO,HALF
+    use mod_constants,          only: ZERO,ONE,TWO,HALF,THREE
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -12,13 +12,10 @@ module HP_LaxFriedrichs
     !>
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!
-    !!
+    !!  @date   2/26/2019
     !!
     !-----------------------------------------------------------------------------------------------
     type, extends(operator_t), public :: HP_LaxFriedrichs_t
-
 
     contains
 
@@ -28,7 +25,7 @@ module HP_LaxFriedrichs
     end type HP_LaxFriedrichs_t
     !***********************************************************************************************
 
-    real(rk) :: p_param = 2._rk
+    real(rk) :: p_param = 4._rk
 
 contains
 
@@ -79,7 +76,11 @@ contains
             p_m, p_p,                               &
             q_m, q_p,                               &
             r_m, r_p,                               &
-            dissipation_u, dissipation_p, dissipation_q, dissipation_r, sumsqr_m, sumsqr_p, mag_m, mag_p, wave_speed
+            dissipation_u, dissipation_p, dissipation_q, dissipation_r, &
+            sumsqr_m, sumsqr_p, mag_m, mag_p,   &
+            d_norm_m, d_norm_p, lambda_m, lambda_p
+
+        real(rk)    :: alpha, beta
             
 
         !
@@ -98,18 +99,16 @@ contains
         r_p = worker%get_field('r', 'value', 'face exterior')
 
 
+        ! Compute normal for 1D system
+        d_norm_m = p_m*worker%unit_normal(1) + q_m*worker%unit_normal(2) + r_m*worker%unit_normal(3)
+        d_norm_p = p_p*worker%unit_normal(1) + q_p*worker%unit_normal(2) + r_p*worker%unit_normal(3)
 
-        sumsqr_m = p_m*p_m + q_m*q_m + r_m*r_m
-        sumsqr_p = p_p*p_p + q_p*q_p + r_p*r_p
-        if (abs(p_param-2._rk) > 1.e-8_rk) then
-            mag_m = sumsqr_m**((p_param-TWO)/TWO)
-            mag_p = sumsqr_p**((p_param-TWO)/TWO)
-        else
-            mag_m = sumsqr_m
-            mag_p = sumsqr_p
-            mag_m = ONE
-            mag_p = ONE
-        end if
+        ! Eigenvalues for 1D p-Poisson system
+        alpha = THREE + (p_param-TWO)/TWO
+        beta  = TWO   + (p_param-TWO)/TWO
+
+        lambda_m = sqrt(abs(alpha*d_norm_m**beta))
+        lambda_p = sqrt(abs(alpha*d_norm_p**beta))
 
 
 
@@ -117,17 +116,15 @@ contains
         !
         ! Compute dissipation
         !
-!        wave_speed = u_m
-!        wave_speed  = 1._rk
-!        dissipation_u = -HALF*wave_speed*(u_p-u_m)
-!        dissipation_p = -HALF*wave_speed*(p_p-p_m)
-!        dissipation_q = -HALF*wave_speed*(q_p-q_m)
-!        dissipation_r = -HALF*wave_speed*(r_p-r_m)
-        dissipation_u = -HALF*max(mag_m,mag_p)*(u_p-u_m)
-        dissipation_p = -HALF*max(mag_m,mag_p)*(p_p-p_m)
-        dissipation_q = -HALF*max(mag_m,mag_p)*(q_p-q_m)
-        dissipation_r = -HALF*max(mag_m,mag_p)*(r_p-r_m)
+        !dissipation_u = -HALF*max(mag_m,mag_p)*(u_p-u_m)
+        !dissipation_p = -HALF*max(mag_m,mag_p)*(p_p-p_m)
+        !dissipation_q = -HALF*max(mag_m,mag_p)*(q_p-q_m)
+        !dissipation_r = -HALF*max(mag_m,mag_p)*(r_p-r_m)
 
+        dissipation_u = -HALF*max(lambda_m,lambda_p)*(u_p-u_m)
+        dissipation_p = -HALF*max(lambda_m,lambda_p)*(p_p-p_m)
+        dissipation_q = -HALF*max(lambda_m,lambda_p)*(q_p-q_m)
+        dissipation_r = -HALF*max(lambda_m,lambda_p)*(r_p-r_m)
 
 
         !

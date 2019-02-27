@@ -29,7 +29,7 @@ module HP_boundary_average
     !********************************************************************************
 
 
-    real(rk) :: p_param = 2._rk
+    real(rk) :: p_param = 4._rk
 
 contains
 

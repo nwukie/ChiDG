@@ -84,10 +84,7 @@ contains
             grad1_r_bc, grad2_r_bc, grad3_r_bc
                     
 
-
-        !
         ! Get u_m from face interior to initialize derivatives
-        !
         u_bc       = worker%get_field('u','value', 'face interior')
         grad1_u_bc = worker%get_field('u','grad1', 'face interior')
         grad2_u_bc = worker%get_field('u','grad2', 'face interior')
@@ -111,36 +108,16 @@ contains
 
         ! ZERO dirichlet condition on walls
         u_bc = ZERO
-!        p_bc = ZERO
-!        q_bc = ZERO
-!        r_bc = ZERO
-
-!        grad1_u_bc = ZERO
-!        grad2_u_bc = ZERO
-!        grad3_u_bc = ZERO
-!        grad1_p_bc = ZERO
-!        grad2_p_bc = ZERO
-!        grad3_p_bc = ZERO
-!        grad1_q_bc = ZERO
-!        grad2_q_bc = ZERO
-!        grad3_q_bc = ZERO
-!        grad1_r_bc = ZERO
-!        grad2_r_bc = ZERO
-!        grad3_r_bc = ZERO
 
 
-        !
         ! Store boundary condition state, Value
-        !
         call worker%store_bc_state('u', u_bc, 'value')
         call worker%store_bc_state('p', p_bc, 'value')
         call worker%store_bc_state('q', q_bc, 'value')
         call worker%store_bc_state('r', r_bc, 'value')
 
 
-        !
         ! Store boundary condition state, gradient
-        !
         call worker%store_bc_state('u', grad1_u_bc, 'grad1')
         call worker%store_bc_state('u', grad2_u_bc, 'grad2')
         call worker%store_bc_state('u', grad3_u_bc, 'grad3')

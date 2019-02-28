@@ -1807,14 +1807,9 @@ contains
 
         else
 
-            !
             ! Compute number of unknowns in the seed element, which is the number of 
             ! partial derivatives we are tracking.
-            !
-            !neqns_seed    = seed%neqns
-            !nterms_s_seed = seed%nterms_s
-            !nderiv        = neqns_seed  *  nterms_s_seed
-            nderiv = seed%neqns * seed%nterms_s
+            nderiv = seed%nfields * seed%nterms_s
 
         end if
 

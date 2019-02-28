@@ -1,8 +1,5 @@
 module type_newton
 #include <messenger.h>
-#include "petsc/finclude/petscmat.h"
-    use petscmat,               only: MatSetValues, ADD_VALUES
-
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
@@ -223,14 +220,6 @@ contains
 
             ! Solve system [lhs][dq] = [b] for newton step: [dq]
             call set_forcing_terms(linear_solver)
-
-
-
-
-
-
-
-
             call timer_linear%start()
             call linear_solver%solve(lhs,dq,b,preconditioner,controller,data)
             call timer_linear%stop()
@@ -259,9 +248,8 @@ contains
             end select
 
 
-            ! Accept new solution, update cfl using new residual, clear working storage
+            ! Accept new solution, clear working storage
             q = qn
-            !call self%update_cfl(rnorm0,fn_fields,cfln)
             call dq%clear()
 
 
@@ -412,104 +400,36 @@ contains
         type(chidg_data_t), intent(inout)   :: data
         real(rk),           intent(in)      :: cfln(:)
 
-        PetscInt                            :: idom, ielem, eqn_ID, itime, ifield, nterms, rstart, rend, cstart, cend, imat, dof_start, nrows, ncols, iarray, row_index_start, col_index_start, i
-        PetscInt, allocatable, dimension(:) :: col_indices, row_indices
-        real(rk)                            :: dtau
-        real(rk), allocatable               :: mat(:,:)
-
-        PetscErrorCode :: ierr
-
+        integer(ik)             :: idom, ielem, itime, ifield
+        real(rk)                :: dtau
+        real(rk), allocatable   :: mat(:,:)
+        type(element_info_t)    :: elem_info
 
         ! Compute element-local pseudo-timestep
         call compute_pseudo_timestep(data,cfln)
 
-
         ! Add mass/dt to sub-block diagonal in dR/dQ
-        if (data%sdata%q%petsc_vector_created) then
+        do idom = 1,data%mesh%ndomains()
+            do ielem = 1,data%mesh%domain(idom)%nelem
+                elem_info = data%mesh%get_element_info(idom,ielem)
+                do itime = 1,data%mesh%domain(idom)%ntime
+                    do ifield = 1,data%eqnset(elem_info%eqn_ID)%prop%nprimary_fields()
 
-            do idom = 1,data%mesh%ndomains()
-                do ielem = 1,data%mesh%domain(idom)%nelem
-                    dof_start = data%mesh%domain(idom)%elems(ielem)%dof_start
-                    eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
-                    do itime = 1,data%mesh%domain(idom)%ntime
-                        do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
+                        ! get element-local timestep
+                        dtau = minval(data%mesh%domain(idom)%elems(ielem)%dtau)
+                        mat = data%mesh%domain(idom)%elems(ielem)%mass * (ONE/dtau)
+                        call data%sdata%lhs%scale_diagonal(mat,elem_info,ifield,itime)
 
-                            ! get element-local timestep
-                            if (size(cfln) == 1) then
-                                dtau = data%mesh%domain(idom)%elems(ielem)%dtau(1)
-                            else
-                                dtau = data%mesh%domain(idom)%elems(ielem)%dtau(ifield)
-                            end if
+                    end do !ifield
+                end do !itime
+            end do !ielem
+        end do !idom
 
-                            ! Need to compute row and column extends in diagonal so we can
-                            ! selectively apply the mass matrix to the sub-block diagonal
-                            nterms = data%mesh%domain(idom)%elems(ielem)%nterms_s
+        ! Reassemble Matrix
+        call data%sdata%lhs%assemble()
 
-
-                            row_index_start = dof_start + (ifield-1)*nterms + (data%eqnset(eqn_ID)%prop%nprimary_fields()*nterms)*(itime-1)
-                            row_indices     = [(i, i=row_index_start,(row_index_start+nterms-1),1)]
-
-                            ! Diagonal addition so column indices are identical to row indices
-                            col_index_start = row_index_start
-                            col_indices     = row_indices
-
-
-                            mat = data%mesh%domain(idom)%elems(ielem)%mass * (ONE/dtau)
-
-                            nrows = 1
-                            ncols = size(mat,2)
-                            do iarray = 1,size(mat,1)
-                                ! subtract 1 from indices since petsc is 0-based
-                                call MatSetValues(data%sdata%lhs%petsc_matrix,nrows,[row_index_start + (iarray-1) - 1],ncols,col_indices-1,mat(iarray,:),ADD_VALUES,ierr)
-                                if (ierr /= 0) call chidg_signal(FATAL,"chidg_matrix%petsc_store: error calling MatSetValues.")
-                            end do 
-
-
-                        end do !ifield
-                    end do !itime
-                end do !ielem
-            end do !idom
-
-            ! Reassemble Matrix
-            call data%sdata%lhs%assemble()
-
-            ! Update stamp
-            call date_and_time(values=data%sdata%lhs%stamp)
-
-
-        else
-
-            do idom = 1,data%mesh%ndomains()
-                do ielem = 1,data%mesh%domain(idom)%nelem
-                    eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
-                    do itime = 1,data%mesh%domain(idom)%ntime
-                        do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
-
-                            ! get element-local timestep
-                            dtau = data%mesh%domain(idom)%elems(ielem)%dtau(ifield)
-
-                            ! Need to compute row and column extends in diagonal so we can
-                            ! selectively apply the mass matrix to the sub-block diagonal
-                            nterms = data%mesh%domain(idom)%elems(ielem)%nterms_s
-                            rstart = 1 + (ifield-1) * nterms
-                            rend   = (rstart-1) + nterms
-                            cstart = rstart                 ! since it is square
-                            cend   = rend                   ! since it is square
-
-                            ! Add mass matrix divided by dt to the block diagonal
-                            imat = data%sdata%lhs%dom(idom)%lblks(ielem,itime)%get_diagonal()
-                            data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  =  data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  +  data%mesh%domain(idom)%elems(ielem)%mass*(ONE/dtau)
-
-
-                        end do !ifield
-                    end do !itime
-                end do !ielem
-            end do !idom
-
-            ! Update stamp
-            call date_and_time(values=data%sdata%lhs%stamp)
-
-        end if
+        ! Update stamp
+        call date_and_time(values=data%sdata%lhs%stamp)
 
     end subroutine contribute_pseudo_temporal
     !*************************************************************************************

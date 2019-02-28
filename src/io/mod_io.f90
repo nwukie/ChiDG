@@ -260,7 +260,10 @@ contains
 
         ! Check that input file exists
         inquire(file='chidg.nml', exist=file_exists)
-        if (.not. file_exists) call chidg_signal(FATAL, "read_input: 'chidg.nml' input file was not found")
+        if (.not. file_exists) then
+            print*, "read_input: 'chidg.nml' input file was not found."
+            call chidg_abort()
+        end if
 
 
         ! Read namelist input for parameter initialization

@@ -78,12 +78,9 @@ elseif (CMAKE_Fortran_COMPILER_ID MATCHES GNU)
                                      -ffree-line-length-none -fbacktrace \
                                      -fstack-protector -fcheck=bounds \
                                      -p -g")    
-    #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form \
-    #                                 -ffree-line-length-none -fexternal-blas \
-    #                                 -funroll-loops")
     set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form \
                                      -ffree-line-length-none -fexternal-blas \
-                                     -funroll-loops -fopenmp -fcheck=bounds")
+                                     -funroll-loops")
                                      #-march=native -funroll-loops")
 
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-O0 --coverage")

@@ -5,7 +5,7 @@ module type_chidg_vector
                                           VecSetValues, tVec, tVecScatter, ADD_VALUES, INSERT_VALUES, VecCopy,          &
                                           VecAssemblyBegin, VecAssemblyEnd, VecDuplicate, NORM_2,VecGetArrayF90,        &
                                           VecRestoreArrayF90, VecNorm, VecScale, VecWAXPY, VecReciprocal, VecDestroy,   &
-                                          VecScatterCreateToAll, VecScatterBegin, VecScatterEnd, SCATTER_FORWARD
+                                          VecScatterCreateToAll, VecScatterBegin, VecScatterEnd, SCATTER_FORWARD, VecScatterDestroy
 
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, TWO, ONE, NO_ID, NO_DATA
@@ -321,6 +321,10 @@ contains
         if (self%petsc_vector_created) then
             call VecDestroy(self%petsc_vector,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecDestroy.')
+            call VecDestroy(self%petsc_vector_recv,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecDestroy.')
+            call VecScatterDestroy(self%petsc_scatter,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecScatterDestroy.')
         end if
 
         ! Set ntime_ for the chidg_vector
@@ -1135,6 +1139,10 @@ contains
         if (self%petsc_vector_created) then
             call VecDestroy(self%petsc_vector,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%release: error calling VecDestroy.')
+            call VecDestroy(self%petsc_vector_recv,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%release: error calling VecDestroy.')
+            call VecScatterDestroy(self%petsc_scatter,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%release: error calling VecScatterDestroy.')
         end if
 
     end subroutine release
@@ -1757,6 +1765,10 @@ contains
         if (self%petsc_vector_created) then
             call VecDestroy(self%petsc_vector,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecDestroy.')
+            call VecDestroy(self%petsc_vector_recv,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecDestroy.')
+            call VecScatterDestroy(self%petsc_scatter,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%release: error calling VecScatterDestroy.')
         end if
 
 

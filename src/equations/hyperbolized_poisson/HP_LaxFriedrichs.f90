@@ -25,7 +25,7 @@ module HP_LaxFriedrichs
     end type HP_LaxFriedrichs_t
     !***********************************************************************************************
 
-    real(rk) :: p_param = 4._rk
+    real(rk) :: p_param = 2._rk
 
 contains
 

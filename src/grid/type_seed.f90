@@ -27,7 +27,7 @@ module type_seed
         integer(ik) :: idomain_l
         integer(ik) :: ielement_g
         integer(ik) :: ielement_l
-        integer(ik) :: neqns
+        integer(ik) :: nfields
         integer(ik) :: nterms_s
         integer(ik) :: iproc
         integer(ik) :: itime
@@ -62,13 +62,13 @@ contains
     !!  @date   12/6/2016
     !!
     !-------------------------------------------------------------------------------------
-    subroutine init(self,idomain_g,idomain_l,ielement_g,ielement_l,neqns,nterms_s,iproc,itime,dof_start,recv_comm,recv_domain,recv_element)
+    subroutine init(self,idomain_g,idomain_l,ielement_g,ielement_l,nfields,nterms_s,iproc,itime,dof_start,recv_comm,recv_domain,recv_element)
         class(seed_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: idomain_g
         integer(ik),    intent(in)      :: idomain_l
         integer(ik),    intent(in)      :: ielement_g
         integer(ik),    intent(in)      :: ielement_l
-        integer(ik),    intent(in)      :: neqns
+        integer(ik),    intent(in)      :: nfields
         integer(ik),    intent(in)      :: nterms_s
         integer(ik),    intent(in)      :: iproc
         integer(ik),    intent(in)      :: itime
@@ -82,7 +82,7 @@ contains
         self%idomain_l    = idomain_l
         self%ielement_g   = ielement_g
         self%ielement_l   = ielement_l
-        self%neqns        = neqns
+        self%nfields      = nfields
         self%nterms_s     = nterms_s
         self%iproc        = iproc
         self%itime        = itime
@@ -113,7 +113,7 @@ contains
         self%idomain_l    = 0
         self%ielement_g   = 0
         self%ielement_l   = 0
-        self%neqns        = 0
+        self%nfields      = 0
         self%nterms_s     = 0
         self%iproc        = NO_PROC
         self%itime        = 0

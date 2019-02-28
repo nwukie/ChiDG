@@ -200,9 +200,6 @@ contains
                 call self%timer_dot%stop()
                 ! End Orthogonalize once.
 
-!                print*, 'PC : MV : DOT'
-!                print*, self%timer_precon%elapsed(), self%timer_mv%elapsed(), self%timer_dot%elapsed()
-
 
                 ! Selective Reorthogonalization
                 !

@@ -10,6 +10,7 @@ module type_mesh
     use type_bc_patch,              only: bc_patch_t
     use type_bc_patch_group,        only: bc_patch_group_t
     use type_ivector,               only: ivector_t
+    use type_element_info,          only: element_info_t
     use type_mpi_request_vector,    only: mpi_request_vector_t
     use mpi_f08,                    only: mpi_isend, mpi_recv, mpi_integer4, mpi_real8, &
                                           mpi_waitall, mpi_request, mpi_status_ignore,  &
@@ -53,6 +54,7 @@ module type_mesh
         ! Mesh procedures
         procedure           :: nelements
         procedure           :: get_dof_start
+        procedure           :: get_element_info
 
         ! Domain procedures
         procedure           :: add_domain
@@ -1593,6 +1595,38 @@ contains
 
 
 
+
+    !>  Return element info object.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   2/27/2019
+    !!
+    !--------------------------------------------------------------------------------
+    function get_element_info(self,idomain_l,ielement_l) result(elem_info)
+        class(mesh_t),  intent(in)  :: self
+        integer(ik),    intent(in)  :: idomain_l
+        integer(ik),    intent(in)  :: ielement_l
+
+        type(element_info_t)    :: elem_info
+
+        elem_info = element_info_t(idomain_g    = self%domain(idomain_l)%elems(ielement_l)%idomain_g,    &
+                                   idomain_l    = self%domain(idomain_l)%elems(ielement_l)%idomain_l,    &
+                                   ielement_g   = self%domain(idomain_l)%elems(ielement_l)%ielement_g,   &
+                                   ielement_l   = self%domain(idomain_l)%elems(ielement_l)%ielement_l,   &
+                                   iproc        = self%domain(idomain_l)%elems(ielement_l)%iproc,        &
+                                   pelem_ID     = NO_ID,                                                 &
+                                   eqn_ID       = self%domain(idomain_l)%elems(ielement_l)%eqn_ID,       &
+                                   nfields      = self%domain(idomain_l)%elems(ielement_l)%neqns,        &
+                                   nterms_s     = self%domain(idomain_l)%elems(ielement_l)%nterms_s,     &
+                                   nterms_c     = self%domain(idomain_l)%elems(ielement_l)%nterms_c,     &
+                                   dof_start    = self%domain(idomain_l)%elems(ielement_l)%dof_start,    &
+                                   recv_comm    = self%domain(idomain_l)%elems(ielement_l)%recv_comm,    &
+                                   recv_domain  = self%domain(idomain_l)%elems(ielement_l)%recv_domain,  &
+                                   recv_element = self%domain(idomain_l)%elems(ielement_l)%recv_element)
+
+
+    end function get_element_info
+    !********************************************************************************
 
 
 

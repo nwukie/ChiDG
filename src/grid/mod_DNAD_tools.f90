@@ -276,7 +276,7 @@ contains
                                idomain_l    = mesh%domain(idomain_l)%elems(ielement_l)%idomain_l,   &
                                ielement_g   = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g,  &
                                ielement_l   = mesh%domain(idomain_l)%elems(ielement_l)%ielement_l,  &
-                               neqns        = mesh%domain(idomain_l)%elems(ielement_l)%neqns,       &
+                               nfields      = mesh%domain(idomain_l)%elems(ielement_l)%neqns,       &
                                nterms_s     = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,    &
                                iproc        = IRANK,                                                &
                                itime        = itime,                                                &
@@ -301,7 +301,7 @@ contains
                                    idomain_l    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,    &
                                    ielement_g   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,   &
                                    ielement_l   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,   &
-                                   neqns        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,       &
+                                   nfields      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,       &
                                    nterms_s     = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,    &
                                    iproc        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,        &
                                    itime        = itime,                                                                &
@@ -318,7 +318,7 @@ contains
                                    idomain_l    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%idomain_l,      &
                                    ielement_g   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%ielement_g,     &
                                    ielement_l   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%ielement_l,     &
-                                   neqns        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nfields,        &
+                                   nfields      = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nfields,        &
                                    nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nterms_s,       &
                                    iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%iproc,          &
                                    itime        = itime,                                                                    &
@@ -342,7 +342,7 @@ contains
                                    idomain_l    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l( idepend),  &
                                    ielement_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend),  &
                                    ielement_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend),  &
-                                   neqns        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%neqns(idepend),       &
+                                   nfields      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%neqns(idepend),       &
                                    nterms_s     = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(idepend),    &
                                    iproc        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend),        &
                                    itime        = itime,                                                                                &
@@ -372,7 +372,7 @@ contains
                            idomain_l    = 0,            &
                            ielement_g   = 0,            &
                            ielement_l   = 0,            &
-                           neqns        = 0,            &
+                           nfields      = 0,            &
                            nterms_s     = 0,            &
                            iproc        = 0,            &
                            itime        = itime,        &  ! need itime here because the residual storage relies on it
@@ -453,7 +453,7 @@ contains
                                idomain_l    = mesh%domain(idomain_l)%elems(ielement_l)%idomain_l,   &
                                ielement_g   = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g,  &
                                ielement_l   = mesh%domain(idomain_l)%elems(ielement_l)%ielement_l,  &
-                               neqns        = mesh%domain(idomain_l)%elems(ielement_l)%neqns,       &
+                               nfields      = mesh%domain(idomain_l)%elems(ielement_l)%neqns,       &
                                nterms_s     = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,    &
                                iproc        = IRANK,                                                &
                                itime        = itime_couple,                                         &
@@ -490,7 +490,7 @@ contains
                                    idomain_l    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,    &
                                    ielement_g   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,   &
                                    ielement_l   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,   &
-                                   neqns        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,       &
+                                   nfields      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,       &
                                    nterms_s     = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,    &
                                    iproc        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,        &
                                    itime        = itime_couple,                                                         &
@@ -510,7 +510,7 @@ contains
                                    idomain_l    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%idomain_l,      &
                                    ielement_g   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%ielement_g,     &
                                    ielement_l   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%ielement_l,     &
-                                   neqns        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nfields,        &
+                                   nfields      = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nfields,        &
                                    nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nterms_s,       &
                                    iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%iproc,          &
                                    itime        = itime_couple,                                                             &
@@ -533,7 +533,7 @@ contains
                                    idomain_l    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l( idepend),  &
                                    ielement_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend),  &
                                    ielement_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend),  &
-                                   neqns        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%neqns(idepend),       &
+                                   nfields      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%neqns(idepend),       &
                                    nterms_s     = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(idepend),    &
                                    iproc        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend),        &
                                    itime        = itime_couple,                                                                         &
@@ -559,7 +559,7 @@ contains
                            idomain_l    = 0, &
                            ielement_g   = 0, &
                            ielement_l   = 0, &
-                           neqns        = 0, &
+                           nfields      = 0, &
                            nterms_s     = 0, &
                            iproc        = 0, &
                            itime        = 0, &

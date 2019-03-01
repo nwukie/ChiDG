@@ -221,6 +221,10 @@ contains
             ! Solve system [lhs][dq] = [b] for newton step: [dq]
             call set_forcing_terms(linear_solver)
             call timer_linear%start()
+
+            call preconditioner%tear_down()
+            call preconditioner%init(data)
+
             call linear_solver%solve(lhs,dq,b,preconditioner,controller,data)
             call timer_linear%stop()
 
@@ -265,7 +269,6 @@ contains
             relative_convergence  = (fn/resid0 > self%rtol)
             iteration_convergence = (niter < self%nmax) .or. self%nmax <= 0
             inquire(file='STOP', exist=stop_run)
-
 
 
             ! Print iteration information
@@ -470,6 +473,8 @@ contains
         ! Apply pseudo-transient scaling
         scaled_vector = pseudo_transient_scaling(data,cfln,smoothed_vector)
 
+        scaled_vector%from_operator = .true.
+
     end function apply_residual_smoother
     !************************************************************************************
 
@@ -539,6 +544,8 @@ contains
                 end do !itime
             end do !ielem
         end do !idom
+
+        scaled_vector%from_operator = .true.
 
     end function pseudo_transient_scaling
     !*************************************************************************************

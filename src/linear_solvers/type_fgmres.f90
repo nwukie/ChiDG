@@ -154,8 +154,7 @@ contains
 
 
             ! Compute initial residual r0, residual norm, and normalized r0
-            !r0     = self%residual(A,x0,b)
-            r0     = self%residual(A,x,b)
+            r0     = self%residual(A,x0,b)
             r0norm = r0%norm(ChiDG_COMM)
             v(1)   = r0/r0norm
             p(1)   = r0norm
@@ -167,11 +166,9 @@ contains
             do j = 1,self%nkrylov
                 nvecs = nvecs + 1
 
-
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 call self%timer_precon%start()
                 z(j) = M%apply(A,v(j))
-
 
                 ! Inner fgmres correction
                 if (self%inner_fgmres) then
@@ -189,7 +186,6 @@ contains
                 norm_before = w%norm(ChiDG_COMM)
 
 
-
                 ! Orthogonalize once. Classical Gram-Schmidt
                 call self%timer_dot%start()
                 if (self%orthogonalization == 'CGS') then
@@ -199,7 +195,6 @@ contains
                 end if
                 call self%timer_dot%stop()
                 ! End Orthogonalize once.
-
 
                 ! Selective Reorthogonalization
                 !
@@ -274,7 +269,6 @@ contains
                 converged_absolute = (res < self%tol)
                 converged_relative = (res/r0norm_initial < self%rtol)
                 converged_nmax     = ( self%niter >= self%nmax ) .and. (self%nmax > 0)
-                !if (self%nmax < 0) converged_nmax = .false.
                 
                 ! Convergence check
                 if ( converged_absolute .or. converged_relative .or. converged_nmax ) exit
@@ -306,6 +300,7 @@ contains
         call self%print_report(A,x,b)
 
         end associate
+
 
     end subroutine solve
     !************************************************************************************************************
@@ -342,16 +337,17 @@ contains
 
         if (w%petsc_vector_created) then
 
-            call VecMDot(w%petsc_vector, j, v(:)%petsc_vector, dot_tmp, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMDot.')
-
-            ! Add to h
-            h(1:j,j) = h(1:j,j) + dot_tmp(1:j)
-
-            ! Subtract from w
-            dot_tmp = -dot_tmp
-            call VecMAXPY(w%petsc_vector, j, dot_tmp, v(:)%petsc_vector, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMAXPY.')
+            call chidg_signal(FATAL,'classical_gram_schmidt: not implemented for new petsc implementation.')
+!            call VecMDot(w%petsc_vector, j, v(:)%petsc_vector, dot_tmp, perr)
+!            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMDot.')
+!
+!            ! Add to h
+!            h(1:j,j) = h(1:j,j) + dot_tmp(1:j)
+!
+!            ! Subtract from w
+!            dot_tmp = -dot_tmp
+!            call VecMAXPY(w%petsc_vector, j, dot_tmp, v(:)%petsc_vector, perr)
+!            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMAXPY.')
 
         else
 
@@ -432,7 +428,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine allocate_krylov_storage(self,b)
-        class(fgmres_t),  intent(inout)   :: self
+        class(fgmres_t),        intent(inout)   :: self
         type(chidg_vector_t),   intent(in)      :: b
 
         logical     :: allocate_vectors
@@ -441,6 +437,8 @@ contains
         ! Check if krylov storage needs allocated or reallocated 
         if (allocated(self%v)) then
             if ( size(self%v) /= (self%nkrylov+1) ) then
+                call self%v%release()
+                call self%z%release()
                 deallocate(self%v,self%z,self%p,self%y,self%c,self%s,self%htmp,self%h)
                 allocate_vectors = .true.
             end if
@@ -468,7 +466,6 @@ contains
             end do
         end if
 
-
     end subroutine allocate_krylov_storage
     !****************************************************************************************
 
@@ -493,21 +490,17 @@ contains
 
         real(rk) :: err
 
-
         err = self%error(A,x,b)
         call self%timer%stop()
         call write_line('   Linear Solver Error: ',         err,                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
         call write_line('   Linear Solver compute time: ',  self%timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
         call write_line('   Linear Solver Iterations: ',    self%niter,           delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
 
-
         call write_line('   Preconditioner time: ',           self%timer_precon%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         call write_line('       Precon time per iteration: ', self%timer_precon%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
 
-
         call write_line('   MV time: ',                   self%timer_mv%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         call write_line('       MV time per iteration: ', self%timer_mv%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
-
 
         call write_line('   MV comm time: ',                   timer_comm%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         call write_line('       MV comm time per iteration: ', timer_comm%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
@@ -516,10 +509,8 @@ contains
         call timer_comm%reset()
         call timer_blas%reset()
 
-
         call write_line('   Dot time: ',  self%timer_dot%elapsed(),  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         call write_line('   Norm time: ', self%timer_norm%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
-
 
     end subroutine print_report
     !*******************************************************************************************

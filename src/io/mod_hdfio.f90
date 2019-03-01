@@ -324,7 +324,6 @@ contains
         end do ! iread
 
 
-        
         ! Initialize q_in. This is collective so we don't want it inside a serial read loop
         call data%sdata%q_in%init(data%mesh,ntime)
         call data%sdata%q_in%set_ntime(ntime)
@@ -734,12 +733,10 @@ contains
             ! Store modes in ChiDG Vector
             if (field_type == 'Primary') then
                 ivar = data%eqnset(eqn_ID)%prop%get_primary_field_index(trim(field_name))
-                !call data%sdata%q_in%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
                 call data%sdata%q_in%set_field(real(bufferterms,rk),element_info,ivar,itime)
             else if (field_type == 'Auxiliary') then
-                ! Implicitly assuming that an auxiliary field chidgVector contains only one field.
+                ! Implicitly assuming that an auxiliary field chidg_vector contains only one field.
                 ivar = 1
-                !call data%sdata%auxiliary_field(aux_vector_index)%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
                 call data%sdata%auxiliary_field(aux_vector_index)%set_field(real(bufferterms,rk),element_info,ivar,itime) 
             end if
 
@@ -912,16 +909,16 @@ contains
         do ielem = 1,data%mesh%domain(idom)%nelem
 
 
-            element_info = element_info_t(idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g,    &
-                                          idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l,    &
-                                          ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g,   &
-                                          ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l,   &
-                                          iproc      = data%mesh%domain(idom)%elems(ielem)%iproc,        &
-                                          pelem_ID   = NO_ID,                                       &
-                                          eqn_ID     = data%mesh%domain(idom)%elems(ielem)%eqn_ID,       &
-                                          nfields    = data%mesh%domain(idom)%elems(ielem)%neqns,        &
-                                          nterms_s   = data%mesh%domain(idom)%elems(ielem)%nterms_s,     &
-                                          nterms_c   = data%mesh%domain(idom)%elems(ielem)%nterms_c,     &
+            element_info = element_info_t(idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g,   &
+                                          idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l,   &
+                                          ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g,  &
+                                          ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l,  &
+                                          iproc      = data%mesh%domain(idom)%elems(ielem)%iproc,       &
+                                          pelem_ID   = NO_ID,                                           &
+                                          eqn_ID     = data%mesh%domain(idom)%elems(ielem)%eqn_ID,      &
+                                          nfields    = data%mesh%domain(idom)%elems(ielem)%neqns,       &
+                                          nterms_s   = data%mesh%domain(idom)%elems(ielem)%nterms_s,    &
+                                          nterms_c   = data%mesh%domain(idom)%elems(ielem)%nterms_c,    &
                                           dof_start  = data%mesh%domain(idom)%elems(ielem)%dof_start)
 
 

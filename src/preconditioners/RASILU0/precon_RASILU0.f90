@@ -55,7 +55,7 @@
 module precon_RASILU0
 #include <messenger.h>
 #include "petsc/finclude/petscksp.h"
-    use petscksp,                   only: tPC, PCCreate, PCApply, PCDestroy, PCSetUp
+    use petscksp,                   only: tPC, PCCreate, PCApply, PCDestroy, PCSetUp, PCReset
 
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: DIAG, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, &
@@ -167,13 +167,14 @@ contains
             case('petsc')
 
                 call PCCreate(ChiDG_COMM%mpi_val,self%pc,perr)
-                if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%init: error calling PCCreate.')
+                if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCCreate.')
                 call PCSetType(self%pc,PCASM,perr)
-                if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%init: error calling PCSetType.')
+                if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCSetType.')
+                self%initialized = .true.
                 self%petsc_initialized = .true.
 
             case default
-                call chidg_signal_one(FATAL,"precon_jacobi%init: invalid input for 'backend'.", trim(backend))
+                call chidg_signal_one(FATAL,"precon_rasilu0%init: invalid input for 'backend'.", trim(backend))
 
         end select
             
@@ -219,9 +220,9 @@ contains
         if (self%petsc_initialized) then
         !******  petsc  implementation  ******!
             call PCSetOperators(self%pc, A%petsc_matrix, A%petsc_matrix, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%update: error calling PCSetOperators.')
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCSetOperators.')
             call PCSetUp(self%pc, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%update: error calling PCSetUp.')
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCSetUp.')
 
 
         else
@@ -426,10 +427,10 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     function apply(self,A,v,z_old) result(z)
-        class(precon_RASILU0_t),   intent(inout)   :: self
-        type(chidg_matrix_t),    intent(in)      :: A
-        type(chidg_vector_t),    intent(in)      :: v
-        type(chidg_vector_t),    intent(in), optional :: z_old
+        class(precon_RASILU0_t),    intent(inout)        :: self
+        type(chidg_matrix_t),       intent(in)           :: A
+        type(chidg_vector_t),       intent(in)           :: v
+        type(chidg_vector_t),       intent(in), optional :: z_old
 
         type(chidg_vector_t) :: z
 
@@ -455,6 +456,8 @@ contains
 
             call PCApply(self%pc,v%petsc_vector,z%petsc_vector,perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%apply: error calling PCApply.')
+            z%from_operator         = .true.
+            z%petsc_needs_assembled = .true.
 
 
         else
@@ -761,10 +764,12 @@ contains
         if (self%petsc_initialized) then
             call PCDestroy(self%pc, perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_RASILU0%tear_down: error calling PCDestroy.')
+            self%initialized = .false.
             self%petsc_initialized = .false.
 
         else
             call self%LD%release()
+            self%initialized = .false.
 
         end if
 

@@ -102,7 +102,9 @@ contains
 
             call MatMult(A%petsc_matrix,x%petsc_vector,res%petsc_vector,perr)
             if (perr /= 0) call chidg_signal(FATAL,'chidg_mv: error calling petsc MatMult.')
+
             res%petsc_vector_created = .true.
+            res%from_operator        = .true.
 
             call timer_blas%stop()
 

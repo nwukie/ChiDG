@@ -164,6 +164,8 @@ contains
         ! Compute r = b - Ax
         r = b - chidg_mv(A,x)
 
+        r%from_operator = .true.
+
     end function residual
     !********************************************************************************************************
 

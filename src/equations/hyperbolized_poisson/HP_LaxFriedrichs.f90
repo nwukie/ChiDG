@@ -111,6 +111,9 @@ contains
         lambda_p = sqrt(abs(alpha*d_norm_p**beta))
 
 
+        ! OVERRIDE
+        lambda_m = ONE
+        lambda_p = ONE
 
 
         !

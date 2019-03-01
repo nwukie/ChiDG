@@ -54,20 +54,12 @@ contains
         integer(ik)                         :: nterms_s, solution_order
 
 
-
-        !
         ! Initialize ChiDG environment
-        !
         call chidg%start_up('core')
         call chidg%start_up('mpi')
 
 
-        
-
-
-        !
         ! Get nterms_s 
-        !
         file_props  = get_properties_hdf(solution_file)
         nterms_s    = file_props%nterms_s(1)
         time_string = file_props%time_integrator
@@ -78,49 +70,33 @@ contains
         end do
 
 
-
-        !
         ! Initialize solution data storage
-        !
         call chidg%set('Solution Order', integer_input=solution_order)
         call chidg%set('Time Integrator', algorithm=trim(time_string))
         chidg%grid_file        = grid_file
         chidg%solution_file_in = solution_file
 
 
-        !
         ! Read grid/solution modes and time integrator options from HDF5
-        !
         call chidg%read_mesh(grid_file, interpolation='Uniform', level=OUTPUT_RES)
         call chidg%read_fields(solution_file)
 
-        !
         ! Process for getting wall distance
-        !
         call chidg%process()
 
-
-        !
         ! Get post processing data (q_out)
-        !
         call chidg%time_integrator%initialize_state(chidg%data)
         call chidg%time_integrator%read_time_options(chidg%data,solution_file,'process')
         call chidg%time_integrator%process_data_for_output(chidg%data)
 
 
-
-        !
         ! Write solution
-        !
         solution_file_prefix = get_file_prefix(solution_file,'.h5')
         plt_filename = solution_file_prefix//'.plt'
         call write_tecio_old(chidg%data,plt_filename, write_domains=.true., write_surfaces=.true.)
         
 
-
-        !
         ! Close ChiDG
-        !
         call chidg%shut_down('core')
 
 
@@ -175,6 +151,7 @@ contains
         nterms_s    = file_props%nterms_s(1)
         time_string = file_props%time_integrator
 
+
         solution_order = 0
         do while (solution_order*solution_order*solution_order < nterms_s)
             solution_order = solution_order + 1
@@ -201,7 +178,6 @@ contains
         ! Process for getting wall distance
         !
         call chidg%process()
-
 
         !
         ! Get post processing data (q_out)

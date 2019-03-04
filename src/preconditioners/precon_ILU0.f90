@@ -257,10 +257,11 @@ contains
         call self%timer%start()
 
 
-        !
         ! Initialize z for preconditioning
-        !
         z = v
+
+
+
 
 
         if (self%petsc_initialized) then
@@ -268,6 +269,8 @@ contains
 
             call PCApply(self%pc,v%petsc_vector,z%petsc_vector,perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%apply: error calling PCApply.')
+            z%from_operator         = .true.
+            z%petsc_needs_assembled = .true.
 
 
 

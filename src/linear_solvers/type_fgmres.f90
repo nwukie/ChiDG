@@ -1,8 +1,7 @@
 module type_fgmres
 #include <messenger.h>
 #include "petsc/finclude/petscvec.h"
-    use petscvec,               only: VecAXPY, VecMDOT, VecMAXPY
-
+    use petscvec,               only: VecAXPY, VecMDOT, VecMAXPY, VecDot, VecGetLocalVectorRead, VecRestoreLocalVectorRead, VecDuplicate, VecSet, VecDestroy
 
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
@@ -178,7 +177,6 @@ contains
                 end if
                 call self%timer_precon%stop()
 
-
                 ! Compute w = Av for the current iteration
                 call self%timer_mv%start()
                 w = chidg_mv(A,z(j))
@@ -334,10 +332,60 @@ contains
         real(rk)       :: dot_tmp(j)
         PetscErrorCode :: perr
 
+        Vec :: local_vector_w, local_vector_v
+
 
         if (w%petsc_vector_created) then
 
             call chidg_signal(FATAL,'classical_gram_schmidt: not implemented for new petsc implementation.')
+
+! This implementation does not seem to be working in parallel!
+!            call VecDuplicate(w%petsc_vector, local_vector_w, perr)
+!            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecDuplicate.')
+!            call VecDuplicate(v(1)%petsc_vector, local_vector_v, perr)
+!            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecDuplicate.')
+!
+!            call VecSet(local_vector_w, ZERO, perr)
+!            call VecSet(local_vector_v, ZERO, perr)
+!
+!
+!
+!            call VecGetLocalVectorRead(w%petsc_vector, local_vector_w, perr)
+!            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecGetLocalVector.')
+!
+!            do i = 1,j
+!                call VecGetLocalVectorRead(v(i)%petsc_vector, local_vector_v, perr)
+!                if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecGetLocalVector.')
+!                call VecDot(local_vector_w,local_vector_v,dot_tmp(i),perr)
+!                if (perr /= 0) call chidg_signal(FATAL,'dot_comm: error calling petsc VecDot.')
+!                call VecRestoreLocalVectorRead(v(i)%petsc_vector, local_vector_v, perr)
+!                if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecRestoreLocalVector.')
+!            end do
+!
+!
+!            ! Reduce local dot-product values across processors, distribute result back to all
+!            call MPI_AllReduce(dot_tmp,htmp,j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+!
+!            h(1:j,j) = h(1:j,j) + htmp(1:j)
+!
+!            ! Subtract off htmp(i)*v(i)
+!            htmp = -htmp
+!            do i = 1,j
+!                !w = w - htmp(i)*v(i)
+!                call VecAXPY(w%petsc_vector, htmp(i), v(i)%petsc_vector, perr)
+!                if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecAXPY.')
+!            end do
+!
+!            call VecRestoreLocalVectorRead(w%petsc_vector, local_vector_w, perr)
+!            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecRestoreLocalVector.')
+!
+!            call VecDestroy(local_vector_w, perr)
+!            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecDestroy.')
+!            call VecDestroy(local_vector_v, perr)
+!            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecDestroy.')
+
+
+! Previous implementation but doesn't work with pointers!
 !            call VecMDot(w%petsc_vector, j, v(:)%petsc_vector, dot_tmp, perr)
 !            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMDot.')
 !
@@ -348,6 +396,7 @@ contains
 !            dot_tmp = -dot_tmp
 !            call VecMAXPY(w%petsc_vector, j, dot_tmp, v(:)%petsc_vector, perr)
 !            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMAXPY.')
+
 
         else
 

@@ -65,8 +65,7 @@ contains
             case('petsc')
                 call PCCreate(ChiDG_COMM%mpi_val,self%pc,perr)
                 if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%init: error calling PCCreate.')
-                !call PCSetType(self%pc,PCBJACOBI,perr)
-                call PCSetType(self%pc,PCJACOBI,perr)
+                call PCSetType(self%pc,PCPBJACOBI,perr)
                 if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%init: error calling PCSetType.')
                 self%petsc_initialized = .true.
 
@@ -181,6 +180,8 @@ contains
 
             call PCApply(self%pc,v%petsc_vector,z%petsc_vector,perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%apply: error calling PCApply.')
+            z%from_operator         = .true.
+            z%petsc_needs_assembled = .true.
 
 
 

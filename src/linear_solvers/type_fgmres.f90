@@ -44,10 +44,15 @@ module type_fgmres
         real(rk),               allocatable, dimension(:,:) :: h
 
         type(timer_t)   :: timer_mv, timer_dot, timer_norm, timer_precon
+
+        type(fgmres_t), pointer :: fgmres => null()
+
     contains
         procedure   :: solve
         procedure   :: allocate_krylov_storage
         procedure   :: print_report
+        procedure   :: tear_down
+        final       :: destroy_fgmres
     end type fgmres_t
     !*********************************************************************************************
 
@@ -87,18 +92,16 @@ contains
         logical     :: converged_absolute, converged_relative, converged_nmax, reorthogonalize
         real(rk),   allocatable :: y_dim(:)
 
-        type(fgmres_t) :: fgmres
-
-
         ! Inner fgmres iteration parameters
         if (self%inner_fgmres) then
-            fgmres%nkrylov           = self%inner_nkrylov
-            fgmres%tol               = self%inner_tol
-            fgmres%rtol              = self%inner_rtol
-            fgmres%nmax              = self%inner_nmax
-            fgmres%silence           = self%inner_silence
-            fgmres%orthogonalization = self%inner_orthogonalization
-            fgmres%inner_fgmres      = .false.
+            if (.not. associated(self%fgmres)) allocate(self%fgmres)
+            self%fgmres%nkrylov           = self%inner_nkrylov
+            self%fgmres%tol               = self%inner_tol
+            self%fgmres%rtol              = self%inner_rtol
+            self%fgmres%nmax              = self%inner_nmax
+            self%fgmres%silence           = self%inner_silence
+            self%fgmres%orthogonalization = self%inner_orthogonalization
+            self%fgmres%inner_fgmres      = .false.
         end if
 
 
@@ -172,7 +175,7 @@ contains
                 ! Inner fgmres correction
                 if (self%inner_fgmres) then
                     zr = v(j) - chidg_mv(A,z(j))
-                    call fgmres%solve(A,deltaz,zr,M,solver_controller)
+                    call self%fgmres%solve(A,deltaz,zr,M,solver_controller)
                     z(j) = z(j) + deltaz
                 end if
                 call self%timer_precon%stop()
@@ -567,10 +570,60 @@ contains
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    recursive subroutine tear_down(self)
+        class(fgmres_t),    intent(inout)   :: self
+
+        call self%r%release()
+        call self%r0%release()
+        call self%w%release()
+        call self%x0%release()
+        call self%zr%release()
+        call self%deltaz%release()
+        call self%v%release()
+        call self%z%release()
+
+        if (associated(self%fgmres)) then
+            call self%fgmres%tear_down()
+            deallocate(self%fgmres)
+            self%fgmres => null()
+        end if
+
+    end subroutine tear_down
+    !*******************************************************************************************
 
 
 
 
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    recursive subroutine destroy_fgmres(self)
+        type(fgmres_t),    intent(inout)   :: self
+
+        call self%tear_down()
+
+    end subroutine destroy_fgmres
+    !*******************************************************************************************
+
+
+    
 
 
 

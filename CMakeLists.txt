@@ -16,7 +16,6 @@ if ( (CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION EQUAL 6 AND CMAKE_PATC
 endif()
 
 
-
 #-----------------------------------------------------------------------------------
 #                      CMake macros for adding source files
 #-----------------------------------------------------------------------------------
@@ -102,8 +101,6 @@ if (PROFILE)
 endif()
 
 
-
-
 #----------------------------------------------------------------------------------------------
 #                                          Find HDF5
 #
@@ -178,13 +175,12 @@ find_package(MPI REQUIRED COMPONENTS Fortran)
 include_directories(${MPI_Fortran_INCLUDE_PATH})
 
 
-
 if (MPI_Fortran_FOUND)
     message(STATUS "    MPI Fortran Libraries: ")
     foreach (L ${MPI_Fortran_LIBRARIES})
         message(STATUS "        " ${L})
     endforeach()
-    message(STATUS "    MPI Include Path: ")
+    message(STATUS "    MPI Fortran Include Path: ")
     foreach (L ${MPI_Fortran_INCLUDE_PATH})
         message(STATUS "        " ${L})
     endforeach()
@@ -222,6 +218,7 @@ message(STATUS "BLAS/LAPACK Summary:")
 find_package(LAPACK REQUIRED)
 
 if (LAPACK_FOUND)
+    set(LAPACK_DIRECTORIES)
     message(STATUS "    LAPACK Libraries: ")
     foreach (L ${LAPACK_LIBRARIES})
         message(STATUS "        " ${L})
@@ -248,16 +245,29 @@ if (LAPACK_FOUND)
         "end program main\n")
 
 
+
     # Try compiling and running test program that uses BLAS/LAPACK routines.
     # We are checking here to make sure that the detected libraries actually
     # work on the current machine. 
-    try_run(RUN_RESULTS COMPILE_RESULTS
-            ${CMAKE_CURRENT_BINARY_DIR} ${test_lapack_file}
-            LINK_LIBRARIES ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} 
-            OUTPUT_VARIABLE out_var)
+    #
+    # NOTE: 
+    # We only try this when the project is first generated. For some reason, 
+    # if CMake needs to regenerate, it seems to remove the rpath in the compiled
+    # program, which then fails because it can't load the blas/lapack libraries.
+    # This was a problem when compiling with MKL, but not Apple Accelerate.
+    #
+    set(LAPACK_TESTED FALSE CACHE BOOL "")
+    mark_as_advanced(LAPACK_TESTED)
+    if (NOT ${LAPACK_TESTED})
+        try_run(RUN_RESULTS COMPILE_RESULTS
+                ${CMAKE_CURRENT_BINARY_DIR} ${test_lapack_file}
+                LINK_LIBRARIES ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES}
+                COMPILE_OUTPUT_VARIABLE compile_out
+                RUN_OUTPUT_VARIABLE run_out)
+    endif()
+
 
     # Interpret RUN/COMPILE results as good/bad
-    set(COMPILED_OKAY ${COMPILE_RESULTS})
     if (${RUN_RESULTS} EQUAL 0)
         set(RAN_OKAY TRUE)
     else()
@@ -266,6 +276,7 @@ if (LAPACK_FOUND)
 
     # Handle RUN/COMPILE results
     if (NOT ${COMPILED_OKAY})
+        message(STATUS ${compile_out} )
         message(SEND_ERROR "We couldn't compile a test program using the BLAS/LAPACK \
                             Libraries that were detected. You can try and influence \
                             the BLAS library that is detected using the configuration\
@@ -273,6 +284,7 @@ if (LAPACK_FOUND)
                             to use the Apple Accelerate Framework you can pass\
                             -DBLA_VENDOR=Apple during configuration.")
     elseif(NOT ${RAN_OKAY} )
+        message(STATUS ${run_out} )
         message(SEND_ERROR "A test program failed when trying to use the BLAS/LAPACK \
                             Libraries that were detected. This could mean that they \
                             are not compatible with your machine, which is possible \
@@ -284,6 +296,9 @@ if (LAPACK_FOUND)
                             -DBLA_VENDOR=Apple during configuration.")
     endif()
 
+    # If we made it through, signal that LAPACK has been tested so we don't need 
+    # to test it again, since tested in regeneration seems to fail due to rpath issues.
+    set(LAPACK_TESTED TRUE CACHE BOOL "" FORCE)
 
 endif()
 
@@ -375,6 +390,7 @@ endforeach()
 #----------------------------------------------------------------------------------------------
 message(STATUS " ")
 message(STATUS "PETSc Summary:")
+set(PETSC_EXECUTABLE_RUNS YES) # Override variable, since the module for petsc does not yet treat Fortran properly.
 find_package (PETSc REQUIRED)
 include_directories(${PETSC_INCLUDES})
 add_definitions (${PETSC_DEFINITIONS})
@@ -435,13 +451,17 @@ if (PETSC_FOUND)
     # Try compiling and running test program that uses PETSC routines.
     # We are checking here to make sure that the detected libraries actually
     # work on the current machine. 
-    try_run(RUN_RESULTS COMPILE_RESULTS
-            ${CMAKE_CURRENT_BINARY_DIR} ${test_petsc_file}
-            CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${PETSC_INCLUDES}"
-            COMPILE_DEFINITIONS ${CMAKE_Fortran_FLAGS_RELEASE}
-            LINK_LIBRARIES ${PETSC_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} 
-            COMPILE_OUTPUT_VARIABLE compile_out
-            RUN_OUTPUT_VARIABLE run_out)
+    set(PETSC_TESTED FALSE CACHE BOOL "")
+    mark_as_advanced(PETSC_TESTED)
+    if (NOT ${PETSC_TESTED})
+        try_run(RUN_RESULTS COMPILE_RESULTS
+                ${CMAKE_CURRENT_BINARY_DIR} ${test_petsc_file}
+                CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${PETSC_INCLUDES}"
+                COMPILE_DEFINITIONS ${CMAKE_Fortran_FLAGS_RELEASE}
+                LINK_LIBRARIES ${PETSC_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${MPI_Fortran_LIBRARIES}
+                COMPILE_OUTPUT_VARIABLE compile_out
+                RUN_OUTPUT_VARIABLE run_out)
+    endif()
 
     # Interpret RUN/COMPILE results as good/bad
     set(COMPILED_OKAY ${COMPILE_RESULTS})
@@ -453,12 +473,20 @@ if (PETSC_FOUND)
 
     # Handle RUN/COMPILE results
     if (NOT ${COMPILED_OKAY})
+        message(STATUS ${compile_out} )
         message(SEND_ERROR "We couldn't compile a test program using the PETSC \
                             Libraries that were detected.")
     elseif(NOT ${RAN_OKAY} )
+        message(STATUS ${run_out} )
         message(SEND_ERROR "A test program compiled but failed when trying to use the PETSC \
                             Libraries that were detected.")
     endif()
+
+
+    # If we made it through, signal that PETSc has been tested so we don't need 
+    # to test it again, since tested in regeneration seems to fail due to rpath issues.
+    set(PETSC_TESTED TRUE CACHE BOOL "" FORCE)
+
 
 endif()
 

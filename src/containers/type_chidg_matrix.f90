@@ -49,25 +49,15 @@ module type_chidg_matrix
 
 
         ! backend dynamic procedures
-        !procedure(init_interface),             pointer, pass :: init           => chidg_init
-        !procedure(store_interface),            pointer, pass :: store          => chidg_store
-        !procedure(store_interface),            pointer, pass :: store_chimera  => chidg_store_chimera
-        !procedure(store_interface),            pointer, pass :: store_bc       => chidg_store_bc
-        !procedure(store_interface),            pointer, pass :: store_hb       => chidg_store_hb
-        !procedure(scale_diagonal_interface),   pointer, pass :: scale_diagonal => chidg_scale_diagonal
-        !procedure(clear_interface),            pointer, pass :: clear          => chidg_clear
-        !procedure(clear_interface),            pointer, pass :: assemble       => chidg_assemble
-        !procedure(init_recv_interface)         pointer, pass :: init_recv      => chidg_init_recv
-
-        procedure(init_interface),              pointer, pass :: init           => petsc_init
-        procedure(store_interface),             pointer, pass :: store          => petsc_store
-        procedure(store_interface),             pointer, pass :: store_chimera  => petsc_store
-        procedure(store_interface),             pointer, pass :: store_bc       => petsc_store
-        procedure(store_interface),             pointer, pass :: store_hb       => petsc_store
-        procedure(scale_diagonal_interface),    pointer, pass :: scale_diagonal => petsc_scale_diagonal
-        procedure(clear_interface),             pointer, pass :: clear          => petsc_clear
-        procedure(clear_interface),             pointer, pass :: assemble       => petsc_assemble
-        procedure(init_recv_interface),         pointer, pass :: init_recv      => petsc_init_recv
+        procedure(init_interface),             pointer, pass :: init           => chidg_init
+        procedure(store_interface),            pointer, pass :: store          => chidg_store
+        procedure(store_interface),            pointer, pass :: store_chimera  => chidg_store_chimera
+        procedure(store_interface),            pointer, pass :: store_bc       => chidg_store_bc
+        procedure(store_interface),            pointer, pass :: store_hb       => chidg_store_hb
+        procedure(scale_diagonal_interface),   pointer, pass :: scale_diagonal => chidg_scale_diagonal
+        procedure(clear_interface),            pointer, pass :: clear          => chidg_clear
+        procedure(clear_interface),            pointer, pass :: assemble       => chidg_assemble
+        procedure(init_recv_interface),        pointer, pass :: init_recv      => chidg_init_recv
 
 
         ! Stamp for uniqueness

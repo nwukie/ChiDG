@@ -6,7 +6,7 @@ module type_fgmres
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
     use mod_inv,                only: inv
-    use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
+    use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, NRANK
     use mod_io,                 only: verbosity
     use mpi_f08
 
@@ -331,7 +331,7 @@ contains
         real(rk),               intent(inout)   :: h(:,:)
         real(rk),               intent(inout)   :: htmp(:)
 
-        integer(ik)    :: i, ierr
+        integer(ik)    :: i, ierr, iproc
         real(rk)       :: dot_tmp(j)
         PetscErrorCode :: perr
 
@@ -340,36 +340,56 @@ contains
 
         if (w%petsc_vector_created) then
 
-            call chidg_signal(FATAL,'classical_gram_schmidt: not implemented for new petsc implementation.')
+            ! WARNING: THIS IS ACTUALLY Modified Gram Schmidt. CGS implementation is currently broken.
+            do i = 1,j
+                htmp(i) = dot(w,v(i),ChiDG_COMM)
+                call VecAXPY(w%petsc_vector,-htmp(i),v(i)%petsc_vector,perr)
+            end do
 
-! This implementation does not seem to be working in parallel!
+            !call chidg_signal(FATAL,'classical_gram_schmidt: not implemented for new petsc implementation.')
+
+!            ! This implementation does not seem to be working in parallel!
 !            call VecDuplicate(w%petsc_vector, local_vector_w, perr)
 !            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecDuplicate.')
 !            call VecDuplicate(v(1)%petsc_vector, local_vector_v, perr)
 !            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecDuplicate.')
 !
 !            call VecSet(local_vector_w, ZERO, perr)
+!            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: VecSet.')
 !            call VecSet(local_vector_v, ZERO, perr)
-!
+!            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: VecSet.')
 !
 !
 !            call VecGetLocalVectorRead(w%petsc_vector, local_vector_w, perr)
 !            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecGetLocalVector.')
 !
 !            do i = 1,j
+!
 !                call VecGetLocalVectorRead(v(i)%petsc_vector, local_vector_v, perr)
 !                if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecGetLocalVector.')
 !                call VecDot(local_vector_w,local_vector_v,dot_tmp(i),perr)
+!
+!                do iproc = 0,NRANK
+!                    if (iproc == IRANK) print*, dot_tmp(i)
+!                end do
+!
 !                if (perr /= 0) call chidg_signal(FATAL,'dot_comm: error calling petsc VecDot.')
 !                call VecRestoreLocalVectorRead(v(i)%petsc_vector, local_vector_v, perr)
 !                if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecRestoreLocalVector.')
+!
 !            end do
+!
+!            call VecRestoreLocalVectorRead(w%petsc_vector, local_vector_w, perr)
+!            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecRestoreLocalVector.')
+!
+!
 !
 !
 !            ! Reduce local dot-product values across processors, distribute result back to all
 !            call MPI_AllReduce(dot_tmp,htmp,j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 !
-!            h(1:j,j) = h(1:j,j) + htmp(1:j)
+!            ! Relocated to end
+!            !h(1:j,j) = h(1:j,j) + htmp(1:j)
 !
 !            ! Subtract off htmp(i)*v(i)
 !            htmp = -htmp
@@ -379,8 +399,6 @@ contains
 !                if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecAXPY.')
 !            end do
 !
-!            call VecRestoreLocalVectorRead(w%petsc_vector, local_vector_w, perr)
-!            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecRestoreLocalVector.')
 !
 !            call VecDestroy(local_vector_w, perr)
 !            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecDestroy.')
@@ -410,13 +428,17 @@ contains
             ! Reduce local dot-product values across processors, distribute result back to all
             call MPI_AllReduce(dot_tmp,htmp,j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 
-            h(1:j,j) = h(1:j,j) + htmp(1:j)
+            ! Relocated to end
+            !h(1:j,j) = h(1:j,j) + htmp(1:j)
 
             do i = 1,j
                 w = w - htmp(i)*v(i)
             end do
 
         end if
+
+        ! Update h
+        h(1:j,j) = h(1:j,j) + htmp(1:j)
 
     end subroutine classical_gram_schmidt
     !****************************************************************************************

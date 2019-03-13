@@ -19,6 +19,7 @@ module type_chidg_matrix
     use type_seed,              only: seed_t
     use type_chidg_vector,      only: chidg_vector_t
     use DNAD_D
+    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
 
@@ -1052,6 +1053,9 @@ contains
         nrows = 1
         ncols = size(integral(1)%xp_ad_)
         do iarray = 1,size(integral)
+
+            if (any(ieee_is_nan(integral(iarray)%xp_ad_))) print*, 'storing NaN!'
+
             ! subtract 1 from indices since petsc is 0-based
             call MatSetValues(self%petsc_matrix,nrows,[row_index_start + (iarray-1) - 1],ncols,col_indices-1,integral(iarray)%xp_ad_,ADD_VALUES,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"chidg_matrix%petsc_store: error calling MatSetValues.")

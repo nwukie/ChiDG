@@ -156,7 +156,7 @@ contains
         type(chidg_vector_t),    intent(inout)  :: x
         type(chidg_vector_t),    intent(in)     :: b
 
-        type(chidg_vector_t) :: r
+        type(chidg_vector_t) :: r, tmp
 
         r = x
         call r%clear()

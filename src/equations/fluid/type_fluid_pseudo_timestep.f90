@@ -146,10 +146,13 @@ contains
             !
             ! Compute elemen-local timestep
             !
-            !sdata%dt(idomain,ielem) = (cfl*h)/lam
-            do ieqn = 1,size(cfl)
-                mesh%domain(idomain)%elems(ielem)%dtau(ieqn) = cfl(ieqn)*h/lam
-            end do
+            if (size(cfl) == 1) then
+                mesh%domain(idomain)%elems(ielem)%dtau = cfl(1)*h/lam
+            else
+                do ieqn = 1,size(cfl)
+                    mesh%domain(idomain)%elems(ielem)%dtau(ieqn) = cfl(ieqn)*h/lam
+                end do
+            end if
 
 
 

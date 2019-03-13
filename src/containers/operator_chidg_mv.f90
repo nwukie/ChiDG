@@ -1,7 +1,7 @@
 module operator_chidg_mv
 #include <messenger.h>
 #include "petsc/finclude/petscmat.h"
-    use petscmat,           only: MatMult
+    use petscmat,           only: MatMult, MatNorm, NORM_INFINITY
 
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ZERO, ONE
@@ -88,13 +88,13 @@ contains
         real(rk),     allocatable   :: temp_1(:), temp_2(:)
 
         PetscErrorCode :: perr
+        PetscReal :: petsc_norm
 
 
         if (x%petsc_vector_created) then
 
             call timer_comm%start()
             call timer_comm%stop()
-
             call timer_blas%start()
 
             res = x

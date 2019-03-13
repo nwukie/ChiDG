@@ -1,11 +1,12 @@
 module type_chidg_matrix
 #include <messenger.h>
 #include "petsc/finclude/petscmat.h"
-    use petscmat,               only: PETSC_DECIDE, MatCreate, MatSetType, MatSetSizes, MatSetUp, &
+    use petscmat,               only: PETSC_DECIDE, MatCreate, MatSetType, MatSetSizes, MatSetUp,       &
                                       MatSetValues, tMat, ADD_VALUES, MatAssemblyBegin, MatAssemblyEnd, &
                                       MAT_FINAL_ASSEMBLY, MatZeroEntries, MatSeqAIJSetPreallocation,    &
                                       MatMPIAIJSetPreallocation, PETSC_NULL_INTEGER, MatSetOption,      &
-                                      MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, MatDestroy, MatGetSize, MatGetLocalSize
+                                      MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, MatDestroy,          &
+                                      MatGetSize, MatGetLocalSize
 
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: NO_ID, ZERO
@@ -932,11 +933,10 @@ contains
 
 
 
-
         ! Preallocation
         dof_per_element = mesh%domain(1)%elems(1)%nterms_s * mesh%domain(1)%elems(1)%neqns
         nlocal_coupling = 7
-        nparallel_coupling = 3
+        nparallel_coupling = 7
 
         aij_nnonzeros_per_row_local    = nlocal_coupling    * dof_per_element
         aij_nnonzeros_per_row_parallel = nparallel_coupling * dof_per_element
@@ -958,6 +958,8 @@ contains
         call MatSetBlockSize(self%petsc_matrix, dof_per_element, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSetBlockSize.')
 
+        call MatSetOption(self%petsc_matrix, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSetOption.')
 
         call self%clear()
 

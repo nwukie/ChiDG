@@ -5,7 +5,7 @@ module type_chidg_vector
     use petscvec,                   only: VecCreate, VecSetType, VecSetSizes, VecSetUp,                                 &
                                           VecSetValues, tVec, tVecScatter, ADD_VALUES, INSERT_VALUES, VecCopy,          &
                                           VecAssemblyBegin, VecAssemblyEnd, VecDuplicate, NORM_2,VecGetArrayF90,        &
-                                          VecRestoreArrayF90, VecNorm, VecScale, VecWAXPY, VecReciprocal, VecDestroy,   &
+                                          VecRestoreArrayF90, VecNorm, VecScale, VecWAXPY, VecAXPY, VecReciprocal, VecDestroy,   &
                                           VecScatterCreateToAll, VecScatterBegin, VecScatterEnd, SCATTER_FORWARD,       &
                                           VecScatterDestroy, VecScatterCopy
 
@@ -51,10 +51,8 @@ module type_chidg_vector
 
         ! ChiDG
         type(domain_vector_t),    allocatable   :: dom(:)       ! Local block vector storage
-
         type(chidg_vector_send_t)               :: send         ! What to send to other processors
         type(chidg_vector_recv_t)               :: recv         ! Receive data from other processors
-
 
 
         ! backend dynamic procedures
@@ -99,7 +97,8 @@ module type_chidg_vector
 
         final               :: destroy
 
-        procedure, public  :: assign_vector_public
+        procedure, public   :: duplicate
+        procedure, public   :: assign_vector_public
         generic :: assignment(=) => assign_vector_public
         
 
@@ -576,6 +575,8 @@ contains
 
         ! Get petsc array pointer
         if (self%petsc_vector_created) then
+            if (self%petsc_needs_assembled) call self%assemble()
+
             !call VecGetArrayF90(self%petsc_vector,array,ierr)
             call VecGetArrayF90(self%petsc_vector_recv,array,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
@@ -838,8 +839,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     function norm_comm(self,comm) result(norm)
-        class(chidg_vector_t),   intent(in)  :: self
-        type(mpi_comm),         intent(in)  :: comm
+        class(chidg_vector_t),  intent(inout)   :: self
+        type(mpi_comm),         intent(in)      :: comm
 
         real(rk)    :: sumsqr, norm
         integer     :: ierr
@@ -1392,7 +1393,8 @@ contains
         if (right%petsc_vector_created) then
 
             ! Copy
-            res = right
+            call right%duplicate(res)
+            !res = right
 
             ! Scale by inverse
             call VecScale(res%petsc_vector,left,perr)
@@ -1443,7 +1445,8 @@ contains
         if (left%petsc_vector_created) then
 
             ! Copy
-            res = left
+            call left%duplicate(res)
+            !res = left
 
             ! Scale by inverse
             call VecScale(res%petsc_vector,right,perr)
@@ -1497,7 +1500,8 @@ contains
         if (right%petsc_vector_created) then
 
             ! Copy
-            res = right
+            call right%duplicate(res)
+            !res = right
 
             ! Get vector reciprocal
             call VecReciprocal(res%petsc_vector,perr)
@@ -1543,8 +1547,8 @@ contains
         type(chidg_vector_t),   intent(in), target  :: left
         real(rk),               intent(in)          :: right
 
-        type(chidg_vector_t) :: res
-        integer(ik)         :: idom, ndom
+        type(chidg_vector_t)    :: res
+        integer(ik)             :: idom, ndom
 
         PetscErrorCode :: perr
         type(chidg_vector_t), pointer   :: tmp1
@@ -1555,7 +1559,8 @@ contains
         if (left%petsc_vector_created) then
 
             ! Copy
-            res = left
+            call left%duplicate(res)
+            !res = left
 
             ! Scale by inverse
             call VecScale(res%petsc_vector,ONE/right,perr)
@@ -1568,7 +1573,6 @@ contains
         else
 
             ndom = size(left%dom)
-
             allocate(res%dom(ndom))
 
             do idom = 1,size(left%dom)
@@ -1609,9 +1613,13 @@ contains
         if (left%petsc_vector_created) then
 
             ! Copy
-            res = left
+            call left%duplicate(res)
+            !res = left
+
+
             ! Operation
             call VecWAXPY(res%petsc_vector,ONE,right%petsc_vector,left%petsc_vector,perr)
+            !call VecAXPY(res%petsc_vector,ONE,right%petsc_vector,perr)
             if (perr /= 0) call chidg_signal(FATAL,'chidg_vector%add_chidg_vector_chidg_vector: error calling VecAXPY.')
 
             res%from_operator = .true.
@@ -1652,8 +1660,8 @@ contains
         type(chidg_vector_t),    intent(in), target  :: left
         type(chidg_vector_t),    intent(in), target  :: right
 
-        type(chidg_vector_t) :: res
-        integer(ik)         :: idom, ndom
+        integer(ik)                     :: idom, ndom
+        type(chidg_vector_t)            :: res
         type(chidg_vector_t), pointer   :: tmp1, tmp2
 
         PetscErrorCode :: perr
@@ -1665,10 +1673,13 @@ contains
 
         if (left%petsc_vector_created) then
 
-            ! Copy
-            res = left
+            ! Copy: BETTER TO CALL A DUPLICATE ROUTINE INSTEAD OF ATTEMPTING TO COPY VIA ASSIGNMENT
+            call left%duplicate(res)
+            !res = left
+
             ! Operation
             call VecWAXPY(res%petsc_vector,-ONE,right%petsc_vector,left%petsc_vector,perr)
+            !call VecAXPY(res%petsc_vector,-ONE,right%petsc_vector,perr)
             if (perr /= 0) call chidg_signal(FATAL,'chidg_vector%sub_chidg_vector_chidg_vector: error calling VecWAYPX.')
 
             res%from_operator = .true.
@@ -1715,7 +1726,8 @@ contains
         if (right%petsc_vector_created) then
 
             ! Copy
-            res = right
+            call right%duplicate(res)
+            !res = right
             
             ! Negate
             call VecScale(res%petsc_vector,-ONE,perr)
@@ -1763,6 +1775,7 @@ contains
 
         PetscErrorCode :: ierr
 
+
         if (vec_in%petsc_vector_created) then
 
             if (vec_in%from_operator) then
@@ -1806,8 +1819,9 @@ contains
                 end if
             end if
 
-            vec_out%petsc_vector_created = .true.
-            vec_out%from_operator        = .false.
+            vec_out%petsc_vector_created  = .true.
+            vec_out%petsc_needs_assembled = .true.
+            vec_out%from_operator         = .false.
         end if
 
         vec_out%ntime_ = vec_in%ntime_
@@ -1858,6 +1872,66 @@ contains
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !-------------------------------------------------
+    subroutine duplicate(self,vec_out)
+        class(chidg_vector_t),  intent(in)      :: self
+        type(chidg_vector_t),   intent(inout)   :: vec_out
+
+        PetscErrorCode :: ierr
+
+        if (self%petsc_vector_created) then
+            ! Duplicate petsc storage
+            if (vec_out%petsc_vector_created) call vec_out%release()
+
+            ! Allocate petsc object pointers
+            allocate(vec_out%petsc_vector, vec_out%petsc_vector_recv, vec_out%petsc_scatter, stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            call VecDuplicate(self%petsc_vector,vec_out%petsc_vector,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
+            call VecDuplicate(self%petsc_vector_recv,vec_out%petsc_vector_recv,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
+
+            call VecCopy(self%petsc_vector,vec_out%petsc_vector,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecCopy.')
+            call VecCopy(self%petsc_vector_recv,vec_out%petsc_vector_recv,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecCopy.')
+            call VecScatterCopy(self%petsc_scatter,vec_out%petsc_scatter,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecScatterCopy.')
+
+            vec_out%petsc_vector_created = .true.
+            vec_out%petsc_needs_assembled = .true.
+
+            ! Update procedure pointers
+            call vector_assign_pointers_petsc(vec_out)
+
+        else
+            !! Duplicate native storage
+            !vec_out = self
+
+            !! Update procedure pointers
+            !call vector_assign_pointers_chidg(vec_out)
+            if (allocated(self%dom)) vec_out%dom = self%dom
+            vec_out%send   = self%send
+            vec_out%recv   = self%recv
+            vec_out%ntime_ = self%ntime_
+
+            ! Update procedure pointers
+            call vector_assign_pointers_chidg(vec_out)
+
+        end if
+
+
+
+    end subroutine duplicate
+    !*************************************************
+
+
+
 
 
     !>
@@ -1880,6 +1954,7 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%destroy: error calling VecScatterDestroy.')
 
             self%petsc_vector_created = .false.
+            self%petsc_needs_assembled = .true.
 
         end if
 

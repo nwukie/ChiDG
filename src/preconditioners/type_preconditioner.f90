@@ -116,6 +116,8 @@ contains
     subroutine tear_down(self)
         class(preconditioner_t),    intent(inout)   :: self
 
+        self%stamp = 0
+
     end subroutine tear_down
     !**************************************************************************************
 

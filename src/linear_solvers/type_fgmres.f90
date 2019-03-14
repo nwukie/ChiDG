@@ -92,6 +92,7 @@ contains
         logical     :: converged_absolute, converged_relative, converged_nmax, reorthogonalize
         real(rk),   allocatable :: y_dim(:)
 
+
         ! Inner fgmres iteration parameters
         if (self%inner_fgmres) then
             if (.not. associated(self%fgmres)) allocate(self%fgmres)
@@ -168,6 +169,7 @@ contains
             do j = 1,self%nkrylov
                 nvecs = nvecs + 1
 
+
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 call self%timer_precon%start()
                 z(j) = M%apply(A,v(j))
@@ -196,6 +198,7 @@ contains
                 end if
                 call self%timer_dot%stop()
                 ! End Orthogonalize once.
+
 
                 ! Selective Reorthogonalization
                 !
@@ -335,16 +338,43 @@ contains
         real(rk)       :: dot_tmp(j)
         PetscErrorCode :: perr
 
-        Vec :: local_vector_w, local_vector_v
+        Vec :: v_tmp(j)
 
 
         if (w%petsc_vector_created) then
 
-            ! WARNING: THIS IS ACTUALLY Modified Gram Schmidt. CGS implementation is currently broken.
+            ! Copy petsc vectors to contiguous array
             do i = 1,j
-                htmp(i) = dot(w,v(i),ChiDG_COMM)
-                call VecAXPY(w%petsc_vector,-htmp(i),v(i)%petsc_vector,perr)
+                call VecDuplicate(v(i)%petsc_vector,v_tmp(i),perr)
+                if (perr /= 0) call chidg_signal(FATAL,'fgmres%classical_gram_schmidt: error in VecDuplicate.')
+                call VecCopy(v(i)%petsc_vector,v_tmp(i),perr)
+                if (perr /= 0) call chidg_signal(FATAL,'fgmres%classical_gram_schmidt: error in VecCopy.')
             end do
+
+            call VecMDot(w%petsc_vector, j, v_tmp, dot_tmp, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMDot.')
+
+            ! Add to h
+            h(1:j,j) = h(1:j,j) + dot_tmp(1:j)
+
+            ! Subtract from w
+            dot_tmp = -dot_tmp
+            call VecMAXPY(w%petsc_vector, j, dot_tmp, v_tmp, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMAXPY.')
+
+            ! Destroy copies
+            do i = 1,j
+                call VecDestroy(v_tmp(i),perr)
+                if (perr /= 0) call chidg_signal(FATAL,'fgmres%classical_gram_schmidt: error in VecDestroy.')
+            end do
+
+
+
+            ! WARNING: THIS IS ACTUALLY Modified Gram Schmidt. CGS implementation is currently broken.
+!            do i = 1,j
+!                htmp(i) = dot(w,v(i),ChiDG_COMM)
+!                call VecAXPY(w%petsc_vector,-htmp(i),v(i)%petsc_vector,perr)
+!            end do
 
             !call chidg_signal(FATAL,'classical_gram_schmidt: not implemented for new petsc implementation.')
 

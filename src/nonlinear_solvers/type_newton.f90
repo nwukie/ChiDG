@@ -118,7 +118,6 @@ contains
                     rhs => data%sdata%rhs,  &
                     lhs => data%sdata%lhs)
 
-
         ! Startup values
         absolute_convergence = .true.   ! measures absolute convergence
         relative_convergence = .true.   ! measures relative convergence
@@ -136,7 +135,6 @@ contains
                    (.not. stop_run) )
             niter = niter + 1
 
-
             ! Store the value of the current inner iteration solution (k) 
             ! for the solution update (n+1), q_(n+1)_k
             qold = q
@@ -150,13 +148,11 @@ contains
                                   differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
 
 
-
             if (niter == 1) then
                 rnorm0 = rhs%norm_fields(ChiDG_COMM)
                 cfln = rnorm0
                 cfln = self%cfl0
             end if
-
 
 
             ! Pseudo-transient continuation
@@ -224,6 +220,7 @@ contains
 
             call preconditioner%tear_down()
             call preconditioner%init(data)
+
 
             call linear_solver%solve(lhs,dq,b,preconditioner,controller,data)
             call timer_linear%stop()
@@ -430,9 +427,6 @@ contains
 
         ! Reassemble Matrix
         call data%sdata%lhs%assemble()
-
-        ! Update stamp
-        call date_and_time(values=data%sdata%lhs%stamp)
 
     end subroutine contribute_pseudo_temporal
     !*************************************************************************************

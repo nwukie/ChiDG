@@ -255,6 +255,8 @@ contains
 
         end if
 
+        ! Remove correspondense to matrix stamp
+        self%stamp = 0
 
     end subroutine tear_down
     !***************************************************************************************

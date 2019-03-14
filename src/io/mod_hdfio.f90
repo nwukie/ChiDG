@@ -408,6 +408,10 @@ contains
         ! Check for file existence
         file_exists = check_file_exists_hdf(file_name)
 
+        ! Make sure q is assembled so it doesn't trigger a collective operation
+        ! inside of a sequential operation
+        call data%sdata%q%assemble()
+
 
         ! Create new file if necessary
         !   Barrier makes sure everyone has called file_exists before
@@ -415,11 +419,13 @@ contains
         call MPI_Barrier(ChiDG_COMM,ierr)
         if (.not. file_exists) then
 
+
                 ! Create a new file
                 if (IRANK == GLOBAL_MASTER) then
                     call initialize_file_hdf(file_name)
                 end if
                 call MPI_Barrier(ChiDG_COMM,ierr)
+
 
                 ! Initialize the file structure.
                 do iproc = 0,NRANK-1
@@ -440,8 +446,8 @@ contains
         do iwrite = 0,NRANK-1
             if ( iwrite == IRANK ) then
 
-
                 fid = open_file_hdf(file_name)
+
 
                 ! Write solution for each domain
                 do idom = 1,data%mesh%ndomains()
@@ -476,6 +482,7 @@ contains
 
                         ! Else, write each field in the file.
                         else
+                        ! Else, write each field in the file.
                             ! For each field: get the name, write to file
                             neqns = data%eqnset(eqn_ID)%prop%nprimary_fields()
                             do ieqn = 1,neqns
@@ -487,7 +494,6 @@ contains
                     end do ! itime
 
                     call close_domain_hdf(domain_id)
-
 
                 end do ! idom
 

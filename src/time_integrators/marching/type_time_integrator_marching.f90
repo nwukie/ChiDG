@@ -145,15 +145,11 @@ contains
         integer(HID_T)  :: fid
 
 
-        !
         ! Open hdf file
-        !
         fid = open_file_hdf(filename)
 
 
-        !
         ! Read dt, no. of time steps and nwrite
-        !
         select case(trim(read_type))
             case('run')
                 ! For running a time-marching case, 
@@ -174,9 +170,7 @@ contains
         end select
 
 
-        !
         ! Close file
-        !
         call close_file_hdf(fid)
 
 
@@ -195,17 +189,15 @@ contains
         class(time_integrator_marching_t),  intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
 
+        associate (q_out => data%sdata%q_out, q_in => data%sdata%q_in)
 
-        !
-        ! Set q_out
-        ! TODO: This part will change after implementation of time marching integrators
-        !
-        call data%sdata%q_out%init(data%mesh,data%time_manager%ntime)
-        call data%sdata%q_out%set_ntime(data%time_manager%ntime)
-        call data%sdata%q_out%clear()
+            call q_out%init(data%mesh,data%time_manager%ntime)
+            call q_out%set_ntime(data%time_manager%ntime)
+            call q_out%clear()
 
-        data%sdata%q_out = data%sdata%q_in
+            q_out = q_in
 
+        end associate
 
     end subroutine process_data_for_output
     !*******************************************************************************

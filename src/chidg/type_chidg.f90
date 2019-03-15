@@ -286,7 +286,6 @@ contains
                     ! Release storage
                     call self%data%release()
 
-
                 case default
                     call chidg_signal(FATAL,"chidg%shut_down: invalid shut_down string")
             end select

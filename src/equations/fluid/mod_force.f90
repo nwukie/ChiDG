@@ -85,21 +85,16 @@ contains
 
         call write_line('Computing Force...', io_proc=GLOBAL_MASTER)
 
-        !
         ! Initialize Chidg Worker references
-        !
         call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, data%time_manager, cache)
 
-
-        !
         ! Get patch_group boundary group ID
-        !
         group_ID = data%mesh%get_bc_patch_group_id(trim(patch_group))
 
+        ! Make sure q is assembled so it doesn't hang when triggered in get_field
+        call data%sdata%q%assemble()
 
-        !
         ! Loop over domains/elements/faces for "patch_group" 
-        !
         force_local = ZERO
         work_local  = ZERO
 
@@ -114,20 +109,15 @@ contains
                     iface      = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
 
 
-                    !
                     ! Initialize element location object
-                    ! 
-                    elem_info%idomain_g  = idomain_g
-                    elem_info%idomain_l  = idomain_l
-                    elem_info%ielement_g = ielement_g
-                    elem_info%ielement_l = ielement_l
+                    elem_info = data%mesh%get_element_info(idomain_l,ielement_l)
+
+
                     call worker%set_element(elem_info)
                     worker%itime = 1
 
 
-                    !
                     ! Update the element cache and all models so they are available
-                    !
                     call cache_handler%update(worker,data%eqnset,data%bc_state_group, components    = 'all',   &
                                                                                       face          = NO_ID,   &
                                                                                       differentiate = .false., &
@@ -137,16 +127,10 @@ contains
                     call worker%set_face(iface)
 
 
-                    !
                     ! Get pressure
-                    !
                     pressure = worker%get_field('Pressure', 'value', 'face interior')
 
-
-                    
-                    !
                     ! Get shear stress tensor
-                    !
                     tau_11 = worker%get_field('Shear-11', 'value', 'face interior')
                     tau_22 = worker%get_field('Shear-22', 'value', 'face interior')
                     tau_33 = worker%get_field('Shear-33', 'value', 'face interior')
@@ -154,33 +138,25 @@ contains
                     tau_13 = worker%get_field('Shear-13', 'value', 'face interior')
                     tau_23 = worker%get_field('Shear-23', 'value', 'face interior')
 
-
                     ! From symmetry
                     tau_21 = tau_12
                     tau_31 = tau_13
                     tau_32 = tau_23
 
-                    
-                    !
                     ! Add pressure component
-                    !
                     tau_11 = tau_11 - pressure
                     tau_22 = tau_22 - pressure
                     tau_33 = tau_33 - pressure
 
 
-                    !
                     ! Get normal vectors and reverse, because we want outward-facing vector from
                     ! the geometry.
-                    !
                     norm_1  = -worker%normal(1)
                     norm_2  = -worker%normal(2)
                     norm_3  = -worker%normal(3)
 
 
-                    !
                     ! Transform normal vector with g*G^{-T} so our normal and Area correspond to quantities on the deformed grid
-                    !
                     det_jacobian_grid = worker%get_det_jacobian_grid_face('value', 'face interior')
                     jacobian_grid     = worker%get_inv_jacobian_grid_face('face interior')
                     grid_velocity     = worker%get_grid_velocity_face('face interior')
@@ -189,7 +165,6 @@ contains
                     norm_3_phys = det_jacobian_grid*(jacobian_grid(1,3,:)*norm_1 + jacobian_grid(2,3,:)*norm_2 + jacobian_grid(3,3,:)*norm_3)
                     
 
-                    !
                     ! Compute \vector{n} dot \tensor{tau}
                     !   : These should produce the same result since the tensor is 
                     !   : symmetric. Not sure which is more correct.
@@ -203,9 +178,7 @@ contains
                     stress_z = tau_31*norm_1_phys + tau_32*norm_2_phys + tau_33*norm_3_phys
 
 
-                    !
                     ! Integrate
-                    !
                     weights = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights_face(iface)
 
                     if (present(force)) then
@@ -225,13 +198,9 @@ contains
         end if ! group_ID /= NO_ID
 
 
-        !
         ! Reduce result across processors
-        !
         if (present(force)) call MPI_AllReduce(force_local,force,3,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
         if (present(work))  call MPI_AllReduce(work_local, work, 1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
-
-
 
     end subroutine report_aerodynamics
     !******************************************************************************************

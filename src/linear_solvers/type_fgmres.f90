@@ -638,8 +638,8 @@ contains
         call self%x0%release()
         call self%zr%release()
         call self%deltaz%release()
-        call self%v%release()
-        call self%z%release()
+        if (allocated(self%v)) call self%v%release()
+        if (allocated(self%z)) call self%z%release()
 
         if (associated(self%fgmres)) then
             call self%fgmres%tear_down()

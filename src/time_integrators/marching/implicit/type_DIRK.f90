@@ -208,21 +208,21 @@ contains
 
 
 
-        !
-        ! Report to file.
-        !
-        call report_aerodynamics(data,'Airfoil',force=force, work=work)
-        if (IRANK == GLOBAL_MASTER) then
-            inquire(file="aero.txt", exist=exists)
-            if (exists) then
-                open(newunit=myunit, file="aero.txt", status="old", position="append",action="write")
-            else
-                open(newunit=myunit, file="aero.txt", status="new",action="write")
-                write(myunit,*) 'force-1', 'force-2', 'force-3', 'work'
-            end if
-            write(myunit,*) force(1), force(2), force(3), work
-            close(myunit)
-        end if
+!        !
+!        ! Report to file.
+!        !
+!        call report_aerodynamics(data,'Airfoil',force=force, work=work)
+!        if (IRANK == GLOBAL_MASTER) then
+!            inquire(file="aero.txt", exist=exists)
+!            if (exists) then
+!                open(newunit=myunit, file="aero.txt", status="old", position="append",action="write")
+!            else
+!                open(newunit=myunit, file="aero.txt", status="new",action="write")
+!                write(myunit,*) 'force-1', 'force-2', 'force-3', 'work'
+!            end if
+!            write(myunit,*) force(1), force(2), force(3), work
+!            close(myunit)
+!        end if
 
 
 

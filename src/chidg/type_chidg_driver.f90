@@ -275,9 +275,9 @@ contains
                 end if
 
                 ! Run ChiDG simulation
-                call wall_distance%report('before')
+                call wall_distance%reporter('before')
                 call wall_distance%run(write_initial=.false., write_final=.false.)
-                call wall_distance%report('after')
+                call wall_distance%reporter('after')
 
                 ! Write wall distance to auxiliary field
                 call wall_distance%write_fields(aux_file)
@@ -325,9 +325,9 @@ contains
                 call wall_distance%read_fields(aux_file)
 
                 ! Run ChiDG simulation
-                call wall_distance%report('before')
+                call wall_distance%reporter('before')
                 call wall_distance%run(write_initial=.false., write_final=.false.)
-                call wall_distance%report('after')
+                call wall_distance%reporter('after')
 
                 ! Write wall distance to auxiliary field
                 call wall_distance%write_fields(aux_file)

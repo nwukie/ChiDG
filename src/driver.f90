@@ -78,9 +78,9 @@ program driver
 
 
         ! Run ChiDG simulation
-        call chidg%report('before')
+        call chidg%reporter('before')
         call chidg%run(write_initial=initial_write, write_final=final_write)
-        call chidg%report('after')
+        call chidg%reporter('after')
 
 
         ! Close ChiDG

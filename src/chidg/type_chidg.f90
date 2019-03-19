@@ -8,6 +8,8 @@ module type_chidg
     use mod_function,               only: register_functions
     use mod_prescribed_mesh_motion_function, only: register_prescribed_mesh_motion_functions
     use mod_radial_basis_function,  only: register_radial_basis_functions
+    use mod_force,                      only: report_aerodynamics
+
 
     use mod_grid,                   only: initialize_grid
     use type_svector,               only: svector_t
@@ -113,7 +115,7 @@ module type_chidg
         ! Run
         procedure       :: process
         procedure       :: run
-        procedure       :: report
+        procedure       :: reporter
 
         ! IO
         procedure       :: read_mesh
@@ -1352,8 +1354,9 @@ contains
 
         character(100)              :: filename
         character(:),   allocatable :: prefix
-        integer(ik)                 :: istep, nsteps, wcount, iread, ierr
-        logical                     :: option_write_initial, option_write_final
+        integer(ik)                 :: istep, nsteps, wcount, iread, ierr, myunit
+        logical                     :: option_write_initial, option_write_final, exists
+        real(rk)                    :: force(3), work
 
         class(chidg_t), pointer :: chidg
     
@@ -1409,13 +1412,25 @@ contains
         nsteps = self%data%time_manager%nsteps
         call write_line("Step","System residual", columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
         do istep = 1,nsteps
+
+
+            ! Report to file: report from mod_io
+            call self%reporter(report)
+
             
             ! Call time integrator to take a step. 
             call self%time_integrator%step(self%data,               &
                                            self%nonlinear_solver,   &
                                            self%linear_solver,      &
                                            self%preconditioner)
+
+
+            if (istep == nsteps) then
+                call self%reporter(report)
+            end if
+
            
+
             ! Write solution every nwrite steps
             if (wcount == self%data%time_manager%nwrite) then
                 if (self%data%time_manager%t < 1.) then
@@ -1430,7 +1445,6 @@ contains
 
             ! Print diagnostics
             call write_line("TIME INTEGRATOR", istep, self%time_integrator%residual_norm%at(istep), io_proc=GLOBAL_MASTER)
-
             wcount = wcount + 1
 
         end do !istep
@@ -1461,37 +1475,56 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine report(self,selection)
+    subroutine reporter(self,selection)
         class(chidg_t), intent(inout)   :: self
         character(*),   intent(in)      :: selection
 
-        integer(ik) :: ireport, ierr
+        integer(ik) :: ireport, ierr, myunit
+        real(rk)    :: force(3), work
+        logical     :: exists
 
 
-        if ( trim(selection) == 'before' ) then
+        select case(trim(selection))
+            case ('before') 
 
+                do ireport = 0,NRANK-1
+                    if ( ireport == IRANK ) then
+                        call write_line('MPI Rank: ', IRANK, io_proc=IRANK)
+                        call self%data%report('grid')
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
+                end do
 
-            do ireport = 0,NRANK-1
-                if ( ireport == IRANK ) then
-                    call write_line('MPI Rank: ', IRANK, io_proc=IRANK)
-                    call self%data%report('grid')
+            case ('after')
+
+                if ( IRANK == GLOBAL_MASTER ) then
+                    !call self%time_integrator%report()
+                    call self%nonlinear_solver%report()
+                    !call self%preconditioner%report()
                 end if
-                call MPI_Barrier(ChiDG_COMM,ierr)
-            end do
+
+            case ('aerodynamics')
+
+                call report_aerodynamics(self%data,'Airfoil',force=force, work=work)
+                if (IRANK == GLOBAL_MASTER) then
+                    inquire(file="aero.txt", exist=exists)
+                    if (exists) then
+                        open(newunit=myunit, file="aero.txt", status="old", position="append",action="write")
+                    else
+                        open(newunit=myunit, file="aero.txt", status="new",action="write")
+                        write(myunit,*) 'force-1', 'force-2', 'force-3', 'work'
+                    end if
+                    write(myunit,*) force(1), force(2), force(3), work
+                    close(myunit)
+                end if
+
+            case default
 
 
-        else if ( trim(selection) == 'after' ) then
-
-            if ( IRANK == GLOBAL_MASTER ) then
-                !call self%time_integrator%report()
-                call self%nonlinear_solver%report()
-                !call self%preconditioner%report()
-            end if
-
-        end if
+        end select
 
 
-    end subroutine report
+    end subroutine reporter
     !*****************************************************************************************
 
 

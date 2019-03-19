@@ -111,6 +111,7 @@ module mod_io
     logical,                save    :: final_write      = .true.
     integer(ik),            save    :: nwrite           = 100
     integer(ik),            save    :: verbosity        = 2
+    character(len=100),     save    :: report           = 'none'
      
 
     ! Initial fields
@@ -183,7 +184,8 @@ module mod_io
     namelist /io/                       nwrite,             &
                                         initial_write,      &
                                         final_write,        &
-                                        verbosity
+                                        verbosity,          &
+                                        report
 
     namelist /initial/                  initial_fields
 

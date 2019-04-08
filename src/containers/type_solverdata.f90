@@ -226,15 +226,13 @@ contains
         character(*),           intent(in)              :: fieldname
         type(chidg_vector_t),   intent(in), optional    :: auxiliary_vector
 
-        integer(ik) :: naux_vectors, ierr
+        integer(ik) :: naux_vectors, ierr, i
 
         type(string_t),         allocatable :: temp_names(:)
         type(chidg_vector_t),   allocatable :: temp_vectors(:)
 
 
-        !
         ! Resize array storage
-        !
         if (allocated(self%auxiliary_field)) then
             naux_vectors = size(self%auxiliary_field) + 1
         else
@@ -248,9 +246,7 @@ contains
 
 
 
-        !
         ! Copy previously added auxiliary fields to new array
-        !
         if (naux_vectors > 1) then
             temp_names(1:size(self%auxiliary_field_name)) = self%auxiliary_field_name(1:size(self%auxiliary_field_name))
             temp_vectors(1:size(self%auxiliary_field))    = self%auxiliary_field(1:size(self%auxiliary_field))
@@ -258,26 +254,39 @@ contains
 
 
 
-        !
         ! Set field name
-        !
         temp_names(naux_vectors) = string_t(trim(fieldname))
 
 
+        ! Release current storate
+        !if (allocated(self%auxiliary_field)) then
+        !    do i = 1,size(self%auxiliary_field)
+        !        call self%auxiliary_field(i)%release()
+        !    end do
+        !    deallocate(self%auxiliary_field)
+        !end if
+        ! Reallocate array
+        !allocate(self%auxiliary_field(naux_vectors), stat=ierr)
+        !if (ierr /= 0) call AllocationError
 
-        !
+
         ! Move resized temp allocation back to solverdata_t container.
-        !
         call move_alloc(temp_names,self%auxiliary_field_name)
         call move_alloc(temp_vectors,self%auxiliary_field)
 
 
-        !
+
+        !! Copy temp to permanent
+        !do i = 1,naux_vectors
+        !    associate( aux => self%auxiliary_field(i), tmp => temp_vectors(i))
+        !        aux = tmp
+        !    end associate
+        !end do
+
+
+
         ! Store incoming vector if present
-        !
-        if (present(auxiliary_vector)) then
-            self%auxiliary_field(naux_vectors) = auxiliary_vector
-        end if
+        if (present(auxiliary_vector)) self%auxiliary_field(naux_vectors) = auxiliary_vector
 
     end subroutine add_auxiliary_field
     !*****************************************************************************************

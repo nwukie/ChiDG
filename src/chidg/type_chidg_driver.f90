@@ -219,7 +219,9 @@ contains
         if (wd_file_exists .and. have_wd_field) then
 
             call wall_distance%read_fields(aux_file)
-            wall_distance%data%sdata%q = wall_distance%data%sdata%q_in
+            associate (q_in => wall_distance%data%sdata%q_in, q => wall_distance%data%sdata%q)
+                wall_distance%data%sdata%q = wall_distance%data%sdata%q_in
+            end associate
 
 
         ! If we don't have an accurate wall distance field in file, solve for a new one.

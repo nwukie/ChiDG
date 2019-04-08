@@ -634,7 +634,7 @@ contains
         ! Update cfl
         if (alpha > 0.75_rk) then
             cfln = cfln*self%cfl_up
-        else if (alpha < 0.1) then
+        else if (alpha < 0.2) then
             cfln = cfln*self%cfl_down
         else
             ! If inbetween, cfl stays the same

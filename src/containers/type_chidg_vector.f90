@@ -1190,6 +1190,7 @@ contains
             self%petsc_scatter     => null()
 
             self%petsc_vector_created = .false.
+            self%petsc_needs_assembled = .true.
 
         end if
 
@@ -1946,15 +1947,26 @@ contains
 
         if (self%petsc_vector_created) then
 
-            call VecDestroy(self%petsc_vector,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%destroy: error calling VecDestroy.')
-            call VecDestroy(self%petsc_vector_recv,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%destroy: error calling VecDestroy.')
-            call VecScatterDestroy(self%petsc_scatter,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%destroy: error calling VecScatterDestroy.')
+            call self%release()
 
-            self%petsc_vector_created = .false.
-            self%petsc_needs_assembled = .true.
+!            call VecDestroy(self%petsc_vector,ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%destroy: error calling VecDestroy.')
+!            call VecDestroy(self%petsc_vector_recv,ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%destroy: error calling VecDestroy.')
+!            call VecScatterDestroy(self%petsc_scatter,ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%destroy: error calling VecScatterDestroy.')
+!
+!
+!            if (associated(self%petsc_vector))      deallocate(self%petsc_vector)
+!            if (associated(self%petsc_vector_recv)) deallocate(self%petsc_vector_recv)
+!            if (associated(self%petsc_scatter))     deallocate(self%petsc_scatter)
+!
+!            self%petsc_vector      => null()
+!            self%petsc_vector_recv => null()
+!            self%petsc_scatter     => null()
+!
+!            self%petsc_vector_created = .false.
+!            self%petsc_needs_assembled = .true.
 
         end if
 

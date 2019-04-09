@@ -35,14 +35,31 @@ program driver
     character(len=10)                           :: time_string
     character(:),                   allocatable :: command, tmp_file
     class(function_t),              allocatable :: fcn
+    logical                                     :: run_chidg_action
 
 
     ! Check for command-line arguments
     narg = command_argument_count()
 
+    ! Get potential 'action'
+    call get_command_argument(1,chidg_action)
+
+    run_chidg_action = .false.
+    if (trim(chidg_action) == '2tec'       .or. &
+        trim(chidg_action) == '2vtk'       .or. &
+        trim(chidg_action) == 'convert'    .or. &
+        trim(chidg_action) == 'edit'       .or. &
+        trim(chidg_action) == 'post'       .or. &
+        trim(chidg_action) == 'clone'      .or. &
+        trim(chidg_action) == 'forces'     .or. &
+        trim(chidg_action) == 'inputs'     .or. &
+        trim(chidg_action) == 'tutorial'   .or. &
+        trim(chidg_action) == 'matplotlib') run_chidg_action = .true.
+
 
     ! Execute ChiDG calculation
-    if ( narg == 0 ) then
+    !if ( narg == 0 ) then
+    if (.not. run_chidg_action) then
 
         ! Initialize ChiDG environment
         call chidg%start_up('mpi')
@@ -92,7 +109,8 @@ program driver
 
 
     ! Check if executing 'action'
-    else if ( narg >= 1 ) then
+    !else if ( narg >= 1 ) then
+    else 
 
         ! Get 'action'
         call get_command_argument(1,chidg_action)
@@ -374,10 +392,6 @@ program driver
 
 
 
-
-
-    else
-        call chidg_signal(FATAL,"chidg: invalid number of arguments. Expecting (0) arguments: 'chidg'. or (2) arguments: 'chidg action file'.")
     end if
 
 

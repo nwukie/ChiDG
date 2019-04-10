@@ -241,6 +241,7 @@ contains
 
 
             call registered_bcs%push_back(WALL)
+            call registered_bcs%push_back(STATIONARY_ADIABATIC_WALL)
             call registered_bcs%push_back(MOVING_WALL)
             call registered_bcs%push_back(INLET_TOTAL)
             call registered_bcs%push_back(INLET_CHARACTERISTIC)

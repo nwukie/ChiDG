@@ -43,6 +43,7 @@ module mod_bc
 
     ! Fluid boundary conditions
     use bc_state_wall,                                  only: wall_t
+    use bc_state_stationary_adiabatic_wall,             only: stationary_adiabatic_wall_t
     use bc_state_moving_wall,                           only: moving_wall_t
     use bc_state_inlet_total,                           only: inlet_total_t
     use bc_state_inlet_characteristic,                  only: inlet_characteristic_t
@@ -155,6 +156,7 @@ contains
 
 
         type(wall_t)                            :: WALL
+        type(stationary_adiabatic_wall_t)       :: STATIONARY_ADIABATIC_WALL
         type(moving_wall_t)                     :: MOVING_WALL
         type(inlet_total_t)                     :: INLET_TOTAL
         type(inlet_characteristic_t)            :: INLET_CHARACTERISTIC

@@ -2424,17 +2424,70 @@ contains
         field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
 
-        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface_n),                         &
-                    !br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
-                    br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface_n)%br2_face)
+!        ! OLD
+!        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface_n),                         &
+!                    !br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
+!                    br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface_n)%br2_face)
+!
+!            ! Get normal vector. Use reverse of the normal vector from the interior element since no exterior element exists.
+!            normx = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+!            normy = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+!            normz = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+!            !normx = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+!            !normy = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+!            !normz = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+!
+!            ! Get interior/exterior state
+!            var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
+!            var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
+!
+!            ! Get ALE transformation
+!            ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
+!            ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
+!
+!            ! Transform values to undeformed element
+!            var_m = var_m*ale_g_m
+!            var_p = var_p*ale_g_p
+!
+!            ! Difference. Relative to exterior element, so reversed
+!            var_diff = (var_m - var_p) 
+!            !var_diff = HALF*(var_p - var_m) 
+!
+!
+!            ! Multiply by weights
+!            var_diff_weighted = var_diff * weights
+!
+!
+!            ! Multiply by normal. Note: normal is scaled by face jacobian.
+!            var_diff_x = var_diff_weighted * normx
+!            var_diff_y = var_diff_weighted * normy
+!            var_diff_z = var_diff_weighted * normz
+!
+!
+!            ! 1: Lift boundary difference. Project into element basis.
+!            ! 2: Evaluate lift modes at face quadrature nodes
+!            lift_gq_x = matmul(br2_face,var_diff_x)
+!            lift_gq_y = matmul(br2_face,var_diff_y)
+!            lift_gq_z = matmul(br2_face,var_diff_z)
+!            
+!
+!            ! Store lift
+!            call worker%cache%set_data(field,'face exterior', lift_gq_x, 'lift face', 1, worker%function_info%seed, iface)
+!            call worker%cache%set_data(field,'face exterior', lift_gq_y, 'lift face', 2, worker%function_info%seed, iface)
+!            call worker%cache%set_data(field,'face exterior', lift_gq_z, 'lift face', 3, worker%function_info%seed, iface)
+!
+!
+!        end associate
+
+
+        ! NEW
+        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),  &
+                    br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
 
             ! Get normal vector. Use reverse of the normal vector from the interior element since no exterior element exists.
-            normx = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
-            normy = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
-            normz = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
-            !normx = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
-            !normy = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
-            !normz = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+            normx = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+            normy = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+            normz = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
@@ -2449,7 +2502,7 @@ contains
             var_p = var_p*ale_g_p
 
             ! Difference. Relative to exterior element, so reversed
-            var_diff = (var_m - var_p) 
+            var_diff = (var_p - var_m) 
             !var_diff = HALF*(var_p - var_m) 
 
 
@@ -2477,8 +2530,6 @@ contains
 
 
         end associate
-
-
 
 
 

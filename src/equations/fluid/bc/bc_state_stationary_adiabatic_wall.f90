@@ -191,9 +191,9 @@ contains
 
 
 
-
-
-
+        !
+        ! Store boundary gradient
+        !
         grad1_density_m = ZERO
         grad2_density_m = ZERO
         grad3_density_m = ZERO

@@ -2,7 +2,7 @@ module type_cache_handler
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: NFACES, INTERIOR, CHIMERA, BOUNDARY, DIAG, NO_PROC,   &
-                                  ME, NEIGHBOR, HALF, ONE,                              &
+                                  ME, NEIGHBOR, ZERO, HALF, ONE,                        &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NO_ID
     use mod_DNAD_tools,     only: face_compute_seed, element_compute_seed
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_element_autodiff
@@ -1876,28 +1876,18 @@ contains
         !
         do iface = 1,NFACES
 
-
-            !
             ! Update worker face index
-            !
             call worker%set_face(iface)
-
-
 
             associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                            &
                         br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face,                                         &
                         br2_vol          => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_vol)
 
 
-
-
-
             eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             do ifield = 1,worker%prop(eqn_ID)%nprimary_fields()
 
-                !
                 ! Get field
-                !
                 field = worker%prop(eqn_ID)%get_primary_field_name(ifield)
 
 
@@ -1930,16 +1920,24 @@ contains
                     ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
                     ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
 
+
                     ! Transform values to undeformed element
                     var_m = var_m*ale_g_m
                     var_p = var_p*ale_g_p
 
 
                     ! Difference
-                    var_diff = HALF*(var_p - var_m) 
+                    if ( worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY ) then
+                        var_diff = (var_p - var_m)
+                    else
+                        var_diff = HALF*(var_p - var_m) 
+                    end if
+
+
 
                     ! Multiply by weights
                     var_diff_weighted = var_diff * weights
+
 
                     ! Multiply by normal. Note: normal is scaled by face jacobian.
                     var_diff_x = var_diff_weighted * worker%normal(1)
@@ -1963,7 +1961,7 @@ contains
                     lift_gq_face_y = matmul(br2_face,var_diff_y)
                     lift_gq_face_z = matmul(br2_face,var_diff_z)
 
-                    
+
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
@@ -1976,7 +1974,7 @@ contains
                     lift_gq_vol_y = matmul(br2_vol,var_diff_y)
                     lift_gq_vol_z = matmul(br2_vol,var_diff_z)
 
-                    
+
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, iface)
@@ -2025,7 +2023,11 @@ contains
 
 
                     ! Difference
-                    var_diff = HALF*(var_p - var_m) 
+                    if ( worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY ) then
+                        var_diff = (var_p - var_m) 
+                    else
+                        var_diff = HALF*(var_p - var_m) 
+                    end if
 
 
                     ! Multiply by weights
@@ -2040,6 +2042,7 @@ contains
                     lift_gq_face_x = matmul(br2_face,var_diff_x)
                     lift_gq_face_y = matmul(br2_face,var_diff_y)
                     lift_gq_face_z = matmul(br2_face,var_diff_z)
+
                     
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
@@ -2051,6 +2054,7 @@ contains
                     lift_gq_vol_x = matmul(br2_vol,var_diff_x)
                     lift_gq_vol_y = matmul(br2_vol,var_diff_y)
                     lift_gq_vol_z = matmul(br2_vol,var_diff_z)
+
                     
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, iface)
@@ -2480,6 +2484,7 @@ contains
 !        end associate
 
 
+
         ! NEW
         associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),  &
                     br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
@@ -2503,18 +2508,14 @@ contains
 
             ! Difference. Relative to exterior element, so reversed
             var_diff = (var_p - var_m) 
-            !var_diff = HALF*(var_p - var_m) 
-
 
             ! Multiply by weights
             var_diff_weighted = var_diff * weights
-
 
             ! Multiply by normal. Note: normal is scaled by face jacobian.
             var_diff_x = var_diff_weighted * normx
             var_diff_y = var_diff_weighted * normy
             var_diff_z = var_diff_weighted * normz
-
 
             ! 1: Lift boundary difference. Project into element basis.
             ! 2: Evaluate lift modes at face quadrature nodes

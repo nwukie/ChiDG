@@ -37,11 +37,11 @@ module type_face
         ! Self information
         integer(ik)             :: spacedim         ! Number of spatial dimensions
         integer(ik)             :: ftype            ! INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
-        integer(ik)             :: ChiID    = 0     ! Identifier for domain-local Chimera interfaces
-        integer(ik)             :: bc_ID    = 0     ! Index for bc state group data%bc_state_group(bc_ID)
-        integer(ik)             :: group_ID = 0     ! Index for bc patch group mesh%bc_patch_group(group_ID)
-        integer(ik)             :: patch_ID = 0     ! Index for bc patch 
-        integer(ik)             :: face_ID  = 0     ! Index for bc patch face
+        integer(ik)             :: ChiID    = NO_ID ! Identifier for domain-local Chimera interfaces
+        integer(ik)             :: bc_ID    = NO_ID ! Index for bc state group data%bc_state_group(bc_ID)
+        integer(ik)             :: group_ID = NO_ID ! Index for bc patch group mesh%bc_patch_group(group_ID)
+        integer(ik)             :: patch_ID = NO_ID ! Index for bc patch 
+        integer(ik)             :: face_ID  = NO_ID ! Index for bc patch face
         integer(ik)             :: mm_ID   = NO_MM_ASSIGNED
 
         ! Owner-element information

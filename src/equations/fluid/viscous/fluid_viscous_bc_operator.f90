@@ -1,7 +1,7 @@
 module fluid_viscous_bc_operator
 #include <messenger.h>
     use mod_kinds,          only: ik, rk
-    use mod_constants,      only: HALF, ONE, TWO
+    use mod_constants,      only: ZERO, HALF, ONE, TWO
     use type_operator,      only: operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -101,6 +101,8 @@ contains
             flux_1, flux_2, flux_3
 
         real(rk),   allocatable, dimension(:)   ::  r
+
+        integer(ik) :: idomain_l, ielement_l, iface, group_ID
 
 
         !
@@ -212,6 +214,17 @@ contains
         flux_1 = -k*grad1_T  -  (u*tau_11 + v*tau_12 + w*tau_13)
         flux_2 = -k*grad2_T  -  (u*tau_12 + v*tau_22 + w*tau_23)
         flux_3 = -k*grad3_T  -  (u*tau_13 + v*tau_23 + w*tau_33)
+
+
+!        idomain_l  = worker%element_info%idomain_l
+!        ielement_l = worker%element_info%ielement_l
+!        iface      = worker%iface
+!        group_ID   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
+!        if (trim(worker%mesh%bc_patch_group(group_ID)%name) == 'Airfoil') then
+!            flux_1 = ZERO
+!            flux_2 = ZERO
+!            flux_3 = ZERO
+!        end if
 
         call worker%integrate_boundary_condition('Energy','Diffusion',flux_1,flux_2,flux_3)
 

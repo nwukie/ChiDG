@@ -346,49 +346,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-!        grad1_density_m = ZERO
-!        grad2_density_m = ZERO
-!        grad3_density_m = ZERO
-!        call worker%store_bc_state('Density'   , grad1_density_m, 'grad1')
-!        call worker%store_bc_state('Density'   , grad2_density_m, 'grad2')
-!        call worker%store_bc_state('Density'   , grad3_density_m, 'grad3')
-!                                                
-!        call worker%store_bc_state('Momentum-1', grad1_mom1_m, 'grad1')
-!        call worker%store_bc_state('Momentum-1', grad2_mom1_m, 'grad2')
-!        call worker%store_bc_state('Momentum-1', grad3_mom1_m, 'grad3')
-!                                                
-!        call worker%store_bc_state('Momentum-2', grad1_mom2_m, 'grad1')
-!        call worker%store_bc_state('Momentum-2', grad2_mom2_m, 'grad2')
-!        call worker%store_bc_state('Momentum-2', grad3_mom2_m, 'grad3')
-!                                                
-!        call worker%store_bc_state('Momentum-3', grad1_mom3_m, 'grad1')
-!        call worker%store_bc_state('Momentum-3', grad2_mom3_m, 'grad2')
-!        call worker%store_bc_state('Momentum-3', grad3_mom3_m, 'grad3')
-!
-!        grad1_energy_m = ZERO
-!        grad2_energy_m = ZERO
-!        grad3_energy_m = ZERO
-!        call worker%store_bc_state('Energy'    , grad1_energy_m, 'grad1')
-!        call worker%store_bc_state('Energy'    , grad2_energy_m, 'grad2')
-!        call worker%store_bc_state('Energy'    , grad3_energy_m, 'grad3')
-
-
-
     end subroutine compute_bc_state
     !*****************************************************************************************
 

@@ -1848,7 +1848,7 @@ contains
         type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
-        character(:),   allocatable :: field
+        character(:),   allocatable :: field, bc_family
         real(rk),       allocatable :: ale_g_m(:), ale_g_p(:)
         integer(ik)                 :: idomain_l, ielement_l, iface, idepend, &
                                        ndepend, BC_ID, BC_face, ifield, idiff, eqn_ID
@@ -1882,6 +1882,16 @@ contains
             associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                            &
                         br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face,                                         &
                         br2_vol          => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_vol)
+
+
+
+            bc_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+            if (bc_ID /= NO_ID) then
+                bc_family = bc_state_group(bc_ID)%family
+            else
+                bc_family = 'none'
+            end if
+
 
 
             eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
@@ -1962,6 +1972,13 @@ contains
                     lift_gq_face_z = matmul(br2_face,var_diff_z)
 
 
+!                    if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
+!                        lift_gq_face_x = ZERO
+!                        lift_gq_face_y = ZERO
+!                        lift_gq_face_z = ZERO
+!                    end if
+
+
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
@@ -1973,6 +1990,14 @@ contains
                     lift_gq_vol_x = matmul(br2_vol,var_diff_x)
                     lift_gq_vol_y = matmul(br2_vol,var_diff_y)
                     lift_gq_vol_z = matmul(br2_vol,var_diff_z)
+
+
+!                    if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
+!                        lift_gq_vol_x = ZERO
+!                        lift_gq_vol_y = ZERO
+!                        lift_gq_vol_z = ZERO
+!                    end if
+
 
 
                     ! Store lift
@@ -2043,6 +2068,12 @@ contains
                     lift_gq_face_y = matmul(br2_face,var_diff_y)
                     lift_gq_face_z = matmul(br2_face,var_diff_z)
 
+
+!                    if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
+!                        lift_gq_face_x = ZERO
+!                        lift_gq_face_y = ZERO
+!                        lift_gq_face_z = ZERO
+!                    end if
                     
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
@@ -2054,6 +2085,13 @@ contains
                     lift_gq_vol_x = matmul(br2_vol,var_diff_x)
                     lift_gq_vol_y = matmul(br2_vol,var_diff_y)
                     lift_gq_vol_z = matmul(br2_vol,var_diff_z)
+
+
+!                    if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
+!                        lift_gq_vol_x = ZERO
+!                        lift_gq_vol_y = ZERO
+!                        lift_gq_vol_z = ZERO
+!                    end if
 
                     
                     ! Store lift
@@ -2384,7 +2422,7 @@ contains
         type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         integer(ik),                intent(in)      :: ieqn
 
-        integer(ik) :: idomain_l, ielement_l, iface, iface_n, eqn_ID
+        integer(ik) :: idomain_l, ielement_l, iface, iface_n, eqn_ID, bc_ID
         logical     :: boundary_face, interior_face
 
         type(AD_D), allocatable, dimension(:)   ::          &
@@ -2394,7 +2432,7 @@ contains
             lift_modes_x,   lift_modes_y,   lift_modes_z,   &
             lift_gq_x,      lift_gq_y,      lift_gq_z
 
-        character(:),   allocatable                 :: field
+        character(:),   allocatable                 :: field, bc_family
         real(rk),       allocatable, dimension(:)   :: normx, normy, normz, ale_g_m, ale_g_p
 
 
@@ -2484,6 +2522,12 @@ contains
 !        end associate
 
 
+        bc_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+        if (bc_ID /= NO_ID) then
+            bc_family = bc_state_group(bc_ID)%family
+        else
+            bc_family = 'none'
+        end if
 
         ! NEW
         associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),  &
@@ -2523,6 +2567,11 @@ contains
             lift_gq_y = matmul(br2_face,var_diff_y)
             lift_gq_z = matmul(br2_face,var_diff_z)
             
+!            if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
+!                lift_gq_x = ZERO
+!                lift_gq_y = ZERO
+!                lift_gq_z = ZERO
+!            end if
 
             ! Store lift
             call worker%cache%set_data(field,'face exterior', lift_gq_x, 'lift face', 1, worker%function_info%seed, iface)

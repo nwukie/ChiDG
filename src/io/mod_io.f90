@@ -8,7 +8,7 @@
 module mod_io
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: ZERO
+    use mod_constants,  only: ZERO, NFACES
     use type_dict,      only: dict_t
     implicit none
 
@@ -23,6 +23,7 @@ module mod_io
     ! Space
     character(len=100),     save    :: basis            = 'legendre'
     integer(ik),            save    :: solution_order   = 1
+    integer(ik),            save    :: lift_stab        = real(NFACES,rk)   ! Default is NFACES, but for 2D this should be 4 instead of 6
 
     ! Quadrature
     integer(ik),            save    :: gq_rule          = 2          ! 1: Collocation, 2: Over-integration
@@ -135,7 +136,8 @@ module mod_io
                                         solutionfile_out
 
     namelist /space/                    basis,              &
-                                        solution_order
+                                        solution_order,     &
+                                        lift_stab
 
     namelist /quadrature/               gq_rule
 

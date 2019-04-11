@@ -29,6 +29,7 @@
 module type_chidg_worker
 #include <messenger.h>
     use mod_kinds,              only: ik, rk
+    use mod_io,                 only: lift_stab
     use mod_constants,          only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA,  &
                                       ONE, THIRD, TWO, NOT_A_FACE, BOUNDARY,    &
                                       CARTESIAN, CYLINDRICAL, INTERIOR, HALF
@@ -72,6 +73,7 @@ module type_chidg_worker
         type(time_manager_t),   pointer :: time_manager
         !type(properties_t),     pointer :: prop(:)
         type(properties_t), allocatable :: prop(:)
+
 
         type(element_info_t)        :: element_info
         type(function_info_t)       :: function_info
@@ -793,14 +795,14 @@ contains
                 lift_nodes      = 'lift face'
                 lift_face_min   = iface_use
                 lift_face_max   = iface_use
-                stabilization   = real(NFACES,rk)
+                stabilization   = real(lift_stab,rk)
             !case('face exterior','boundary')
             !    cache_component = 'face exterior'
             !    lift_source     = 'face exterior'
             !    lift_nodes      = 'lift face'
             !    lift_face_min   = iface_use
             !    lift_face_max   = iface_use
-            !    stabilization   = real(NFACES,rk)
+            !    stabilization   = real(lift_stab,rk)
             case('boundary')
                 cache_component = 'face exterior'
                 !lift_source     = 'face interior'
@@ -808,14 +810,14 @@ contains
                 lift_nodes      = 'lift face'
                 lift_face_min   = iface_use
                 lift_face_max   = iface_use
-                stabilization   = real(NFACES,rk)
+                stabilization   = real(lift_stab,rk)
             case('face exterior')
                 cache_component = 'face exterior'
                 lift_source     = 'face exterior'
                 lift_nodes      = 'lift face'
                 lift_face_min   = iface_use
                 lift_face_max   = iface_use
-                stabilization   = real(NFACES,rk)
+                stabilization   = real(lift_stab,rk)
             case('element')
                 cache_component = 'element'
                 lift_source     = 'face interior'

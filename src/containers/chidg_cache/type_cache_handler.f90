@@ -2615,15 +2615,14 @@ contains
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
 
-
             ! Get ALE transformation
             ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
             ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
 
+
             ! Transform values to undeformed element
             var_m = var_m*ale_g_m
             var_p = var_p*ale_g_p
-
 
 
             ! Difference. Relative to exterior element, so reversed
@@ -2648,12 +2647,7 @@ contains
             call worker%cache%set_data(field,'face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
             call worker%cache%set_data(field,'face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
 
-
         end associate
-
-
-
-
 
 
     end subroutine handle_external_lift__chimera_face

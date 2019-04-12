@@ -23,7 +23,8 @@ module mod_io
     ! Space
     character(len=100),     save    :: basis            = 'legendre'
     integer(ik),            save    :: solution_order   = 1
-    integer(ik),            save    :: lift_stab        = real(NFACES,rk)   ! Default is NFACES, but for 2D this should be 4 instead of 6
+    real(rk),               save    :: face_lift_stab   = real(NFACES,rk)   ! Default is NFACES, but for 2D this should be 4 instead of 6
+    real(rk),               save    :: elem_lift_stab   = real(1,rk)        ! Default is 1
 
     ! Quadrature
     integer(ik),            save    :: gq_rule          = 2          ! 1: Collocation, 2: Over-integration
@@ -137,7 +138,8 @@ module mod_io
 
     namelist /space/                    basis,              &
                                         solution_order,     &
-                                        lift_stab
+                                        face_lift_stab,     &
+                                        elem_lift_stab
 
     namelist /quadrature/               gq_rule
 

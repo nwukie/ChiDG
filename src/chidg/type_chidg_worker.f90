@@ -29,7 +29,7 @@
 module type_chidg_worker
 #include <messenger.h>
     use mod_kinds,              only: ik, rk
-    use mod_io,                 only: lift_stab
+    use mod_io,                 only: face_lift_stab, elem_lift_stab
     use mod_constants,          only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA,  &
                                       ONE, THIRD, TWO, NOT_A_FACE, BOUNDARY,    &
                                       CARTESIAN, CYLINDRICAL, INTERIOR, HALF
@@ -795,7 +795,7 @@ contains
                 lift_nodes      = 'lift face'
                 lift_face_min   = iface_use
                 lift_face_max   = iface_use
-                stabilization   = real(lift_stab,rk)
+                stabilization   = face_lift_stab
             !case('face exterior','boundary')
             !    cache_component = 'face exterior'
             !    lift_source     = 'face exterior'
@@ -810,21 +810,22 @@ contains
                 lift_nodes      = 'lift face'
                 lift_face_min   = iface_use
                 lift_face_max   = iface_use
-                stabilization   = real(lift_stab,rk)
+                stabilization   = face_lift_stab
             case('face exterior')
                 cache_component = 'face exterior'
                 lift_source     = 'face exterior'
                 lift_nodes      = 'lift face'
                 lift_face_min   = iface_use
                 lift_face_max   = iface_use
-                stabilization   = real(lift_stab,rk)
+                stabilization   = face_lift_stab
             case('element')
                 cache_component = 'element'
                 lift_source     = 'face interior'
                 lift_nodes      = 'lift element'
                 lift_face_min   = 1
                 lift_face_max   = NFACES
-                stabilization   = ONE
+                !stabilization   = ONE
+                stabilization   = elem_lift_stab
             case default
                 user_msg = "chidg_worker%get_field: Invalid value for interpolation source. &
                             Try 'face interior', 'face exterior', 'boundary', or 'element'"

@@ -109,6 +109,7 @@ contains
 
         real(rk),   allocatable, dimension(:)   :: r
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
+        real(rk)                                :: q
 
 
 
@@ -186,7 +187,6 @@ contains
         ! Compute energy by extrapolating pressure and adding the fluid velocity on the wall
         !
         energy_bc = p_m/(gam-ONE) + HALF*density_m*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO)
-        !energy_bc = energy_m - HALF*density_m*(vel1_m**TWO + vel2_m**TWO + vel3_m**TWO)
 
 
         if (worker%coordinate_system() == 'Cylindrical') then
@@ -212,8 +212,9 @@ contains
 
 
         !
-        ! Impose adiabatic
+        ! Impose heat flux
         !
+        q = ZERO
 
 
         !
@@ -282,37 +283,40 @@ contains
 
 
 
-        grad1_density_bc = (ONE/(Rgas*T_m))*grad1_p
-        grad2_density_bc = (ONE/(Rgas*T_m))*grad2_p
-        grad3_density_bc = (ONE/(Rgas*T_m))*grad3_p
+        grad1_density_bc = (ONE/(Rgas*T_m))*grad1_p  -  (p_m/(Rgas*T_m*T_m))*(q/k)*worker%unit_normal(1)
+        grad2_density_bc = (ONE/(Rgas*T_m))*grad2_p  -  (p_m/(Rgas*T_m*T_m))*(q/k)*worker%unit_normal(2)
+        grad3_density_bc = (ONE/(Rgas*T_m))*grad3_p  -  (p_m/(Rgas*T_m*T_m))*(q/k)*worker%unit_normal(2)
 
 
-        grad1_mom1_bc = (p_m/(Rgas*T_m))*grad1_vel1  +  (grid_velocity(:,1)/(Rgas*T_m))*grad1_p
-        grad2_mom1_bc = (p_m/(Rgas*T_m))*grad2_vel1  +  (grid_velocity(:,1)/(Rgas*T_m))*grad2_p
-        grad3_mom1_bc = (p_m/(Rgas*T_m))*grad3_vel1  +  (grid_velocity(:,1)/(Rgas*T_m))*grad3_p
+        grad1_mom1_bc = (p_m/(Rgas*T_m))*grad1_vel1  +  (grid_velocity(:,1)/(Rgas*T_m))*grad1_p  -  (p_m/(Rgas*T_m*T_m))*grid_velocity(:,1)*(q/k)*worker%unit_normal(1)
+        grad2_mom1_bc = (p_m/(Rgas*T_m))*grad2_vel1  +  (grid_velocity(:,1)/(Rgas*T_m))*grad2_p  -  (p_m/(Rgas*T_m*T_m))*grid_velocity(:,1)*(q/k)*worker%unit_normal(2)
+        grad3_mom1_bc = (p_m/(Rgas*T_m))*grad3_vel1  +  (grid_velocity(:,1)/(Rgas*T_m))*grad3_p  -  (p_m/(Rgas*T_m*T_m))*grid_velocity(:,1)*(q/k)*worker%unit_normal(3)
 
-        grad1_mom2_bc = (p_m/(Rgas*T_m))*grad1_vel2  +  (grid_velocity(:,2)/(Rgas*T_m))*grad1_p
-        grad2_mom2_bc = (p_m/(Rgas*T_m))*grad2_vel2  +  (grid_velocity(:,2)/(Rgas*T_m))*grad2_p
-        grad3_mom2_bc = (p_m/(Rgas*T_m))*grad3_vel2  +  (grid_velocity(:,2)/(Rgas*T_m))*grad3_p
+        grad1_mom2_bc = (p_m/(Rgas*T_m))*grad1_vel2  +  (grid_velocity(:,2)/(Rgas*T_m))*grad1_p  -  (p_m/(Rgas*T_m*T_m))*grid_velocity(:,2)*(q/k)*worker%unit_normal(1)
+        grad2_mom2_bc = (p_m/(Rgas*T_m))*grad2_vel2  +  (grid_velocity(:,2)/(Rgas*T_m))*grad2_p  -  (p_m/(Rgas*T_m*T_m))*grid_velocity(:,2)*(q/k)*worker%unit_normal(2)
+        grad3_mom2_bc = (p_m/(Rgas*T_m))*grad3_vel2  +  (grid_velocity(:,2)/(Rgas*T_m))*grad3_p  -  (p_m/(Rgas*T_m*T_m))*grid_velocity(:,2)*(q/k)*worker%unit_normal(3)
 
-        grad1_mom3_bc = (p_m/(Rgas*T_m))*grad1_vel3  +  (grid_velocity(:,3)/(Rgas*T_m))*grad1_p
-        grad2_mom3_bc = (p_m/(Rgas*T_m))*grad2_vel3  +  (grid_velocity(:,3)/(Rgas*T_m))*grad2_p
-        grad3_mom3_bc = (p_m/(Rgas*T_m))*grad3_vel3  +  (grid_velocity(:,3)/(Rgas*T_m))*grad3_p
+        grad1_mom3_bc = (p_m/(Rgas*T_m))*grad1_vel3  +  (grid_velocity(:,3)/(Rgas*T_m))*grad1_p  -  (p_m/(Rgas*T_m*T_m))*grid_velocity(:,3)*(q/k)*worker%unit_normal(1)
+        grad2_mom3_bc = (p_m/(Rgas*T_m))*grad2_vel3  +  (grid_velocity(:,3)/(Rgas*T_m))*grad2_p  -  (p_m/(Rgas*T_m*T_m))*grid_velocity(:,3)*(q/k)*worker%unit_normal(2)
+        grad3_mom3_bc = (p_m/(Rgas*T_m))*grad3_vel3  +  (grid_velocity(:,3)/(Rgas*T_m))*grad3_p  -  (p_m/(Rgas*T_m*T_m))*grid_velocity(:,3)*(q/k)*worker%unit_normal(3)
 
         grad1_energy_bc = (p_m*grid_velocity(:,1)/(Rgas*T_m))*grad1_vel1 +  &
                           (p_m*grid_velocity(:,2)/(Rgas*T_m))*grad1_vel2 +  &
                           (p_m*grid_velocity(:,3)/(Rgas*T_m))*grad1_vel3 +  &
-                          (ONE/(gam-ONE) + HALF*(ONE/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO))*grad1_p
+                          (ONE/(gam-ONE) + HALF*(ONE/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO))*grad1_p - &
+                          (HALF*(p_m/(Rgas*T_m*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO)*(q/k)*worker%unit_normal(1)
 
         grad2_energy_bc = (p_m*grid_velocity(:,1)/(Rgas*T_m))*grad2_vel1 +  &
                           (p_m*grid_velocity(:,2)/(Rgas*T_m))*grad2_vel2 +  &
                           (p_m*grid_velocity(:,3)/(Rgas*T_m))*grad2_vel3 +  &
-                          (ONE/(gam-ONE) + HALF*(ONE/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO))*grad2_p
+                          (ONE/(gam-ONE) + HALF*(ONE/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO))*grad2_p - &
+                          (HALF*(p_m/(Rgas*T_m*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO)*(q/k)*worker%unit_normal(2)
 
         grad3_energy_bc = (p_m*grid_velocity(:,1)/(Rgas*T_m))*grad3_vel1 +  &
                           (p_m*grid_velocity(:,2)/(Rgas*T_m))*grad3_vel2 +  &
                           (p_m*grid_velocity(:,3)/(Rgas*T_m))*grad3_vel3 +  &
-                          (ONE/(gam-ONE) + HALF*(ONE/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO))*grad3_p
+                          (ONE/(gam-ONE) + HALF*(ONE/(Rgas*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO))*grad3_p - &
+                          (HALF*(p_m/(Rgas*T_m*T_m))*(grid_velocity(:,1)**TWO + grid_velocity(:,2)**TWO + grid_velocity(:,3)**TWO)*(q/k)*worker%unit_normal(3)
 
 
         ! Convert gradients of tangential momentum to angular momentum

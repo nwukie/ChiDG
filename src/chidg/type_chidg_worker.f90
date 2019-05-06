@@ -1282,10 +1282,6 @@ contains
 
 
 
-
-
-
-
     !>  Store a primary field being defined from a boundary condition state function
     !!  to the 'face exterior' cache component.
     !!
@@ -1337,7 +1333,6 @@ contains
             call self%cache%set_data(field,'face exterior',cache_data,'gradient',idirection,self%function_info%seed,self%iface)
 
         end if
-
 
 
     end subroutine store_bc_state

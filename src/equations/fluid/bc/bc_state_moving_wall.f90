@@ -39,32 +39,17 @@ contains
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/29/2016
+    !!  @date   3/29/2019
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
         class(moving_wall_t),   intent(inout) :: self
         
-
-        !
         ! Set operator name
-        !
         call self%set_name('Moving Wall')
         call self%set_family('Wall')
 
-
-!        !
-!        ! Set operator equations
-!        !
-!        call self%set_equation('Density'   )
-!        call self%set_equation('Momentum-1')
-!        call self%set_equation('Momentum-2')
-!        call self%set_equation('Momentum-3')
-!        call self%set_equation('Energy'    )
-
-        !
         ! Add functions
-        !
         call self%bcproperties%add('Velocity-1','Required')
         call self%bcproperties%add('Velocity-2','Required')
         call self%bcproperties%add('Velocity-3','Required')
@@ -77,20 +62,10 @@ contains
 
 
 
-
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/12/2016
-    !!
-    !!
+    !!  @date   3/29/2019
     !!
     !----------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
@@ -112,10 +87,7 @@ contains
         real(rk),   allocatable, dimension(:)   :: r
 
 
-
-        !
         ! Interpolate interior solution to quadrature nodes
-        !
         density_m = worker%get_field('Density'   , 'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
@@ -123,9 +95,7 @@ contains
         energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
 
 
-        !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r

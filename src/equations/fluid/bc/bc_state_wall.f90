@@ -38,7 +38,7 @@ contains
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/29/2016
+    !!  @date   3/29/2019
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
@@ -68,9 +68,7 @@ contains
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/12/2016
-    !!
-    !!
+    !!  @date   3/29/2019
     !!
     !----------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
@@ -199,19 +197,18 @@ contains
 
 
 
-
-
-
-
-        !
         ! Impose heat flux
         !
+        !   q = -k \nabla T
+        !
+        !----------------------------------------------------
+
+
+        ! Get thermal conductivity
         k = worker%get_field('Laminar Thermal Conductivity', 'value', 'face interior')
 
 
-        !
         ! compute velocity jacobians
-        !
         invdensity = ONE/density_m
         dvel1_ddensity = -invdensity*invdensity*mom1_m
         dvel2_ddensity = -invdensity*invdensity*mom2_m
@@ -220,7 +217,6 @@ contains
         dvel1_dmom1 = invdensity
         dvel2_dmom2 = invdensity
         dvel3_dmom3 = invdensity
-
 
 
         !
@@ -241,6 +237,7 @@ contains
         grad1_vel3 = dvel3_ddensity*grad1_density_m  +  dvel3_dmom3*grad1_mom3_m
         grad2_vel3 = dvel3_ddensity*grad2_density_m  +  dvel3_dmom3*grad2_mom3_m
         grad3_vel3 = dvel3_ddensity*grad3_density_m  +  dvel3_dmom3*grad3_mom3_m
+
 
         !
         ! Pressure jacobians

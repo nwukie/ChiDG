@@ -58,7 +58,6 @@ program driver
 
 
     ! Execute ChiDG calculation
-    !if ( narg == 0 ) then
     if (.not. run_chidg_action) then
 
         ! Initialize ChiDG environment
@@ -108,8 +107,7 @@ program driver
 
 
 
-    ! Check if executing 'action'
-    !else if ( narg >= 1 ) then
+    ! If not running calculation, try and run chidg 'action'
     else 
 
         ! Get 'action'

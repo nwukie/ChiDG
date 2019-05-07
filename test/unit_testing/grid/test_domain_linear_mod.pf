@@ -53,7 +53,7 @@ contains
         type(domain_connectivity_t) :: connectivity
         integer(ik)                 :: ftype, ineighbor, mapping, ielem, &
                                        ipt_xi, ipt_eta, ipt_zeta, ipt
-        integer(ik)                 :: neqns, nterms_s, idomain, ntime, nelements_g
+        integer(ik)                 :: neqns, nterms_s, idomain, ntime, nelements_g, dof_start
         real(rk), dimension(npt)    :: x,y,z
 
         !
@@ -95,8 +95,9 @@ contains
         nterms_s    = 8
         ntime       = 1
         nelements_g = 27
+        dof_start   = 0
         call this%domain%init_geom(idomain,nelements_g,nodes,connectivity,'Cartesian')
-        call this%domain%init_sol('Quadrature',1,nterms_s,neqns,ntime)
+        call this%domain%init_sol('Quadrature',1,nterms_s,neqns,ntime,dof_start)
         call this%domain%init_comm_local()
 
     end subroutine setUp
@@ -167,7 +168,7 @@ contains
         
         do ielem = 1,self%domain%nelem
             @assertTrue(self%domain%elems(ielem)%geom_initialized)
-            @assertTrue(self%domain%elems(ielem)%numInitialized)
+            @assertTrue(self%domain%elems(ielem)%sol_initialized)
         end do
         
     end subroutine test_domain_elements_initialized
@@ -190,7 +191,7 @@ contains
         do ielem = 1,self%domain%nelem
             do iface = 1,NFACES
                 @assertTrue(self%domain%faces(ielem,iface)%geom_initialized)
-                @assertTrue(self%domain%faces(ielem,iface)%numInitialized)
+                @assertTrue(self%domain%faces(ielem,iface)%sol_initialized)
             end do
         end do
 

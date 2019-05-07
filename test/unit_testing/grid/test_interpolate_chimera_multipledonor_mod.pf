@@ -3,7 +3,7 @@ module test_interpolate_chimera_multipledonor_mod
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
     use type_meshdata,      only: meshdata_t
-    use type_face_info,     only: face_info_t
+    use type_element_info,  only: element_info_t, element_info
     use type_function_info, only: function_info_t
     use mod_bc,             only: create_bc
 
@@ -11,7 +11,7 @@ module test_interpolate_chimera_multipledonor_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  NEIGHBOR, IO_DESTINATION
+                                  NEIGHBOR, IO_DESTINATION, NO_ID
     use mod_chidg_mpi,      only: IRANK
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_face_standard
     use mod_test_utilities, only: create_mesh_file
@@ -36,7 +36,7 @@ module test_interpolate_chimera_multipledonor_mod
 
         character(:),       allocatable :: filename
         type(chidg_t)                   :: chidg
-        class(function_t),  allocatable :: fcn
+        class(function_t),  allocatable :: fcn_info
 
     contains
 
@@ -57,53 +57,37 @@ contains
     subroutine setUp(this)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: this
 
-        integer(ik)                     :: ieqn, idom
+        integer(ik)                     :: ifield, idom
         type(meshdata_t),   allocatable :: meshdata(:) 
         
-        !
         ! Send log to file
-        !
         IO_DESTINATION = 'file'
     
-        !        
         ! Initialize ChiDG environment
-        !
         call this%chidg%start_up('core')
 
 
-        !
         ! Create mesh file
-        !
         this%filename = "D2E8M1_overlapping_multipledonor.h5"
         call create_mesh_file("D2 E8 M1 : Overlapping : NonMatching",this%filename)
 
 
-
-        !
         ! Set the order of accuracy for the solution
-        !
         call this%chidg%set('Solution Order', integer_input=2)
 
 
-
-        !
         ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
-        !
         call this%chidg%read_mesh(this%filename)
 
 
-        !
         ! Initialized solution to constant values
-        !
-        ieqn = this%chidg%data%eqnset(1)%prop%get_primary_field_index('u')   ! Get variable index
+        ifield = this%chidg%data%eqnset(1)%prop%get_primary_field_index('u')   ! Get variable index
 
 
-        !
         ! Initialize variable
-        !
-        call create_function(this%fcn,'constant')                  ! Allocate constant function
-        call this%fcn%set_option('val',5._rk)                      ! Set constant function value
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,this%fcn,ieqn)
+        call create_function(this%fcn_info,'constant')                  ! Allocate constant function
+        call this%fcn_info%set_option('val',5._rk)                      ! Set constant function value
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,this%fcn_info,ifield)
 
     
     end subroutine setUp
@@ -151,12 +135,12 @@ contains
     subroutine test__interpolate_face_chimera_AD_MD__values__idE(self)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
+        integer(ik)                 :: ielem, iface, ifield, ngq, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
-        type(face_info_t)           :: face
-        type(function_info_t)       :: fcn
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: fcn_info
         
         
         associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
@@ -170,32 +154,48 @@ contains
             ! A seed element, this is a neighbor for this test - so all derivative arrays 
             ! should be seeded to zero
             !
-            call fcn%seed%init(idomain_g    = 1,     &
-                               idomain_l    = 1,     &
-                               ielement_g   = 2,     &
-                               ielement_l   = 2,     &
-                               neqns        = 1,     &
-                               nterms_s     = 8,     &
-                               iproc        = IRANK, &
-                               itime        = itime, &
-                               recv_comm    = 0,     &
-                               recv_domain  = 0,     &
-                               recv_element = 0)
+            call fcn_info%seed%init(idomain_g    = 1,     &
+                                    idomain_l    = 1,     &
+                                    ielement_g   = 2,     &
+                                    ielement_l   = 2,     &
+                                    nfields      = 1,     &
+                                    nterms_s     = 8,     &
+                                    iproc        = IRANK, &
+                                    itime        = itime, &
+                                    dof_start    = 8,     &
+                                    recv_comm    = 0,     &
+                                    recv_domain  = 0,     &
+                                    recv_element = 0)
 
 
 
-            !
-            ! Set face
-            !
-            face%idomain_g  = idomain
-            face%idomain_l  = idomain
-            face%ielement_g = ielem
-            face%ielement_l = ielem
-            face%iface      = iface
+!            !
+!            ! Set face
+!            !
+!            face%idomain_g  = idomain
+!            face%idomain_l  = idomain
+!            face%ielement_g = ielem
+!            face%ielement_l = ielem
+!            face%iface      = iface
+            elem_info = element_info(idomain_g  = idomain,    &
+                                     idomain_l  = idomain,    &
+                                     ielement_g = ielem,      &
+                                     ielement_l = ielem,      &
+                                     iproc      = 0,          &
+                                     pelem_ID   = NO_ID,      &
+                                     eqn_ID     = 1,          &
+                                     nfields    = 1,          &
+                                     nterms_s   = 8,          &
+                                     nterms_c   = 8,          &
+                                     dof_start  = 0,          &
+                                     recv_comm    = NO_ID,    &
+                                     recv_domain  = NO_ID,    &
+                                     recv_element = NO_ID)
+
 
 
             tol  = 1.e-13_rk
-            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ifield = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq  = faces(ielem,iface)%basis_s%nnodes_face()
 
 
@@ -209,11 +209,11 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,elem_info,fcn_info,iface,ifield,itime,'value',NEIGHBOR)
             
             
             ! Initialize reference
-            val = self%fcn%get_option_value('val')
+            val = self%fcn_info%get_option_value('val')
             u_ref = val
             
             
@@ -243,12 +243,12 @@ contains
     subroutine test__interpolate_face_chimera_AD_MD__derivatives__idF(self)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain, itime
+        integer(ik)                 :: ielem, iface, ifield, ngq, igq, nderiv, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
-        type(face_info_t)           :: face
-        type(function_info_t)       :: fcn
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: fcn_info
         
         
         associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
@@ -262,30 +262,45 @@ contains
             ! A seed element, this is the current element. Since we are performing a 
             ! NEIGHBOR interpolation, derivatives should be zero.
             !
-            call fcn%seed%init(idomain_g    = 1,     &
-                               idomain_l    = 1,     &
-                               ielement_g   = 2,     &
-                               ielement_l   = 2,     &
-                               neqns        = 1,     &
-                               nterms_s     = 8,     &
-                               iproc        = IRANK, &
-                               itime        = itime, &
-                               recv_comm    = 0,     &
-                               recv_domain  = 0,     &
-                               recv_element = 0)
+            call fcn_info%seed%init(idomain_g    = 1,     &
+                                    idomain_l    = 1,     &
+                                    ielement_g   = 2,     &
+                                    ielement_l   = 2,     &
+                                    nfields      = 1,     &
+                                    nterms_s     = 8,     &
+                                    iproc        = IRANK, &
+                                    itime        = itime, &
+                                    dof_start    = 8,     &
+                                    recv_comm    = 0,     &
+                                    recv_domain  = 0,     &
+                                    recv_element = 0)
 
-            !
-            ! Set face
-            !
-            face%idomain_g  = idomain
-            face%idomain_l  = idomain
-            face%ielement_g = ielem
-            face%ielement_l = ielem
-            face%iface      = iface
+!            !
+!            ! Set face
+!            !
+!            face%idomain_g  = idomain
+!            face%idomain_l  = idomain
+!            face%ielement_g = ielem
+!            face%ielement_l = ielem
+!            face%iface      = iface
+            elem_info = element_info(idomain_g  = idomain,    &
+                                     idomain_l  = idomain,    &
+                                     ielement_g = ielem,      &
+                                     ielement_l = ielem,      &
+                                     iproc      = 0,          &
+                                     pelem_ID   = NO_ID,      &
+                                     eqn_ID     = 1,          &
+                                     nfields    = 1,          &
+                                     nterms_s   = 8,          &
+                                     nterms_c   = 8,          &
+                                     dof_start  = 0,          &
+                                     recv_comm    = NO_ID,    &
+                                     recv_domain  = NO_ID,    &
+                                     recv_element = NO_ID)
 
 
             tol    = 1.e-13_rk
-            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ifield   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq    = faces(ielem,iface)%basis_s%nnodes_face()
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
@@ -298,7 +313,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,elem_info,fcn_info,iface,ifield,itime,'value',NEIGHBOR)
             
             deriv_ref = ZERO
             
@@ -333,12 +348,12 @@ contains
     subroutine test__interpolate_face_chimera_AD_MD__values__idG(self)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
+        integer(ik)                 :: ielem, iface, ifield, ngq, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
-        type(face_info_t)           :: face
-        type(function_info_t)       :: fcn
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: fcn_info
         
         
         associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q )
@@ -351,31 +366,46 @@ contains
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
             ! all dervative arrays should be nonzero.
             !
-            call fcn%seed%init(idomain_g    = 2,     &
-                               idomain_l    = 2,     &
-                               ielement_g   = 1,     &
-                               ielement_l   = 1,     &
-                               neqns        = 1,     &
-                               nterms_s     = 8,     &
-                               iproc        = IRANK, &
-                               itime        = itime, &
-                               recv_comm    = 0,     &
-                               recv_domain  = 0,     &
-                               recv_element = 0)
+            call fcn_info%seed%init(idomain_g    = 2,     &
+                                    idomain_l    = 2,     &
+                                    ielement_g   = 1,     &
+                                    ielement_l   = 1,     &
+                                    nfields      = 1,     &
+                                    nterms_s     = 8,     &
+                                    iproc        = IRANK, &
+                                    itime        = itime, &
+                                    dof_start    = 40,    &
+                                    recv_comm    = 0,     &
+                                    recv_domain  = 0,     &
+                                    recv_element = 0)
 
 
-            !
-            ! Set face
-            !
-            face%idomain_g  = idomain
-            face%idomain_l  = idomain
-            face%ielement_g = ielem
-            face%ielement_l = ielem
-            face%iface      = iface
+!            !
+!            ! Set face
+!            !
+!            face%idomain_g  = idomain
+!            face%idomain_l  = idomain
+!            face%ielement_g = ielem
+!            face%ielement_l = ielem
+!            face%iface      = iface
+            elem_info = element_info(idomain_g  = idomain,    &
+                                     idomain_l  = idomain,    &
+                                     ielement_g = ielem,      &
+                                     ielement_l = ielem,      &
+                                     iproc      = 0,          &
+                                     pelem_ID   = NO_ID,      &
+                                     eqn_ID     = 1,          &
+                                     nfields    = 1,          &
+                                     nterms_s   = 8,          &
+                                     nterms_c   = 8,          &
+                                     dof_start  = 0,          &
+                                     recv_comm    = NO_ID,    &
+                                     recv_domain  = NO_ID,    &
+                                     recv_element = NO_ID)
 
 
             tol  = 1.e-13_rk
-            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ifield = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq  = faces(ielem,iface)%basis_s%nnodes_face()
             
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
@@ -387,13 +417,13 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,elem_info,fcn_info,iface,ifield,itime,'value',NEIGHBOR)
             
             
             !
             ! Initialize reference
             !
-            val = self%fcn%get_option_value('val')
+            val = self%fcn_info%get_option_value('val')
             u_ref = val
             
             
@@ -422,13 +452,13 @@ contains
     subroutine test__interpolate_face_chimera_AD_MD__derivatives__idH(self)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain, itime
+        integer(ik)                 :: ielem, iface, ifield, igq, ngq, nderiv, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
         real(rk),   allocatable     :: mat(:,:)
-        type(face_info_t)           :: face
-        type(function_info_t)       :: fcn
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: fcn_info
 
         integer(ik)                 :: idonor, ChiID, ndonor_nodes, node_index
         
@@ -446,33 +476,48 @@ contains
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all 
             ! dervative arrays should be nonzero.
             !
-            call fcn%seed%init(idomain_g    = 2,     &
-                               idomain_l    = 2,     &
-                               ielement_g   = 1,     &
-                               ielement_l   = 1,     &
-                               neqns        = 1,     &
-                               nterms_s     = 8,     &
-                               iproc        = IRANK, &
-                               itime        = itime, &
-                               recv_comm    = 0,     &
-                               recv_domain  = 0,     &
-                               recv_element = 0)
+            call fcn_info%seed%init(idomain_g    = 2,     &
+                                    idomain_l    = 2,     &
+                                    ielement_g   = 1,     &
+                                    ielement_l   = 1,     &
+                                    nfields      = 1,     &
+                                    nterms_s     = 8,     &
+                                    iproc        = IRANK, &
+                                    itime        = itime, &
+                                    dof_start    = 40,    &
+                                    recv_comm    = 0,     &
+                                    recv_domain  = 0,     &
+                                    recv_element = 0)
 
 
-            !
-            ! Set face
-            !
-            face%idomain_g  = idomain
-            face%idomain_l  = idomain
-            face%ielement_g = ielem
-            face%ielement_l = ielem
-            face%iface      = iface
+!            !
+!            ! Set face
+!            !
+!            face%idomain_g  = idomain
+!            face%idomain_l  = idomain
+!            face%ielement_g = ielem
+!            face%ielement_l = ielem
+!            face%iface      = iface
+            elem_info = element_info(idomain_g  = idomain,    &
+                                     idomain_l  = idomain,    &
+                                     ielement_g = ielem,      &
+                                     ielement_l = ielem,      &
+                                     iproc      = 0,          &
+                                     pelem_ID   = NO_ID,      &
+                                     eqn_ID     = 1,          &
+                                     nfields    = 1,          &
+                                     nterms_s   = 8,          &
+                                     nterms_c   = 8,          &
+                                     dof_start  = 0,          &
+                                     recv_comm    = NO_ID,    &
+                                     recv_domain  = NO_ID,    &
+                                     recv_element = NO_ID)
 
 
 
             
             tol    = 1.e-13_rk
-            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ifield   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq    = faces(ielem,iface)%basis_s%nnodes_face()
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
@@ -485,7 +530,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,elem_info,fcn_info,iface,ifield,itime,'value',NEIGHBOR)
               
             
 

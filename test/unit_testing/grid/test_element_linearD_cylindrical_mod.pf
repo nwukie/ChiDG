@@ -51,11 +51,13 @@ contains
         
         integer(ik), parameter          :: npt = 8
         real(rk)                        :: nodes(npt,3)
-        integer(ik)                     :: ftype, ielem, idomain, ntime,                    &
-                                           neqns, nterms_s, ineighbor_domain_g,             &
-                                           ineighbor_domain_l, ineighbor_element_g,         &
-                                           ineighbor_element_l, ineighbor_face,             &
-                                           ineighbor_proc, ineighbor_neqns, ineighbor_nterms_s
+        integer(ik)                     :: ftype, ielem, idomain, ntime,                &
+                                           neqns, nterms_s, dof_start,                  &
+                                           ineighbor_domain_g,                          &
+                                           ineighbor_domain_l, ineighbor_element_g,     &
+                                           ineighbor_element_l, ineighbor_face,         &
+                                           ineighbor_proc, ineighbor_neqns,             &
+                                           ineighbor_nterms_s, ineighbor_dof_start
         
         
         ! Set collocation quadratur for testing coordinates at quadrature points 
@@ -96,17 +98,18 @@ contains
         !
         ! Initialize Element geometry and Numerics
         !
-        idomain  = 1
-        ielem    = 1
-        neqns    = 2
-        nterms_s = 8
-        ntime    = 1
+        idomain   = 1
+        ielem     = 1
+        neqns     = 2
+        nterms_s  = 8
+        ntime     = 1
+        dof_start = 0
         call this%elem%init_geom(nodes        = nodes,                                  &
                                  connectivity = [1, 2, 3, 4, 5, 6, 7, 8],               &
                                  etype        = 1,                                      &
                                  location     = [idomain,idomain,ielem,ielem,IRANK],    &
                                  coord_system = 'Cylindrical')
-        call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime)
+        call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime,dof_start)
         
         
         !
@@ -132,30 +135,31 @@ contains
         ineighbor_neqns     = 2
         ineighbor_nterms_s  = 8
         ineighbor_proc      = 0
+        ineighbor_dof_start = 0
         call this%faces(XI_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
                                                    ineighbor_element_g,ineighbor_element_l,    &
                                                    ineighbor_face,ineighbor_neqns,             &
-                                                   ineighbor_nterms_s,ineighbor_proc)
+                                                   ineighbor_nterms_s,ineighbor_proc,ineighbor_dof_start)
         call this%faces(XI_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
                                                    ineighbor_element_g,ineighbor_element_l,    &
                                                    ineighbor_face,ineighbor_neqns,             &
-                                                   ineighbor_nterms_s,ineighbor_proc)
+                                                   ineighbor_nterms_s,ineighbor_proc,ineighbor_dof_start)
         call this%faces(ETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
                                                     ineighbor_element_g,ineighbor_element_l,   &
                                                     ineighbor_face,ineighbor_neqns,            &
-                                                    ineighbor_nterms_s,ineighbor_proc)
+                                                    ineighbor_nterms_s,ineighbor_proc,ineighbor_dof_start)
         call this%faces(ETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
                                                     ineighbor_element_g,ineighbor_element_l,   &
                                                     ineighbor_face,ineighbor_neqns,            &
-                                                    ineighbor_nterms_s,ineighbor_proc)
+                                                    ineighbor_nterms_s,ineighbor_proc,ineighbor_dof_start)
         call this%faces(ZETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
                                                      ineighbor_element_g,ineighbor_element_l,  &
                                                      ineighbor_face,ineighbor_neqns,           &
-                                                     ineighbor_nterms_s,ineighbor_proc)
+                                                     ineighbor_nterms_s,ineighbor_proc,ineighbor_dof_start)
         call this%faces(ZETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
                                                      ineighbor_element_g,ineighbor_element_l,  &
                                                      ineighbor_face,ineighbor_neqns,           &
-                                                     ineighbor_nterms_s,ineighbor_proc)
+                                                     ineighbor_nterms_s,ineighbor_proc,ineighbor_dof_start)
 
         
         call this%faces(XI_MIN)%init_sol(this%elem)

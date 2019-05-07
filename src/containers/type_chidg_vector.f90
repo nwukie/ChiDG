@@ -1,6 +1,7 @@
 module type_chidg_vector
 #include <messenger.h>
 #include "petsc/finclude/petscvec.h"
+#include "petsc/finclude/petscis.h"
 #include "petscconf.h"
     use petscvec,                   only: VecCreate, VecSetType, VecSetSizes, VecSetUp,                                 &
                                           VecSetValues, tVec, tVecScatter, ADD_VALUES, INSERT_VALUES, VecCopy,          &
@@ -8,6 +9,7 @@ module type_chidg_vector
                                           VecRestoreArrayF90, VecNorm, VecScale, VecWAXPY, VecAXPY, VecReciprocal, VecDestroy,   &
                                           VecScatterCreateToAll, VecScatterBegin, VecScatterEnd, SCATTER_FORWARD,       &
                                           VecScatterDestroy, VecScatterCopy
+    use petscis,                    only: tIS, ISAllGather
 
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, TWO, ONE, NO_ID, NO_DATA
@@ -34,22 +36,24 @@ module type_chidg_vector
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!
-    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/10/2019
+    !!  @note   Added PETSc backend.
     !!
     !------------------------------------------------------------------------------------------
     type, public :: chidg_vector_t
 
-        ! PETSC
+        ! PETSC backend
         Vec,        pointer :: petsc_vector      => null()
         Vec,        pointer :: petsc_vector_recv => null()
         VecScatter, pointer :: petsc_scatter     => null()
+        IS,         pointer :: petsc_is          => null()
         logical             :: petsc_vector_created  = .false.
         logical             :: from_operator         = .false.
         logical             :: petsc_needs_assembled = .false.
 
 
-        ! ChiDG
+        ! ChiDG backend
         type(domain_vector_t),    allocatable   :: dom(:)       ! Local block vector storage
         type(chidg_vector_send_t)               :: send         ! What to send to other processors
         type(chidg_vector_recv_t)               :: recv         ! Receive data from other processors
@@ -383,6 +387,9 @@ contains
         call VecScatterCreateToAll(self%petsc_vector, self%petsc_scatter, self%petsc_vector_recv, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecScatterCreateToAll.')
 
+!        call ISAllGather(self%petsc_is)
+!        call VecScatterCreate(self%petsc_vector, self%petsc_scatter, self%petsc_vector_recv, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecScatterCreateToAll.')
 
         ! Clear vector storage
         call self%clear()

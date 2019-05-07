@@ -117,6 +117,8 @@ contains
         real(rk),   allocatable         :: nodes(:,:)
         integer(ik)                     :: nelements_g, eqn_ID
 
+        print*, 'hiiiiiiiiiiiiiii'
+
         IO_DESTINATION  = 'file'
 
 

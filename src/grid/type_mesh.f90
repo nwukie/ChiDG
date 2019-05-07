@@ -1315,14 +1315,6 @@ contains
                                        face_location(6), element_location(5),       &
                                        element_data(9), spacedim, inode, dof_start
 
-        logical :: parallel_donor
-
-        real(rk), allocatable :: ref_coords(:,:)
-        real(rk) :: xi, eta, zeta, det_jacobian_grid_pt, det_jacobian_grid_grad_pt(3),&
-            inv_jacobian_grid_pt(3,3), grid_vel_pt(3)
-        integer(ik) :: npts, ipt, donor_proc, idonor, idomain_l, ielement_l,  igq, ChiID
-
-
         !
         ! Receive interior face data
         !
@@ -1451,8 +1443,10 @@ contains
                     call self%parallel_element(pelem_ID)%init_geom(nodes,connectivity,etype,element_location,trim(coord_system))
                 end if
 
+                if (.not. self%parallel_element(pelem_ID)%sol_initialized) then
+                    call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start)
+                end if
 
-                call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start)
                 call self%parallel_element(pelem_ID)%set_displacements_velocities(nodes_disp,nodes_vel)
                 call self%parallel_element(pelem_ID)%update_interpolations_ale()
 

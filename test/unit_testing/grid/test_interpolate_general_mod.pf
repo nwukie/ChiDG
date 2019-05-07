@@ -208,10 +208,11 @@ contains
                                          idomain_l    = 1,     &
                                          ielement_g   = 15,    &
                                          ielement_l   = 15,    &
-                                         neqns        = 1,     &
+                                         nfields      = 1,     &
                                          nterms_s     = 8,     &
                                          iproc        = IRANK, &
                                          itime        = itime, &
+                                         dof_start    = 112,   & 
                                          recv_comm    = 0,     &
                                          recv_domain  = 0,     &
                                          recv_element = 0)

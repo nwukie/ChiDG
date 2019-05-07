@@ -111,7 +111,7 @@ contains
         type(bc_element_coupling_t) :: coupling
         integer(ik)                 :: idomain_g,   idomain_l,          &
                                        ielement_g,  ielement_l, iface,  &
-                                       neqns, nterms_s
+                                       neqns, nterms_s, dof_start
         real(rk)                    :: total_area
         real(rk),       allocatable :: areas(:)
         type(point_t),  allocatable :: quad_pts(:)
@@ -123,6 +123,7 @@ contains
         iface      = 3
         neqns      = 2
         nterms_s   = 8
+        dof_start  = 24
         total_area = 1._rk
         areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
         quad_pts   = [ point_t(0.1_rk,0.2_rk,0.3_rk), &
@@ -134,7 +135,7 @@ contains
         ! THIS IS BEING TESTED
         !
         call coupling%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,IRANK)
-        call coupling%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+        call coupling%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,dof_start,total_area,areas,quad_pts)
 
 
         !
@@ -154,6 +155,7 @@ contains
         @assertEqual(coupling%neqns(1),      neqns)
         @assertEqual(coupling%nterms_s(1),   nterms_s)
         @assertEqual(coupling%proc(1),       IRANK)
+        @assertEqual(coupling%dof_start(1),  dof_start)
 
         
     end subroutine test_bc_element_coupling__add_one
@@ -187,7 +189,7 @@ contains
         type(bc_element_coupling_t) :: coupling
         integer(ik)                 :: idomain_g,   idomain_l,  &
                                        ielement_g,  ielement_l, &
-                                       iface, proc, neqns, nterms_s
+                                       iface, proc, neqns, nterms_s, dof_start
         real(rk)                    :: total_area
         real(rk),       allocatable :: areas(:)
         type(point_t),  allocatable :: quad_pts(:)
@@ -198,6 +200,7 @@ contains
         ielement_l = 2
         iface      = 2
         neqns      = 1
+        dof_start  = 0
         nterms_s   = 8
         total_area = 1._rk
         areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
@@ -211,7 +214,7 @@ contains
         ! THIS IS BEING TESTED
         !
         call coupling%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
-        call coupling%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+        call coupling%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,dof_start,total_area,areas,quad_pts)
 
 
         idomain_g  = 3
@@ -220,6 +223,7 @@ contains
         ielement_l = 3
         iface      = 4
         neqns      = 1
+        dof_start  = 8
         nterms_s   = 8
         total_area = 1._rk
         areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
@@ -233,7 +237,7 @@ contains
         ! THIS IS BEING TESTED
         !
         call coupling%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
-        call coupling%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+        call coupling%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,dof_start,total_area,areas,quad_pts)
 
 
 
@@ -255,6 +259,7 @@ contains
         @assertEqual(coupling%iface(1),      2)
         @assertEqual(coupling%neqns(1),      1)
         @assertEqual(coupling%nterms_s(1),   8)
+        @assertEqual(coupling%dof_start(1),  0)
         @assertEqual(coupling%proc(1),       0)
         
         @assertEqual(coupling%idomain_g(2),  3)
@@ -264,6 +269,7 @@ contains
         @assertEqual(coupling%iface(2),      4)
         @assertEqual(coupling%neqns(2),      1)
         @assertEqual(coupling%nterms_s(2),   8)
+        @assertEqual(coupling%dof_start(2),  8)
         @assertEqual(coupling%proc(2),       1)
 
 

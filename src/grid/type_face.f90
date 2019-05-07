@@ -42,7 +42,7 @@ module type_face
         integer(ik)             :: group_ID = NO_ID ! Index for bc patch group mesh%bc_patch_group(group_ID)
         integer(ik)             :: patch_ID = NO_ID ! Index for bc patch 
         integer(ik)             :: face_ID  = NO_ID ! Index for bc patch face
-        integer(ik)             :: mm_ID   = NO_MM_ASSIGNED
+        integer(ik)             :: mm_ID    = NO_MM_ASSIGNED
 
         ! Owner-element information
         integer(ik)             :: face_location(5)! [idomain_g, idomain_l, iparent_g, iparent_l, iface]
@@ -73,6 +73,7 @@ module type_face
         integer(ik)             :: recv_domain          = 0
         integer(ik)             :: recv_element         = 0
 
+
         ! Neighbor information: if neighbor is off-processor
         real(rk)                :: neighbor_h(3)           ! Approximate size of neighbor bounding box
         real(rk),   allocatable :: neighbor_grad1(:,:)     ! Grad of basis functions in at quadrature nodes
@@ -81,6 +82,7 @@ module type_face
         real(rk),   allocatable :: neighbor_br2_face(:,:)  ! Matrix for computing/obtaining br2 modes at face nodes
         real(rk),   allocatable :: neighbor_br2_vol(:,:)   ! Matrix for computing/obtaining br2 modes at volume nodes
         real(rk),   allocatable :: neighbor_invmass(:,:)    
+
 
         ! Neighbor ALE: if neighbor is off-processor
         real(rk),   allocatable :: neighbor_interp_coords_vel(:,:)   
@@ -152,8 +154,8 @@ module type_face
 
         ! Logical tests
         logical :: geom_initialized    = .false.
+        logical :: sol_initialized     = .false.
         logical :: neighborInitialized = .false.
-        logical :: numInitialized      = .false.
 
 
     contains
@@ -384,7 +386,7 @@ contains
         !
         ! Confirm face numerics were initialized
         !
-        self%numInitialized  = .true.
+        self%sol_initialized  = .true.
 
     end subroutine init_sol
     !******************************************************************************************

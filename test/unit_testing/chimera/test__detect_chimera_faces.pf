@@ -28,6 +28,7 @@ subroutine test__detect_chimera_faces()
     type(chidg_t)           :: chidg
     character(len=100)      :: filename = 'D2E8M1_overlapping_matching.h5'
 
+    print*, 'hiiiiiiiiiiii'
 
     IO_DESTINATION  = 'file'
 

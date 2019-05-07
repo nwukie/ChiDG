@@ -25,6 +25,7 @@ subroutine test_find_gq_donor_cylinder_abutting()
     real(rk)                        :: tol
     character(1024)                 :: filename = "cylinder_chimera_matching.h5"
 
+    print*, 'hiiiiiiiiiiiiiiiiiiiii'
 
     tol            = 1.e-12_rk
     IO_DESTINATION = 'file'

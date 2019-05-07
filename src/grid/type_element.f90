@@ -74,9 +74,10 @@ module type_element
         integer(ik)                 :: ntime                ! Number of time levels in solution.
         integer(ik)                 :: dof_start            ! Starting DOF index in ChiDG-global index
         integer(ik)                 :: interpolation_level  ! 1=lowest, 2-> are higher.
-        integer(ik)                 :: recv_comm    = NO_ID ! chidg_vector access if element is initialized on another processor
-        integer(ik)                 :: recv_domain  = NO_ID ! chidg_vector access if element is initialized on another processor
-        integer(ik)                 :: recv_element = NO_ID ! chidg_vector access if element is initialized on another processor
+        integer(ik)                 :: recv_comm    = NO_ID ! chidg_vector access if element is initialized on another processor.
+        integer(ik)                 :: recv_domain  = NO_ID ! chidg_vector access if element is initialized on another processor.
+        integer(ik)                 :: recv_element = NO_ID ! chidg_vector access if element is initialized on another processor.
+        integer(ik)                 :: pdof_start   = NO_ID ! Starting DOF index in local petsc vector for parallel storage.
 
 
         ! Connectivty and linear transformation martrix for 
@@ -146,7 +147,7 @@ module type_element
 
         ! Logical tests
         logical :: geom_initialized = .false.
-        logical :: numInitialized   = .false.
+        logical :: sol_initialized  = .false.
 
         ! Tree box indicator
         integer(ik), allocatable    :: node_box_ID(:)
@@ -538,11 +539,6 @@ contains
         call self%update_interpolations()
         call self%update_interpolations_ale()
 
-        !
-        ! Confirm element numerics were initialized
-        !
-        self%numInitialized = .true.    
-
 
         !
         ! Store element_data(4-8)
@@ -555,6 +551,10 @@ contains
         self%element_data(9) = self%dof_start
 
 
+        !
+        ! Confirm element numerics were initialized
+        !
+        self%sol_initialized = .true.    
 
     end subroutine init_sol
     !**********************************************************************************

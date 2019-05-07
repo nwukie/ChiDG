@@ -3,14 +3,14 @@ module test_function_status_mod
     use mod_kinds,                      only: ik, rk
     use mod_constants,                  only: XI_MIN, XI_MAX, ETA_MIN, &
                                               ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                              NFUNCTION_TYPES, NFACES, NBLK, IO_DESTINATION, ZERO
+                                              NFUNCTION_TYPES, NFACES, NBLK, IO_DESTINATION, ZERO, NO_ID
     use type_chidg,                     only: chidg_t
     use type_domain_connectivity,       only: domain_connectivity_t
     use type_equationset_function_data, only: equationset_function_data_t
     use mod_test_utilities,             only: create_mesh
     use mod_bc,                         only: create_bc
 
-    use type_face_info,                 only: face_info_t
+    use type_element_info,              only: element_info_t, element_info
     use type_function_info,             only: function_info_t
     implicit none
 
@@ -314,11 +314,11 @@ subroutine test_function_status__compute(this)
 
 
     type(equationset_function_data_t),  allocatable :: function_data(:)
-    integer(ik)                                     :: ndom, ieqn
+    integer(ik)                                     :: ndom, ieqn, iface
 
     logical :: compute_function, compute_function_equation_1, compute_function_equation_2
 
-    type(face_info_t)       :: face_info
+    type(element_info_t)       :: elem_info
     type(function_info_t)   :: function_info
 
 
@@ -338,32 +338,50 @@ subroutine test_function_status__compute(this)
 
 
     !
-    ! Initialize face_info and function_info containers to pass to function_status%compute_function
+    ! Initialize elem_info and function_info containers to pass to function_status%compute_function
     !
-    face_info%idomain_g  = 1
-    face_info%idomain_l  = 1
-    face_info%ielement_g = 2
-    face_info%ielement_l = 2
-    face_info%iface      = 2
+    !elem_info%idomain_g  = 1
+    !elem_info%idomain_l  = 1
+    !elem_info%ielement_g = 2
+    !elem_info%ielement_l = 2
+    !elem_info%iface      = 2
+    elem_info = element_info(idomain_g=1,       &
+                             idomain_l=1,       &
+                             ielement_g=2,      &
+                             ielement_l=2,      &
+                             iproc=0,           &
+                             pelem_ID=NO_ID,    &
+                             eqn_ID=1,          &
+                             nfields=1,         &
+                             nterms_s=8,        &
+                             nterms_c=8,        &
+                             dof_start=8,       &
+                             recv_comm=NO_ID,   &
+                             recv_domain=NO_ID, &
+                             recv_element=NO_ID)
+
+
+
 
     function_info%type  = 1
     function_info%ifcn  = 1
     function_info%idiff = 5
 
+    iface = 2
     ieqn = 2
 
     !
     ! Register function as computed.
     !
-    call this%chidg%data%sdata%function_status%register_function_computed(face_info,function_info,ieqn)
+    call this%chidg%data%sdata%function_status%register_function_computed(elem_info,function_info,iface,ieqn)
 
 
     !
     ! Get status of function. THIS IS BEING TESTED.
     !
-    compute_function            = this%chidg%data%sdata%function_status%compute_function(face_info,function_info)
-    compute_function_equation_1 = this%chidg%data%sdata%function_status%compute_function_equation(face_info,function_info,1)
-    compute_function_equation_2 = this%chidg%data%sdata%function_status%compute_function_equation(face_info,function_info,2)
+    compute_function            = this%chidg%data%sdata%function_status%compute_function(elem_info,function_info,iface)
+    compute_function_equation_1 = this%chidg%data%sdata%function_status%compute_function_equation(elem_info,function_info,iface,1)
+    compute_function_equation_2 = this%chidg%data%sdata%function_status%compute_function_equation(elem_info,function_info,iface,2)
 
 
     
@@ -429,11 +447,11 @@ subroutine test_function_status__linearize(this)
 
 
     type(equationset_function_data_t),  allocatable :: function_data(:)
-    integer(ik)                                     :: ndom, ieqn
+    integer(ik)                                     :: ndom, ieqn, iface
 
     logical :: linearize_function, linearize_function_equation_1, linearize_function_equation_2
 
-    type(face_info_t)       :: face_info
+    type(element_info_t)    :: elem_info
     type(function_info_t)   :: function_info
 
 
@@ -453,32 +471,47 @@ subroutine test_function_status__linearize(this)
 
 
     !
-    ! Initialize face_info and function_info containers to pass to function_status%compute_function
+    ! Initialize elem_info and function_info containers to pass to function_status%compute_function
     !
-    face_info%idomain_g  = 1
-    face_info%idomain_l  = 1
-    face_info%ielement_g = 2
-    face_info%ielement_l = 2
-    face_info%iface      = 2
+    !elem_info%idomain_g  = 1
+    !elem_info%idomain_l  = 1
+    !elem_info%ielement_g = 2
+    !elem_info%ielement_l = 2
+    !elem_info%iface      = 2
+    elem_info = element_info(idomain_g=1,       &
+                             idomain_l=1,       &
+                             ielement_g=2,      &
+                             ielement_l=2,      &
+                             iproc=0,           &
+                             pelem_ID=NO_ID,    &
+                             eqn_ID=1,          &
+                             nfields=1,         &
+                             nterms_s=8,        &
+                             nterms_c=8,        &
+                             dof_start=8,       &
+                             recv_comm=NO_ID,   &
+                             recv_domain=NO_ID, &
+                             recv_element=NO_ID)
 
     function_info%type  = 1
     function_info%ifcn  = 1
     function_info%idiff = 5
 
-    ieqn = 2
+    iface = 2
+    ieqn  = 2
 
     !
     ! Register function as computed.
     !
-    call this%chidg%data%sdata%function_status%register_function_linearized(face_info,function_info,ieqn)
+    call this%chidg%data%sdata%function_status%register_function_linearized(elem_info,function_info,iface,ieqn)
 
 
     !
     ! Get status of function. THIS IS BEING TESTED.
     !
-    linearize_function            = this%chidg%data%sdata%function_status%linearize_function(face_info,function_info)
-    linearize_function_equation_1 = this%chidg%data%sdata%function_status%linearize_function_equation(face_info,function_info,1)
-    linearize_function_equation_2 = this%chidg%data%sdata%function_status%linearize_function_equation(face_info,function_info,2)
+    linearize_function            = this%chidg%data%sdata%function_status%linearize_function(elem_info,function_info,iface)
+    linearize_function_equation_1 = this%chidg%data%sdata%function_status%linearize_function_equation(elem_info,function_info,iface,1)
+    linearize_function_equation_2 = this%chidg%data%sdata%function_status%linearize_function_equation(elem_info,function_info,iface,2)
 
 
     

@@ -35,6 +35,8 @@ subroutine test__detect_chimera_donors()
     integer(ik)                     :: idom, ielem, igq, idonor, iface
 
 
+    print*, 'hiiiiiiiiiiiiiii'
+
     tol             = 1.e-13_rk
     IO_DESTINATION  = 'file'
 

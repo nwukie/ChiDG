@@ -179,7 +179,6 @@ module integration_1D_nonlinear_diffusion_mod
         character(:),   allocatable :: gridfile
         integer(ik)                 :: order
 
-        type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
 
     contains
@@ -188,6 +187,7 @@ module integration_1D_nonlinear_diffusion_mod
     end type nonlinear_diffusion_1D
     !*******************************************************************************
 
+    type(chidg_t)   :: chidg
 
 contains
 
@@ -432,13 +432,13 @@ contains
         ! Get MPI communicator information from pFUnit
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+        chidg_COMM%mpi_val = this%getMpiCommunicator()
 
 
         ! Initialize ChiDG environment
         IO_DESTINATION   = 'file'
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
+        call chidg%start_up('mpi',chidg_COMM)
+        call chidg%start_up('core')
 
 
         !-------------------------------------------------------------------------------
@@ -558,18 +558,18 @@ contains
 
 
         end if
-        call MPI_Barrier(this%ChiDG_COMM,ierr)
+        call MPI_Barrier(chidg_COMM,ierr)
 
 
         ! Set ChiDG components
-        call this%chidg%set('Solution Order',   integer_input=this%order)
-        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+        call chidg%set('Solution Order',   integer_input=this%order)
+        call chidg%set('Time Integrator',  algorithm=time_integrator)
+        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call chidg%set('Preconditioner',   algorithm=preconditioner)
 
         ! Read grid
-        call this%chidg%read_mesh(this%gridfile)
+        call chidg%read_mesh(this%gridfile)
 
 
         ! Initialize solution. 
@@ -579,7 +579,7 @@ contains
         ! from 0 to 3.5 on x=[0,1]
         call create_function(fcn,'polynomial')
         call fcn%set_option('f',3.5_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
 
 
 
@@ -597,7 +597,7 @@ contains
         class(nonlinear_diffusion_1D),  intent(inout)   :: this
 
         ! Close ChiDG
-        call this%chidg%shut_down('core')
+        call chidg%shut_down('core')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -632,10 +632,10 @@ contains
         order_index = get_order_index(self%order)
 
         ! Run ChiDG simulation
-        call self%chidg%run(write_initial=.false., write_final=.false.)
+        call chidg%run(write_initial=.false., write_final=.false.)
 
         ! Compute error
-        computed_error = compute_1D_nonlinear_diffusion_error(self%chidg%data,self%ChiDG_COMM)
+        computed_error = compute_1D_nonlinear_diffusion_error(chidg%data,chidg_COMM)
 
         ! Store the computed error for the current case
         if (self%gridtype == 'singleblock') then

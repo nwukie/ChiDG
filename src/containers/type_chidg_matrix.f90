@@ -23,10 +23,6 @@ module type_chidg_matrix
     implicit none
 
 
-    private chidg_store, chidg_store_chimera, chidg_store_bc, chidg_store_hb, chidg_clear
-    public chidg_matrix_t, chidg_matrix
-
-
     !>  ChiDG matrix type. Contains an array of domain_matrix_t types, each corresponding to a 
     !!  domain.
     !!
@@ -149,7 +145,7 @@ module type_chidg_matrix
     end interface
 
 
-    private
+!    private
 contains
 
 

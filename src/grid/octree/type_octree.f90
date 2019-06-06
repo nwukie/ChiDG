@@ -100,6 +100,7 @@ contains
         start_index = 1
         end_index   = num_points
 
+        if (allocated(self%successors)) deallocate(self%successors)
         allocate(self%successors(num_points))
         do inode = 1, num_points
             self%successors(inode) = inode+1

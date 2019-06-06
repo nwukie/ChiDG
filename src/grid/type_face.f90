@@ -69,6 +69,8 @@ module type_face
         integer(ik)             :: ineighbor_neqns      = 0
         integer(ik)             :: ineighbor_nterms_s   = 0
         integer(ik)             :: ineighbor_dof_start  = 0
+        integer(ik)             :: ineighbor_pdof_start = 0
+        integer(ik)             :: ineighbor_pelem_ID   = NO_ID
         integer(ik)             :: recv_comm            = 0
         integer(ik)             :: recv_domain          = 0
         integer(ik)             :: recv_element         = 0

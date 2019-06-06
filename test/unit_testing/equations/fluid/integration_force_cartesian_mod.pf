@@ -193,8 +193,6 @@ module integration_force_cartesian_mod
 
         character(100)  :: gridfile
         integer(ik)     :: order
-
-        type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
 
     contains
@@ -274,6 +272,7 @@ module integration_force_cartesian_mod
 
 
 
+    type(chidg_t)   :: chidg
 
 
 contains
@@ -636,15 +635,16 @@ contains
         class(function_t),  allocatable :: fcn
         real(rk)                        :: entropy_error
 
+        
         ! Get MPI communicator information from pFUnit
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+        IRANK              = this%getProcessRank()
+        NRANK              = this%getNumProcessesRequested()
+        chidg_COMM%mpi_val = this%getMpiCommunicator()
 
         ! Initialize ChiDG environment
         IO_DESTINATION   = 'file'
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
+        call chidg%start_up('mpi',ChiDG_COMM)
+        call chidg%start_up('core')
 
 
         !-------------------------------------------!
@@ -682,7 +682,7 @@ contains
         linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
 
-        call this%chidg%data%time_manager%init()
+        call chidg%data%time_manager%init()
 
         ! Set linear solver options to pass during initialization
         call loptions%set('tol',1.e-9_rk)
@@ -694,7 +694,6 @@ contains
         call noptions%set('cfl0',1.0_rk)
         call noptions%set('nsteps',100)
         !------------------------------------------------------------------------------
-
 
 
 
@@ -745,31 +744,30 @@ contains
 
 
         ! Set ChiDG components
-        call this%chidg%set('Solution Order',   integer_input=this%order)
-        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+        call chidg%set('Solution Order',   integer_input=this%order)
+        call chidg%set('Time Integrator',  algorithm=time_integrator)
+        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call chidg%set('Preconditioner',   algorithm=preconditioner)
 
 
         ! Read grid
-        call this%chidg%read_mesh(this%gridfile)
+        call chidg%read_mesh(this%gridfile)
 
 
         ! Initialize solution
         call create_function(fcn,'Test Compute Force Initial Solution')
 
         call fcn%set_option('ivar',1._rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
+        call chidg%data%sdata%q%project(chidg%data%mesh,fcn,1)
         call fcn%set_option('ivar',2._rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,2)
+        call chidg%data%sdata%q%project(chidg%data%mesh,fcn,2)
         call fcn%set_option('ivar',3._rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,3)
+        call chidg%data%sdata%q%project(chidg%data%mesh,fcn,3)
         call fcn%set_option('ivar',4._rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,4)
+        call chidg%data%sdata%q%project(chidg%data%mesh,fcn,4)
         call fcn%set_option('ivar',5._rk)
-       call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,5)
-
+        call chidg%data%sdata%q%project(chidg%data%mesh,fcn,5)
 
 
     end subroutine SetUp
@@ -785,7 +783,7 @@ contains
         class(force),  intent(inout)   :: this
 
         ! Close ChiDG
-        call this%chidg%shut_down('core')
+        call chidg%shut_down('core')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -811,7 +809,7 @@ contains
         real(rk)    :: tol, force_computed(3), force_expected(3)
 
         ! Compute force: THIS IS BEING TESTED
-        call report_aerodynamics(self%chidg%data, 'Walls', force=force_computed)
+        call report_aerodynamics(chidg%data, 'Walls', force=force_computed)
 
         ! Test that computed entropy error is the expected value
         force_expected = [100._rk, -100000._rk, ZERO]

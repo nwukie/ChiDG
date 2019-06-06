@@ -100,6 +100,7 @@ contains
 
         real(rk),   allocatable, dimension(:)   :: r, q_input
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
+        logical :: k_exists
 
 
         ! Get boundary heat flux
@@ -197,16 +198,28 @@ contains
 
 
 
+        !----------------------------------------------------------------------------
+        !
         ! Impose heat flux
         !
         !   q = -k \nabla T
         !
-        !----------------------------------------------------
+        ! NOTE: heat flux only imposed if 'Laminar Thermal Conductivity' exists,
+        !       since it is used in the formulation. Otherwise, q_input is set 
+        !       to zero and the formulation becomes adiabatic.
+        !
+        !----------------------------------------------------------------------------
 
 
         ! Get thermal conductivity
-        k = worker%get_field('Laminar Thermal Conductivity', 'value', 'face interior')
+        k_exists = worker%check_field_exists('Laminar Thermal Conductivity')
 
+        if (k_exists) then
+            k = worker%get_field('Laminar Thermal Conductivity', 'value', 'face interior')
+        else
+            k       = density_m/density_m
+            q_input = ZERO
+        end if
 
         ! compute velocity jacobians
         invdensity = ONE/density_m

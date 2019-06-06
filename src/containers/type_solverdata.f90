@@ -1,10 +1,10 @@
 module type_solverdata
 #include <messenger.h>
-#include "petsc/finclude/petscvec.h"
-#include "petsc/finclude/petscmat.h"
-    use petscvec,                           only: VecSet
-    use petscmat,                           only: MatMult
-
+!#include "petsc/finclude/petscvec.h"
+!#include "petsc/finclude/petscmat.h"
+!    use petscvec,                           only: VecSet
+!    use petscmat,                           only: MatMult
+!
     use mod_kinds,                          only: rk,ik
     use mod_constants,                      only: NFACES, ZERO
     use mod_string,                         only: string_t
@@ -138,8 +138,6 @@ contains
         type(mesh_t),                       intent(inout)   :: mesh
         type(equationset_function_data_t),  intent(in)      :: function_data(:)
         
-
-        PetscErrorCode :: perr
         integer(ik) :: ierr, ndom, maxelems, idom
         logical     :: increase_maxelems = .false.
 

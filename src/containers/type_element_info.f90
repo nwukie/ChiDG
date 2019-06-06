@@ -1,6 +1,7 @@
 module type_element_info
     use mod_kinds,      only: ik
     use mod_constants,  only: NO_ID
+    implicit none
 
 
 

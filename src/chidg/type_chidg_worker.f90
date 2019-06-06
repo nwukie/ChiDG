@@ -97,6 +97,7 @@ module type_chidg_worker
         procedure   :: interpolate_field
         procedure   :: interpolate_field_general
         procedure   :: get_field
+        procedure   :: check_field_exists
         procedure   :: store_bc_state
         procedure   :: store_model_field
 
@@ -731,7 +732,24 @@ contains
 
 
 
+    
 
+    !>  Check if a field exists in the cache.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   5/9/2019
+    !!
+    !--------------------------------------------------------------------------------------
+    function check_field_exists(self,field) result(exists)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+
+        logical :: exists
+
+        exists = self%cache%check_field_exists(field,'element')
+
+    end function check_field_exists
+    !***************************************************************************************
 
 
 

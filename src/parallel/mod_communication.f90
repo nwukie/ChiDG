@@ -194,7 +194,6 @@ contains
 
         integer :: idom, ierr
 
-
         !
         ! In case establish_chimera_communication is being called as a reinitialization 
         ! procedure. Calling chimera%clear to wipe out previous data 
@@ -207,20 +206,15 @@ contains
         call MPI_Barrier(ChiDG_COMM,ierr)   ! not sure if this is needed.
 
 
-
         ! Process-local routine, just to flag faces
         call detect_chimera_faces(mesh)
-
 
         ! Detect local or global chimera donors
         call detect_chimera_donors(mesh)
 
-
         ! Compute chimera interpolation matrices to evaluate donor 
         ! solution at receiver quadrature nodes.
         call compute_chimera_interpolators(mesh)
-
-
 
         ! Barrier
         call MPI_Barrier(ChiDG_COMM,ierr)

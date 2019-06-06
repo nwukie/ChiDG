@@ -1023,13 +1023,13 @@ contains
             call MPI_Send(br2_vol_size, 2,MPI_INTEGER4,iproc,7,ChiDG_COMM,ierr)
             call MPI_Send(invmass_size, 2,MPI_INTEGER4,iproc,8,ChiDG_COMM,ierr)
 
-            call MPI_Send(self%faces(ielem_l,iface)%grad1,      grad_size(1)*grad_size(2),          MPI_REAL8,iproc, 9,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%grad2,      grad_size(1)*grad_size(2),          MPI_REAL8,iproc,10,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%grad3,      grad_size(1)*grad_size(2),          MPI_REAL8,iproc,11,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%br2_face,   br2_face_size(1)*br2_face_size(2),  MPI_REAL8,iproc,12,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%br2_vol,    br2_vol_size(1)*br2_vol_size(2),    MPI_REAL8,iproc,13,ChiDG_COMM,ierr)
-            call MPI_Send(self%elems(ielem_l)%invmass,          invmass_size(1)*invmass_size(2),    MPI_REAL8,iproc,14,ChiDG_COMM,ierr)
-            call MPI_Send(self%elems(ielem_l)%h,                3,                                  MPI_REAL8,iproc,15,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%grad1,    grad_size(1)*grad_size(2),          MPI_REAL8,iproc, 9,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%grad2,    grad_size(1)*grad_size(2),          MPI_REAL8,iproc,10,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%grad3,    grad_size(1)*grad_size(2),          MPI_REAL8,iproc,11,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%br2_face, br2_face_size(1)*br2_face_size(2),  MPI_REAL8,iproc,12,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%br2_vol,  br2_vol_size(1)*br2_vol_size(2),    MPI_REAL8,iproc,13,ChiDG_COMM,ierr)
+            call MPI_Send(self%elems(ielem_l)%invmass,        invmass_size(1)*invmass_size(2),    MPI_REAL8,iproc,14,ChiDG_COMM,ierr)
+            call MPI_Send(self%elems(ielem_l)%h,              3,                                  MPI_REAL8,iproc,15,ChiDG_COMM,ierr)
         end if
 
 

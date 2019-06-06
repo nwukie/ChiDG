@@ -2,6 +2,7 @@ module type_bc_state
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: CARTESIAN, CYLINDRICAL, NO_ID
+    use mod_chidg_mpi,          only: NRANK
 
     use type_bcproperty_set,    only: bcproperty_set_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -844,7 +845,6 @@ contains
         do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
             do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
-
                 !
                 ! Get block-element index of current iface_bc
                 !
@@ -853,7 +853,6 @@ contains
                 ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
                 ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
                 iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
-
                 
                 !
                 ! Add the element index as the only dependency.
@@ -865,6 +864,7 @@ contains
                                                                                                 iface,      &
                                                                                                 IRANK)
 
+
                 call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID,    &
                                                                                             idomain_g,  &
                                                                                             ielement_g, &
@@ -875,10 +875,8 @@ contains
                                                                                             mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas,  &
                                                                                             mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def)
 
-
             end do ! face_ID
         end do ! patch_ID
-
 
     end subroutine init_bc_coupling_local
     !**********************************************************************************************

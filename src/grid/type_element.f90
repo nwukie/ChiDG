@@ -2007,8 +2007,8 @@ contains
         !
         ! Compute inverse cell mapping jacobian
         !
-        jinv = ONE/det_3x3(metric)
-        jinv_def   = ONE/det_3x3(metric_ale)
+        jinv     = ONE/det_3x3(metric)
+        jinv_def = ONE/det_3x3(metric_ale)
 
 
         !

@@ -128,8 +128,6 @@ module type_chidg
         procedure       :: write_fields
         procedure       :: produce_visualization
 
-
-
     end type chidg_t
     !*****************************************************************************************
 
@@ -150,8 +148,6 @@ contains
 
 
 
-
-
     !>  ChiDG Start-Up Activities.
     !!
     !!  activity:
@@ -166,10 +162,11 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine start_up(self,activity,comm)
+    subroutine start_up(self,activity,comm,header)
         class(chidg_t), intent(inout)           :: self
         character(*),   intent(in)              :: activity
         type(mpi_comm), intent(in), optional    :: comm
+        logical,        intent(in), optional    :: header
 
         integer(ik) :: ierr, iread
 
@@ -183,9 +180,10 @@ contains
             ! Start up ChiDG core
             case ('core')
 
+                if (.not. log_initialized) call log_init(header)
+
                 ! Call environment initialization routines by default on first init call
                 if (.not. self%envInitialized ) then
-                    call log_init()
 
                     ! Call environment initialization routines by default on first init call
                     ! Order matters here. Functions need to come first. Used by 
@@ -349,7 +347,6 @@ contains
 
                 ! matrix/vector
                 call self%init('storage')
-
 
 
             ! Initialize domain data that depend on the solution expansion
@@ -600,10 +597,8 @@ contains
         call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('Reading mesh... ', io_proc=GLOBAL_MASTER)
 
-
         ! Read domain geometry. Also performs partitioning.
         call self%read_mesh_grids(grid_file,equation_set,partitions_in)
-
 
         ! Read boundary conditions.
         call self%read_mesh_boundary_conditions(grid_file, bc_wall,        &
@@ -617,16 +612,13 @@ contains
         ! Read mesh motion information.
         call self%read_mesh_motions(grid_file)
                                                       
-
         ! Initialize data
         call self%init('all',interpolation,level)
 
         call self%record_mesh_size()
 
-
         call write_line('Done reading mesh.', io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
-
 
     end subroutine read_mesh
     !*****************************************************************************************
@@ -725,7 +717,6 @@ contains
             end do
 
         end if
-
 
         call MPI_Bcast(ndoms,  1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
         call MPI_Bcast(nnodes, 1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)

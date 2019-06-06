@@ -105,8 +105,6 @@ module integration_smoothbump_mod
         integer(ik)     :: nelem_eta
         character(100)  :: gridfile
         integer(ik)     :: P
-
-        type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
 
     contains
@@ -115,6 +113,7 @@ module integration_smoothbump_mod
     end type smoothbump
     !*******************************************************************************
 
+    type(chidg_t)   :: chidg
 
 contains
 
@@ -224,13 +223,13 @@ contains
         ! Get MPI communicator information from pFUnit
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+        chidg_COMM%mpi_val = this%getMpiCommunicator()
         
         if (run_setup) then
 
             ! Initialize ChiDG environment
-            call this%chidg%start_up('mpi',this%ChiDG_COMM)
-            call this%chidg%start_up('core')
+            call chidg%start_up('mpi',chidg_COMM)
+            call chidg%start_up('core')
 
             !------------------------------------------------------------------------------
             !
@@ -247,7 +246,7 @@ contains
             preconditioner   = 'RASILU0'
             IO_DESTINATION   = 'file'
 
-            call this%chidg%data%time_manager%init()
+            call chidg%data%time_manager%init()
 
             ! Set linear solver options to pass during initialization
             call loptions%set('tol',1.e-9_rk)
@@ -260,7 +259,6 @@ contains
             call noptions%set('ptc',.true.)
             call noptions%set('search','Backtrack')
             !------------------------------------------------------------------------------
-
 
 
 
@@ -305,33 +303,34 @@ contains
             end if
 
             ! Set ChiDG components
-            call this%chidg%set('Solution Order',   integer_input=this%P+1)
-            call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-            call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-            call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-            call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+            call chidg%set('Solution Order',   integer_input=this%P+1)
+            call chidg%set('Time Integrator',  algorithm=time_integrator)
+            call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+            call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+            call chidg%set('Preconditioner',   algorithm=preconditioner)
 
             ! Read grid
-            call this%chidg%read_mesh(this%gridfile)
+            call chidg%read_mesh(this%gridfile)
 
             ! Initialize solution
             if (this%P == 0) then
                 call create_function(fcn,'constant')
                 call fcn%set_option('val',1.13262_rk)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+                call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
                 call fcn%set_option('val',190.339029_rk)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
+                call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,2)
                 call fcn%set_option('val',ZERO)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
+                call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,3)
                 call fcn%set_option('val',ZERO)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
+                call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,4)
                 call fcn%set_option('val',248493.425_rk)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
+                call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,5)
             else
-                call this%chidg%read_fields(this%gridfile)
+                call chidg%read_fields(this%gridfile)
             end if
 
         end if !run_setup
+
 
     end subroutine setUp
     !*******************************************************************************************
@@ -349,7 +348,7 @@ contains
         if (run_setup) then
 
             ! Close ChiDG
-            call this%chidg%shut_down('core')
+            call chidg%shut_down('core')
 
             if (IRANK == GLOBAL_MASTER) then
                 !call delete_file(this%gridfile)
@@ -394,29 +393,29 @@ contains
         order_index = get_order_index(self%P)
 
         ! Run ChiDG simulation
-        call self%chidg%run(write_initial=.false., write_final=.false.)
+        call chidg%run(write_initial=.false., write_final=.false.)
 
-        call self%chidg%write_mesh(self%gridfile)
-        call self%chidg%write_fields(self%gridfile)
+        call chidg%write_mesh(self%gridfile)
+        call chidg%write_fields(self%gridfile)
 
 
         ! Store the nonlinear convergence of the calculation
-        nonlinear_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%residual_norm
+        nonlinear_convergence(npes_index,grid_index,order_index) = chidg%nonlinear_solver%residual_norm
 
 
 !        ! Store the number of nonlinear iterations that the solution converged in. 
 !        ! Problem is linear so it should converge in 1 Newton Step. Really, just the 
 !        ! solution of 1 linear system of equations.
 !        if (self%gridtype == 'singleblock') then
-!            nsteps_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations
+!            nsteps_convergence(npes_index,grid_index,order_index) = chidg%nonlinear_solver%newton_iterations
 !        elseif (self%gridtype == 'chimera') then
-!            nsteps_convergence_chimera(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations
+!            nsteps_convergence_chimera(npes_index,grid_index,order_index) = chidg%nonlinear_solver%newton_iterations
 !        end if
 
 
 
         ! Compute entropy error
-        error(npes_index,grid_index,order_index) = compute_entropy_error(self%chidg%data)
+        error(npes_index,grid_index,order_index) = compute_entropy_error(chidg%data)
 
 
         ! Check if all information has been accumulated, if so, don't initialize anymore 
@@ -424,6 +423,7 @@ contains
         if (abs(error(size(error,1),size(error,2),size(error,3)) - ZERO) > 1.e-8_rk) then
             run_setup = .false.
         end if
+
 
     end subroutine run_calculations
     !*****************************************************************************************
@@ -498,6 +498,16 @@ contains
 
         integer(ik)             :: inpes, igrid, iorder
         real(rk), allocatable   :: reference_convergence(:), test_convergence(:)
+
+        do igrid = 1,2
+            do iorder = 1,4
+                print*, 'igrid, iorder: ', igrid, iorder
+                do inpes = 1,5
+                    print*, 'inpes: ', inpes
+                    print*, nonlinear_convergence(inpes,igrid,iorder)%data()
+                end do
+            end do
+        end do
 
         do inpes = 1,5
             do igrid = 1,2

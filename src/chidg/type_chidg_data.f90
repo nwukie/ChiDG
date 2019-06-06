@@ -51,20 +51,12 @@ module type_chidg_data
         logical                                     :: solverInitialized = .false.
         integer(ik),        private                 :: spacedim_ = 3
 
-        ! mesh
         type(mesh_t)                                :: mesh
-
-        ! bc's and equation set's
-        type(bc_state_group_t),         allocatable :: bc_state_group(:)
-        type(equation_set_t),           allocatable :: eqnset(:)
-
-        ! An object containing chidg matrices/vectors
         type(solverdata_t)                          :: sdata
-
-        ! An object containing time information
         type(time_manager_t)                        :: time_manager
 
-        ! Note: mesh_motion_t is abstract, so it needs a wrapper (I think...) 
+        type(bc_state_group_t),         allocatable :: bc_state_group(:)
+        type(equation_set_t),           allocatable :: eqnset(:)
         type(mesh_motion_wrapper_t),    allocatable :: mesh_motion(:)
 
     contains
@@ -775,7 +767,7 @@ contains
     subroutine initialize_solution_bc(self)
         class(chidg_data_t),    intent(inout)   :: self
 
-        integer(ik) :: ibc
+        integer(ik) :: ibc, ierr
 
         call write_line("Initialize: bc communication...", io_proc=GLOBAL_MASTER)
         do ibc = 1,self%nbc_state_groups()

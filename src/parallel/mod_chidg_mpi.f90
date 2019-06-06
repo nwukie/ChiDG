@@ -9,7 +9,7 @@
 !-----------------------------------------------------------------------------
 module mod_chidg_mpi
 #include <petsc/finclude/petsc.h>
-use petsc,          only: PETSC_NULL_CHARACTER, PETSC_COMM_WORLD
+    use petsc,      only: PETSC_NULL_CHARACTER, PETSC_COMM_WORLD
     use mod_kinds,  only: rk, ik
     use mpi_f08
     implicit none
@@ -29,6 +29,7 @@ use petsc,          only: PETSC_NULL_CHARACTER, PETSC_COMM_WORLD
 
     logical :: mpi_is_initialized = .false.
     logical :: mpi_is_finalized   = .false.
+!    logical :: petsc_is_initialized = .false.
 
 contains
 
@@ -79,11 +80,14 @@ contains
 
         ! Initialize PETSc
         PETSC_COMM_WORLD = ChiDG_COMM%mpi_val
-        call PetscInitialize(PETSC_NULL_CHARACTER,perr)
-        if (perr .ne. 0) then
-          print*,'Unable to initialize PETSc'
-          stop
-        endif
+        if (.not. mpi_is_initialized) then
+            call PetscInitialize(PETSC_NULL_CHARACTER,perr)
+            if (perr .ne. 0) then
+              print*,'Unable to initialize PETSc'
+              stop
+            endif
+        end if
+
 
 
     end subroutine chidg_mpi_init

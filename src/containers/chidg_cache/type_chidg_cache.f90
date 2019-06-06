@@ -1,7 +1,7 @@
 module type_chidg_cache
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: NFACES, CACHE_FACE_INTERIOR, CACHE_FACE_EXTERIOR
+    use mod_constants,      only: NFACES, CACHE_FACE_INTERIOR, CACHE_FACE_EXTERIOR, NO_ID
     use type_mesh,      only: mesh_t
     use type_properties,    only: properties_t
     use type_seed,          only: seed_t
@@ -41,6 +41,8 @@ module type_chidg_cache
 
         procedure   :: set_data
         procedure   :: get_data
+
+        procedure   :: check_field_exists
 
     end type chidg_cache_t
     !**************************************************************************************
@@ -225,6 +227,40 @@ contains
 
 
 
+
+
+
+    !>  Check if field exists in cache.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/8/2016
+    !!
+    !!  TODO: test
+    !!
+    !----------------------------------------------------------------------------------------
+    function check_field_exists(self,field,cache_component,iface) result(exists)
+        class(chidg_cache_t),   intent(inout)           :: self
+        character(*),           intent(in)              :: field
+        character(*),           intent(in)              :: cache_component
+        integer(ik),            intent(in), optional    :: iface
+
+        logical :: exists
+
+        select case (trim(cache_component))
+            case ('element')
+                exists = (self%element%get_field_index(field) /= NO_ID)
+            case ('face interior')
+                exists = (self%faces(iface,1)%get_field_index(field) /= NO_ID)
+            case ('face exterior')
+                exists = (self%faces(iface,2)%get_field_index(field) /= NO_ID)
+            case default
+                call chidg_signal(FATAL,'chidg_cache%check_field_exists: Error in cache_component string')
+        end select
+
+
+
+    end function check_field_exists
+    !*****************************************************************************************
 
 
 

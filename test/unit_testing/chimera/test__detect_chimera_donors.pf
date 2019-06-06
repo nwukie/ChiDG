@@ -35,47 +35,22 @@ subroutine test__detect_chimera_donors()
     integer(ik)                     :: idom, ielem, igq, idonor, iface
 
 
-    print*, 'hiiiiiiiiiiiiiii'
-
     tol             = 1.e-13_rk
     IO_DESTINATION  = 'file'
 
 
-    !
     ! Initialize ChiDG environment
-    !
     call chidg%start_up('core')
 
-    !
     ! Set accuracy for the solution expansion
-    !
     call chidg%set('Solution Order', integer_input=2)
 
-    !
     ! Create grid file
-    !
     call create_mesh_file("D2 E8 M1 : Overlapping : Matching", filename)
 
 
-    !
     ! Read 2-Domain overlapping grid
-    !
     call chidg%read_mesh(filename)
-!    call chidg%read_mesh_grids(filename)
-!    call chidg%read_mesh_boundary_conditions(filename)
-!    call chidg%init('domains')
-!    call chidg%init('comm - interior')
-
-
-
-
-!    call detect_chimera_faces(chidg%data%mesh)
-    !
-    ! Detect Chimera donors. THIS IS BEING TESTED
-    !
-!    call detect_chimera_donors(chidg%data%mesh)
-
-
 
 
 
@@ -203,13 +178,8 @@ subroutine test__detect_chimera_donors()
 
 
 
-    !
-    ! Close ChiDG interface
-    !
+    ! Close ChiDG interface and clean-up.
     call chidg%shut_down('core')
-
-
-    ! Clean-up
     call delete_file(filename)
 
 

@@ -388,6 +388,7 @@ contains
         write(unit=file_unit, nml=space)
         write(unit=file_unit, nml=quadrature)
         write(unit=file_unit, nml=time)
+        write(unit=file_unit, nml=infrastructure)
         write(unit=file_unit, nml=nonlinear_solve)
         write(unit=file_unit, nml=linear_solve)
         write(unit=file_unit, nml=io)

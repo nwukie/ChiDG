@@ -1,7 +1,7 @@
 module type_cache_data
 #include <messenger.h>
     use mod_kinds,                  only: ik, rk
-    use mod_constants,              only: INTERIOR, BOUNDARY, CHIMERA, ZERO
+    use mod_constants,              only: INTERIOR, BOUNDARY, CHIMERA, ZERO, NO_ID
     use type_cache_data_field,      only: cache_data_field_t
     use type_mesh,              only: mesh_t
     use type_properties,            only: properties_t
@@ -236,7 +236,7 @@ contains
                     was not found. Check that the field being stored is included in &
                     an operator_t or model_t with something like &
                     model%add_model_field('My Field')."
-        if (field_index == 0) call chidg_signal_one(FATAL,user_msg,trim(field))
+        if (field_index == NO_ID) call chidg_signal_one(FATAL,user_msg,trim(field))
 
         
         !
@@ -280,7 +280,7 @@ contains
         ! Get field index
         field_index = self%get_field_index(field)
         user_msg = "cache_data%get_data: We didn't find the field in the chidg cache."
-        if (field_index == 0) call chidg_signal_one(FATAL,user_msg,field)
+        if (field_index == NO_ID) call chidg_signal_one(FATAL,user_msg,field)
 
 
 
@@ -458,7 +458,7 @@ contains
 
         integer(ik) :: ifield, field_index
 
-        field_index = 0
+        field_index = NO_ID
         do ifield = 1,size(self%fields)
             if (trim(self%fields(ifield)%name) == trim(field)) then
                 field_index = ifield

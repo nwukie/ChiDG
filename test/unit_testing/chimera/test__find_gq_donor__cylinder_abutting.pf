@@ -25,40 +25,28 @@ subroutine test_find_gq_donor_cylinder_abutting()
     real(rk)                        :: tol
     character(1024)                 :: filename = "cylinder_chimera_matching.h5"
 
-    print*, 'hiiiiiiiiiiiiiiiiiiiii'
-
     tol            = 1.e-12_rk
     IO_DESTINATION = 'file'
 
 
-    !
     ! Initialize ChiDG
-    !
     call chidgA%start_up('core')
 
 
-    !
     ! Set accuracy of the solution expansion
-    !
     call chidgA%set('Solution Order', integer_input=2)
 
 
-    !
     ! Generate cylinder mesh
-    !
     call create_mesh_file("Cylinder : Diagonal : Matching",trim(filename))
 
 
-    !
     ! Read grid
-    !
     call chidgA%read_mesh_grids(trim(filename))
     call chidgA%read_mesh_boundary_conditions(trim(filename))
 
 
-    !
     ! Initialize solution data storage
-    !
     call chidgA%init('domains')
     call chidgA%init('comm - interior')
     call chidgA%init('comm - chimera')

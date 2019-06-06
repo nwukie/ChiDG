@@ -145,8 +145,8 @@ macro (add_test_target target_subdirectory test_type)
 	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a chidg-core -lstdc++ -lpthread ${MPI_Fortran_LIBRARIES} ${METIS_LIBRARIES})
     	
 	set_target_properties(${target_name} PROPERTIES 
-                             COMPILE_FLAGS "-DUSE_MPI=True -DBUILD_ROBUST=True ${MPI_Fortran_COMPILE_FLAGS}"
-                             LINK_FLAGS    "${MPI_Fortran_LINK_FLAGS}")
+                             COMPILE_FLAGS "-DUSE_MPI=True -DBUILD_ROBUST=True ${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
+                             LINK_FLAGS    "${CMAKE_Fortran_LINK} ${MPI_Fortran_LINK_FLAGS}")
 	
 	
     #

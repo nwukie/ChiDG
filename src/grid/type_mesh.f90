@@ -15,7 +15,7 @@ module type_mesh
     use mpi_f08,                    only: mpi_isend, mpi_recv, mpi_integer4, mpi_real8, &
                                           mpi_waitall, mpi_request, mpi_status_ignore,  &
                                           mpi_statuses_ignore, mpi_character, mpi_sum
-    use type_octree,                  only: octree_t
+    use type_octree,                only: octree_t
     implicit none
     private
 
@@ -88,6 +88,7 @@ module type_mesh
         procedure           :: find_parallel_element
         procedure           :: new_parallel_element
         procedure           :: nparallel_elements
+        procedure           :: get_parallel_dofs
 
 
         ! Extra routines for testing private procedures
@@ -643,9 +644,11 @@ contains
     subroutine release(self)
         class(mesh_t),  intent(inout)   :: self
 
-
-        if (allocated(self%domain)) deallocate(self%domain)
-
+        if (allocated(self%domain))             deallocate(self%domain)
+        if (allocated(self%bc_patch_group))     deallocate(self%bc_patch_group)
+        if (allocated(self%nelements_per_proc)) deallocate(self%nelements_per_proc)
+        if (allocated(self%parallel_element))   deallocate(self%parallel_element)
+        if (allocated(self%global_nodes))       deallocate(self%global_nodes)
 
     end subroutine release
     !*********************************************************************************
@@ -1051,6 +1054,51 @@ contains
 
 
 
+    !>  Return the global indices of all parallel degrees-of-freedom that need
+    !!  accessed
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   5/11/2019
+    !!
+    !!
+    !----------------------------------------------------------------------------------
+    function get_parallel_dofs(self) result(parallel_dofs)
+        class(mesh_t),  intent(in)  :: self
+
+        integer(ik) :: dof_start, nterms_s, nfields, pelem_ID, idof
+        !integer(ik),    allocatable :: parallel_dofs(:)
+
+        type(ivector_t) :: parallel_dofs
+
+
+        ! Loop through parallel_elements and accumulate dof indices
+        do pelem_ID = 1,self%nparallel_elements()
+
+            dof_start = self%parallel_element(pelem_ID)%dof_start
+            nterms_s  = self%parallel_element(pelem_ID)%nterms_s
+            nfields   = self%parallel_element(pelem_ID)%neqns
+
+            ! Store each dof index
+            do idof = dof_start, dof_start + (nterms_s*nfields - 1)
+                call parallel_dofs%push_back(idof)
+            end do !idof
+
+        end do !pelem_ID
+
+
+    end function get_parallel_dofs
+    !**********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
     !>  Communicate number of elements on each process.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -1064,6 +1112,7 @@ contains
         integer(ik), allocatable    :: buffer(:)
 
         ! Allocate storage for number of elements on each process
+        if (allocated(self%nelements_per_proc)) deallocate(self%nelements_per_proc)
         allocate(self%nelements_per_proc(NRANK), stat=ierr)
         if (ierr /= 0) call AllocationError
         self%nelements_per_proc = 0
@@ -1125,11 +1174,13 @@ contains
         logical             :: interior_face, parallel_neighbor
 
 
+
+
         !
-        ! Send interior face data
+        ! Send interior face neighbor DATA: important because we need face data, not just element data.
         !
         do idom = 1,self%ndomains()
-            do ielem = 1,self%domain(idom)%nelem
+            do ielem = 1,self%domain(idom)%nelements()
                 do iface = 1,NFACES
 
                     interior_face     = (self%domain(idom)%faces(ielem,iface)%ftype == INTERIOR)
@@ -1176,8 +1227,61 @@ contains
 
 
 
+
+
         !
-        ! Send chimera donors
+        ! Send interior face neighbor elements: these will be initialized in target proc mesh%parallel_elements.
+        ! That way, we can query parallel_elements to decide order of access in parallel vector storage, for example.
+        !
+        do idom = 1,self%ndomains()
+            do ielem = 1,self%domain(idom)%nelements()
+                do iface = 1,NFACES
+
+                    interior_face     = (self%domain(idom)%faces(ielem,iface)%ftype == INTERIOR)
+                    parallel_neighbor = (self%domain(idom)%faces(ielem,iface)%ineighbor_proc /= IRANK)
+
+                    !
+                    ! For INTERIOR faces that have off-processor neighbors we 
+                    ! need to send that element to the neighbor processor.
+                    !
+                    if ( interior_face .and. parallel_neighbor ) then
+
+                        associate ( face => self%domain(idom)%faces(ielem,iface) ) 
+
+                        idomain_l  = self%domain(idom)%elems(ielem)%idomain_l
+                        ielement_l = self%domain(idom)%elems(ielem)%ielement_l
+
+                        send_size_a = size(self%domain(idomain_l)%elems(ielement_l)%connectivity)
+                        send_size_b = size(self%domain(idomain_l)%elems(ielement_l)%node_coords)
+                        send_size_c = size(self%domain(idomain_l)%elems(ielement_l)%node_coords_def)
+                        send_size_d = size(self%domain(idomain_l)%elems(ielement_l)%node_coords_vel)
+                
+                        ! Send element to off-processor interior neighbor
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,             5, mpi_integer4, face%ineighbor_proc, 0, ChiDG_COMM, request(1), ierr)
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_data,                 9, mpi_integer4, face%ineighbor_proc, 0, ChiDG_COMM, request(2), ierr)
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords,        send_size_b, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(3), ierr)
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_def,    send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(4), ierr)
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_vel,    send_size_d, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(5), ierr)
+
+                        call self%comm_requests%push_back(request(1))
+                        call self%comm_requests%push_back(request(2))
+                        call self%comm_requests%push_back(request(3))
+                        call self%comm_requests%push_back(request(4))
+                        call self%comm_requests%push_back(request(5))
+
+                        end associate
+
+                    end if
+
+
+                end do !iface
+            end do !ielem
+        end do !idom
+
+
+
+        !
+        ! Send chimera donor elements: these will be initialized in target proc mesh%parallel_elements
         !
         do idom = 1,self%ndomains()
             ! For each element that needs sent
@@ -1220,23 +1324,75 @@ contains
         end do !idom
 
 
-!        do group_ID = 1,self%nbc_patch_groups()
-!            do patch_ID = 1,self%bc_patch_group(group_ID)%npatches()
-!                if (self%bc_patch_group(group_ID)%patch(patch_ID)%spatial_coupling = 'Global') then
-!
-!                    ! Send each element in the patch to each other processor in bc_comm
-!                    call MPI_Comm_Size(bc_comm, bc_NRANK, ierr)
-!                    call MPI_Comm_Rank(bc_comm, bc_IRANK, ierr)
-!
-!                    do iproc = 0,
-!
-!                end if !global spatial coupling
-!            end do !patch_ID
-!        end do !group_ID
+
+
+
+
+
+
+
+
+
+
+
+
+
+! PREVIOUS
 
 
 !        !
-!        ! Send coupled bc elements
+!        ! Send interior face data
+!        !
+!        do idom = 1,self%ndomains()
+!            do ielem = 1,self%domain(idom)%nelem
+!                do iface = 1,NFACES
+!
+!                    interior_face     = (self%domain(idom)%faces(ielem,iface)%ftype == INTERIOR)
+!                    parallel_neighbor = (self%domain(idom)%faces(ielem,iface)%ineighbor_proc /= IRANK)
+!
+!                    !
+!                    ! For INTERIOR faces that have off-processor neighbors we need to communicate ALE data.
+!                    !
+!                    if ( interior_face .and. parallel_neighbor ) then
+!
+!                        associate ( face => self%domain(idom)%faces(ielem,iface) ) 
+!
+!                        send_size_a = size(face%neighbor_location)
+!                        send_size_b = size(face%interp_coords_vel)
+!                        send_size_c = size(face%ale_g)
+!                        send_size_d = size(face%ale_Dinv)
+!
+!                        ! First, send neighbor location. This way, the receiving processor knows where to put the data.
+!                        ! Next, send all ALE information
+!                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%neighbor_location, send_size_a, mpi_integer4, face%ineighbor_proc, 0, ChiDG_COMM, request(1), ierr)
+!                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%interp_coords_vel, send_size_b, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(2), ierr)
+!                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_g,             send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(3), ierr)
+!                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_g_grad1,       send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(4), ierr)
+!                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_g_grad2,       send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(5), ierr)
+!                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_g_grad3,       send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(6), ierr)
+!                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_Dinv,          send_size_d, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(7), ierr)
+!
+!                        call self%comm_requests%push_back(request(1))
+!                        call self%comm_requests%push_back(request(2))
+!                        call self%comm_requests%push_back(request(3))
+!                        call self%comm_requests%push_back(request(4))
+!                        call self%comm_requests%push_back(request(5))
+!                        call self%comm_requests%push_back(request(6))
+!                        call self%comm_requests%push_back(request(7))
+!
+!                        end associate
+!
+!                    end if
+!
+!
+!                end do !iface
+!            end do !ielem
+!        end do !idom
+!
+!
+!
+!        !
+!        ! Send chimera donors
 !        !
 !        do idom = 1,self%ndomains()
 !            ! For each element that needs sent
@@ -1277,6 +1433,65 @@ contains
 !                end do !isend_procs
 !            end do !isend
 !        end do !idom
+!
+!
+!!        do group_ID = 1,self%nbc_patch_groups()
+!!            do patch_ID = 1,self%bc_patch_group(group_ID)%npatches()
+!!                if (self%bc_patch_group(group_ID)%patch(patch_ID)%spatial_coupling = 'Global') then
+!!
+!!                    ! Send each element in the patch to each other processor in bc_comm
+!!                    call MPI_Comm_Size(bc_comm, bc_NRANK, ierr)
+!!                    call MPI_Comm_Rank(bc_comm, bc_IRANK, ierr)
+!!
+!!                    do iproc = 0,
+!!
+!!                end if !global spatial coupling
+!!            end do !patch_ID
+!!        end do !group_ID
+!
+!
+!!        !
+!!        ! Send coupled bc elements
+!!        !
+!!        do idom = 1,self%ndomains()
+!!            ! For each element that needs sent
+!!            do isend = 1,self%domain(idom)%chimera%nsend()
+!!                ! For each processor the current element gets sent to
+!!                do isend_proc = 1,self%domain(idom)%chimera%send(isend)%nsend_procs()
+!!
+!!                    ! Get the processor rank we are sending to
+!!                    iproc = self%domain(idom)%chimera%send(isend)%send_procs%at(isend_proc)
+!!
+!!                    ! If receiver is off-processor, send reference and physical nodes/velocities
+!!                    if (iproc /= IRANK) then
+!!
+!!                        idomain_l  = self%domain(idom)%chimera%send(isend)%idomain_l
+!!                        ielement_l = self%domain(idom)%chimera%send(isend)%ielement_l
+!!
+!!                        send_size_a = size(self%domain(idomain_l)%elems(ielement_l)%connectivity)
+!!                        send_size_b = size(self%domain(idomain_l)%elems(ielement_l)%node_coords)
+!!                        send_size_c = size(self%domain(idomain_l)%elems(ielement_l)%node_coords_def)
+!!                        send_size_d = size(self%domain(idomain_l)%elems(ielement_l)%node_coords_vel)
+!!                
+!!                        ! First send location of donor
+!!                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,             5, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
+!!                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_data,                 9, mpi_integer4, iproc, 0, ChiDG_COMM, request(2), ierr)
+!!                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords,        send_size_b, mpi_real8,    iproc, 0, ChiDG_COMM, request(3), ierr)
+!!                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_def,    send_size_c, mpi_real8,    iproc, 0, ChiDG_COMM, request(4), ierr)
+!!                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_vel,    send_size_d, mpi_real8,    iproc, 0, ChiDG_COMM, request(5), ierr)
+!!
+!!
+!!                        call self%comm_requests%push_back(request(1))
+!!                        call self%comm_requests%push_back(request(2))
+!!                        call self%comm_requests%push_back(request(3))
+!!                        call self%comm_requests%push_back(request(4))
+!!                        call self%comm_requests%push_back(request(5))
+!!
+!!                    end if 
+!!
+!!                end do !isend_procs
+!!            end do !isend
+!!        end do !idom
 
 
 
@@ -1313,10 +1528,14 @@ contains
                                        idomain_g, ielement_g, coordinate_system,    & 
                                        recv_size_a, recv_size_b, recv_size_c,       &
                                        face_location(6), element_location(5),       &
-                                       element_data(9), spacedim, inode, dof_start
+                                       element_data(9), spacedim, inode, dof_start, &
+                                       ineighbor_domain_g, ineighbor_element_g
+        logical :: interior_face, parallel_neighbor
+
+
 
         !
-        ! Receive interior face data
+        ! Receive interior face neighbor DATA
         !
         recv_procs = self%get_recv_procs()
         do iproc = 1,size(recv_procs)
@@ -1349,11 +1568,10 @@ contains
 
 
         !
-        ! Receive/construct parallel chimera donors
+        ! Receive/construct parallel neighbors/chimera donors
         !
         do iproc = 1,size(recv_procs)
-            do irecv = 1,self%get_proc_nchimera_donors(recv_procs(iproc))
-
+            do irecv = 1,(self%get_proc_ninterior_neighbors(recv_procs(iproc)) + self%get_proc_nchimera_donors(recv_procs(iproc)))
 
 
                 ! element_location = [idomain_g, idomain_l, ielement_g, ielement_l, iproc]
@@ -1453,6 +1671,181 @@ contains
 
             end do !irecv
         end do !iproc
+
+
+
+
+! PREVIOUS
+
+!        !
+!        ! Receive interior face data
+!        !
+!        recv_procs = self%get_recv_procs()
+!        do iproc = 1,size(recv_procs)
+!            do irecv = 1,self%get_proc_ninterior_neighbors(recv_procs(iproc))
+!
+!                ! The sending proc sent its neighbor location, which is a face on our local processor 
+!                ! here where we will store the incoming ALE data
+!                ! face_location = [idomain_g, idomain_l, ielement_g, ielement_l, iface, dof_start]
+!                call mpi_recv(face_location, 6, mpi_integer4, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!                idom  = face_location(2)
+!                ielem = face_location(4)
+!                iface = face_location(5)
+!
+!                recv_size_a = size(self%domain(idom)%faces(ielem,iface)%neighbor_interp_coords_vel)
+!                recv_size_b = size(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g)
+!                recv_size_c = size(self%domain(idom)%faces(ielem,iface)%neighbor_ale_Dinv)
+!
+!                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_interp_coords_vel, recv_size_a, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g,             recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad1,       recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad2,       recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad3,       recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_Dinv,          recv_size_c, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!
+!            end do !irecv
+!        end do !iproc
+!
+!
+!
+!
+!
+!        !
+!        ! Receive/construct parallel chimera donors
+!        !
+!        do iproc = 1,size(recv_procs)
+!            do irecv = 1,self%get_proc_nchimera_donors(recv_procs(iproc))
+!
+!
+!
+!                ! element_location = [idomain_g, idomain_l, ielement_g, ielement_l, iproc]
+!                call mpi_recv(element_location, 5, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!                idomain_g  = element_location(1)
+!                ielement_g = element_location(3)
+!
+!
+!                ! element_data = [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level]
+!                call mpi_recv(element_data, 9, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!                etype               = element_data(1)
+!                spacedim            = element_data(2)
+!                coordinate_system   = element_data(3)
+!                nfields             = element_data(4)
+!                nterms_s            = element_data(5)
+!                nterms_c            = element_data(6)
+!                ntime               = element_data(7)
+!                interpolation_level = element_data(8)
+!                dof_start           = element_data(9)
+!                nnodes = (etype+1)*(etype+1)*(etype+1)
+!                
+!
+!
+!                ! Allocate buffers and receive: nodes, displacements, and velocities. 
+!                ! These quantities are located at the element support nodes, not interpolation
+!                ! nodes.
+!                if (allocated(nodes)) deallocate(nodes, nodes_def, nodes_vel, connectivity)
+!                allocate(nodes(       nnodes,3), &
+!                         nodes_def(   nnodes,3), &
+!                         nodes_vel(   nnodes,3), &
+!                         connectivity(nnodes  ), stat=ierr)
+!                if (ierr /= 0) call AllocationError
+!
+!
+!                call mpi_recv(nodes,     nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!                call mpi_recv(nodes_def, nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!                call mpi_recv(nodes_vel, nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!
+!                
+!                !
+!                ! Compute node displacements
+!                !
+!                nodes_disp = nodes_def - nodes
+!
+!                !
+!                ! Build local connectivity
+!                !   : we construct the parallel element using just a local ordering
+!                !   : so connectivity starts at 1 and goes to the number of nodes in 
+!                !   : the element, nnodes.
+!                !   :
+!                !   :   connectivity = [1, 2, 3, 4, 5, 6, 7, 8 ...]
+!                !   :
+!                !   : We assume here that the displacements and velocities are ordered
+!                !   : appropriately.
+!                !
+!                do inode = 1,nnodes
+!                    connectivity(inode) = inode
+!                end do
+!
+!
+!
+!                !
+!                ! Check for existing parallel element. If one does not
+!                ! exist, get an identifier for a new parallel element.
+!                !
+!                pelem_ID = self%find_parallel_element(idomain_g,ielement_g)
+!                if (pelem_ID == NO_ID) pelem_ID = self%new_parallel_element()
+!
+!
+!                !
+!                ! Initialize element geometry
+!                !
+!                select case(coordinate_system)
+!                    case(CARTESIAN)
+!                        coord_system = 'Cartesian'
+!                    case(CYLINDRICAL)
+!                        coord_system = 'Cylindrical'
+!                    case default
+!                        call chidg_signal(FATAL,"element%comm_recv: invalid coordinate system.")
+!                end select
+!
+!                
+!                !
+!                ! Construct/initialize/reinitialize parallel element
+!                !
+!                if (.not. self%parallel_element(pelem_ID)%geom_initialized) then
+!                    call self%parallel_element(pelem_ID)%init_geom(nodes,connectivity,etype,element_location,trim(coord_system))
+!                end if
+!
+!                if (.not. self%parallel_element(pelem_ID)%sol_initialized) then
+!                    call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start)
+!                end if
+!
+!                call self%parallel_element(pelem_ID)%set_displacements_velocities(nodes_disp,nodes_vel)
+!                call self%parallel_element(pelem_ID)%update_interpolations_ale()
+!
+!
+!            end do !irecv
+!        end do !iproc
+
+
+
+        !
+        ! Initialize interior parallel neighbor element ID
+        !
+        do idom = 1,self%ndomains()
+            do ielem = 1,self%domain(idom)%nelements()
+                do iface = 1,NFACES
+
+                    interior_face     = (self%domain(idom)%faces(ielem,iface)%ftype == INTERIOR)
+                    parallel_neighbor = (self%domain(idom)%faces(ielem,iface)%ineighbor_proc /= IRANK)
+
+                    !
+                    ! For INTERIOR faces that have off-processor neighbors we need to communicate ALE data.
+                    !
+                    if ( interior_face .and. parallel_neighbor ) then
+
+                        ineighbor_domain_g   = self%domain(idom)%faces(ielem,iface)%ineighbor_domain_g
+                        ineighbor_element_g  = self%domain(idom)%faces(ielem,iface)%ineighbor_element_g
+                        pelem_ID = self%find_parallel_element(idomain_g,ielement_g)
+                        if (pelem_ID == NO_ID) call chidg_signal(FATAL,'mesh%comm_recv: could not find interior neighbor parallel element.')
+
+                        self%domain(idom)%faces(ielem,iface)%ineighbor_pelem_ID = pelem_ID
+
+                    end if
+
+                end do !iface
+            end do !ielem
+        end do !idom
+
 
 
 

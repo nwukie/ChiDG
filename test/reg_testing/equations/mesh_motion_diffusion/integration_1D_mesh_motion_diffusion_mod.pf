@@ -153,7 +153,6 @@ module integration_1D_mesh_motion_diffusion_mod
         character(:),   allocatable :: gridfile
         integer(ik)                 :: order
 
-        type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
     contains
         procedure   :: setUp
@@ -162,6 +161,7 @@ module integration_1D_mesh_motion_diffusion_mod
     !*******************************************************************************
 
 
+    type(chidg_t)   :: chidg
 
 
 contains
@@ -438,11 +438,11 @@ contains
         ! Get MPI communicator information from pFUnit
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+        chidg_COMM%mpi_val = this%getMpiCommunicator()
 
         ! Initialize ChiDG environment
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
+        call chidg%start_up('mpi',chidg_COMM)
+        call chidg%start_up('core')
 
 
         !-------------------------------------------------------------------------------
@@ -566,26 +566,26 @@ contains
 
 
         ! Read grid
-        call this%chidg%read_mesh(this%gridfile)
+        call chidg%read_mesh(this%gridfile)
 
         ! Set ChiDG components
-        call this%chidg%set('Solution Order',   integer_input=this%order)
-        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+        call chidg%set('Solution Order',   integer_input=this%order)
+        call chidg%set('Time Integrator',  algorithm=time_integrator)
+        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call chidg%set('Preconditioner',   algorithm=preconditioner)
 
         ! Wrap-up initialization activities
-        call this%chidg%init('all')
+        call chidg%init('all')
 
         ! Initialize solution
         call create_function(fcn,'constant')
         call fcn%set_option('val',1.0_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
         call fcn%set_option('val',0.0_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,2)
         call fcn%set_option('val',0.0_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,3)
 
     end subroutine SetUp
     !*****************************************************************************************
@@ -599,7 +599,7 @@ contains
         class(mesh_motion_diffusion_1D),  intent(inout)   :: this
 
         ! Close ChiDG
-        call this%chidg%shut_down('core')
+        call chidg%shut_down('core')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -635,19 +635,19 @@ contains
         order_index = get_order_index(self%order)
 
         ! Run ChiDG simulation
-        call self%chidg%run(write_initial=.false., write_final=.false.)
+        call chidg%run(write_initial=.false., write_final=.false.)
 
         ! Store the number of nonlinear iterations that the solution converged in. Problem 
         ! is linear so it should converge in 1 Newton Step. Really, just the solution 
         ! of 1 linear system of equations.
         if (self%gridtype == 'singleblock') then
-            nsteps_convergence(npes_index,grid_index,order_index)         = self%chidg%nonlinear_solver%newton_iterations
+            nsteps_convergence(npes_index,grid_index,order_index)         = chidg%nonlinear_solver%newton_iterations
         elseif (self%gridtype == 'chimera') then
-            nsteps_convergence_chimera(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations 
+            nsteps_convergence_chimera(npes_index,grid_index,order_index) = chidg%nonlinear_solver%newton_iterations 
         end if
 
         ! Compute error
-        computed_error = compute_1D_mesh_motion_diffusion_error(self%chidg%data,self%ChiDG_COMM)
+        computed_error = compute_1D_mesh_motion_diffusion_error(chidg%data,chidg_COMM)
 
         ! Store the computed error for the current case
         if (self%gridtype == 'singleblock') then

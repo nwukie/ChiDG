@@ -291,12 +291,8 @@ contains
             allocate(u_gq(ngq))
             allocate(u_ref(ngq))
             
-            elem_info%idomain_g  = idomain
-            elem_info%idomain_l  = idomain
-            elem_info%ielement_g = ielem
-            elem_info%ielement_l = ielem
+            elem_info = self%chidg%data%mesh%get_element_info(idomain,ielem)
 
-            
             !
             ! PROCEDURE BEING TESTED
             !
@@ -379,10 +375,7 @@ contains
             allocate(u_gq(ngq))
             allocate(deriv_ref(nderiv))
             
-            elem_info%idomain_g  = idomain
-            elem_info%idomain_l  = idomain
-            elem_info%ielement_g = ielem
-            elem_info%ielement_l = ielem
+            elem_info = self%chidg%data%mesh%get_element_info(idomain,ielem)
 
             
             !
@@ -467,10 +460,7 @@ contains
             allocate(u_gq(ngq))
             allocate(u_ref(ngq))
             
-            elem_info%idomain_g  = idomain
-            elem_info%idomain_l  = idomain
-            elem_info%ielement_g = ielem
-            elem_info%ielement_l = ielem
+            elem_info = self%chidg%data%mesh%get_element_info(idomain,ielem)
 
             
             !
@@ -556,11 +546,7 @@ contains
             allocate(u_gq(ngq))
             allocate(deriv_ref(nderiv))
             
-            elem_info%idomain_g  = idomain
-            elem_info%idomain_l  = idomain
-            elem_info%ielement_g = ielem
-            elem_info%ielement_l = ielem
-
+            elem_info = self%chidg%data%mesh%get_element_info(idomain,ielem)
 
             
             !

@@ -73,16 +73,16 @@ elseif (CMAKE_Fortran_COMPILER_ID MATCHES GNU)
     endif()
 
     # Set compile/link flags
-    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp --coverage -ffree-form \
+    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -ffree-form \
                                      -ffree-line-length-none -fbacktrace \
                                      -fstack-protector -fcheck=bounds \
-                                     -p -g")    
+                                     -g")    
     set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form \
                                      -ffree-line-length-none -fexternal-blas \
                                      -funroll-loops")
                                      #-march=native -funroll-loops")
 
-    set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-O0 --coverage")
+    set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-O0")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "-O3")
     
     set (PROFILE_FLAGS "-p -g")

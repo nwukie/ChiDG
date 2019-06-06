@@ -85,11 +85,14 @@ contains
 
         call write_line('Computing Force...', io_proc=GLOBAL_MASTER)
 
+
         ! Initialize Chidg Worker references
         call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, data%time_manager, cache)
 
+
         ! Get patch_group boundary group ID
         group_ID = data%mesh%get_bc_patch_group_id(trim(patch_group))
+
 
         ! Make sure q is assembled so it doesn't hang when triggered in get_field
         call data%sdata%q%assemble()
@@ -201,6 +204,7 @@ contains
         ! Reduce result across processors
         if (present(force)) call MPI_AllReduce(force_local,force,3,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
         if (present(work))  call MPI_AllReduce(work_local, work, 1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+
 
     end subroutine report_aerodynamics
     !******************************************************************************************

@@ -48,6 +48,7 @@ module type_chidg_vector
         Vec,        pointer :: petsc_vector_recv => null()
         VecScatter, pointer :: petsc_scatter     => null()
         IS,         pointer :: petsc_is          => null()
+
         logical             :: petsc_vector_created  = .false.
         logical             :: from_operator         = .false.
         logical             :: petsc_needs_assembled = .false.
@@ -382,6 +383,33 @@ contains
         ! Set up vector
         call VecSetUp(self%petsc_vector,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecSetUp.')
+
+
+
+
+        !---------------------------------------------------------------------------
+        !
+        !   Initialize the following PETSc data objects for parallel communication:
+        !
+        !   petsc_is: A PETSc index set that contains the problem-global indices
+        !             of degrees-of-freedom that need to be accessed across 
+        !             parallel boundaries.
+        !
+        !   pestc_scatter: A PETSc scatter context that describes scatter from 
+        !                  off-process degrees-of-freedom to a local sequential
+        !                  vector.
+        !
+        !   petsc_vector_recv: A PETSc local sequential vector to hold off-processor
+        !                      data received via petsc_scatter.
+        !
+        !---------------------------------------------------------------------------
+
+        ! First, creat index set of all off-processor degrees-of-freedom:
+!        parallel_dofs = mesh%get_parallel_dofs()
+
+
+
+
 
         ! Initialize parallel scatter to all
         call VecScatterCreateToAll(self%petsc_vector, self%petsc_scatter, self%petsc_vector_recv, ierr)
@@ -1918,11 +1946,8 @@ contains
             call vector_assign_pointers_petsc(vec_out)
 
         else
-            !! Duplicate native storage
-            !vec_out = self
 
-            !! Update procedure pointers
-            !call vector_assign_pointers_chidg(vec_out)
+            ! Update procedure pointers
             if (allocated(self%dom)) vec_out%dom = self%dom
             vec_out%send   = self%send
             vec_out%recv   = self%recv

@@ -43,5 +43,7 @@ add_lib_sources(
                 type_rbf_mm_driver_vector.f90
                 type_rbf_node_vector.f90
                 type_rbf_source_vector.f90
+                type_petsc_vector_wrapper.f90
+                type_petsc_scatter_wrapper.f90
                 )
 

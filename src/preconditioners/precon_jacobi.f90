@@ -178,11 +178,9 @@ contains
         if (self%petsc_initialized) then
         !******  petsc  implementation  ******!
 
-            call PCApply(self%pc,v%petsc_vector,z%petsc_vector,perr)
+            call PCApply(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%apply: error calling PCApply.')
-            z%from_operator         = .true.
             z%petsc_needs_assembled = .true.
-
 
 
         else

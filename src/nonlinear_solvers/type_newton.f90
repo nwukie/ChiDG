@@ -467,8 +467,6 @@ contains
         ! Apply pseudo-transient scaling
         scaled_vector = pseudo_transient_scaling(data,cfln,smoothed_vector)
 
-        scaled_vector%from_operator = .true.
-
     end function apply_residual_smoother
     !************************************************************************************
 
@@ -538,8 +536,6 @@ contains
                 end do !itime
             end do !ielem
         end do !idom
-
-        scaled_vector%from_operator = .true.
 
     end function pseudo_transient_scaling
     !*************************************************************************************

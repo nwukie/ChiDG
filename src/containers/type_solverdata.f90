@@ -141,7 +141,6 @@ contains
         integer(ik) :: ierr, ndom, maxelems, idom
         logical     :: increase_maxelems = .false.
 
-
         ! Create vector/matrix containers
         self%q     = chidg_vector(trim(backend))
         self%dq    = chidg_vector(trim(backend))

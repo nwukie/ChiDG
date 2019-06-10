@@ -91,7 +91,7 @@ contains
         PetscReal :: petsc_norm
 
 
-        if (x%petsc_vector_created) then
+        if (allocated(x%wrapped_petsc_vector)) then
 
             call timer_comm%start()
             call timer_comm%stop()
@@ -100,11 +100,8 @@ contains
             res = x
             call res%clear()
 
-            call MatMult(A%petsc_matrix,x%petsc_vector,res%petsc_vector,perr)
+            call MatMult(A%petsc_matrix,x%wrapped_petsc_vector%petsc_vector,res%wrapped_petsc_vector%petsc_vector,perr)
             if (perr /= 0) call chidg_signal(FATAL,'chidg_mv: error calling petsc MatMult.')
-
-            res%petsc_vector_created = .true.
-            res%from_operator        = .true.
 
             call timer_blas%stop()
 

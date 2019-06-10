@@ -36,7 +36,7 @@ contains
 
         res = ZERO
 
-        if (a%petsc_vector_created) then
+        if (allocated(a%wrapped_petsc_vector)) then
             call chidg_signal(FATAL,'dot_local: processor-local dot-product not yet implemented for petsc.')
         else
 
@@ -71,9 +71,9 @@ contains
 
         PetscErrorCode :: perr
 
-        if (a%petsc_vector_created) then
+        if (allocated(a%wrapped_petsc_vector)) then
             
-            call VecDot(a%petsc_vector,b%petsc_vector,comm_dot,perr)
+            call VecDot(a%wrapped_petsc_vector%petsc_vector,b%wrapped_petsc_vector%petsc_vector,comm_dot,perr)
             if (perr /= 0) call chidg_signal(FATAL,'dot_comm: error calling petsc VecDot.')
 
         else

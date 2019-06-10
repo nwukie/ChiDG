@@ -341,17 +341,17 @@ contains
         Vec :: v_tmp(j)
 
 
-        if (w%petsc_vector_created) then
+        if (allocated(w%wrapped_petsc_vector)) then
 
             ! Copy petsc vectors to contiguous array
             do i = 1,j
-                call VecDuplicate(v(i)%petsc_vector,v_tmp(i),perr)
+                call VecDuplicate(v(i)%wrapped_petsc_vector%petsc_vector,v_tmp(i),perr)
                 if (perr /= 0) call chidg_signal(FATAL,'fgmres%classical_gram_schmidt: error in VecDuplicate.')
-                call VecCopy(v(i)%petsc_vector,v_tmp(i),perr)
+                call VecCopy(v(i)%wrapped_petsc_vector%petsc_vector,v_tmp(i),perr)
                 if (perr /= 0) call chidg_signal(FATAL,'fgmres%classical_gram_schmidt: error in VecCopy.')
             end do
 
-            call VecMDot(w%petsc_vector, j, v_tmp, dot_tmp, perr)
+            call VecMDot(w%wrapped_petsc_vector%petsc_vector, j, v_tmp, dot_tmp, perr)
             if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMDot.')
 
             ! Add to h
@@ -359,7 +359,7 @@ contains
 
             ! Subtract from w
             dot_tmp = -dot_tmp
-            call VecMAXPY(w%petsc_vector, j, dot_tmp, v_tmp, perr)
+            call VecMAXPY(w%wrapped_petsc_vector%petsc_vector, j, dot_tmp, v_tmp, perr)
             if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMAXPY.')
 
             ! Destroy copies
@@ -501,10 +501,10 @@ contains
         integer(ik)     :: i
         PetscErrorCode  :: perr
 
-        if (w%petsc_vector_created) then
+        if (allocated(w%wrapped_petsc_vector)) then
             do i = 1,j
                 htmp(i) = dot(w,v(i),ChiDG_COMM)
-                call VecAXPY(w%petsc_vector,-htmp(i),v(i)%petsc_vector,perr)
+                call VecAXPY(w%wrapped_petsc_vector%petsc_vector,-htmp(i),v(i)%wrapped_petsc_vector%petsc_vector,perr)
             end do
 
         else 

@@ -113,7 +113,7 @@ contains
 
 
         ! Solve
-        call KSPSolve(self%ksp,b%petsc_vector,x%petsc_vector,perr)
+        call KSPSolve(self%ksp,b%wrapped_petsc_vector%petsc_vector,x%wrapped_petsc_vector%petsc_vector,perr)
         if (perr /= 0) call chidg_signal(FATAL,'petsc_linear: error calling KSPSolve.')
 
 

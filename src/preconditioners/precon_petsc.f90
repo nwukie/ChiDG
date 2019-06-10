@@ -176,7 +176,7 @@ contains
         ! Initialize z for preconditioning
         z = v
 
-        call PCApply(self%pc,v%petsc_vector,z%petsc_vector,perr)
+        call PCApply(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
         if (perr /= 0) call chidg_signal(FATAL,'precon_petsc%apply: error calling PCApply.')
 
         call self%timer%stop()

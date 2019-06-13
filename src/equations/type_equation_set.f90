@@ -560,10 +560,11 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine compute_boundary_advective_operators(self,worker,differentiate)
-        class(equation_set_t),   intent(inout)  :: self
-        type(chidg_worker_t),    intent(inout)  :: worker
-        logical,                 intent(in)     :: differentiate
+    subroutine compute_boundary_advective_operators(self,worker,differentiate,diff_pattern)
+        class(equation_set_t),   intent(inout)          :: self
+        type(chidg_worker_t),    intent(inout)          :: worker
+        logical,                 intent(in)             :: differentiate
+        integer(ik),             intent(in), optional   :: diff_pattern(:)
 
         integer(ik),    allocatable :: compute_pattern(:)
         integer(ik)                 :: nfcn, ifcn, icompute, ncompute, ipattern, idiff
@@ -598,10 +599,12 @@ contains
             if (differentiate) then
                 ! compute function, wrt internal, external(in direction iface) states
                 compute_pattern = [DIAG,iface]
+                if (present(diff_pattern)) compute_pattern = diff_pattern
             else
                 ! compute function, but do not differentiate
                 compute_pattern = [0]
             end if
+
 
 
             ! Execute compute pattern
@@ -664,10 +667,11 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    subroutine compute_boundary_diffusive_operators(self,worker,differentiate)
-        class(equation_set_t),  intent(inout)   :: self
-        type(chidg_worker_t),   intent(inout)   :: worker
-        logical,                intent(in)      :: differentiate
+    subroutine compute_boundary_diffusive_operators(self,worker,differentiate,diff_pattern)
+        class(equation_set_t),  intent(inout)           :: self
+        type(chidg_worker_t),   intent(inout)           :: worker
+        logical,                intent(in)              :: differentiate
+        integer(ik),            intent(in), optional    :: diff_pattern(:)
 
         integer(ik),    allocatable :: compute_pattern(:)
         integer(ik)                 :: nfcn, ifcn, ipattern, icompute, ncompute, idiff, &
@@ -710,10 +714,12 @@ contains
             if (differentiate) then
                 ! compute function, wrt internal, external(in direction iface) states
                 compute_pattern = [DIAG,iface]
+                if (present(diff_pattern)) compute_pattern = diff_pattern
             else
                 ! compute function, but do not differentiate
                 compute_pattern = [0]
             end if
+
 
             ! Execute compute pattern
             do ipattern = 1,size(compute_pattern)
@@ -777,10 +783,11 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    subroutine compute_volume_advective_operators(self,worker,differentiate)
-        class(equation_set_t),      intent(inout)   :: self
-        type(chidg_worker_t),       intent(inout)   :: worker
-        logical,                    intent(in)      :: differentiate
+    subroutine compute_volume_advective_operators(self,worker,differentiate,diff_pattern)
+        class(equation_set_t),      intent(inout)           :: self
+        type(chidg_worker_t),       intent(inout)           :: worker
+        logical,                    intent(in)              :: differentiate
+        integer(ik),                intent(in), optional    :: diff_pattern(:)
 
         integer(ik),    allocatable :: compute_pattern(:)
         integer(ik)                 :: nfcn, ifcn, icompute, ncompute, idiff, ipattern
@@ -849,10 +856,11 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    subroutine compute_volume_diffusive_operators(self,worker,differentiate)
-        class(equation_set_t),      intent(inout)   :: self
-        type(chidg_worker_t),       intent(inout)   :: worker
-        logical,                    intent(in)      :: differentiate
+    subroutine compute_volume_diffusive_operators(self,worker,differentiate,diff_pattern)
+        class(equation_set_t),      intent(inout)           :: self
+        type(chidg_worker_t),       intent(inout)           :: worker
+        logical,                    intent(in)              :: differentiate
+        integer(ik),                intent(in), optional    :: diff_pattern(:)
 
         integer(ik),    allocatable :: compute_pattern(:)
         integer(ik)                 :: nfcn, ifcn, icompute, ncompute, ipattern, idiff
@@ -872,10 +880,12 @@ contains
         if (differentiate) then
             ! compute function, wrt (all exterior)/interior states
             compute_pattern = [1,2,3,4,5,6,DIAG]
+            if (present(diff_pattern)) compute_pattern = diff_pattern
         else
             ! compute function, but do not differentiate
             compute_pattern = [0]
         end if
+
 
         ! Execute compute pattern
         do ipattern = 1,size(compute_pattern)

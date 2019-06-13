@@ -169,10 +169,13 @@ contains
             do j = 1,self%nkrylov
                 nvecs = nvecs + 1
 
+                print*, '1: ', v(j)%norm(ChiDG_COMM)
 
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 call self%timer_precon%start()
                 z(j) = M%apply(A,v(j))
+
+                print*, '2: ', z(j)%norm(ChiDG_COMM)
 
                 ! Inner fgmres correction
                 if (self%inner_fgmres) then
@@ -188,6 +191,7 @@ contains
                 call self%timer_mv%stop()
                 norm_before = w%norm(ChiDG_COMM)
 
+                print*, '3: ', w%norm(ChiDG_COMM)
 
                 ! Orthogonalize once. Classical Gram-Schmidt
                 call self%timer_dot%start()
@@ -199,6 +203,7 @@ contains
                 call self%timer_dot%stop()
                 ! End Orthogonalize once.
 
+                print*, '4: ', w%norm(ChiDG_COMM)
 
                 ! Selective Reorthogonalization
                 !

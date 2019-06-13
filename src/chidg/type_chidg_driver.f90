@@ -220,7 +220,8 @@ contains
 
             call wall_distance%read_fields(aux_file)
             associate (q_in => wall_distance%data%sdata%q_in, q => wall_distance%data%sdata%q)
-                wall_distance%data%sdata%q = wall_distance%data%sdata%q_in
+                !wall_distance%data%sdata%q = wall_distance%data%sdata%q_in     ! For some reason, this causes a segfault, but is okay when wrapped inside associate
+                q = q_in
             end associate
 
 
@@ -339,10 +340,10 @@ contains
         end if ! have_wd_field .and. wd_file_exists
 
 
-
         ! Try to find 'Wall Distance' auxiliary field storage.
         call write_line('Storing Wall Distance field to Auxiliary field ChiDG Vector:', io_proc=GLOBAL_MASTER)
         aux_field_index = chidg%data%sdata%get_auxiliary_field_index('Wall Distance : p-Poisson')
+
 
         ! If no 'Wall Distance' auxiliary field storage was not found, create one.
         if (aux_field_index == 0) then
@@ -355,7 +356,6 @@ contains
             chidg%data%sdata%auxiliary_field(aux_field_index) = wall_distance%data%sdata%q
 
         end if
-
 
 
     end subroutine wall_distance_driver

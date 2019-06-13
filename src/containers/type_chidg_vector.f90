@@ -65,13 +65,15 @@ module type_chidg_vector
 
 
         ! backend dynamic procedures
-        procedure(vector_init_interface),      pointer, pass   :: init             => chidg_init_vector
-        procedure(vector_store_interface),     pointer, pass   :: set_field        => chidg_set_field
-        procedure(vector_store_interface),     pointer, pass   :: add_field        => chidg_add_field
-        procedure(vector_getfield_interface),  pointer, pass   :: select_get_field => chidg_get_field
-        procedure(vector_self_interface),      pointer, pass   :: clear            => chidg_clear_vector
-        procedure(vector_self_interface),      pointer, pass   :: assemble         => chidg_assemble_vector
-        procedure(vector_assign_interface),    pointer, nopass :: assign_vector    => chidg_assign_vector
+        procedure(vector_init_interface),      pointer, pass   :: init              => chidg_init_vector
+        procedure(vector_store_interface),     pointer, pass   :: set_field         => chidg_set_field
+        procedure(vector_setfields_interface), pointer, pass   :: set_fields        => chidg_set_fields
+        procedure(vector_store_interface),     pointer, pass   :: add_field         => chidg_add_field
+        procedure(vector_getfield_interface),  pointer, pass   :: select_get_field  => chidg_get_field
+        procedure(vector_getfields_interface), pointer, pass   :: select_get_fields => chidg_get_fields
+        procedure(vector_self_interface),      pointer, pass   :: clear             => chidg_clear_vector
+        procedure(vector_self_interface),      pointer, pass   :: assemble          => chidg_assemble_vector
+        procedure(vector_assign_interface),    pointer, nopass :: assign_vector     => chidg_assign_vector
 
         integer(ik),    private                 :: ntime_       ! No. of time instances stored
 
@@ -86,6 +88,7 @@ module type_chidg_vector
 
         procedure,  public  :: project                          ! Project function to basis
         procedure,  public  :: get_field
+        procedure,  public  :: get_fields
         procedure,  public  :: sumsqr                           ! Sum squared proc-local entries 
         procedure,  public  :: sumsqr_fields
         procedure,  public  :: dump
@@ -180,6 +183,18 @@ module type_chidg_vector
         end subroutine vector_store_interface
     end interface
 
+    interface 
+        subroutine vector_setfields_interface(self,values,element_info)
+            import chidg_vector_t
+            import element_info_t
+            import rk
+            import ik
+            class(chidg_vector_t),  intent(inout)   :: self
+            real(rk),               intent(in)      :: values(:)
+            type(element_info_t),   intent(in)      :: element_info
+        end subroutine vector_setfields_interface
+    end interface
+
 
     interface 
         subroutine vector_getfield_interface(self,element_info,ifield,itime,values)
@@ -196,6 +211,17 @@ module type_chidg_vector
     end interface
 
 
+    interface 
+        subroutine vector_getfields_interface(self,element_info,values)
+            import chidg_vector_t
+            import element_info_t
+            import rk
+            import ik
+            class(chidg_vector_t),  intent(inout),  target  :: self
+            type(element_info_t),   intent(in)              :: element_info
+            real(rk), allocatable,  intent(inout)           :: values(:)
+        end subroutine vector_getfields_interface
+    end interface
 
 
 
@@ -413,6 +439,33 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/30/2019
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine chidg_set_fields(self,values,element_info)
+        class(chidg_vector_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: values(:)
+        type(element_info_t),   intent(in)      :: element_info
+
+        self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%vec = values
+
+    end subroutine chidg_set_fields
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
     !>
     !!
@@ -471,6 +524,53 @@ contains
 
     end subroutine petsc_set_field
     !***********************************************************************************
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/29/2019
+    !!
+    !!  TODO: Account for Harmonic Balance
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine petsc_set_fields(self,values,element_info)
+        class(chidg_vector_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: values(:)
+        type(element_info_t),   intent(in)      :: element_info
+
+        PetscErrorCode          :: ierr, i
+        PetscInt                :: istart
+        PetscInt, allocatable   :: indices(:)
+
+        istart = element_info%dof_start
+        indices = [(i, i=istart,(istart + element_info%nfields*element_info%nterms_s - 1),1)]
+
+        ! Decrement by 1 for 0-based indexing
+        indices = indices - 1
+
+        call VecSetValues(self%wrapped_petsc_vector%petsc_vector,size(values),indices,values,INSERT_VALUES,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_set_fields: error calling VecSetValues.')
+
+        ! Indicate needs assembled
+        self%petsc_needs_assembled = .true.
+
+    end subroutine petsc_set_fields
+    !***********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -542,6 +642,25 @@ contains
     !***********************************************************************************
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/11/2019
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine chidg_get_fields(self,element_info,values) 
+        class(chidg_vector_t),  intent(inout), target   :: self
+        type(element_info_t),   intent(in)              :: element_info
+        real(rk), allocatable,  intent(inout)           :: values(:)
+
+        if (element_info%iproc /= IRANK) then
+            values = self%recv%comm(element_info%recv_comm)%dom(element_info%recv_domain)%vecs(element_info%recv_element)%vec
+        else
+            values = self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%vec
+        end if
+
+    end subroutine chidg_get_fields
+    !***********************************************************************************
 
 
 
@@ -594,6 +713,70 @@ contains
     !***********************************************************************************
 
 
+
+
+    !>  Return all degrees-of-freedom from an element.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/11/2019
+    !!
+    !!  TODO: Account for Harmonic Balance
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine petsc_get_fields(self,element_info,values)
+        class(chidg_vector_t),  intent(inout), target   :: self
+        type(element_info_t),   intent(in)              :: element_info
+        real(rk), allocatable,  intent(inout)           :: values(:)
+
+        integer(ik)             :: istart, iend
+
+        PetscScalar, pointer :: array(:) => null()
+        PetscErrorCode       :: ierr
+
+        ! Get petsc array pointer
+        if (allocated(self%wrapped_petsc_vector)) then
+            if (self%petsc_needs_assembled) call self%assemble()
+
+            !call VecGetArrayF90(self%petsc_vector,array,ierr)
+            call VecGetArrayF90(self%wrapped_petsc_vector_recv%petsc_vector,array,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_fields: error calling VecGetArrayF90.')
+        else
+            call chidg_signal(FATAL,'chidg_vector%petsc_get_fields: petsc vector not created.')
+        end if
+
+        ! Compute start and end indices for accessing modes of a variable
+        istart = element_info%dof_start
+        iend   = istart + (element_info%nfields*element_info%nterms_s) - 1
+
+        ! Access modes
+        values = array(istart:iend)
+
+        ! Restore petsc array
+        call VecRestoreArrayF90(self%wrapped_petsc_vector_recv%petsc_vector,array,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_fields: error calling VecGetArrayF90.')
+
+
+    end subroutine petsc_get_fields
+    !***********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     function get_field(self,element_info,ifield,itime) result(values)
         class(chidg_vector_t),  intent(inout)   :: self
         type(element_info_t),   intent(in)      :: element_info
@@ -607,6 +790,15 @@ contains
     end function get_field
 
 
+    function get_fields(self,element_info) result(values)
+        class(chidg_vector_t),  intent(inout)   :: self
+        type(element_info_t),   intent(in)      :: element_info
+
+        real(rk),   allocatable :: values(:)
+
+        call self%select_get_fields(element_info,values)
+
+    end function get_fields
 
 
 
@@ -1763,26 +1955,30 @@ contains
     subroutine vector_assign_pointers_chidg(vec)
         type(chidg_vector_t),   intent(inout)   :: vec
 
-        vec%init             => chidg_init_vector
-        vec%clear            => chidg_clear_vector
-        vec%set_field        => chidg_set_field
-        vec%add_field        => chidg_add_field
-        vec%select_get_field => chidg_get_field
-        vec%assemble         => chidg_assemble_vector
-        vec%assign_vector    => chidg_assign_vector
+        vec%init              => chidg_init_vector
+        vec%clear             => chidg_clear_vector
+        vec%set_field         => chidg_set_field
+        vec%set_fields        => chidg_set_fields
+        vec%add_field         => chidg_add_field
+        vec%select_get_field  => chidg_get_field
+        vec%select_get_fields => chidg_get_fields
+        vec%assemble          => chidg_assemble_vector
+        vec%assign_vector     => chidg_assign_vector
 
     end subroutine vector_assign_pointers_chidg
 
     subroutine vector_assign_pointers_petsc(vec)
         type(chidg_vector_t),   intent(inout)   :: vec
 
-        vec%init             => petsc_init_vector
-        vec%clear            => petsc_clear_vector
-        vec%set_field        => petsc_set_field
-        vec%add_field        => petsc_add_field
-        vec%select_get_field => petsc_get_field
-        vec%assemble         => petsc_assemble_vector
-        vec%assign_vector    => petsc_assign_vector
+        vec%init              => petsc_init_vector
+        vec%clear             => petsc_clear_vector
+        vec%set_field         => petsc_set_field
+        vec%set_fields        => petsc_set_fields
+        vec%add_field         => petsc_add_field
+        vec%select_get_field  => petsc_get_field
+        vec%select_get_fields => petsc_get_fields
+        vec%assemble          => petsc_assemble_vector
+        vec%assign_vector     => petsc_assign_vector
 
     end subroutine vector_assign_pointers_petsc
 

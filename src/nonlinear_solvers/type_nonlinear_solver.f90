@@ -32,8 +32,8 @@ module type_nonlinear_solver
         character(100)  :: search       = 'backtrack'   ! Line search algorithm: ('backtrack','none')
         logical         :: smooth       = .true.        ! Residual smoothing
         character(100)  :: smoother     = 'jacobi'      ! Residual smoother: ('jacobi')
-        integer(ik)     :: nsmooth      = 10            ! Number of residual smoothing iterations
-        real(rk)        :: smooth_relax = 0.5_rk        ! Relaxation factor on residual smoothing contribution
+        integer(ik)     :: nsmooth      = 3             ! Number of residual smoothing iterations
+        real(rk)        :: smooth_relax = 1.0_rk        ! Relaxation factor on residual smoothing contribution
 
 
         ! Data logs

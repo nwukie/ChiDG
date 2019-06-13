@@ -68,8 +68,8 @@ module mod_io
     real(rk),               save    :: cfl_down          = 0.2_rk
     logical,                save    :: smooth            = .false.
     character(len=100),     save    :: smoother          = 'jacobi'
-    integer(ik),            save    :: nsmooth           = 10
-    real(rk),               save    :: smooth_relax      = 0.5
+    integer(ik),            save    :: nsmooth           = 3
+    real(rk),               save    :: smooth_relax      = 1.0
     type(dict_t),           save    :: noptions
     
     ! Linear solver parameters

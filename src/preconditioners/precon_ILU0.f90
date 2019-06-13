@@ -69,7 +69,6 @@ contains
         
         select case (trim(backend))
             case('native')
-
                 self%LD = chidg_matrix(trim(backend))
                 call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
                 call self%LD%clear()

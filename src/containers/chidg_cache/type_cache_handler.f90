@@ -175,7 +175,6 @@ contains
         eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         compute_gradients = (allocated(equation_set(eqn_ID)%volume_diffusive_operator)   .or. &
                              allocated(equation_set(eqn_ID)%boundary_diffusive_operator) )
-!        compute_gradients = .true.
 
 
         !
@@ -1461,7 +1460,7 @@ contains
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
         character(*),               intent(in)      :: model_type
 

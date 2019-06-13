@@ -7,9 +7,6 @@ module mod_spatial
     use mpi_f08,                only: MPI_Barrier
     use DNAD_D
 
-
-
-
     use type_chidg_data,        only: chidg_data_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_chidg_cache,       only: chidg_cache_t

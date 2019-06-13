@@ -48,14 +48,15 @@ module type_chidg_matrix
 
         ! backend dynamic procedures
         procedure(init_interface),             pointer, pass :: init           => chidg_init
+        procedure(init_recv_interface),        pointer, pass :: init_recv      => chidg_init_recv
         procedure(store_interface),            pointer, pass :: store          => chidg_store
         procedure(store_interface),            pointer, pass :: store_chimera  => chidg_store_chimera
         procedure(store_interface),            pointer, pass :: store_bc       => chidg_store_bc
         procedure(store_interface),            pointer, pass :: store_hb       => chidg_store_hb
         procedure(scale_diagonal_interface),   pointer, pass :: scale_diagonal => chidg_scale_diagonal
+        procedure(get_diagonal_interface),     pointer, pass :: get_diagonal   => chidg_get_diagonal
         procedure(clear_interface),            pointer, pass :: clear          => chidg_clear
         procedure(clear_interface),            pointer, pass :: assemble       => chidg_assemble
-        procedure(init_recv_interface),        pointer, pass :: init_recv      => chidg_init_recv
 
 
         ! Stamp for uniqueness
@@ -133,6 +134,31 @@ module type_chidg_matrix
         end subroutine scale_diagonal_interface
     end interface
 
+
+!    interface 
+!        function get_diagonal_interface(self,element_info) result(mat)
+!            import chidg_matrix_t
+!            import element_info_t
+!            import rk
+!            class(chidg_matrix_t),  intent(inout)   :: self
+!            type(element_info_t),   intent(in)      :: element_info
+!            real(rk), allocatable :: mat(:,:)
+!        end function get_diagonal_interface
+!    end interface
+
+    interface 
+        subroutine get_diagonal_interface(self,element_info,mat)
+            import chidg_matrix_t
+            import element_info_t
+            import rk
+            class(chidg_matrix_t),  intent(inout)   :: self
+            type(element_info_t),   intent(in)      :: element_info
+            real(rk), allocatable,  intent(inout)   :: mat(:,:)
+        end subroutine get_diagonal_interface
+    end interface
+
+
+
     interface 
         subroutine clear_interface(self)
             import chidg_matrix_t
@@ -145,7 +171,6 @@ module type_chidg_matrix
     end interface
 
 
-!    private
 contains
 
 
@@ -762,20 +787,38 @@ contains
 
 
 
+    !> Procedure for storing linearization information
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial 
+    !!                          derivatives for the linearization matrix.
+    !!  @param[in]  element_info   Information about where the coupling was computed and whom it
+    !!                          was computed with respect to.
+    !!  @param[in]  ivar        Index of the variable, for which the linearization was computed.
+    !!
+    !!  TODO: Fix for Harmonic Balance
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine chidg_get_diagonal(self,element_info,mat)
+        class(chidg_matrix_t),  intent(inout)   :: self
+        type(element_info_t),   intent(in)      :: element_info
+        real(rk), allocatable,  intent(inout)   :: mat(:,:)
 
+        integer(ik) :: imat, itime
 
+        itime = 1
 
+        ! Find diagonal
+        imat = self%dom(element_info%idomain_l)%lblks(element_info%ielement_l,itime)%get_diagonal()
 
+        ! Access
+        mat = self%dom(element_info%idomain_l)%lblks(element_info%ielement_l,itime)%data_(imat)%mat
 
-
-
-
-
-
-
-
-
-
+    end subroutine chidg_get_diagonal
+    !*******************************************************************************************
 
 
 
@@ -1109,6 +1152,34 @@ contains
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_get_diagonal(self,element_info,mat)
+        class(chidg_matrix_t),  intent(inout)   :: self
+        type(element_info_t),   intent(in)      :: element_info
+        real(rk), allocatable,  intent(inout)   :: mat(:,:)
+
+        call chidg_signal(FATAL,'chidg_matrix%get_diagonal: not yet implemented for PETSc')
+
+    end subroutine petsc_get_diagonal
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     !> Set all chidg_matrix matrix-values to zero
     !!
@@ -1415,6 +1486,7 @@ contains
         mat%store_bc       => chidg_store_bc
         mat%store_hb       => chidg_store_hb
         mat%scale_diagonal => chidg_scale_diagonal
+        mat%get_diagonal   => chidg_get_diagonal
         mat%clear          => chidg_clear
         mat%assemble       => chidg_assemble
 
@@ -1430,6 +1502,7 @@ contains
         mat%store_bc       => petsc_store
         mat%store_hb       => petsc_store
         mat%scale_diagonal => petsc_scale_diagonal
+        mat%get_diagonal   => petsc_get_diagonal
         mat%clear          => petsc_clear
         mat%assemble       => petsc_assemble
 

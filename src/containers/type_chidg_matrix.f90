@@ -8,18 +8,19 @@ module type_chidg_matrix
                                       MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, MatDestroy,          &
                                       MatGetSize, MatGetLocalSize
 
-    use mod_kinds,              only: rk, ik
-    use mod_constants,          only: NO_ID, ZERO
-    use mod_chidg_mpi,          only: IRANK, ChiDG_COMM
-    use mpi_f08,                only: MPI_AllReduce, MPI_SUM, MPI_INTEGER4, MPI_INTEGER8
-    use type_densematrix,       only: densematrix_t
-    use type_domain_matrix,     only: domain_matrix_t
-    use type_mesh,              only: mesh_t
-    use type_element_info,      only: element_info_t
-    use type_seed,              only: seed_t
-    use type_chidg_vector,      only: chidg_vector_t
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: NO_ID, ZERO
+    use mod_chidg_mpi,              only: IRANK, ChiDG_COMM
+    use mpi_f08,                    only: MPI_AllReduce, MPI_SUM, MPI_INTEGER4, MPI_INTEGER8
+    use type_densematrix,           only: densematrix_t
+    use type_domain_matrix,         only: domain_matrix_t
+    use type_mesh,                  only: mesh_t
+    use type_element_info,          only: element_info_t
+    use type_seed,                  only: seed_t
+    use type_chidg_vector,          only: chidg_vector_t
+    use type_petsc_matrix_wrapper,  only: petsc_matrix_wrapper_t
+    use ieee_arithmetic,            only: ieee_is_nan
     use DNAD_D
-    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
 
@@ -37,7 +38,8 @@ module type_chidg_matrix
     type, public :: chidg_matrix_t
 
         ! PETSC
-        Mat         :: petsc_matrix
+        !Mat         :: petsc_matrix
+        type(petsc_matrix_wrapper_t),   allocatable :: wrapped_petsc_matrix
         logical     :: petsc_matrix_created = .false.
 
         ! ChiDG
@@ -930,9 +932,13 @@ contains
                            dof_per_element, nlocal_coupling, nparallel_coupling,    &
                            aij_nnonzeros_per_row_local, aij_nnonzeros_per_row_parallel
 
+        ! Allocate matrix wrapper
+        allocate(self%wrapped_petsc_matrix, stat=ierr)
+        if (ierr /= 0) call AllocationError
+
 
         ! Create matrix object
-        call MatCreate(ChiDG_COMM%mpi_val, self%petsc_matrix, ierr)
+        call MatCreate(ChiDG_COMM%mpi_val, self%wrapped_petsc_matrix%petsc_matrix, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error creating PETSc matrix.')
         self%petsc_matrix_created = .true.
 
@@ -960,7 +966,7 @@ contains
         nglobal_cols = nglobal_rows
 
 
-        call MatSetSizes(self%petsc_matrix,nlocal_rows,nlocal_cols,nglobal_rows,nglobal_cols,ierr)
+        call MatSetSizes(self%wrapped_petsc_matrix%petsc_matrix,nlocal_rows,nlocal_cols,nglobal_rows,nglobal_cols,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc matrix sizes.')
         !---------------------------------------------
 
@@ -968,7 +974,7 @@ contains
 
         ! Set matrix type
 !        call MatSetType(self%petsc_matrix, 'aij', ierr)
-        call MatSetType(self%petsc_matrix, 'baij', ierr)
+        call MatSetType(self%wrapped_petsc_matrix%petsc_matrix, 'baij', ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting PETSc matrix type.')
 
 
@@ -989,16 +995,16 @@ contains
 !        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqAIJSetPreallocation.')
 
 
-        call MatMPIBAIJSetPreallocation(self%petsc_matrix,dof_per_element,nlocal_coupling,PETSC_NULL_INTEGER,nparallel_coupling,PETSC_NULL_INTEGER,ierr)
+        call MatMPIBAIJSetPreallocation(self%wrapped_petsc_matrix%petsc_matrix,dof_per_element,nlocal_coupling,PETSC_NULL_INTEGER,nparallel_coupling,PETSC_NULL_INTEGER,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatMPIBAIJSetPreallocation.')
-        call MatSeqBAIJSetPreallocation(self%petsc_matrix,dof_per_element,nlocal_coupling,PETSC_NULL_INTEGER,ierr)
+        call MatSeqBAIJSetPreallocation(self%wrapped_petsc_matrix%petsc_matrix,dof_per_element,nlocal_coupling,PETSC_NULL_INTEGER,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqBAIJSetPreallocation.')
 
 
-        call MatSetBlockSize(self%petsc_matrix, dof_per_element, ierr)
+        call MatSetBlockSize(self%wrapped_petsc_matrix%petsc_matrix, dof_per_element, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSetBlockSize.')
 
-        call MatSetOption(self%petsc_matrix, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, ierr)
+        call MatSetOption(self%wrapped_petsc_matrix%petsc_matrix, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSetOption.')
 
         call self%clear()
@@ -1051,8 +1057,8 @@ contains
 
         PetscErrorCode :: perr
 
-        call MatAssemblyBegin(self%petsc_matrix,MAT_FINAL_ASSEMBLY,perr)
-        call MatAssemblyEnd(self%petsc_matrix,MAT_FINAL_ASSEMBLY,perr)
+        call MatAssemblyBegin(self%wrapped_petsc_matrix%petsc_matrix,MAT_FINAL_ASSEMBLY,perr)
+        call MatAssemblyEnd(self%wrapped_petsc_matrix%petsc_matrix,MAT_FINAL_ASSEMBLY,perr)
 
     end subroutine petsc_assemble
     !*******************************************************************************************
@@ -1093,10 +1099,10 @@ contains
         ncols = size(integral(1)%xp_ad_)
         do iarray = 1,size(integral)
 
-            if (any(ieee_is_nan(integral(iarray)%xp_ad_))) print*, 'storing NaN!'
+            if (any(ieee_is_nan(integral(iarray)%xp_ad_))) print*, 'storing NaN! (ifield):', ifield
 
             ! subtract 1 from indices since petsc is 0-based
-            call MatSetValues(self%petsc_matrix,nrows,[row_index_start + (iarray-1) - 1],ncols,col_indices-1,integral(iarray)%xp_ad_,ADD_VALUES,ierr)
+            call MatSetValues(self%wrapped_petsc_matrix%petsc_matrix,nrows,[row_index_start + (iarray-1) - 1],ncols,col_indices-1,integral(iarray)%xp_ad_,ADD_VALUES,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"chidg_matrix%petsc_store: error calling MatSetValues.")
         end do 
 
@@ -1138,7 +1144,7 @@ contains
         ncols = size(mat,2)
         do iarray = 1,size(mat,1)
             ! subtract 1 from indices since petsc is 0-based
-            call MatSetValues(self%petsc_matrix,nrows,[row_index_start + (iarray-1) - 1],ncols,col_indices-1,mat(iarray,:),ADD_VALUES,ierr)
+            call MatSetValues(self%wrapped_petsc_matrix%petsc_matrix,nrows,[row_index_start + (iarray-1) - 1],ncols,col_indices-1,mat(iarray,:),ADD_VALUES,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"chidg_matrix%petsc_store_matrix: error calling MatSetValues.")
         end do 
 
@@ -1192,7 +1198,7 @@ contains
 
         PetscErrorCode :: perr
 
-        call MatZeroEntries(self%petsc_matrix,perr)
+        call MatZeroEntries(self%wrapped_petsc_matrix%petsc_matrix,perr)
         if (perr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_clear: error calling MatZeroEntries.')
     
     end subroutine petsc_clear
@@ -1435,12 +1441,12 @@ contains
 
         if (allocated(self%dom)) deallocate(self%dom)
 
-
-        if (self%petsc_matrix_created) then
-            call MatDestroy(self%petsc_matrix,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%release: error calling MatDestroy.')
-            self%petsc_matrix_created = .false.
-        end if
+        if (allocated(self%wrapped_petsc_matrix)) deallocate(self%wrapped_petsc_matrix)
+!        if (self%petsc_matrix_created) then
+!            call MatDestroy(self%wrapped_petsc_matrix%petsc_matrix,ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%release: error calling MatDestroy.')
+!            self%petsc_matrix_created = .false.
+!        end if
 
 
     end subroutine release
@@ -1462,11 +1468,12 @@ contains
 
         PetscErrorCode :: perr
 
-        if (self%petsc_matrix_created) then
-            call MatDestroy(self%petsc_matrix,perr)
-            if (perr /= 0) call chidg_signal(FATAL,'chidg_matrix%destructor: error calling MatDestroy.')
-            self%petsc_matrix_created = .false.
-        end if
+        if (allocated(self%wrapped_petsc_matrix)) deallocate(self%wrapped_petsc_matrix)
+!        if (self%petsc_matrix_created) then
+!            call MatDestroy(self%wrapped_petsc_matrix%petsc_matrix,perr)
+!            if (perr /= 0) call chidg_signal(FATAL,'chidg_matrix%destructor: error calling MatDestroy.')
+!            self%petsc_matrix_created = .false.
+!        end if
 
     end subroutine destructor
     !*********************************************************************************

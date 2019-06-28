@@ -12,7 +12,6 @@ module type_element
     use mod_polynomial,         only: polynomial_val, dpolynomial_val
     use mod_inv,                only: inv, inv_3x3
     use mod_determinant,        only: det_3x3
-    !use mod_io,                 only: gq_rule
 
 
     use type_point,                 only: point_t
@@ -73,11 +72,12 @@ module type_element
         integer(ik)                 :: nterms_c             ! Number of terms in coordinate expansion. 
         integer(ik)                 :: ntime                ! Number of time levels in solution.
         integer(ik)                 :: dof_start            ! Starting DOF index in ChiDG-global index
+        integer(ik)                 :: dof_local_start      ! Starting DOF index in ChiDG-local index
         integer(ik)                 :: interpolation_level  ! 1=lowest, 2-> are higher.
         integer(ik)                 :: recv_comm    = NO_ID ! chidg_vector access if element is initialized on another processor.
         integer(ik)                 :: recv_domain  = NO_ID ! chidg_vector access if element is initialized on another processor.
         integer(ik)                 :: recv_element = NO_ID ! chidg_vector access if element is initialized on another processor.
-        integer(ik)                 :: pdof_start   = NO_ID ! Starting DOF index in local petsc vector for parallel storage.
+        integer(ik)                 :: recv_dof     = NO_ID ! Starting DOF index in local petsc vector for parallel storage.
 
 
         ! Connectivty and linear transformation martrix for 
@@ -436,7 +436,7 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------
-    subroutine init_sol(self,interpolation,level,nterms_s,nfields,ntime,dof_start)
+    subroutine init_sol(self,interpolation,level,nterms_s,nfields,ntime,dof_start,dof_local_start)
         class(element_t),   intent(inout)   :: self
         character(*),       intent(in)      :: interpolation
         integer(ik),        intent(in)      :: level
@@ -444,16 +444,18 @@ contains
         integer(ik),        intent(in)      :: nfields
         integer(ik),        intent(in)      :: ntime
         integer(ik),        intent(in)      :: dof_start
+        integer(ik),        intent(in)      :: dof_local_start
 
         integer(ik) :: ierr
         integer(ik) :: nnodes
         integer(ik) :: ref_ID_s, ref_ID_c
         
 
-        self%nterms_s    = nterms_s     ! number of terms in solution expansion
-        self%neqns       = nfields      ! number of equations being solved
-        self%ntime       = ntime        ! number of time steps in solution
-        self%dof_start   = dof_start
+        self%nterms_s        = nterms_s     ! number of terms in solution expansion
+        self%neqns           = nfields      ! number of equations being solved
+        self%ntime           = ntime        ! number of time steps in solution
+        self%dof_start       = dof_start
+        self%dof_local_start = dof_local_start
 
 
         !

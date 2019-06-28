@@ -7,7 +7,7 @@ module type_fgmres
     use mod_constants,          only: ZERO
     use mod_inv,                only: inv
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, NRANK
-    use mod_io,                 only: verbosity
+    use mod_io,                 only: verbosity, backend
     use mpi_f08
 
     use type_timer,             only: timer_t
@@ -169,13 +169,9 @@ contains
             do j = 1,self%nkrylov
                 nvecs = nvecs + 1
 
-                print*, '1: ', v(j)%norm(ChiDG_COMM)
-
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 call self%timer_precon%start()
                 z(j) = M%apply(A,v(j))
-
-                print*, '2: ', z(j)%norm(ChiDG_COMM)
 
                 ! Inner fgmres correction
                 if (self%inner_fgmres) then
@@ -191,7 +187,6 @@ contains
                 call self%timer_mv%stop()
                 norm_before = w%norm(ChiDG_COMM)
 
-                print*, '3: ', w%norm(ChiDG_COMM)
 
                 ! Orthogonalize once. Classical Gram-Schmidt
                 call self%timer_dot%start()
@@ -203,7 +198,6 @@ contains
                 call self%timer_dot%stop()
                 ! End Orthogonalize once.
 
-                print*, '4: ', w%norm(ChiDG_COMM)
 
                 ! Selective Reorthogonalization
                 !
@@ -304,7 +298,6 @@ contains
             x0 = x
 
         end do ! while
-
 
         call self%print_report(A,x,b)
 
@@ -637,14 +630,25 @@ contains
     recursive subroutine tear_down(self)
         class(fgmres_t),    intent(inout)   :: self
 
+        integer(ik) :: iv, iz
+
         call self%r%release()
         call self%r0%release()
         call self%w%release()
         call self%x0%release()
         call self%zr%release()
         call self%deltaz%release()
-        if (allocated(self%v)) call self%v%release()
-        if (allocated(self%z)) call self%z%release()
+
+        if (allocated(self%v)) then
+            do iv = 1,size(self%v)
+                call self%v(iv)%release()
+            end do
+        end if
+        if (allocated(self%z)) then
+            do iz = 1,size(self%z)
+                call self%z(iz)%release()
+            end do
+        end if
 
         if (associated(self%fgmres)) then
             call self%fgmres%tear_down()

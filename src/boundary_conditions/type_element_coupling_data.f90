@@ -35,6 +35,7 @@ module type_element_coupling_data
         integer(ik)                 :: neqns       = 0
         integer(ik)                 :: nterms_s    = 0
         integer(ik)                 :: dof_start   = 0
+        integer(ik)                 :: dof_local_start   = 0
         real(rk)                    :: total_area  = ZERO
         real(rk),       allocatable :: areas(:)
         type(point_t),  allocatable :: quad_pts(:)
@@ -116,21 +117,23 @@ contains
     !!  @date   4/18/2017
     !!
     !----------------------------------------------------------------------
-    subroutine set_data(self,neqns,nterms_s,dof_start,total_area,areas,quad_pts)
+    subroutine set_data(self,neqns,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
         class(element_coupling_data_t), intent(inout)   :: self
         integer(ik),                    intent(in)      :: neqns
         integer(ik),                    intent(in)      :: nterms_s
         integer(ik),                    intent(in)      :: dof_start
+        integer(ik),                    intent(in)      :: dof_local_start
         real(rk),                       intent(in)      :: total_area
         real(rk),                       intent(in)      :: areas(:)
         type(point_t),                  intent(in)      :: quad_pts(:)
 
-        self%neqns      = neqns
-        self%nterms_s   = nterms_s
-        self%dof_start  = dof_start
-        self%total_area = total_area
-        self%areas      = areas
-        self%quad_pts   = quad_pts
+        self%neqns           = neqns
+        self%nterms_s        = nterms_s
+        self%dof_start       = dof_start
+        self%dof_local_start = dof_local_start
+        self%total_area      = total_area
+        self%areas           = areas
+        self%quad_pts        = quad_pts
 
     end subroutine set_data
     !**********************************************************************

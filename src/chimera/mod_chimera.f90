@@ -26,7 +26,7 @@ module mod_chimera
     use type_point
     use type_mesh,              only: mesh_t
     use type_chimera_send,      only: chimera_send
-    use type_element_info,      only: element_info_t
+    use type_element_info,      only: element_info_t, element_info
     use type_face_info,         only: face_info_t, face_info
     use type_ivector,           only: ivector_t
     use type_rvector,           only: rvector_t
@@ -199,7 +199,6 @@ contains
         type(rvector_t)         :: donor_proc_vols
 
 
-
         !
         ! Loop through processes. One will process its chimera faces and try to 
         ! find processor-local donors. If it can't find on-processor donors, then 
@@ -241,6 +240,7 @@ contains
                         ! Loop through quadrature nodes on Chimera face and find donors
                         !
                         do igq = 1,mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%basis_s%nnodes_face()
+
 
                             !
                             ! Get node coordinates
@@ -374,17 +374,33 @@ contains
                                 !
                                 idonor_proc = donor_proc_indices%at(donor_index)
                                 call MPI_Recv(parallel_indices,10,MPI_INTEGER4, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                                donor%idomain_g  = parallel_indices(1)
-                                donor%idomain_l  = parallel_indices(2)
-                                donor%ielement_g = parallel_indices(3)
-                                donor%ielement_l = parallel_indices(4)
-                                donor%iproc      = parallel_indices(5)
-                                donor%eqn_ID     = parallel_indices(6)
-                                donor%nfields    = parallel_indices(7)
-                                donor%nterms_s   = parallel_indices(8)
-                                donor%nterms_c   = parallel_indices(9)
-                                donor%dof_start  = parallel_indices(10)
-
+!                                donor%idomain_g  = parallel_indices(1)
+!                                donor%idomain_l  = parallel_indices(2)
+!                                donor%ielement_g = parallel_indices(3)
+!                                donor%ielement_l = parallel_indices(4)
+!                                donor%iproc      = parallel_indices(5)
+!                                donor%eqn_ID     = parallel_indices(6)
+!                                donor%nfields    = parallel_indices(7)
+!                                donor%nterms_s   = parallel_indices(8)
+!                                donor%nterms_c   = parallel_indices(9)
+!                                donor%dof_start  = parallel_indices(10)
+                                
+                                donor = element_info(idomain_g  = parallel_indices(1),  &
+                                                     idomain_l  = parallel_indices(2),  &
+                                                     ielement_g = parallel_indices(3),  &
+                                                     ielement_l = parallel_indices(4),  &
+                                                     iproc      = parallel_indices(5),  &
+                                                     pelem_ID   = NO_ID, &
+                                                     eqn_ID     = parallel_indices(6),  &
+                                                     nfields    = parallel_indices(7),  &
+                                                     nterms_s   = parallel_indices(8),  &
+                                                     nterms_c   = parallel_indices(9),  &
+                                                     dof_start  = parallel_indices(10), &
+                                                     dof_local_start = NO_ID, &
+                                                     recv_comm       = NO_ID, &
+                                                     recv_domain     = NO_ID, &
+                                                     recv_element    = NO_ID, &
+                                                     recv_dof        = NO_ID)
 
 
                                 ! 1: Receive donor local coordinate
@@ -414,11 +430,12 @@ contains
 
                             end if
 
+
                             !
                             ! Add donor
                             !
                             donor_ID = mesh%domain(idom)%chimera%recv(ichimera_face)%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, donor%iproc)
-                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%set_properties(donor%nterms_c,donor%nterms_s,donor%nfields,donor%eqn_ID,donor%dof_start)
+                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%set_properties(donor%nterms_c,donor%nterms_s,donor%nfields,donor%eqn_ID,donor%dof_start,donor%dof_local_start)
                             call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%add_node(igq,donor_coord,donor_metric,donor_jinv)
 
 
@@ -438,11 +455,6 @@ contains
             call MPI_BCast(searching,1,MPI_LOGICAL, iproc, ChiDG_COMM, ierr)
 
             end if ! iproc == IRANK
-
-
-
-
-
 
 
 
@@ -563,6 +575,7 @@ contains
         
         ! Clear cache of last detected overset donor.
         call clear_donor_cache()
+
 
     end subroutine detect_chimera_donors
     !*************************************************************************************
@@ -752,7 +765,7 @@ contains
 
         integer(ik)                 :: idom, ielem, inewton, idomain_g, idomain_l,      &
                                        ielement_g, ielement_l, icandidate, ncandidates, &
-                                       idonor, ndonors, donor_index
+                                       idonor, ndonors, donor_index, donor_domain_l, donor_element_l
 
         real(rk), allocatable   :: xcenter(:), ycenter(:), zcenter(:), dist(:), donor_vols(:)
         real(rk)                :: xgq, ygq, zgq, dx, dy, dz, xi, eta, zeta, xn, yn, zn,    &
@@ -783,7 +796,6 @@ contains
         search1 = xgq + offset1
         search2 = ygq + offset2
         search3 = zgq + offset3
-
 
 
         ! Try previous donor, since it is relatively likely the previous donor
@@ -826,7 +838,6 @@ contains
             end if
         end if
         !---------------------------------------------------------------------
-
 
 
 
@@ -952,17 +963,29 @@ contains
             donor_found = .false.
 
         elseif (ndonors == 1) then
+
             idonor = donors%at(1)   ! donor index from candidates
-            donor_element%idomain_g  = candidate_domains_g%at(idonor)
-            donor_element%idomain_l  = candidate_domains_l%at(idonor)
-            donor_element%ielement_g = candidate_elements_g%at(idonor)
-            donor_element%ielement_l = candidate_elements_l%at(idonor)
-            donor_element%iproc      = IRANK
-            donor_element%eqn_ID     = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%eqn_ID
-            donor_element%nfields    = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
-            donor_element%nterms_s   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
-            donor_element%nterms_c   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
-            donor_element%dof_start  = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%dof_start
+
+            donor_domain_l  = candidate_domains_l%at(idonor)
+            donor_element_l = candidate_elements_l%at(idonor)
+
+            donor_element = element_info(idomain_g       = mesh%domain(donor_domain_l)%elems(donor_element_l)%idomain_g, &
+                                         idomain_l       = mesh%domain(donor_domain_l)%elems(donor_element_l)%idomain_l, &
+                                         ielement_g      = mesh%domain(donor_domain_l)%elems(donor_element_l)%ielement_g, &
+                                         ielement_l      = mesh%domain(donor_domain_l)%elems(donor_element_l)%ielement_l, &
+                                         iproc           = IRANK, &
+                                         pelem_ID        = NO_ID, &
+                                         eqn_ID          = mesh%domain(donor_domain_l)%elems(donor_element_l)%eqn_ID, &
+                                         nfields         = mesh%domain(donor_domain_l)%elems(donor_element_l)%neqns, &
+                                         nterms_s        = mesh%domain(donor_domain_l)%elems(donor_element_l)%nterms_s, &
+                                         nterms_c        = mesh%domain(donor_domain_l)%elems(donor_element_l)%nterms_c, &
+                                         dof_start       = mesh%domain(donor_domain_l)%elems(donor_element_l)%dof_start, &
+                                         dof_local_start = mesh%domain(donor_domain_l)%elems(donor_element_l)%dof_local_start, &
+                                         recv_comm       = NO_ID, &
+                                         recv_domain     = NO_ID, &
+                                         recv_element    = NO_ID, &
+                                         recv_dof        = NO_ID)
+
 
             xi   = donors_xi%at(1)
             eta  = donors_eta%at(1)
@@ -971,7 +994,10 @@ contains
             donor_found = .true.
             if (present(donor_volume)) donor_volume = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%vol
 
+
         elseif (ndonors > 1) then
+
+
             ! Handle multiple potential donors: Choose donor with minimum volume - should be best resolved
             if (allocated(donor_vols) ) deallocate(donor_vols)
             allocate(donor_vols(donors%size()))
@@ -989,16 +1015,28 @@ contains
             end if
 
             idonor = donors%at(donor_index)
-            donor_element%idomain_g  = candidate_domains_g%at(idonor)
-            donor_element%idomain_l  = candidate_domains_l%at(idonor)
-            donor_element%ielement_g = candidate_elements_g%at(idonor)
-            donor_element%ielement_l = candidate_elements_l%at(idonor)
-            donor_element%iproc      = IRANK
-            donor_element%eqn_ID     = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%eqn_ID
-            donor_element%nfields    = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
-            donor_element%nterms_s   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
-            donor_element%nterms_c   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
-            donor_element%dof_start  = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%dof_start
+
+            donor_domain_l  = candidate_domains_l%at(idonor)
+            donor_element_l = candidate_elements_l%at(idonor)
+
+            donor_element = element_info(idomain_g       = mesh%domain(donor_domain_l)%elems(donor_element_l)%idomain_g, &
+                                         idomain_l       = mesh%domain(donor_domain_l)%elems(donor_element_l)%idomain_l, &
+                                         ielement_g      = mesh%domain(donor_domain_l)%elems(donor_element_l)%ielement_g, &
+                                         ielement_l      = mesh%domain(donor_domain_l)%elems(donor_element_l)%ielement_l, &
+                                         iproc           = IRANK, &
+                                         pelem_ID        = NO_ID, &
+                                         eqn_ID          = mesh%domain(donor_domain_l)%elems(donor_element_l)%eqn_ID, &
+                                         nfields         = mesh%domain(donor_domain_l)%elems(donor_element_l)%neqns, &
+                                         nterms_s        = mesh%domain(donor_domain_l)%elems(donor_element_l)%nterms_s, &
+                                         nterms_c        = mesh%domain(donor_domain_l)%elems(donor_element_l)%nterms_c, &
+                                         dof_start       = mesh%domain(donor_domain_l)%elems(donor_element_l)%dof_start, &
+                                         dof_local_start = mesh%domain(donor_domain_l)%elems(donor_element_l)%dof_local_start, &
+                                         recv_comm       = NO_ID, &
+                                         recv_domain     = NO_ID, &
+                                         recv_element    = NO_ID, &
+                                         recv_dof        = NO_ID)
+
+
 
             ! Set donor coordinate and volume if present
             xi   = donors_xi%at(donor_index)
@@ -1187,22 +1225,45 @@ contains
         ! Sanity check on donors and set donor_element location
         !
         if (donors_pelem_ID%size() == 0) then
-            donor_element = element_info_t(0, 0, 0, NO_PROC, NO_ID, 0, 0, 0, 0)
+            !donor_element = element_info_t(0, 0, 0, NO_PROC, NO_ID, 0, 0, 0, 0)
+            donor_element = element_info(idomain_g       = 0,       &
+                                         idomain_l       = 0,       &
+                                         ielement_g      = 0,       &
+                                         ielement_l      = 0,       &
+                                         iproc           = NO_PROC, &
+                                         pelem_ID        = NO_ID,   &
+                                         eqn_ID          = NO_ID,   &
+                                         nfields         = 0,       &
+                                         nterms_s        = 0,       &
+                                         nterms_c        = 0,       &
+                                         dof_start       = NO_ID,   &
+                                         dof_local_start = NO_ID,   &
+                                         recv_comm       = NO_ID,   &
+                                         recv_domain     = NO_ID,   &
+                                         recv_element    = NO_ID,   &
+                                         recv_dof        = NO_ID)
+
             donor_found = .false.
 
 
         elseif (donors_pelem_ID%size() == 1) then
             pelem_ID = donors_pelem_ID%at(1)   ! donor index from candidates
-            donor_element = element_info_t(mesh%parallel_element(pelem_ID)%idomain_g,   &
-                                           mesh%parallel_element(pelem_ID)%idomain_l,   &
-                                           mesh%parallel_element(pelem_ID)%ielement_g,  &
-                                           mesh%parallel_element(pelem_ID)%ielement_l,  &
-                                           mesh%parallel_element(pelem_ID)%iproc,       &
-                                           pelem_ID,                                    &
-                                           mesh%parallel_element(pelem_ID)%eqn_ID,      &
-                                           mesh%parallel_element(pelem_ID)%neqns,       &
-                                           mesh%parallel_element(pelem_ID)%nterms_s,    &
-                                           mesh%parallel_element(pelem_ID)%nterms_c)
+            donor_element = element_info(idomain_g       = mesh%parallel_element(pelem_ID)%idomain_g,       &
+                                         idomain_l       = mesh%parallel_element(pelem_ID)%idomain_l,       &
+                                         ielement_g      = mesh%parallel_element(pelem_ID)%ielement_g,      &
+                                         ielement_l      = mesh%parallel_element(pelem_ID)%ielement_l,      &
+                                         iproc           = mesh%parallel_element(pelem_ID)%iproc,           &
+                                         pelem_ID        = pelem_ID,                                        &
+                                         eqn_ID          = mesh%parallel_element(pelem_ID)%eqn_ID,          &
+                                         nfields         = mesh%parallel_element(pelem_ID)%neqns,           &
+                                         nterms_s        = mesh%parallel_element(pelem_ID)%nterms_s,        &
+                                         nterms_c        = mesh%parallel_element(pelem_ID)%nterms_c,        &
+                                         dof_start       = mesh%parallel_element(pelem_ID)%dof_start,       &
+                                         dof_local_start = mesh%parallel_element(pelem_ID)%dof_local_start, &
+                                         recv_comm       = mesh%parallel_element(pelem_ID)%recv_comm,       &
+                                         recv_domain     = mesh%parallel_element(pelem_ID)%recv_domain,     &
+                                         recv_element    = mesh%parallel_element(pelem_ID)%recv_element,    &
+                                         recv_dof        = mesh%parallel_element(pelem_ID)%recv_dof)
 
 
             xi   = donors_xi%at(1)
@@ -1232,16 +1293,33 @@ contains
             !
             donor_index = minloc(donor_vols,1)
             pelem_ID = donors_pelem_ID%at(donor_index)   ! donor index from candidates with minimum volume
-            donor_element = element_info_t(mesh%parallel_element(pelem_ID)%idomain_g,   &
-                                           mesh%parallel_element(pelem_ID)%idomain_l,   &
-                                           mesh%parallel_element(pelem_ID)%ielement_g,  &
-                                           mesh%parallel_element(pelem_ID)%ielement_l,  &
-                                           mesh%parallel_element(pelem_ID)%iproc,       &
-                                           pelem_ID,                                    &
-                                           mesh%parallel_element(pelem_ID)%eqn_ID,      &
-                                           mesh%parallel_element(pelem_ID)%neqns,       &
-                                           mesh%parallel_element(pelem_ID)%nterms_s,    &
-                                           mesh%parallel_element(pelem_ID)%nterms_c)
+
+!            donor_element = element_info_t(mesh%parallel_element(pelem_ID)%idomain_g,   &
+!                                           mesh%parallel_element(pelem_ID)%idomain_l,   &
+!                                           mesh%parallel_element(pelem_ID)%ielement_g,  &
+!                                           mesh%parallel_element(pelem_ID)%ielement_l,  &
+!                                           mesh%parallel_element(pelem_ID)%iproc,       &
+!                                           pelem_ID,                                    &
+!                                           mesh%parallel_element(pelem_ID)%eqn_ID,      &
+!                                           mesh%parallel_element(pelem_ID)%neqns,       &
+!                                           mesh%parallel_element(pelem_ID)%nterms_s,    &
+!                                           mesh%parallel_element(pelem_ID)%nterms_c)
+            donor_element = element_info(idomain_g       = mesh%parallel_element(pelem_ID)%idomain_g,       &
+                                         idomain_l       = mesh%parallel_element(pelem_ID)%idomain_l,       &
+                                         ielement_g      = mesh%parallel_element(pelem_ID)%ielement_g,      &
+                                         ielement_l      = mesh%parallel_element(pelem_ID)%ielement_l,      &
+                                         iproc           = mesh%parallel_element(pelem_ID)%iproc,           &
+                                         pelem_ID        = pelem_ID,                                        &
+                                         eqn_ID          = mesh%parallel_element(pelem_ID)%eqn_ID,          &
+                                         nfields         = mesh%parallel_element(pelem_ID)%neqns,           &
+                                         nterms_s        = mesh%parallel_element(pelem_ID)%nterms_s,        &
+                                         nterms_c        = mesh%parallel_element(pelem_ID)%nterms_c,        &
+                                         dof_start       = mesh%parallel_element(pelem_ID)%dof_start,       &
+                                         dof_local_start = mesh%parallel_element(pelem_ID)%dof_local_start, &
+                                         recv_comm       = mesh%parallel_element(pelem_ID)%recv_comm,       &
+                                         recv_domain     = mesh%parallel_element(pelem_ID)%recv_domain,     &
+                                         recv_element    = mesh%parallel_element(pelem_ID)%recv_element,    &
+                                         recv_dof        = mesh%parallel_element(pelem_ID)%recv_dof)
 
             !
             ! Set donor coordinate and volume if present

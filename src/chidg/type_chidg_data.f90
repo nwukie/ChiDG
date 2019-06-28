@@ -718,7 +718,7 @@ contains
         integer(ik),            intent(in)      :: level
         integer(ik),            intent(in)      :: nterms_s
 
-        integer(ik) :: idomain, nfields, eqn_ID, domain_dof_start
+        integer(ik) :: idomain, nfields, eqn_ID, domain_dof_start, domain_dof_local_start
 
         ! Initialize mesh numerics based on equation set and polynomial expansion order
         call write_line(" ", ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -739,14 +739,16 @@ contains
 
             ! Get the starting dof index for the domain
             if (idomain==1) then
-                domain_dof_start = self%mesh%mesh_dof_start
+                domain_dof_start       = self%mesh%mesh_dof_start
+                domain_dof_local_start = 1
             else
-                domain_dof_start = self%mesh%domain(idomain-1)%get_dof_end() + 1
+                domain_dof_start       = self%mesh%domain(idomain-1)%get_dof_end() + 1
+                domain_dof_local_start = self%mesh%domain(idomain-1)%get_dof_local_end() + 1
             end if
 
             ! Call initialization
             self%mesh%ntime_ = self%time_manager%ntime
-            call self%mesh%domain(idomain)%init_sol(interpolation,level,nterms_s,nfields,self%time_manager%ntime,domain_dof_start)
+            call self%mesh%domain(idomain)%init_sol(interpolation,level,nterms_s,nfields,self%time_manager%ntime,domain_dof_start,domain_dof_local_start)
             call self%mesh%domain(idomain)%update_interpolations_ale()
         end do
 

@@ -205,7 +205,6 @@ contains
         end do !idom
         call MPI_Barrier(ChiDG_COMM,ierr)   ! not sure if this is needed.
 
-
         ! Process-local routine, just to flag faces
         call detect_chimera_faces(mesh)
 

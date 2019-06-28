@@ -11,10 +11,12 @@ module mod_spatial
     use type_chidg_worker,      only: chidg_worker_t
     use type_chidg_cache,       only: chidg_cache_t
     use type_cache_handler,     only: cache_handler_t
-    use type_element_info,      only: element_info_t
+    use type_element_info,      only: element_info_t, element_info
     use type_timer,             only: timer_t
     implicit none
 
+    type(chidg_cache_t)         :: cache
+    type(cache_handler_t)       :: cache_handler
 
 contains
 
@@ -47,8 +49,6 @@ contains
 
         type(element_info_t)        :: elem_info
         type(chidg_worker_t)        :: worker
-        type(chidg_cache_t)         :: cache
-        type(cache_handler_t)       :: cache_handler
 
 
         ! Initialize Chidg Worker references
@@ -103,20 +103,22 @@ contains
                 associate ( domain => data%mesh%domain(idom), eqnset => data%eqnset(eqn_ID) )
 
 
-                elem_info = element_info_t(idomain_g    = domain%elems(ielem)%idomain_g,    &
-                                           idomain_l    = domain%elems(ielem)%idomain_l,    &
-                                           ielement_g   = domain%elems(ielem)%ielement_g,   &
-                                           ielement_l   = domain%elems(ielem)%ielement_l,   &
-                                           iproc        = domain%elems(ielem)%iproc,        &
-                                           pelem_ID     = NO_ID,                            &
-                                           eqn_ID       = domain%elems(ielem)%eqn_ID,       &
-                                           nfields      = domain%elems(ielem)%neqns,        &
-                                           nterms_s     = domain%elems(ielem)%nterms_s,     &
-                                           nterms_c     = domain%elems(ielem)%nterms_c,     &
-                                           dof_start    = domain%elems(ielem)%dof_start,    &
-                                           recv_comm    = domain%elems(ielem)%recv_comm,    &
-                                           recv_domain  = domain%elems(ielem)%recv_domain,  &
-                                           recv_element = domain%elems(ielem)%recv_element)
+                elem_info = element_info(idomain_g       = domain%elems(ielem)%idomain_g,       &
+                                         idomain_l       = domain%elems(ielem)%idomain_l,       &
+                                         ielement_g      = domain%elems(ielem)%ielement_g,      &
+                                         ielement_l      = domain%elems(ielem)%ielement_l,      &
+                                         iproc           = domain%elems(ielem)%iproc,           &
+                                         pelem_ID        = NO_ID,                               &
+                                         eqn_ID          = domain%elems(ielem)%eqn_ID,          &
+                                         nfields         = domain%elems(ielem)%neqns,           &
+                                         nterms_s        = domain%elems(ielem)%nterms_s,        &
+                                         nterms_c        = domain%elems(ielem)%nterms_c,        &
+                                         dof_start       = domain%elems(ielem)%dof_start,       &
+                                         dof_local_start = domain%elems(ielem)%dof_local_start, &
+                                         recv_comm       = domain%elems(ielem)%recv_comm,       &
+                                         recv_domain     = domain%elems(ielem)%recv_domain,     &
+                                         recv_element    = domain%elems(ielem)%recv_element,    &
+                                         recv_dof        = domain%elems(ielem)%recv_dof)
 
                 call worker%set_element(elem_info)
 
@@ -178,10 +180,15 @@ contains
 
 
         ! Timing IO
-        call write_line('- total time: ',    total_timer%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('- comm time: ',     comm_timer%elapsed(),     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('- cache time: ',    cache_timer%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('- function time: ', function_timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('- total time: ',    total_timer%elapsed(),                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('- comm time: ',     comm_timer%elapsed(),                   delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('- cache time: ',    cache_timer%elapsed(),                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('-- resize time: ',   cache_handler%timer_resize%elapsed(),  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('-- primary time: ',  cache_handler%timer_primary%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('-- model time: ',    cache_handler%timer_model%elapsed(),   delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('-- gradient time: ', cache_handler%timer_lift%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('--- model grad compute time: ', cache_handler%timer_model_grad_compute%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('- function time: ', function_timer%elapsed(),               delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
         if (present(timing)) then
             timing = total_timer%elapsed()

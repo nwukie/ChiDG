@@ -190,7 +190,7 @@ contains
     !---------------------------------------------------------------------------------
     subroutine init(self,mesh,prop,solverdata,time_manager,cache)
         class(chidg_worker_t),  intent(inout)       :: self
-        type(mesh_t),       intent(in), target  :: mesh
+        type(mesh_t),           intent(in), target  :: mesh
         type(properties_t),     intent(in), target  :: prop(:)
         type(solverdata_t),     intent(in), target  :: solverdata
         type(time_manager_t),   intent(in), target  :: time_manager
@@ -578,11 +578,9 @@ contains
             if (cache_type == 'value') then
                 idomain_l = self%element_info%idomain_l
                 ielement_l = self%element_info%ielement_l
-                !eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
                 eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
                 ifield    = self%prop(eqn_ID)%get_primary_field_index(field)
 
-                !var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, Pmin, Pmax)
                 var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, mode_min=Pmin, mode_max=Pmax)
 
             else if ( (cache_type == 'gradient') .or. &
@@ -665,7 +663,6 @@ contains
         !
         ! Get access index in solution vector for field being interpolated
         !
-        !eqn_ID = self%mesh%domain(self%element_info%idomain_l)%eqn_ID
         eqn_ID = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%eqn_ID
         ifield = self%prop(eqn_ID)%get_primary_field_index(trim(field))
 

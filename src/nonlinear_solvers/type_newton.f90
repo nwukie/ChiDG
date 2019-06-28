@@ -13,7 +13,7 @@ module type_newton
     use type_preconditioner,    only: preconditioner_t
     use type_solver_controller, only: solver_controller_t
     use type_timer,             only: timer_t
-    use type_element_info,      only: element_info_t
+    use type_element_info,      only: element_info_t, element_info
     use type_chidg_vector
     use operator_chidg_mv
 
@@ -139,7 +139,6 @@ contains
             ! for the solution update (n+1), q_(n+1)_k
             qold = q
 
-
             ! Update Spatial Residual and Linearization (rhs, lin)
             residual_ratio = resid/resid_prev
             if ( niter <= 2) residual_ratio = ONE
@@ -157,6 +156,7 @@ contains
             resid = rhs%norm(ChiDG_COMM)
             rnorm = rhs%norm_fields(ChiDG_COMM)
 
+
             ! Update smoother(preconditioner), PRIOR to ptc contribution
             !
             ! Mavriplis, "A residual smoothing strategy for accelerating Newton method continuation", 2018.
@@ -165,13 +165,6 @@ contains
                 if (controller%update_preconditioner(data%sdata%lhs,smoother)) call smoother%update(data%sdata%lhs,data%sdata%rhs)
             end if
 
-            ! Pseudo-transient continuation
-            !   ptc contribution should be before residual smoothing
-            !   because the smoother for DG needs the ptc scaling
-            !   for stability of the nonlinear smoothing iterations.
-            if (self%ptc) then
-                call contribute_pseudo_temporal(data,cfln)
-            end if ! self%ptc
 
 
             ! Residual-smoothing
@@ -190,6 +183,16 @@ contains
             end if ! self%smooth
 
 
+            ! Pseudo-transient continuation
+            !   ptc contribution should be before residual smoothing
+            !   because the smoother for DG needs the ptc scaling
+            !   for stability of the nonlinear smoothing iterations.
+            if (self%ptc) then
+                call contribute_pseudo_temporal(data,cfln)
+            end if ! self%ptc
+
+
+
             ! Convergence check
             call self%record_and_report(resid,timing,niter,cfln(1))
             if (resid < self%tol) exit
@@ -202,11 +205,6 @@ contains
             ! Solve system [lhs][dq] = [b] for newton step: [dq]
             call set_forcing_terms(linear_solver)
             call timer_linear%start()
-
-            call preconditioner%tear_down()
-            call preconditioner%init(data)
-
-
             call linear_solver%solve(lhs,dq,b,preconditioner,controller,data)
             call timer_linear%stop()
 
@@ -405,7 +403,7 @@ contains
         real(rk)                :: dtau
         real(rk),   allocatable :: field(:)
         type(chidg_vector_t)    :: scaled_vector
-        type(element_info_t)    :: element_info
+        type(element_info_t)    :: elem_info
 
         ! Compute element-local pseudo-timestep
         call compute_pseudo_timestep(data,cfln)
@@ -418,17 +416,22 @@ contains
             do ielem = 1,data%mesh%domain(idom)%nelem
                 eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
 
-                element_info = element_info_t(idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g,    &
-                                              idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l,    &
-                                              ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g,   &
-                                              ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l,   &
-                                              iproc      = data%mesh%domain(idom)%elems(ielem)%iproc,        &
-                                              pelem_ID   = NO_ID,                                            &
-                                              eqn_ID     = data%mesh%domain(idom)%elems(ielem)%eqn_ID,       &
-                                              nfields    = data%mesh%domain(idom)%elems(ielem)%neqns,        &
-                                              nterms_s   = data%mesh%domain(idom)%elems(ielem)%nterms_s,     &
-                                              nterms_c   = data%mesh%domain(idom)%elems(ielem)%nterms_c,     &
-                                              dof_start  = data%mesh%domain(idom)%elems(ielem)%dof_start)
+                elem_info = element_info(idomain_g       = data%mesh%domain(idom)%elems(ielem)%idomain_g,       &
+                                         idomain_l       = data%mesh%domain(idom)%elems(ielem)%idomain_l,       &
+                                         ielement_g      = data%mesh%domain(idom)%elems(ielem)%ielement_g,      &
+                                         ielement_l      = data%mesh%domain(idom)%elems(ielem)%ielement_l,      &
+                                         iproc           = data%mesh%domain(idom)%elems(ielem)%iproc,           &
+                                         pelem_ID        = NO_ID,                                               &
+                                         eqn_ID          = data%mesh%domain(idom)%elems(ielem)%eqn_ID,          &
+                                         nfields         = data%mesh%domain(idom)%elems(ielem)%neqns,           &
+                                         nterms_s        = data%mesh%domain(idom)%elems(ielem)%nterms_s,        &
+                                         nterms_c        = data%mesh%domain(idom)%elems(ielem)%nterms_c,        &
+                                         dof_start       = data%mesh%domain(idom)%elems(ielem)%dof_start,       &
+                                         dof_local_start = data%mesh%domain(idom)%elems(ielem)%dof_local_start, &
+                                         recv_comm       = data%mesh%domain(idom)%elems(ielem)%recv_comm,       &
+                                         recv_domain     = data%mesh%domain(idom)%elems(ielem)%recv_domain,     &
+                                         recv_element    = data%mesh%domain(idom)%elems(ielem)%recv_element,    &
+                                         recv_dof        = data%mesh%domain(idom)%elems(ielem)%recv_dof)
 
 
                 do itime = 1,data%mesh%domain(idom)%ntime
@@ -438,13 +441,14 @@ contains
                         dtau = minval(data%mesh%domain(idom)%elems(ielem)%dtau)
 
                         ! Retrieve field
-                        field = scaled_vector%get_field(element_info,ifield,itime)
+                        !field = scaled_vector%get_field(elem_info,ifield,itime)
+                        field = vector%get_field(elem_info,ifield,itime)
 
                         ! Scale field by (M/dtau)
                         field = matmul(data%mesh%domain(idom)%elems(ielem)%mass/dtau,field)
 
                         ! Store scaled field 
-                        call scaled_vector%set_field(field,element_info,ifield,itime)
+                        call scaled_vector%set_field(field,elem_info,ifield,itime)
 
                     end do !ifield
                 end do !itime

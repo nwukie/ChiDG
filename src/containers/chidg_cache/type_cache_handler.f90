@@ -7,13 +7,14 @@ module type_cache_handler
     use mod_DNAD_tools,     only: face_compute_seed, element_compute_seed
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_element_autodiff
     use mod_chidg_mpi,      only: IRANK
+    use mod_io,             only: verbosity
     use DNAD_D
 
     use type_chidg_cache,       only: chidg_cache_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_equation_set,      only: equation_set_t
     use type_bc_state_group,    only: bc_state_group_t
-
+    use type_timer,             only: timer_t
     implicit none
 
 
@@ -40,6 +41,7 @@ module type_cache_handler
     !----------------------------------------------------------------------------------------
     type, public :: cache_handler_t
 
+        type(timer_t)   :: timer_primary, timer_model, timer_lift, timer_resize, timer_model_grad_compute
 
 
     contains
@@ -166,7 +168,9 @@ contains
         !
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
+        call self%timer_resize%start()
         call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l,differentiate,lift)
+        call self%timer_resize%stop()
 
 
         !
@@ -180,15 +184,21 @@ contains
         !
         ! Update fields
         !
+        call self%timer_primary%start()
         call self%update_auxiliary_fields(worker,equation_set,bc_state_group,differentiate)
         call self%update_primary_fields(  worker,equation_set,bc_state_group,differentiate,compute_gradients,update_element, update_interior_faces, update_exterior_faces, face_min, face_max)
+        call self%timer_primary%stop()
+
+        call self%timer_model%start()
         if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
+        call self%timer_model%stop()
 
 
 
         !
         ! Compute f(Q-) models. Interior, Exterior, BC, Element
         !
+        call self%timer_model%start()
         do iface = face_min,face_max
 
             ! Update worker face index
@@ -199,12 +209,14 @@ contains
             if (update_exterior_faces) call self%update_model_exterior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
 
         end do !iface
+        call self%timer_model%stop()
 
 
 
         !
         ! Compute f(Q-) models. Interior, Exterior, BC, Element
         !
+        call self%timer_model%start()
         do iface = face_min,face_max
 
             ! Update worker face index
@@ -219,6 +231,7 @@ contains
 
 
         end do !iface
+        call self%timer_model%stop()
 
 
 
@@ -230,7 +243,9 @@ contains
 
 
 
+        call self%timer_model%start()
         if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
+        call self%timer_model%stop()
 
 
 
@@ -240,6 +255,7 @@ contains
         ! Compute f(Q-,Q+), f(Grad(Q) models. Interior, Exterior, BC, Element
         !
         !compute_gradients = .false.
+        call self%timer_lift%start()
         if (compute_gradients) then
 
 !            !
@@ -283,7 +299,7 @@ contains
 !            worker%contains_lift = .false.
 
         end if ! compute_gradients
-
+        call self%timer_lift%stop()
 
 
     end subroutine update
@@ -984,8 +1000,8 @@ contains
         type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
-        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
-                                                       idiff, iaux_field, ifield, eqn_ID
+        integer(ik)                                 :: idepend, iaux, idomain_l, ielement_l, iface, &
+                                                       idiff, iaux_field, ifield, eqn_ID, nfields_primary, nterms_s_primary
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -1006,12 +1022,10 @@ contains
 
         idepend = 0 ! no linearization
         eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
-        do ifield = 1,worker%prop(eqn_ID)%nauxiliary_fields()
+        do iaux = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
-            !
             ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
-            !
-            field      = worker%prop(eqn_ID)%get_auxiliary_field_name(ifield)
+            field      = worker%prop(eqn_ID)%get_auxiliary_field_name(iaux)
             iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
             ! Set seed
@@ -1020,11 +1034,11 @@ contains
             worker%function_info%idiff   = idiff
 
             ! Interpolate modes to nodes
-            ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
-            value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'value')
-            grad1_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'grad1')
-            grad2_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
-            grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
+            ifield = 1    !implicitly assuming only 1 equation in the auxiliary field chidg_vector
+            value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ifield,worker%itime,'value')
+            grad1_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ifield,worker%itime,'grad1')
+            grad2_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ifield,worker%itime,'grad2')
+            grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ifield,worker%itime,'grad3')
 
             ! Store gq data in cache
             call worker%cache%set_data(field,'element',value_gq,'value',   0,worker%function_info%seed)
@@ -1032,10 +1046,7 @@ contains
             call worker%cache%set_data(field,'element',grad2_gq,'gradient',2,worker%function_info%seed)
             call worker%cache%set_data(field,'element',grad3_gq,'gradient',3,worker%function_info%seed)
 
-        end do !ieqn
-
-
-
+        end do !iaux
 
     end subroutine update_auxiliary_element
     !*****************************************************************************************
@@ -1065,7 +1076,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ifield, idomain_l, ielement_l, iface, &
-                                                       iaux_field, iaux, idiff, eqn_ID
+                                                       iaux_field, iaux, idiff, eqn_ID, nfields_primary, nterms_s_primary
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -1075,9 +1086,7 @@ contains
         iface      = worker%iface
 
 
-        !
         ! Set differentiation indicator
-        !
         if (differentiate) then
             idiff = DIAG
         else
@@ -1085,17 +1094,12 @@ contains
         end if
 
 
-
-        !
         ! Face interior state. 
-        !
         eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         idepend = 0 ! no linearization
         do iaux = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
-            !
             ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
-            !
             field      = worker%prop(eqn_ID)%get_auxiliary_field_name(iaux)
             iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
@@ -1119,8 +1123,6 @@ contains
             call worker%cache%set_data(field,'face interior',grad3_gq,'gradient',3,worker%function_info%seed,iface)
 
         end do !iaux
-
-
 
     end subroutine update_auxiliary_interior
     !*****************************************************************************************
@@ -1155,7 +1157,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, idomain_l, ielement_l, iface, &
-                                                       iaux, iaux_field, ifield, idiff, eqn_ID
+                                                       iaux, iaux_field, ifield, idiff, eqn_ID, nfields_primary, nterms_s_primary
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -1165,9 +1167,7 @@ contains
         iface      = worker%iface
 
 
-        !
         ! Set differentiation indicator
-        !
         if (differentiate) then
             idiff = DIAG
         else
@@ -1175,18 +1175,14 @@ contains
         end if
 
 
-        !
         ! Face exterior state. 
-        !
         if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
 
             eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             idepend = 0 ! no linearization
             do iaux = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
-                !
                 ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
-                !
                 field      = worker%prop(eqn_ID)%get_auxiliary_field_name(iaux)
                 iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
@@ -1212,7 +1208,6 @@ contains
             end do !iaux
 
         end if
-
 
 
     end subroutine update_auxiliary_exterior
@@ -1248,7 +1243,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ifield, idomain_l, ielement_l, iface, &
-                                                       iaux_field, iaux, idiff, eqn_ID
+                                                       iaux_field, iaux, idiff, eqn_ID, nfields_primary, nterms_s_primary
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -1258,9 +1253,7 @@ contains
         iface      = worker%iface
 
 
-        !
         ! Set differentiation indicator
-        !
         if (differentiate) then
             idiff = DIAG
         else
@@ -1268,19 +1261,14 @@ contains
         end if
 
 
-
-        !
         ! Face interior state. 
-        !
         if ( (worker%face_type() == BOUNDARY) ) then
 
             eqn_ID  = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             idepend = 0 ! no linearization
             do iaux = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
-                !
                 ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
-                !
                 field      = worker%prop(eqn_ID)%get_auxiliary_field_name(iaux)
                 iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
@@ -1289,9 +1277,8 @@ contains
                 worker%function_info%idepend = idepend
                 worker%function_info%idiff   = idiff
 
-                !
                 ! Interpolate modes to nodes
-                ifield = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
+                ifield = 1    !implicitly assuming only 1 equation in the auxiliary field chidg_vector
                 value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'value',ME)
                 grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad1',ME)
                 grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad2',ME)
@@ -1427,7 +1414,9 @@ contains
                             worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff,worker%itime)
                             worker%function_info%idepend = idepend
 
+                            if (dependency=='f(Grad(Q))') call self%timer_model_grad_compute%start()
                             call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
+                            if (dependency=='f(Grad(Q))') call self%timer_model_grad_compute%stop()
                         end do !idepend
                     end if !compute
 

@@ -2,7 +2,8 @@ module type_petsc_scatter_wrapper
 #include <messenger.h>
 #include "petsc/finclude/petscvec.h"
 #include "petscconf.h"
-    use petscvec, only: tVecScatter, VecScatterDestroy
+    use mod_kinds,  only: ik
+    use petscvec,   only: tVecScatter, VecScatterDestroy
 
     type, public :: petsc_scatter_wrapper_t
         VecScatter  :: petsc_scatter
@@ -22,6 +23,7 @@ contains
     subroutine destroy(self)
         type(petsc_scatter_wrapper_t),   intent(inout)   :: self
 
+        integer(ik) :: ierr
 
         ! We assume, that whenever a petsc_scatter_wrapper_t is allocated, the petsc_scatter
         ! component is also created. So, we do not check that this is actually the case.

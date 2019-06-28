@@ -98,11 +98,8 @@ contains
             call timer_blas%start()
 
             res = x
-            call res%clear()
 
-            call x%assemble()
-
-            call MatMult(A%petsc_matrix,x%wrapped_petsc_vector%petsc_vector,res%wrapped_petsc_vector%petsc_vector,perr)
+            call MatMult(A%wrapped_petsc_matrix%petsc_matrix,x%wrapped_petsc_vector%petsc_vector,res%wrapped_petsc_vector%petsc_vector,perr)
             if (perr /= 0) call chidg_signal(FATAL,'chidg_mv: error calling petsc MatMult.')
 
             call timer_blas%stop()

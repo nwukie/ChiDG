@@ -54,26 +54,28 @@ module type_face
         integer(ik)             :: neqns           ! Number of equations in equationset_t
         integer(ik)             :: nterms_s        ! Number of terms in solution polynomial expansion
         integer(ik)             :: dof_start       ! Starting DOF index in ChiDG-global index 
+        integer(ik)             :: dof_local_start ! Starting DOF index in ChiDG-local index 
         integer(ik)             :: ntime
         integer(ik)             :: coordinate_system    ! CARTESIAN, CYLINDRICAL. parameters from mod_constants.f90
 
 
         ! Neighbor information
-        integer(ik)             :: neighbor_location(6) = 0         ! [idomain_g, idomain_l, ielement_g, ielement_l, iface]
-        integer(ik)             :: ineighbor_proc       = NO_PROC   ! MPI processor rank of the neighboring element
-        integer(ik)             :: ineighbor_domain_g   = 0         ! Global index of the neighboring element's domain
-        integer(ik)             :: ineighbor_domain_l   = 0         ! Processor-local index of the neighboring element's domain
-        integer(ik)             :: ineighbor_element_g  = 0         ! Domain-global index of the neighboring element
-        integer(ik)             :: ineighbor_element_l  = 0         ! Processor-local index of the neighboring element
-        integer(ik)             :: ineighbor_face       = 0
-        integer(ik)             :: ineighbor_neqns      = 0
-        integer(ik)             :: ineighbor_nterms_s   = 0
-        integer(ik)             :: ineighbor_dof_start  = 0
-        integer(ik)             :: ineighbor_pdof_start = 0
-        integer(ik)             :: ineighbor_pelem_ID   = NO_ID
-        integer(ik)             :: recv_comm            = 0
-        integer(ik)             :: recv_domain          = 0
-        integer(ik)             :: recv_element         = 0
+        integer(ik)             :: neighbor_location(7)      = 0         ! [idomain_g, idomain_l, ielement_g, ielement_l, iface, dof_start, dof_local_start]
+        integer(ik)             :: ineighbor_proc            = NO_PROC   ! MPI processor rank of the neighboring element
+        integer(ik)             :: ineighbor_domain_g        = 0         ! Global index of the neighboring element's domain
+        integer(ik)             :: ineighbor_domain_l        = 0         ! Processor-local index of the neighboring element's domain
+        integer(ik)             :: ineighbor_element_g       = 0         ! Domain-global index of the neighboring element
+        integer(ik)             :: ineighbor_element_l       = 0         ! Processor-local index of the neighboring element
+        integer(ik)             :: ineighbor_face            = 0
+        integer(ik)             :: ineighbor_neqns           = 0
+        integer(ik)             :: ineighbor_nterms_s        = 0
+        integer(ik)             :: ineighbor_dof_start       = NO_ID
+        integer(ik)             :: ineighbor_dof_local_start = NO_ID
+        integer(ik)             :: ineighbor_pelem_ID        = NO_ID
+        integer(ik)             :: recv_comm                 = NO_ID
+        integer(ik)             :: recv_domain               = NO_ID
+        integer(ik)             :: recv_element              = NO_ID
+        integer(ik)             :: recv_dof                  = NO_ID
 
 
         ! Neighbor information: if neighbor is off-processor
@@ -238,16 +240,18 @@ contains
         !
         ! No neighbor associated at this point
         !
-        self%ineighbor_domain_g  = NO_INTERIOR_NEIGHBOR
-        self%ineighbor_domain_l  = NO_INTERIOR_NEIGHBOR
-        self%ineighbor_element_g = NO_INTERIOR_NEIGHBOR
-        self%ineighbor_element_l = NO_INTERIOR_NEIGHBOR
-        self%ineighbor_face      = NO_INTERIOR_NEIGHBOR
-        self%ineighbor_proc      = NO_PROC
-        self%ineighbor_dof_start = NO_ID
-        self%neighbor_location = [self%ineighbor_domain_g, self%ineighbor_domain_l, &
+        self%ineighbor_domain_g        = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_domain_l        = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_element_g       = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_element_l       = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_face            = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_proc            = NO_PROC
+        self%ineighbor_dof_start       = NO_ID
+        self%ineighbor_dof_local_start = NO_ID
+        self%neighbor_location = [self%ineighbor_domain_g, self%ineighbor_domain_l,   &
                                   self%ineighbor_element_g, self%ineighbor_element_l, &
-                                  self%ineighbor_face, self%ineighbor_dof_start]
+                                  self%ineighbor_face, self%ineighbor_dof_start,      &
+                                  self%ineighbor_dof_local_start]
         
 
         !
@@ -1168,7 +1172,7 @@ contains
     subroutine set_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,              &
                                        ineighbor_element_g,ineighbor_element_l,            &
                                        ineighbor_face,ineighbor_neqns, ineighbor_nterms_s, &
-                                       ineighbor_proc,ineighbor_dof_start)
+                                       ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
         class(face_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: ftype
         integer(ik),    intent(in)      :: ineighbor_domain_g
@@ -1180,22 +1184,24 @@ contains
         integer(ik),    intent(in)      :: ineighbor_nterms_s
         integer(ik),    intent(in)      :: ineighbor_proc
         integer(ik),    intent(in)      :: ineighbor_dof_start
+        integer(ik),    intent(in)      :: ineighbor_dof_local_start
 
 
-        self%ftype               = ftype
-        self%ineighbor_domain_g  = ineighbor_domain_g
-        self%ineighbor_domain_l  = ineighbor_domain_l
-        self%ineighbor_element_g = ineighbor_element_g
-        self%ineighbor_element_l = ineighbor_element_l
-        self%ineighbor_face      = ineighbor_face
-        self%ineighbor_neqns     = ineighbor_neqns
-        self%ineighbor_nterms_s  = ineighbor_nterms_s
-        self%ineighbor_proc      = ineighbor_proc
-        self%ineighbor_dof_start = ineighbor_dof_start
+        self%ftype                     = ftype
+        self%ineighbor_domain_g        = ineighbor_domain_g
+        self%ineighbor_domain_l        = ineighbor_domain_l
+        self%ineighbor_element_g       = ineighbor_element_g
+        self%ineighbor_element_l       = ineighbor_element_l
+        self%ineighbor_face            = ineighbor_face
+        self%ineighbor_neqns           = ineighbor_neqns
+        self%ineighbor_nterms_s        = ineighbor_nterms_s
+        self%ineighbor_proc            = ineighbor_proc
+        self%ineighbor_dof_start       = ineighbor_dof_start
+        self%ineighbor_dof_local_start = ineighbor_dof_local_start
 
         self%neighbor_location = [ineighbor_domain_g,  ineighbor_domain_l,  &
                                   ineighbor_element_g, ineighbor_element_l, &
-                                  ineighbor_face, ineighbor_dof_start]
+                                  ineighbor_face, ineighbor_dof_start, ineighbor_dof_local_start]
 
         self%neighborInitialized = .true.
 

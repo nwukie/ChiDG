@@ -15,7 +15,7 @@ module type_harmonic_balance
     use type_rvector,                   only: rvector_t
     use mod_HB_matrices,                only: calc_pseudo_spectral_operator
     use type_seed,                      only: seed_t
-    use type_element_info,              only: element_info_t
+    use type_element_info,              only: element_info_t, element_info
     use type_chidg_vector
     use DNAD_D
 
@@ -195,25 +195,7 @@ contains
 
 
                         ! LHS contribution
-                        !face = face_info(data%mesh%domain(idom)%elems(ielem)%idomain_g,  &
-                        !                 data%mesh%domain(idom)%elems(ielem)%idomain_l,  &
-                        !                 data%mesh%domain(idom)%elems(ielem)%ielement_g, &
-                        !                 data%mesh%domain(idom)%elems(ielem)%ielement_l, &
-                        !                 NO_FACE,                                        &
-                        !                 data%mesh%domain(idom)%elems(ielem)%dof_start)
-
-                        elem_info = element_info_t(idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g,  &
-                                                   idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l,  &
-                                                   ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g, &
-                                                   ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l, &
-                                                   iproc      = data%mesh%domain(idom)%elems(ielem)%iproc,      &
-                                                   pelem_ID   = NO_ID,                          &
-                                                   eqn_ID     = data%mesh%domain(idom)%elems(ielem)%eqn_ID,     &
-                                                   nfields    = data%mesh%domain(idom)%elems(ielem)%neqns,      &
-                                                   nterms_s   = data%mesh%domain(idom)%elems(ielem)%nterms_s,   &
-                                                   nterms_c   = data%mesh%domain(idom)%elems(ielem)%nterms_c,   &
-                                                   dof_start  = data%mesh%domain(idom)%elems(ielem)%dof_start)
-
+                        elem_info = data%mesh%get_element_info(idom,ielem)
 
 
 

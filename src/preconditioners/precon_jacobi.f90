@@ -63,6 +63,7 @@ contains
                 call self%D%init(data%mesh,mtype='Diagonal')
 
             case('petsc')
+
                 call PCCreate(ChiDG_COMM%mpi_val,self%pc,perr)
                 if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%init: error calling PCCreate.')
                 call PCSetType(self%pc,PCPBJACOBI,perr)
@@ -102,7 +103,7 @@ contains
 
         if (self%petsc_initialized) then
         !******  petsc  implementation  ******!
-            call PCSetOperators(self%pc, A%petsc_matrix, A%petsc_matrix, perr)
+            call PCSetOperators(self%pc, A%wrapped_petsc_matrix%petsc_matrix, A%wrapped_petsc_matrix%petsc_matrix, perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%update: error calling PCSetOperators.')
             call PCSetUp(self%pc, perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%update: error calling PCSetUp.')

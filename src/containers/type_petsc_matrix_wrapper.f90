@@ -1,16 +1,15 @@
-module type_petsc_vector_wrapper
+module type_petsc_matrix_wrapper
 #include <messenger.h>
-#include "petsc/finclude/petscvec.h"
-!#include "petscconf.h"
+#include "petsc/finclude/petscmat.h"
     use mod_kinds,  only: ik
-    use petscvec,   only: tVec, VecDestroy
+    use petscmat,   only: tMat, MatDestroy
     implicit none
 
-    type, public :: petsc_vector_wrapper_t
-        Vec :: petsc_vector
+    type, public :: petsc_matrix_wrapper_t
+        Mat     :: petsc_matrix
     contains
         final :: destroy
-    end type petsc_vector_wrapper_t
+    end type petsc_matrix_wrapper_t
 
 contains
 
@@ -22,15 +21,14 @@ contains
     !!
     !------------------------------------------------------------------------------------
     subroutine destroy(self)
-        type(petsc_vector_wrapper_t),   intent(inout)   :: self
+        type(petsc_matrix_wrapper_t),   intent(inout)   :: self
 
         integer(ik) :: ierr
 
-
         ! We assume, that whenever a petsc_vector_wrapper_t is allocated, the petsc_vector 
         ! component is also created. So, we do not check that this is actually the case.
-        call VecDestroy(self%petsc_vector,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'petsc_vector_wrapper%destroy: error calling VecDestroy.')
+        call MatDestroy(self%petsc_matrix,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'petsc_matrix_wrapper%destroy: error calling MatDestroy.')
 
 
         ! NOTE: petsc sets vector objects to NULL after destroying them. The problem is that
@@ -45,11 +43,11 @@ contains
         ! Also, the PETSC_FORTRAN_TYPE_INITIALIZE macro is defined as '= -2' so there shouldn't
         ! be any '=' below or the compiler will error.
         !
-        self%petsc_vector%v      PETSC_FORTRAN_TYPE_INITIALIZE
+        self%petsc_matrix%v      PETSC_FORTRAN_TYPE_INITIALIZE
 
 
     end subroutine destroy
     !*************************************************************************************
 
 
-end module type_petsc_vector_wrapper
+end module type_petsc_matrix_wrapper

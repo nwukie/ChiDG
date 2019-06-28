@@ -106,7 +106,6 @@ contains
         real(rk)    :: const, epsilon_vorticity, eps
 
 
-
         !
         ! Interpolate solution to quadrature nodes
         !
@@ -135,7 +134,7 @@ contains
         eps = 1.e-11_rk
         !eps = ZERO
         dwall = worker%get_field('Wall Distance', 'value', 'element')
-        if (any(ieee_is_nan(dwall(:)%x_ad_))) call write_line('dwall is nan',io_proc=GLOBAL_MASTER)
+        if (any(ieee_is_nan(dwall(:)%x_ad_))) call write_line('dwall is nan')
 
         !
         ! Divide by density

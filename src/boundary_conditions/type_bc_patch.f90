@@ -347,7 +347,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------
-    subroutine set_coupled_element_data(self,face_ID,idomain_g,ielement_g,neqns,nterms_s,dof_start,total_area,areas,quad_pts)
+    subroutine set_coupled_element_data(self,face_ID,idomain_g,ielement_g,neqns,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
         class(bc_patch_t),  intent(inout)   :: self
         integer(ik),        intent(in)      :: face_ID
         integer(ik),        intent(in)      :: idomain_g
@@ -355,11 +355,12 @@ contains
         integer(ik),        intent(in)      :: neqns
         integer(ik),        intent(in)      :: nterms_s
         integer(ik),        intent(in)      :: dof_start
+        integer(ik),        intent(in)      :: dof_local_start
         real(rk),           intent(in)      :: total_area
         real(rk),           intent(in)      :: areas(:)
         real(rk),           intent(in)      :: quad_pts(:,:)
 
-        call self%coupling(face_ID)%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,dof_start,total_area,areas,point_t(quad_pts))
+        call self%coupling(face_ID)%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,dof_start,dof_local_start,total_area,areas,point_t(quad_pts))
     
     end subroutine set_coupled_element_data
     !***********************************************************************************

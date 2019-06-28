@@ -8,7 +8,7 @@ module mod_integrate
     use type_mesh,              only: mesh_t
     use type_element,           only: element_t
     use type_face,              only: face_t
-    use type_element_info,      only: element_info_t
+    use type_element_info,      only: element_info_t, element_info
     use type_function_info,     only: function_info_t
     use type_solverdata,        only: solverdata_t
     use type_seed,              only: seed_t
@@ -189,10 +189,10 @@ contains
     !!  @param[inout]   flux    function to integrate over the boundary
     !!
     !----------------------------------------------------------------------------------------
-    subroutine integrate_boundary_scalar_flux(mesh,sdata,element_info,function_info,iface,ieqn,itime,integrand)
+    subroutine integrate_boundary_scalar_flux(mesh,sdata,elem_info,function_info,iface,ieqn,itime,integrand)
         type(mesh_t),           intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
-        type(element_info_t),   intent(in)      :: element_info
+        type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: function_info
         integer(ik),            intent(in)      :: iface
         integer(ik),            intent(in)      :: ieqn
@@ -203,13 +203,13 @@ contains
         type(AD_D), allocatable     :: integral(:)
         type(AD_D), allocatable     :: integrand_n(:)
         type(function_info_t)       :: function_n
-        type(element_info_t)        :: element_info_n
+        type(element_info_t)        :: elem_info_n
         integer(ik)                 :: ineighbor_element_l, ineighbor_face, ineighbor_proc, idiff_n, ierr, iface_n
         logical                     :: parallel_neighbor, diff_none, diff_interior, diff_exterior
 
 
-        associate ( idomain_l   => element_info%idomain_l,     &
-                    ielement_l  => element_info%ielement_l,    &
+        associate ( idomain_l   => elem_info%idomain_l,     &
+                    ielement_l  => elem_info%ielement_l,    &
                     !iface       => iface,         &
                     ifcn        => function_info%ifcn,      &
                     idonor      => function_info%idepend,   &
@@ -248,8 +248,8 @@ contains
             integral = matmul(valtrans,integrand)
 
 
-            call store_boundary_integral_residual(     mesh,sdata,element_info,function_info,iface,ieqn,itime,integral)
-            call store_boundary_integral_linearization(mesh,sdata,element_info,function_info,iface,ieqn,itime,integral)
+            call store_boundary_integral_residual(     mesh,sdata,elem_info,function_info,iface,ieqn,itime,integral)
+            call store_boundary_integral_linearization(mesh,sdata,elem_info,function_info,iface,ieqn,itime,integral)
 
 
         end associate
@@ -262,29 +262,36 @@ contains
         if ( ineighbor_element_l /= NO_INTERIOR_NEIGHBOR ) then
             if ( .not. parallel_neighbor ) then
 
-                !face_n%idomain_g  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
-                !face_n%idomain_l  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
-                !face_n%ielement_g = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
-                !face_n%ielement_l = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
-                !face_n%iface      = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
-                !face_n = face_info_constructor(mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g, &
-                !                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l, &
-                !                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g, &
-                !                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l, &
-                !                               mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face(), &
-                !                               mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start)
+                elem_info_n = element_info(idomain_g       = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,          &
+                                           idomain_l       = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,          &
+                                           ielement_g      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,         &
+                                           ielement_l      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,         &
+                                           iproc           = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,              &
+                                           pelem_ID        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_pelem_ID,          &
+                                           eqn_ID          = NO_ID,                                                                      &
+                                           nfields         = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,             &
+                                           nterms_s        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,          &
+                                           nterms_c        = NO_DATA,                                                                    &
+                                           dof_start       = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start,         &
+                                           dof_local_start = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_local_start,   &
+                                           recv_comm       = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,                   &
+                                           recv_domain     = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,                 &
+                                           recv_element    = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_element,                &
+                                           recv_dof        = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_dof)
 
-                element_info_n = element_info_t(idomain_g  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,     &
-                                                idomain_l  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,     &
-                                                ielement_g = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,    &
-                                                ielement_l = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,    &
-                                                iproc      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,         &
-                                                pelem_ID   = NO_ID,                                                                 &
-                                                eqn_ID     = NO_ID,                                                                 &
-                                                nfields    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,        &
-                                                nterms_s   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,     &
-                                                nterms_c   = NO_DATA,                                                               &
-                                                dof_start  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start)
+
+
+                !elem_info_n = element_info_t(idomain_g  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,     &
+                !                                idomain_l  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,     &
+                !                                ielement_g = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,    &
+                !                                ielement_l = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,    &
+                !                                iproc      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,         &
+                !                                pelem_ID   = NO_ID,                                                                 &
+                !                                eqn_ID     = NO_ID,                                                                 &
+                !                                nfields    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,        &
+                !                                nterms_s   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,     &
+                !                                nterms_c   = NO_DATA,                                                               &
+                !                                dof_start  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start)
 
                 iface_n = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
 
@@ -328,8 +335,8 @@ contains
                     !
                     integral = -matmul(valtrans_n,integrand_n)
 
-                    call store_boundary_integral_residual(     mesh,sdata,element_info_n,function_n,iface_n,ieqn,itime,integral)
-                    call store_boundary_integral_linearization(mesh,sdata,element_info_n,function_n,iface_n,ieqn,itime,integral)
+                    call store_boundary_integral_residual(     mesh,sdata,elem_info_n,function_n,iface_n,ieqn,itime,integral)
+                    call store_boundary_integral_linearization(mesh,sdata,elem_info_n,function_n,iface_n,ieqn,itime,integral)
 
                 end associate
 

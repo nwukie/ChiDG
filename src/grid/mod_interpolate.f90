@@ -22,7 +22,6 @@
 !!      get_elem_interpolation_info
 !!      get_elem_interpolation_interpolator
 !!      get_elem_interpolation_mask
-!!      get_elem_interpolation_comm
 !!      get_elem_interpolation_ndonors
 !!      get_elem_interpolation_style
 !!      get_interpolation_nderiv
@@ -42,7 +41,7 @@ module mod_interpolate
     use DNAD_D
 
     use type_mesh,              only: mesh_t
-    use type_element_info,      only: element_info_t
+    use type_element_info,      only: element_info_t, element_info
     use type_face_info,         only: face_info_constructor
     use type_edge_info,         only: edge_info_t
     use type_seed,              only: seed_t
@@ -263,7 +262,6 @@ contains
         integer(ik),            intent(in)              :: interpolation_source
 
         type(element_info_t) :: donor_info
-        type(recv_t)         :: recv_info
 
         type(AD_D),         allocatable :: qdiff(:), var_gq(:)
         real(rk),           allocatable :: qtmp(:)
@@ -271,7 +269,7 @@ contains
         character(:),       allocatable :: interpolation_style
 
         integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr, nnodes, donor_iface
-        logical     :: differentiate_me, conforming_interpolation, chimera_interpolation, parallel_interpolation
+        logical     :: differentiate_me, conforming_interpolation, chimera_interpolation
 
 
         ! Chimera data
@@ -325,10 +323,8 @@ contains
             donor_iface  = compute_neighbor_face(mesh,elem_info%idomain_l,elem_info%ielement_l,iface,idonor)         ! THIS PROBABLY NEEDS IMPROVED
             donor_info   = get_elem_interpolation_info(        mesh,elem_info,iface,interpolation_source,idonor)
             mask         = get_elem_interpolation_mask(        mesh,elem_info,iface,interpolation_source,idonor)
-            recv_info    = get_elem_interpolation_comm(        mesh,elem_info,iface,interpolation_source,idonor)
             interpolator = get_elem_interpolation_interpolator(mesh,elem_info,iface,interpolation_source,idonor,interpolation_type,donor_info,donor_iface)
 
-            parallel_interpolation = (recv_info%comm /= 0)
 
         
 
@@ -598,19 +594,26 @@ contains
         character(*),           intent(in)      :: interpolation_type
 
         real(rk),   allocatable :: var_gq(:)
-        type(element_info_t)    :: element_info
+        type(element_info_t)    :: elem_info
 
-        element_info = element_info_t(idomain_g  = mesh%domain(idomain_l)%elems(ielement_l)%idomain_g,    &
-                                      idomain_l  = mesh%domain(idomain_l)%elems(ielement_l)%idomain_l,    &
-                                      ielement_g = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g,   &
-                                      ielement_l = mesh%domain(idomain_l)%elems(ielement_l)%ielement_l,   &
-                                      iproc      = mesh%domain(idomain_l)%elems(ielement_l)%iproc,        &
-                                      pelem_ID   = NO_ID,                                            &
-                                      eqn_ID     = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID,       &
-                                      nfields    = mesh%domain(idomain_l)%elems(ielement_l)%neqns,        &
-                                      nterms_s   = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,     &
-                                      nterms_c   = mesh%domain(idomain_l)%elems(ielement_l)%nterms_c,     &
-                                      dof_start  = mesh%domain(idomain_l)%elems(ielement_l)%dof_start)
+
+        elem_info = element_info(idomain_g       = mesh%domain(idomain_l)%elems(ielement_l)%idomain_g,       &
+                                 idomain_l       = mesh%domain(idomain_l)%elems(ielement_l)%idomain_l,       &
+                                 ielement_g      = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g,      &
+                                 ielement_l      = mesh%domain(idomain_l)%elems(ielement_l)%ielement_l,      &
+                                 iproc           = mesh%domain(idomain_l)%elems(ielement_l)%iproc,           &
+                                 pelem_ID        = NO_ID,                                                    &
+                                 eqn_ID          = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID,          &
+                                 nfields         = mesh%domain(idomain_l)%elems(ielement_l)%neqns,           &
+                                 nterms_s        = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,        &
+                                 nterms_c        = mesh%domain(idomain_l)%elems(ielement_l)%nterms_c,        &
+                                 dof_start       = mesh%domain(idomain_l)%elems(ielement_l)%dof_start,       &
+                                 dof_local_start = mesh%domain(idomain_l)%elems(ielement_l)%dof_local_start, &
+                                 recv_comm       = mesh%domain(idomain_l)%elems(ielement_l)%recv_comm,       &
+                                 recv_domain     = mesh%domain(idomain_l)%elems(ielement_l)%recv_domain,     &
+                                 recv_element    = mesh%domain(idomain_l)%elems(ielement_l)%recv_element,    &
+                                 recv_dof        = mesh%domain(idomain_l)%elems(ielement_l)%recv_comm)
+
 
 
 
@@ -622,13 +625,13 @@ contains
         select case (interpolation_type)
             case('value')
                 !var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'), q%get_field(element_info,ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'), q%get_field(elem_info,ifield,itime))
             case('grad1')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad1,      q%get_field(element_info,ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad1,      q%get_field(elem_info,ifield,itime))
             case('grad2')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad2,      q%get_field(element_info,ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad2,      q%get_field(elem_info,ifield,itime))
             case('grad3')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad3,      q%get_field(element_info,ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad3,      q%get_field(elem_info,ifield,itime))
             case default
                 call chidg_signal(FATAL,"interpolate_element_standard: invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
         end select
@@ -663,19 +666,24 @@ contains
         integer(ik),            intent(in)      :: itime
 
         real(rk),   allocatable :: var_gq(:)
-        type(element_info_t)    :: element_info
+        type(element_info_t)    :: elem_info
 
-        element_info = element_info_t(idomain_g  = mesh%domain(idomain_l)%elems(ielement_l)%idomain_g,    &
-                                      idomain_l  = mesh%domain(idomain_l)%elems(ielement_l)%idomain_l,    &
-                                      ielement_g = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g,   &
-                                      ielement_l = mesh%domain(idomain_l)%elems(ielement_l)%ielement_l,   &
-                                      iproc      = mesh%domain(idomain_l)%elems(ielement_l)%iproc,        &
-                                      pelem_ID   = NO_ID,                                            &
-                                      eqn_ID     = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID,       &
-                                      nfields    = mesh%domain(idomain_l)%elems(ielement_l)%neqns,        &
-                                      nterms_s   = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,     &
-                                      nterms_c   = mesh%domain(idomain_l)%elems(ielement_l)%nterms_c,     &
-                                      dof_start  = mesh%domain(idomain_l)%elems(ielement_l)%dof_start)
+        elem_info = element_info(idomain_g       = mesh%domain(idomain_l)%elems(ielement_l)%idomain_g,       &
+                                 idomain_l       = mesh%domain(idomain_l)%elems(ielement_l)%idomain_l,       &
+                                 ielement_g      = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g,      &
+                                 ielement_l      = mesh%domain(idomain_l)%elems(ielement_l)%ielement_l,      &
+                                 iproc           = mesh%domain(idomain_l)%elems(ielement_l)%iproc,           &
+                                 pelem_ID        = NO_ID,                                                    &
+                                 eqn_ID          = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID,          &
+                                 nfields         = mesh%domain(idomain_l)%elems(ielement_l)%neqns,           &
+                                 nterms_s        = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,        &
+                                 nterms_c        = mesh%domain(idomain_l)%elems(ielement_l)%nterms_c,        &
+                                 dof_start       = mesh%domain(idomain_l)%elems(ielement_l)%dof_start,       &
+                                 dof_local_start = mesh%domain(idomain_l)%elems(ielement_l)%dof_local_start, &
+                                 recv_comm       = mesh%domain(idomain_l)%elems(ielement_l)%recv_comm,       &
+                                 recv_domain     = mesh%domain(idomain_l)%elems(ielement_l)%recv_domain,     &
+                                 recv_element    = mesh%domain(idomain_l)%elems(ielement_l)%recv_element,    &
+                                 recv_dof        = mesh%domain(idomain_l)%elems(ielement_l)%recv_comm)
 
         !
         ! Use quadrature instance to compute variable at quadrature nodes.
@@ -683,7 +691,7 @@ contains
         ! with the array of modes for the given variable
         !
         !var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
-        var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface), q%get_field(element_info,ifield,itime))
+        var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface), q%get_field(elem_info,ifield,itime))
 
 
     end function interpolate_face_standard
@@ -867,6 +875,7 @@ contains
 
 
             ! Retrieve modal coefficients for ifield from vector
+            print*, 'WARNING! UPDATE parallel data access in mod_interpolate%interpolate_general_autodiff.'
             if (parallel_donor) then
                 recv_info%comm    = mesh%parallel_element(donor%pelem_ID)%recv_comm
                 recv_info%domain  = mesh%parallel_element(donor%pelem_ID)%recv_domain
@@ -1177,9 +1186,8 @@ contains
         integer(ik),            intent(in)  :: idonor
 
         type(element_info_t)    :: donor_info
-        integer(ik)             :: ChiID
-        logical                 :: conforming_interpolation, chimera_interpolation, parallel_interpolation
-
+        integer(ik)             :: ChiID, recv_dof
+        logical                 :: conforming_interpolation, chimera_interpolation
 
         associate( idom => source_info%idomain_l, ielem => source_info%ielement_l, iface => source_iface)
 
@@ -1187,13 +1195,7 @@ contains
         ! Compute neighbor access indices
         !
         if ( interpolation_source == ME ) then
-
             ! Interpolate from ME element
-!            elem_info%idomain_l  = face_info%idomain_l
-!            elem_info%ielement_l = face_info%ielement_l
-!            elem_info%idomain_g  = face_info%idomain_g
-!            elem_info%ielement_g = face_info%ielement_g
-!            elem_info%iface      = face_info%iface
             donor_info = source_info
 
 
@@ -1204,26 +1206,23 @@ contains
 
             ! Interpolate from conforming NEIGHBOR element
             if ( conforming_interpolation ) then
-                !iface_info%idomain_g  = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_g  
-                !iface_info%idomain_l  = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_l
-                !iface_info%ielement_g = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_g
-                !iface_info%ielement_l = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_l
-                !iface_info%iface      = compute_neighbor_face(mesh,idom,ielem,iface,idonor)         ! THIS PROBABLY NEEDS IMPROVED
 
-                donor_info = element_info_t(idomain_g    = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_domain_g,    &
-                                            idomain_l    = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_domain_l,    &
-                                            ielement_g   = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_element_g,   &
-                                            ielement_l   = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_element_l,   &
-                                            iproc        = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_proc,        &
-                                            pelem_ID     = NO_ID,                                                                                               &
-                                            eqn_ID       = NO_ID,                                                                                               &
-                                            nfields      = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_neqns,       &
-                                            nterms_s     = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_nterms_s,    &
-                                            nterms_c     = 0,                                                                                                   &
-                                            dof_start    = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_dof_start,   &
-                                            recv_comm    = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_comm,             &
-                                            recv_domain  = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_domain,           &
-                                            recv_element = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_element)
+                donor_info = element_info(idomain_g       = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_domain_g,        &
+                                          idomain_l       = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_domain_l,        &
+                                          ielement_g      = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_element_g,       &
+                                          ielement_l      = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_element_l,       &
+                                          iproc           = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_proc,            &
+                                          pelem_ID        = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_pelem_ID,        &
+                                          eqn_ID          = NO_ID,                                                                                                   &
+                                          nfields         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_neqns,           &
+                                          nterms_s        = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_nterms_s,        &
+                                          nterms_c        = 0,                                                                                                       &
+                                          dof_start       = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_dof_start,       &
+                                          dof_local_start = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_dof_local_start, &
+                                          recv_comm       = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_comm,                 &
+                                          recv_domain     = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_domain,               &
+                                          recv_element    = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_element,              &
+                                          recv_dof        = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_dof)
 
 
 
@@ -1231,25 +1230,23 @@ contains
             ! Interpolate from CHIMERA donor element
             elseif ( chimera_interpolation ) then
                 ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                !iface_info%idomain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
-                !iface_info%idomain_l  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
-                !iface_info%ielement_g = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
-                !iface_info%ielement_l = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
 
-                donor_info = element_info_t(idomain_g    = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%idomain_g,      &
-                                            idomain_l    = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%idomain_l,      &
-                                            ielement_g   = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ielement_g,     &
-                                            ielement_l   = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ielement_l,     &
-                                            iproc        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%iproc,          &
-                                            pelem_ID     = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%pelem_ID,       &
-                                            eqn_ID       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%eqn_ID,         &
-                                            nfields      = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nfields,        &
-                                            nterms_s     = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nterms_s,       &
-                                            nterms_c     = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nterms_c,       &
-                                            dof_start    = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%dof_start,      &
-                                            recv_comm    = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_comm,      &
-                                            recv_domain  = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_domain,    &
-                                            recv_element = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_element)
+                donor_info = element_info(idomain_g       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%idomain_g,       &
+                                          idomain_l       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%idomain_l,       &
+                                          ielement_g      = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ielement_g,      &
+                                          ielement_l      = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ielement_l,      &
+                                          iproc           = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%iproc,           &
+                                          pelem_ID        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%pelem_ID,        &
+                                          eqn_ID          = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%eqn_ID,          &
+                                          nfields         = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nfields,         &
+                                          nterms_s        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nterms_s,        &
+                                          nterms_c        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nterms_c,        &
+                                          dof_start       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%dof_start,       &
+                                          dof_local_start = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%dof_local_start, &
+                                          recv_comm       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_comm,       &
+                                          recv_domain     = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_domain,     &
+                                          recv_element    = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_element,    &
+                                          recv_dof        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_dof)
 
             else
                 call chidg_signal(FATAL,"get_elem_interpolation_info: neighbor conforming_interpolation nor chimera_interpolation were detected")
@@ -1500,86 +1497,86 @@ contains
 
 
 
-    !>  This routine returns a recv_t communication structure indicating whether the 
-    !!  interpolation donor is LOCAL or REMOTE. 
-    !!
-    !!  The recv_t contains recv_comm, recv_domain, and recv_element components. If these are 
-    !!  set, then the interpolation is remote and these indices specify where in the 'recv' 
-    !!  container to find the solution modes for the interpolation. If these indices are not 
-    !!  set, then the interpolation is LOCAL and the main interpolation routine can use the 
-    !!  local element indices to locate the solution modes.
-    !!  
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/16/2016
-    !!
-    !!
-    !-----------------------------------------------------------------------------------------
-    function get_elem_interpolation_comm(mesh,source_info,source_iface,interpolation_source,idonor) result(recv_info)
-        type(mesh_t),           intent(in)  :: mesh
-        type(element_info_t),   intent(in)  :: source_info
-        integer(ik),            intent(in)  :: source_iface
-        integer(ik),            intent(in)  :: interpolation_source
-        integer(ik),            intent(in)  :: idonor
-
-
-        type(recv_t)    :: recv_info                !< This gets set if REMOTE interpolation
-        integer(ik)     :: ChiID, donor_proc
-        logical         :: conforming_interpolation, chimera_interpolation, parallel_interpolation
-
-
-        associate( idom => source_info%idomain_l, ielem => source_info%ielement_l, iface => source_iface)
-
-        !
-        ! Initialize recv_info container to null, indicating LOCAL interpolation. 
-        ! Always the case, if interpolation_source=ME.
-        !
-        recv_info = recv_t(0,0,0)
-
-
-
-        if ( interpolation_source == NEIGHBOR ) then
-
-            chimera_interpolation    = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
-            conforming_interpolation = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
-
-
-            ! Interpolate from conforming NEIGHBOR element
-            if ( conforming_interpolation ) then
-
-                parallel_interpolation   = ( IRANK /= mesh%domain(idom)%faces(ielem,iface)%ineighbor_proc )
-
-                if (parallel_interpolation) then
-                    recv_info%comm    = mesh%domain(idom)%faces(ielem,iface)%recv_comm
-                    recv_info%domain  = mesh%domain(idom)%faces(ielem,iface)%recv_domain
-                    recv_info%element = mesh%domain(idom)%faces(ielem,iface)%recv_element
-                end if
-
-
-
-            ! Interpolate from CHIMERA donor element
-            elseif ( chimera_interpolation ) then
-                ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                donor_proc = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc
-
-                parallel_interpolation = (IRANK /= donor_proc)
-                if (parallel_interpolation) then
-                     recv_info%comm    = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_comm
-                     recv_info%domain  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_domain
-                     recv_info%element = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_element
-                end if
-
-            else
-                call chidg_signal(FATAL,"get_elem_interpolation_comm: neighbor conforming_interpolation nor chimera_interpolation were detected")
-            end if
-
-
-        end if
-
-        end associate
-
-    end function get_elem_interpolation_comm
-    !*****************************************************************************************
+!    !>  This routine returns a recv_t communication structure indicating whether the 
+!    !!  interpolation donor is LOCAL or REMOTE. 
+!    !!
+!    !!  The recv_t contains recv_comm, recv_domain, and recv_element components. If these are 
+!    !!  set, then the interpolation is remote and these indices specify where in the 'recv' 
+!    !!  container to find the solution modes for the interpolation. If these indices are not 
+!    !!  set, then the interpolation is LOCAL and the main interpolation routine can use the 
+!    !!  local element indices to locate the solution modes.
+!    !!  
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   8/16/2016
+!    !!
+!    !!
+!    !-----------------------------------------------------------------------------------------
+!    function get_elem_interpolation_comm(mesh,source_info,source_iface,interpolation_source,idonor) result(recv_info)
+!        type(mesh_t),           intent(in)  :: mesh
+!        type(element_info_t),   intent(in)  :: source_info
+!        integer(ik),            intent(in)  :: source_iface
+!        integer(ik),            intent(in)  :: interpolation_source
+!        integer(ik),            intent(in)  :: idonor
+!
+!
+!        type(recv_t)    :: recv_info                !< This gets set if REMOTE interpolation
+!        integer(ik)     :: ChiID, donor_proc
+!        logical         :: conforming_interpolation, chimera_interpolation, parallel_interpolation
+!
+!
+!        associate( idom => source_info%idomain_l, ielem => source_info%ielement_l, iface => source_iface)
+!
+!        !
+!        ! Initialize recv_info container to null, indicating LOCAL interpolation. 
+!        ! Always the case, if interpolation_source=ME.
+!        !
+!        recv_info = recv_t(0,0,0)
+!
+!
+!
+!        if ( interpolation_source == NEIGHBOR ) then
+!
+!            chimera_interpolation    = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
+!            conforming_interpolation = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
+!
+!
+!            ! Interpolate from conforming NEIGHBOR element
+!            if ( conforming_interpolation ) then
+!
+!                parallel_interpolation   = ( IRANK /= mesh%domain(idom)%faces(ielem,iface)%ineighbor_proc )
+!
+!                if (parallel_interpolation) then
+!                    recv_info%comm    = mesh%domain(idom)%faces(ielem,iface)%recv_comm
+!                    recv_info%domain  = mesh%domain(idom)%faces(ielem,iface)%recv_domain
+!                    recv_info%element = mesh%domain(idom)%faces(ielem,iface)%recv_element
+!                end if
+!
+!
+!
+!            ! Interpolate from CHIMERA donor element
+!            elseif ( chimera_interpolation ) then
+!                ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
+!                donor_proc = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc
+!
+!                parallel_interpolation = (IRANK /= donor_proc)
+!                if (parallel_interpolation) then
+!                     recv_info%comm    = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_comm
+!                     recv_info%domain  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_domain
+!                     recv_info%element = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_element
+!                end if
+!
+!            else
+!                call chidg_signal(FATAL,"get_elem_interpolation_comm: neighbor conforming_interpolation nor chimera_interpolation were detected")
+!            end if
+!
+!
+!        end if
+!
+!        end associate
+!
+!    end function get_elem_interpolation_comm
+!    !*****************************************************************************************
 
 
 

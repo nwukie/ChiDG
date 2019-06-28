@@ -340,22 +340,9 @@ contains
         end if ! have_wd_field .and. wd_file_exists
 
 
-        ! Try to find 'Wall Distance' auxiliary field storage.
-        call write_line('Storing Wall Distance field to Auxiliary field ChiDG Vector:', io_proc=GLOBAL_MASTER)
-        aux_field_index = chidg%data%sdata%get_auxiliary_field_index('Wall Distance : p-Poisson')
-
-
-        ! If no 'Wall Distance' auxiliary field storage was not found, create one.
-        if (aux_field_index == 0) then
-
-            call chidg%data%sdata%add_auxiliary_field('Wall Distance : p-Poisson', wall_distance%data%sdata%q)
-
-        ! If 'Wall Distance' auxiliary field storage was found, copy Wall Distance solution 
-        ! to working ChiDG environment.
-        else
-            chidg%data%sdata%auxiliary_field(aux_field_index) = wall_distance%data%sdata%q
-
-        end if
+        ! Read scalar field 'u' to auxiliary field 'Wall Distance : p-Poisson'
+        call write_line('Reading Wall Distance field from file to Auxiliary field ChiDG Vector:', io_proc=GLOBAL_MASTER)
+        call chidg%read_auxiliary_field(aux_file,field='u',store_as='Wall Distance : p-Poisson')
 
 
     end subroutine wall_distance_driver

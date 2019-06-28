@@ -10,7 +10,7 @@ module type_mesh
     use type_bc_patch,              only: bc_patch_t
     use type_bc_patch_group,        only: bc_patch_group_t
     use type_ivector,               only: ivector_t
-    use type_element_info,          only: element_info_t
+    use type_element_info,          only: element_info_t, element_info
     use type_mpi_request_vector,    only: mpi_request_vector_t
     use mpi_f08,                    only: mpi_isend, mpi_recv, mpi_integer4, mpi_real8, &
                                           mpi_waitall, mpi_request, mpi_status_ignore,  &
@@ -34,7 +34,7 @@ module type_mesh
     type, public :: mesh_t
 
         integer(ik)                         :: ntime_
-        integer(ik)                         :: mesh_dof_start
+        integer(ik)                         :: mesh_dof_start   ! Based on Fortran 1-indexing
 
         ! Local data
         type(domain_t),         allocatable :: domain(:)
@@ -1055,10 +1055,12 @@ contains
 
 
     !>  Return the global indices of all parallel degrees-of-freedom that need
-    !!  accessed
+    !!  accessed on the local process.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   5/11/2019
+    !!
+    !!  Returned indices based on Fortran 1-indexing
     !!
     !!
     !----------------------------------------------------------------------------------
@@ -1066,9 +1068,9 @@ contains
         class(mesh_t),  intent(in)  :: self
 
         integer(ik) :: dof_start, nterms_s, nfields, pelem_ID, idof
-        !integer(ik),    allocatable :: parallel_dofs(:)
 
-        type(ivector_t) :: parallel_dofs
+        type(ivector_t)             :: parallel_dofs_vector
+        integer(ik),    allocatable :: parallel_dofs(:)
 
 
         ! Loop through parallel_elements and accumulate dof indices
@@ -1080,11 +1082,13 @@ contains
 
             ! Store each dof index
             do idof = dof_start, dof_start + (nterms_s*nfields - 1)
-                call parallel_dofs%push_back(idof)
+                call parallel_dofs_vector%push_back(idof)
             end do !idof
 
         end do !pelem_ID
 
+        ! Return integer array
+        parallel_dofs = parallel_dofs_vector%data()
 
     end function get_parallel_dofs
     !**********************************************************************************
@@ -1527,11 +1531,12 @@ contains
                                        ntime, pelem_ID, interpolation_level,        &
                                        idomain_g, ielement_g, coordinate_system,    & 
                                        recv_size_a, recv_size_b, recv_size_c,       &
-                                       face_location(6), element_location(5),       &
+                                       neighbor_location(7), element_location(5),       &
                                        element_data(9), spacedim, inode, dof_start, &
-                                       ineighbor_domain_g, ineighbor_element_g
-        logical :: interior_face, parallel_neighbor
-
+                                       ineighbor_domain_g, ineighbor_element_g,     &
+                                       recv_dof, ChiID, idonor, idonor_domain_g,    &
+                                       idonor_element_g
+        logical :: interior_face, parallel_neighbor, parallel_donor
 
 
         !
@@ -1544,10 +1549,10 @@ contains
                 ! The sending proc sent its neighbor location, which is a face on our local processor 
                 ! here where we will store the incoming ALE data
                 ! face_location = [idomain_g, idomain_l, ielement_g, ielement_l, iface, dof_start]
-                call mpi_recv(face_location, 6, mpi_integer4, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                idom  = face_location(2)
-                ielem = face_location(4)
-                iface = face_location(5)
+                call mpi_recv(neighbor_location, size(neighbor_location), mpi_integer4, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                idom  = neighbor_location(2)
+                ielem = neighbor_location(4)
+                iface = neighbor_location(5)
 
                 recv_size_a = size(self%domain(idom)%faces(ielem,iface)%neighbor_interp_coords_vel)
                 recv_size_b = size(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g)
@@ -1566,10 +1571,10 @@ contains
 
 
 
-
         !
         ! Receive/construct parallel neighbors/chimera donors
         !
+        recv_dof = 1    ! DOF indices are based on Fortran 1-indexing
         do iproc = 1,size(recv_procs)
             do irecv = 1,(self%get_proc_ninterior_neighbors(recv_procs(iproc)) + self%get_proc_nchimera_donors(recv_procs(iproc)))
 
@@ -1638,12 +1643,22 @@ contains
                 ! exist, get an identifier for a new parallel element.
                 !
                 pelem_ID = self%find_parallel_element(idomain_g,ielement_g)
-                if (pelem_ID == NO_ID) pelem_ID = self%new_parallel_element()
+
+                if (pelem_ID == NO_ID) then
+                    pelem_ID = self%new_parallel_element()
+
+                    ! Only update recv_dof for new elements, since we don't want to 
+                    ! modify the access indices for existing elements.
+
+                    ! Update dof access indices for parallel elements on local process
+                    self%parallel_element(pelem_ID)%recv_dof = recv_dof
+
+                    ! Increment recv_dof
+                    recv_dof = recv_dof + (nterms_s*nfields*ntime)
+                end if
 
 
-                !
                 ! Initialize element geometry
-                !
                 select case(coordinate_system)
                     case(CARTESIAN)
                         coord_system = 'Cartesian'
@@ -1654,15 +1669,13 @@ contains
                 end select
 
                 
-                !
                 ! Construct/initialize/reinitialize parallel element
-                !
                 if (.not. self%parallel_element(pelem_ID)%geom_initialized) then
                     call self%parallel_element(pelem_ID)%init_geom(nodes,connectivity,etype,element_location,trim(coord_system))
                 end if
 
                 if (.not. self%parallel_element(pelem_ID)%sol_initialized) then
-                    call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start)
+                    call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start,dof_local_start=NO_ID)
                 end if
 
                 call self%parallel_element(pelem_ID)%set_displacements_velocities(nodes_disp,nodes_vel)
@@ -1671,6 +1684,10 @@ contains
 
             end do !irecv
         end do !iproc
+
+
+
+
 
 
 
@@ -1819,7 +1836,7 @@ contains
 
 
         !
-        ! Initialize interior parallel neighbor element ID
+        ! Initialize interior parallel neighbor element ID and recv_dof
         !
         do idom = 1,self%ndomains()
             do ielem = 1,self%domain(idom)%nelements()
@@ -1828,17 +1845,17 @@ contains
                     interior_face     = (self%domain(idom)%faces(ielem,iface)%ftype == INTERIOR)
                     parallel_neighbor = (self%domain(idom)%faces(ielem,iface)%ineighbor_proc /= IRANK)
 
-                    !
-                    ! For INTERIOR faces that have off-processor neighbors we need to communicate ALE data.
-                    !
+                    ! For INTERIOR faces that have off-processor neighbors we need to find the parallel 
+                    ! element ID in the local parallel element list
                     if ( interior_face .and. parallel_neighbor ) then
 
                         ineighbor_domain_g   = self%domain(idom)%faces(ielem,iface)%ineighbor_domain_g
                         ineighbor_element_g  = self%domain(idom)%faces(ielem,iface)%ineighbor_element_g
-                        pelem_ID = self%find_parallel_element(idomain_g,ielement_g)
+                        pelem_ID = self%find_parallel_element(ineighbor_domain_g,ineighbor_element_g)
                         if (pelem_ID == NO_ID) call chidg_signal(FATAL,'mesh%comm_recv: could not find interior neighbor parallel element.')
 
                         self%domain(idom)%faces(ielem,iface)%ineighbor_pelem_ID = pelem_ID
+                        self%domain(idom)%faces(ielem,iface)%recv_dof           = self%parallel_element(pelem_ID)%recv_dof
 
                     end if
 
@@ -1846,6 +1863,29 @@ contains
             end do !ielem
         end do !idom
 
+
+
+        !
+        ! Initialize chimera parallel neighbor element ID and recv_dof
+        !
+        do idom = 1,self%ndomains()
+            do ChiID = 1,self%domain(idom)%chimera%nreceivers()
+                do idonor = 1,self%domain(idom)%chimera%recv(ChiID)%ndonors()
+
+                    parallel_donor = (self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc /= IRANK)
+                    if (parallel_donor) then
+                        idonor_domain_g  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
+                        idonor_element_g = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
+                        pelem_ID = self%find_parallel_element(idonor_domain_g,idonor_element_g)
+                        if (pelem_ID == NO_ID) call chidg_signal(FATAL,'mesh%comm_recv: could not find overset donor parallel element.')
+
+                        self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%pelem_ID = pelem_ID
+                        self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_dof = self%parallel_element(pelem_ID)%recv_dof
+                    end if
+
+                end do !idonor
+            end do !ChiID
+        end do !idom
 
 
 
@@ -1996,20 +2036,22 @@ contains
 
         type(element_info_t)    :: elem_info
 
-        elem_info = element_info_t(idomain_g    = self%domain(idomain_l)%elems(ielement_l)%idomain_g,    &
-                                   idomain_l    = self%domain(idomain_l)%elems(ielement_l)%idomain_l,    &
-                                   ielement_g   = self%domain(idomain_l)%elems(ielement_l)%ielement_g,   &
-                                   ielement_l   = self%domain(idomain_l)%elems(ielement_l)%ielement_l,   &
-                                   iproc        = self%domain(idomain_l)%elems(ielement_l)%iproc,        &
-                                   pelem_ID     = NO_ID,                                                 &
-                                   eqn_ID       = self%domain(idomain_l)%elems(ielement_l)%eqn_ID,       &
-                                   nfields      = self%domain(idomain_l)%elems(ielement_l)%neqns,        &
-                                   nterms_s     = self%domain(idomain_l)%elems(ielement_l)%nterms_s,     &
-                                   nterms_c     = self%domain(idomain_l)%elems(ielement_l)%nterms_c,     &
-                                   dof_start    = self%domain(idomain_l)%elems(ielement_l)%dof_start,    &
-                                   recv_comm    = self%domain(idomain_l)%elems(ielement_l)%recv_comm,    &
-                                   recv_domain  = self%domain(idomain_l)%elems(ielement_l)%recv_domain,  &
-                                   recv_element = self%domain(idomain_l)%elems(ielement_l)%recv_element)
+        elem_info = element_info(idomain_g       = self%domain(idomain_l)%elems(ielement_l)%idomain_g,       &
+                                 idomain_l       = self%domain(idomain_l)%elems(ielement_l)%idomain_l,       &
+                                 ielement_g      = self%domain(idomain_l)%elems(ielement_l)%ielement_g,      &
+                                 ielement_l      = self%domain(idomain_l)%elems(ielement_l)%ielement_l,      &
+                                 iproc           = self%domain(idomain_l)%elems(ielement_l)%iproc,           &
+                                 pelem_ID        = NO_ID,                                                    &
+                                 eqn_ID          = self%domain(idomain_l)%elems(ielement_l)%eqn_ID,          &
+                                 nfields         = self%domain(idomain_l)%elems(ielement_l)%neqns,           &
+                                 nterms_s        = self%domain(idomain_l)%elems(ielement_l)%nterms_s,        &
+                                 nterms_c        = self%domain(idomain_l)%elems(ielement_l)%nterms_c,        &
+                                 dof_start       = self%domain(idomain_l)%elems(ielement_l)%dof_start,       &
+                                 dof_local_start = self%domain(idomain_l)%elems(ielement_l)%dof_local_start, &
+                                 recv_comm       = self%domain(idomain_l)%elems(ielement_l)%recv_comm,       &
+                                 recv_domain     = self%domain(idomain_l)%elems(ielement_l)%recv_domain,     &
+                                 recv_element    = self%domain(idomain_l)%elems(ielement_l)%recv_element,    &
+                                 recv_dof        = self%domain(idomain_l)%elems(ielement_l)%recv_dof)
 
 
     end function get_element_info

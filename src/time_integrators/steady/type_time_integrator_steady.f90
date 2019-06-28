@@ -52,11 +52,13 @@ contains
         class(time_integrator_steady_t),    intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
 
+!        data%sdata%q = data%sdata%q_in
+
         associate( q => data%sdata%q, q_in => data%sdata%q_in)
-
             q = q_in
-
+            call q%assemble()
         end associate
+
 
     end subroutine initialize_state
     !*******************************************************************************

@@ -8,11 +8,12 @@ module type_chidg_vector
                                           VecAssemblyBegin, VecAssemblyEnd, VecDuplicate, NORM_2,VecGetArrayF90,        &
                                           VecRestoreArrayF90, VecNorm, VecScale, VecWAXPY, VecAXPY, VecReciprocal, VecDestroy,   &
                                           VecScatterCreateToAll, VecScatterBegin, VecScatterEnd, SCATTER_FORWARD,       &
-                                          VecScatterDestroy, VecScatterCopy
-    use petscis,                    only: tIS, ISAllGather
+                                          VecScatterDestroy, VecScatterCopy, VecPointwiseDivide, PETSC_DETERMINE, PETSC_COMM_SELF
+    use petscis,                    only: tIS, ISAllGather, PETSC_NULL_IS, PETSC_COPY_VALUES, ISCopy, ISDuplicate
 
     use type_petsc_vector_wrapper,  only: petsc_vector_wrapper_t
     use type_petsc_scatter_wrapper, only: petsc_scatter_wrapper_t
+    use type_petsc_is_wrapper,      only: petsc_is_wrapper_t
 
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, TWO, ONE, NO_ID, NO_DATA
@@ -47,15 +48,11 @@ module type_chidg_vector
     type, public :: chidg_vector_t
 
         ! PETSC backend
-!        Vec,        pointer :: petsc_vector      => null()
-!        Vec,        pointer :: petsc_vector_recv => null()
-!        VecScatter, pointer :: petsc_scatter     => null()
-!        IS,         pointer :: petsc_is          => null()
-        type(petsc_vector_wrapper_t),   allocatable :: wrapped_petsc_vector
-        type(petsc_vector_wrapper_t),   allocatable :: wrapped_petsc_vector_recv
-        type(petsc_scatter_wrapper_t),  allocatable :: wrapped_petsc_scatter
-
-        logical             :: petsc_needs_assembled = .false.
+        type(petsc_vector_wrapper_t),   allocatable :: wrapped_petsc_vector      ! Primary global parallel vector
+        type(petsc_vector_wrapper_t),   allocatable :: wrapped_petsc_vector_recv ! Local vector to store off-process dofs
+        type(petsc_scatter_wrapper_t),  allocatable :: wrapped_petsc_scatter     ! Scatter context to execute exchange of dofs
+        type(petsc_is_wrapper_t),       allocatable :: wrapped_petsc_is          ! Global indicess of off-process dofs needed locally
+        logical     :: petsc_needs_assembled = .false.
 
 
         ! ChiDG backend
@@ -323,6 +320,7 @@ contains
         call self%recv%init(mesh)   ! determine what data to receive and allocate storage
         call self%send%init_wait()  ! wait on outstanding mpi_requests
 
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
     end subroutine chidg_init_vector
     !******************************************************************************************
@@ -343,7 +341,8 @@ contains
         type(mesh_t),           intent(inout)         :: mesh
         integer(ik),            intent(in)            :: ntime
 
-        integer(ik)     :: ndomains, idom, ielem
+        integer(ik)     :: ndomains, idom, ielem, nparallel_dofs
+        integer(ik), allocatable :: parallel_dof_indices(:)
         PetscErrorCode  :: ierr
         PetscInt        :: nlocal_rows, nglobal_rows
 
@@ -351,7 +350,11 @@ contains
         if (allocated(self%wrapped_petsc_vector))      deallocate(self%wrapped_petsc_vector)
         if (allocated(self%wrapped_petsc_vector_recv)) deallocate(self%wrapped_petsc_vector_recv)
         if (allocated(self%wrapped_petsc_scatter))     deallocate(self%wrapped_petsc_scatter)
-        allocate(self%wrapped_petsc_vector, self%wrapped_petsc_vector_recv, self%wrapped_petsc_scatter, stat=ierr)
+        if (allocated(self%wrapped_petsc_is))          deallocate(self%wrapped_petsc_is)
+        allocate(self%wrapped_petsc_vector,      &
+                 self%wrapped_petsc_vector_recv, &
+                 self%wrapped_petsc_scatter,     &
+                 self%wrapped_petsc_is, stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ! Set ntime_ for the chidg_vector
@@ -404,12 +407,50 @@ contains
         !
         !---------------------------------------------------------------------------
 
-        ! Initialize parallel scatter to all
-        call VecScatterCreateToAll(self%wrapped_petsc_vector%petsc_vector, self%wrapped_petsc_scatter%petsc_scatter, self%wrapped_petsc_vector_recv%petsc_vector, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecScatterCreateToAll.')
+
+        ! Get parallel communication indices
+        parallel_dof_indices = mesh%get_parallel_dofs()
+
+        ! DOF indices are Fortran 1-based. Convert to C 0-based for passing to ISCreateGeneral 
+        parallel_dof_indices = parallel_dof_indices - 1
+
+
+        !-------------- SET UP LOCAL SEQUENTIAL VECTOR FOR PARALLEL RECEIVE -----------------
+        ! Create vector object
+        call VecCreate(PETSC_COMM_SELF, self%wrapped_petsc_vector_recv%petsc_vector, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init_vector: error creating PETSc vector for parallel receive.')
+
+        ! Set vector type
+        call VecSetType(self%wrapped_petsc_vector_recv%petsc_vector, 'seq', ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init_vector: error calling VecSetType for parallel receive.')
+
+        ! Set vector size
+        call VecSetSizes(self%wrapped_petsc_vector_recv%petsc_vector,size(parallel_dof_indices),PETSC_DETERMINE,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecSetSizes.')
+
+        ! Set up vector
+        call VecSetUp(self%wrapped_petsc_vector_recv%petsc_vector,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error calling VecSetUp.')
+        !---------------- FINISHED SETTING UP LOCAL SEQUENTIAL VECTOR --------------------
+
+
+
+
+        ! Create needed index set
+        call ISCreateGeneral(ChiDG_COMM%mpi_val, size(parallel_dof_indices), parallel_dof_indices, PETSC_COPY_VALUES, self%wrapped_petsc_is%petsc_is, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error creating petsc index set with ISCreateGeneral.')
+
+
+        ! Create scatter context
+        call VecScatterCreate(self%wrapped_petsc_vector%petsc_vector, self%wrapped_petsc_is%petsc_is, self%wrapped_petsc_vector_recv%petsc_vector, PETSC_NULL_IS, self%wrapped_petsc_scatter%petsc_scatter, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init: error creating petsc scatter context with VecScatterCreate.')
+
 
         ! Clear vector storage
         call self%clear()
+
+        ! Assemble
+        call self%assemble()
 
 
     end subroutine petsc_init_vector
@@ -567,16 +608,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -617,8 +648,6 @@ contains
 
 
 
-
-
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -640,6 +669,8 @@ contains
 
     end subroutine chidg_get_field
     !***********************************************************************************
+
+
 
 
     !>
@@ -667,11 +698,12 @@ contains
 
 
 
-
-    !>
+    !>  Return field from petsc vector
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   1/30/2019
+    !!
+    !!  TODO: Account for ntime
     !!
     !-----------------------------------------------------------------------------------
     subroutine petsc_get_field(self,element_info,ifield,itime,values)
@@ -689,28 +721,53 @@ contains
         ! Get petsc array pointer
         if (allocated(self%wrapped_petsc_vector)) then
             if (self%petsc_needs_assembled) call self%assemble()
-
-            !call VecGetArrayF90(self%petsc_vector,array,ierr)
-            call VecGetArrayF90(self%wrapped_petsc_vector_recv%petsc_vector,array,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
         else
             call chidg_signal(FATAL,'chidg_vector%petsc_get_field: petsc vector not created.')
         end if
 
-        ! Compute start and end indices for accessing modes of a variable
-        istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
-        iend = istart + (element_info%nterms_s-1)
 
-        ! Access modes
-        values = array(istart:iend)
+        ! If local access
+        if (element_info%iproc == IRANK) then
 
-        ! Restore petsc array
-        call VecRestoreArrayF90(self%wrapped_petsc_vector_recv%petsc_vector,array,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
+            ! Get access to local data array
+            call VecGetArrayF90(self%wrapped_petsc_vector%petsc_vector,array,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
 
+            ! Compute start and end indices for accessing modes of a variable
+            istart = element_info%dof_local_start + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
+            iend = istart + (element_info%nterms_s-1)
+
+            ! Access modes
+            values = array(istart:iend)
+
+            ! Restore petsc array
+            call VecRestoreArrayF90(self%wrapped_petsc_vector%petsc_vector,array,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
+
+
+        ! If parallel access
+        else
+
+            ! Get access to data array in receive vector where off-processor data is stored
+            call VecGetArrayF90(self%wrapped_petsc_vector_recv%petsc_vector,array,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
+
+            ! Compute start and end indices for accessing modes of a variable
+            istart = element_info%recv_dof + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
+            iend = istart + (element_info%nterms_s-1)
+
+            ! Access modes
+            values = array(istart:iend)
+
+            ! Restore petsc array
+            call VecRestoreArrayF90(self%wrapped_petsc_vector_recv%petsc_vector,array,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
+
+        end if
 
     end subroutine petsc_get_field
     !***********************************************************************************
+
 
 
 
@@ -733,27 +790,55 @@ contains
         PetscScalar, pointer :: array(:) => null()
         PetscErrorCode       :: ierr
 
+
+
         ! Get petsc array pointer
         if (allocated(self%wrapped_petsc_vector)) then
             if (self%petsc_needs_assembled) call self%assemble()
-
-            !call VecGetArrayF90(self%petsc_vector,array,ierr)
-            call VecGetArrayF90(self%wrapped_petsc_vector_recv%petsc_vector,array,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_fields: error calling VecGetArrayF90.')
         else
-            call chidg_signal(FATAL,'chidg_vector%petsc_get_fields: petsc vector not created.')
+            call chidg_signal(FATAL,'chidg_vector%petsc_get_field: petsc vector not created.')
         end if
 
-        ! Compute start and end indices for accessing modes of a variable
-        istart = element_info%dof_start
-        iend   = istart + (element_info%nfields*element_info%nterms_s) - 1
 
-        ! Access modes
-        values = array(istart:iend)
+        ! If local access
+        if (element_info%iproc == IRANK) then
 
-        ! Restore petsc array
-        call VecRestoreArrayF90(self%wrapped_petsc_vector_recv%petsc_vector,array,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_fields: error calling VecGetArrayF90.')
+            ! Get access to local data array
+            call VecGetArrayF90(self%wrapped_petsc_vector%petsc_vector,array,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
+
+            ! Compute start and end indices for accessing modes of a variable
+            istart = element_info%dof_local_start
+            iend = istart + (element_info%nfields*element_info%nterms_s) - 1
+
+            ! Access modes
+            values = array(istart:iend)
+
+            ! Restore petsc array
+            call VecRestoreArrayF90(self%wrapped_petsc_vector%petsc_vector,array,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
+
+
+
+        ! If parallel access
+        else
+
+            ! Get access to data array in receive vector where off-processor data is stored
+            call VecGetArrayF90(self%wrapped_petsc_vector_recv%petsc_vector,array,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
+
+            ! Compute start and end indices for accessing modes of a variable
+            istart = element_info%recv_dof
+            iend = istart + (element_info%nfields*element_info%nterms_s) - 1
+
+            ! Access modes
+            values = array(istart:iend)
+
+            ! Restore petsc array
+            call VecRestoreArrayF90(self%wrapped_petsc_vector_recv%petsc_vector,array,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
+
+        end if
 
 
     end subroutine petsc_get_fields
@@ -772,11 +857,15 @@ contains
 
 
 
-
-
-
-
-
+    !>  Return dofs for corresponding to (ifield,itime) on element_info.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/25/2019
+    !!
+    !!  Abstract interface was having trouble returning a function value
+    !!  so it is indirected here to avoid run-time segmentation fault.
+    !!
+    !----------------------------------------------------------------------------------
     function get_field(self,element_info,ifield,itime) result(values)
         class(chidg_vector_t),  intent(inout)   :: self
         type(element_info_t),   intent(in)      :: element_info
@@ -788,8 +877,18 @@ contains
         call self%select_get_field(element_info,ifield,itime,values)
 
     end function get_field
+    !**********************************************************************************
 
 
+    !>  Return all dofs on element_info.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/25/2019
+    !!
+    !!  Abstract interface was having trouble returning a function value
+    !!  so it is indirected here to avoid run-time segmentation fault.
+    !!
+    !----------------------------------------------------------------------------------
     function get_fields(self,element_info) result(values)
         class(chidg_vector_t),  intent(inout)   :: self
         type(element_info_t),   intent(in)      :: element_info
@@ -799,6 +898,7 @@ contains
         call self%select_get_fields(element_info,values)
 
     end function get_fields
+    !**********************************************************************************
 
 
 
@@ -919,6 +1019,9 @@ contains
         call VecSet(self%wrapped_petsc_vector%petsc_vector,ZERO,perr)
         if (perr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_clear_vector: error calling VecSet.')
 
+        call VecSet(self%wrapped_petsc_vector_recv%petsc_vector,ZERO,perr)
+        if (perr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_clear_vector: error calling VecSet.')
+
         ! Indicate needs assembled
         self%petsc_needs_assembled = .true.
 
@@ -973,6 +1076,8 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assemble_vector: error calling VecScatterBegin.')
         call VecScatterEnd(self%wrapped_petsc_scatter%petsc_scatter, self%wrapped_petsc_vector%petsc_vector, self%wrapped_petsc_vector_recv%petsc_vector, INSERT_VALUES, SCATTER_FORWARD, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assemble_vector: error calling VecScatterBegin.')
+
+
 
         ! Indicate needs assembled
         self%petsc_needs_assembled = .false.
@@ -1361,6 +1466,7 @@ contains
         if (allocated(self%wrapped_petsc_vector))      deallocate(self%wrapped_petsc_vector)
         if (allocated(self%wrapped_petsc_vector_recv)) deallocate(self%wrapped_petsc_vector_recv)
         if (allocated(self%wrapped_petsc_scatter))     deallocate(self%wrapped_petsc_scatter)
+        if (allocated(self%wrapped_petsc_is))          deallocate(self%wrapped_petsc_is)
 
     end subroutine release
     !****************************************************************************************
@@ -1703,7 +1809,7 @@ contains
         type(chidg_vector_t),   intent(in)  :: left
         real(rk),               intent(in)  :: right
 
-        type(chidg_vector_t)    :: res
+        type(chidg_vector_t)    :: res, tmp_right
         integer(ik)             :: idom, ndom
         PetscErrorCode          :: perr
 
@@ -1714,9 +1820,10 @@ contains
             ! Copy
             call left%duplicate(res)
 
-            ! Scale
-            call VecScale(res%wrapped_petsc_vector%petsc_vector,ONE/right,perr)
-            if (perr /= 0) call chidg_signal(FATAL,'chidg_vector%div_chidg_vector_real: error calling VecScale.')
+            ! Divide
+            call left%duplicate(tmp_right)
+            call VecSet(tmp_right%wrapped_petsc_vector%petsc_vector, right, perr)
+            call VecPointwiseDivide(res%wrapped_petsc_vector%petsc_vector,left%wrapped_petsc_vector%petsc_vector,tmp_right%wrapped_petsc_vector%petsc_vector,perr)
 
             ! Trigger assembly if necessary
             res%petsc_needs_assembled = .true.
@@ -1908,26 +2015,66 @@ contains
         ! Check if vector being assigned has been initialized
         if (allocated(vec_in%wrapped_petsc_vector)) then
 
-            ! If vec_out already allocated, storage should already exist. So, only copy data to existing storage
-            if (.not. allocated(vec_out%wrapped_petsc_vector)) then
+            !! If vec_out already allocated, storage should already exist. So, only copy data to existing storage
+            ! Finalize vector being assign so we know memory is released. Might not be able to trust 
+            ! the compiler in this case. Then we can reallocate.
+            if (allocated(vec_out%wrapped_petsc_vector)) call vec_out%release()
 
-                ! Allocate petsc object wrappers
-                allocate(vec_out%wrapped_petsc_vector, vec_out%wrapped_petsc_vector_recv, vec_out%wrapped_petsc_scatter, stat=ierr)
-                if (ierr /= 0) call AllocationError
+            ! Allocate petsc object wrappers
+            allocate(vec_out%wrapped_petsc_vector,      &
+                     vec_out%wrapped_petsc_vector_recv, &
+                     vec_out%wrapped_petsc_scatter,     &
+                     vec_out%wrapped_petsc_is,          &
+                     stat=ierr)
+            if (ierr /= 0) call AllocationError
 
-                call VecDuplicate(vec_in%wrapped_petsc_vector%petsc_vector,vec_out%wrapped_petsc_vector%petsc_vector,ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
-                call VecDuplicate(vec_in%wrapped_petsc_vector_recv%petsc_vector,vec_out%wrapped_petsc_vector_recv%petsc_vector,ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
+            ! Duplicate data structures
+            call VecDuplicate(vec_in%wrapped_petsc_vector%petsc_vector,vec_out%wrapped_petsc_vector%petsc_vector,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
+            call VecDuplicate(vec_in%wrapped_petsc_vector_recv%petsc_vector,vec_out%wrapped_petsc_vector_recv%petsc_vector,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
+            call ISDuplicate(vec_in%wrapped_petsc_is%petsc_is,vec_out%wrapped_petsc_is%petsc_is,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in ISDuplicate.')
 
-            end if
-
+            ! Copy memory
             call VecCopy(vec_in%wrapped_petsc_vector%petsc_vector,vec_out%wrapped_petsc_vector%petsc_vector,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecCopy.')
             call VecCopy(vec_in%wrapped_petsc_vector_recv%petsc_vector,vec_out%wrapped_petsc_vector_recv%petsc_vector,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecCopy.')
             call VecScatterCopy(vec_in%wrapped_petsc_scatter%petsc_scatter,vec_out%wrapped_petsc_scatter%petsc_scatter,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecScatterCopy.')
+            call ISCopy(vec_in%wrapped_petsc_is%petsc_is,vec_out%wrapped_petsc_is%petsc_is,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in ISCopy.')
+
+
+!            ! If vec_out already allocated, storage should already exist. So, only copy data to existing storage
+!            if (.not. allocated(vec_out%wrapped_petsc_vector)) then
+!
+!                ! Allocate petsc object wrappers
+!                allocate(vec_out%wrapped_petsc_vector,      &
+!                         vec_out%wrapped_petsc_vector_recv, &
+!                         vec_out%wrapped_petsc_scatter,     &
+!                         vec_out%wrapped_petsc_is,          &
+!                         stat=ierr)
+!                if (ierr /= 0) call AllocationError
+!
+!                call VecDuplicate(vec_in%wrapped_petsc_vector%petsc_vector,vec_out%wrapped_petsc_vector%petsc_vector,ierr)
+!                if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
+!                call VecDuplicate(vec_in%wrapped_petsc_vector_recv%petsc_vector,vec_out%wrapped_petsc_vector_recv%petsc_vector,ierr)
+!                if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
+!                call ISDuplicate(vec_in%wrapped_petsc_is%petsc_is,vec_out%wrapped_petsc_is%petsc_is,ierr)
+!                if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in ISDuplicate.')
+!
+!            end if
+!
+!            call VecCopy(vec_in%wrapped_petsc_vector%petsc_vector,vec_out%wrapped_petsc_vector%petsc_vector,ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecCopy.')
+!            call VecCopy(vec_in%wrapped_petsc_vector_recv%petsc_vector,vec_out%wrapped_petsc_vector_recv%petsc_vector,ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecCopy.')
+!            call VecScatterCopy(vec_in%wrapped_petsc_scatter%petsc_scatter,vec_out%wrapped_petsc_scatter%petsc_scatter,ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecScatterCopy.')
+!            call ISCopy(vec_in%wrapped_petsc_is%petsc_is,vec_out%wrapped_petsc_is%petsc_is,ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in ISCopy.')
 
 
             vec_out%petsc_needs_assembled = .true.
@@ -1943,7 +2090,8 @@ contains
 
     subroutine assign_vector_public(vec_out,vec_in)
         class(chidg_vector_t),  intent(inout)   :: vec_out
-        class(chidg_vector_t),  intent(in), target :: vec_in
+        !class(chidg_vector_t),  intent(in), target :: vec_in
+        class(chidg_vector_t),  intent(in)      :: vec_in
 
         call vec_in%assign_vector(vec_out,vec_in)
 
@@ -2001,13 +2149,19 @@ contains
             ! Duplicate petsc storage, if it doesn't already exist in vec_out
             if (.not. allocated(vec_out%wrapped_petsc_vector)) then
                 ! Allocate petsc object pointers
-                allocate(vec_out%wrapped_petsc_vector, vec_out%wrapped_petsc_vector_recv, vec_out%wrapped_petsc_scatter, stat=ierr)
+                allocate(vec_out%wrapped_petsc_vector,      &
+                         vec_out%wrapped_petsc_vector_recv, &
+                         vec_out%wrapped_petsc_scatter,     &
+                         vec_out%wrapped_petsc_is,          &
+                         stat=ierr)
                 if (ierr /= 0) call AllocationError
 
                 call VecDuplicate(self%wrapped_petsc_vector%petsc_vector,vec_out%wrapped_petsc_vector%petsc_vector,ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
                 call VecDuplicate(self%wrapped_petsc_vector_recv%petsc_vector,vec_out%wrapped_petsc_vector_recv%petsc_vector,ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecDuplicate.')
+                call ISDuplicate(self%wrapped_petsc_is%petsc_is,vec_out%wrapped_petsc_is%petsc_is,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in ISDuplicate.')
             end if
 
             ! Copy data from self to vec_out 
@@ -2017,6 +2171,8 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecCopy.')
             call VecScatterCopy(self%wrapped_petsc_scatter%petsc_scatter,vec_out%wrapped_petsc_scatter%petsc_scatter,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in VecScatterCopy.')
+            call ISCopy(self%wrapped_petsc_is%petsc_is,vec_out%wrapped_petsc_is%petsc_is,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_assign_vector: error in ISCopy.')
 
             vec_out%petsc_needs_assembled = .true.
 
@@ -2056,9 +2212,7 @@ contains
         PetscErrorCode :: ierr
 
         if (allocated(self%wrapped_petsc_vector)) then
-
             call self%release()
-
         end if
 
     end subroutine destroy

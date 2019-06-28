@@ -1,12 +1,7 @@
 module type_solverdata
 #include <messenger.h>
-!#include "petsc/finclude/petscvec.h"
-!#include "petsc/finclude/petscmat.h"
-!    use petscvec,                           only: VecSet
-!    use petscmat,                           only: MatMult
-!
     use mod_kinds,                          only: rk,ik
-    use mod_constants,                      only: NFACES, ZERO
+    use mod_constants,                      only: NFACES, ZERO, NO_ID
     use mod_string,                         only: string_t
     use mod_io,                             only: backend
     use type_chidg_vector,                  only: chidg_vector_t, chidg_vector
@@ -89,9 +84,10 @@ module type_solverdata
         generic, public     :: init => init_base
         procedure, private  :: init_base
 
-        procedure           :: add_auxiliary_field
 
         procedure           :: nauxiliary_fields
+        procedure           :: add_auxiliary_field
+        procedure           :: new_auxiliary_field
         procedure           :: get_auxiliary_field_index
         procedure           :: get_auxiliary_field_name
 
@@ -138,7 +134,7 @@ contains
         type(mesh_t),                       intent(inout)   :: mesh
         type(equationset_function_data_t),  intent(in)      :: function_data(:)
         
-        integer(ik) :: ierr, ndom, maxelems, idom
+        integer(ik) :: ierr, ndom, maxelems, idom, iaux, aux_ID
         logical     :: increase_maxelems = .false.
 
         ! Create vector/matrix containers
@@ -164,6 +160,13 @@ contains
         call self%lhs%init_recv(self%rhs)
 
 
+        ! By default, create 5 auxiliary field vectors. Each initialized with 'empty' field string.
+        do iaux = 1,5
+            aux_ID = self%new_auxiliary_field()
+            call self%auxiliary_field(aux_ID)%init(mesh,mesh%ntime_)
+        end do
+
+
         ! Find maximum number of elements in any domain
         ndom = mesh%ndomains()
         maxelems = 0
@@ -173,6 +176,7 @@ contains
                 maxelems = mesh%domain(idom)%nelem
             end if
         end do
+
 
 
         ! Allocate timestep storage
@@ -218,53 +222,86 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_auxiliary_field(self,fieldname,auxiliary_vector)
+    function add_auxiliary_field(self,fieldname,auxiliary_vector) result(aux_ID)
         class(solverdata_t),    intent(inout)           :: self
         character(*),           intent(in)              :: fieldname
         type(chidg_vector_t),   intent(in), optional    :: auxiliary_vector
 
-        integer(ik) :: naux_vectors, ierr, i
+        integer(ik) :: aux_ID
+
+        ! Try and find 'empty' auxiliary vector
+        aux_ID = self%get_auxiliary_field_index('empty')
+        if (aux_ID == NO_ID) aux_ID = self%new_auxiliary_field()
+
+        ! Set field name
+        self%auxiliary_field_name(aux_ID) = string_t(trim(fieldname))
+
+        ! Store incoming vector if present
+        if (present(auxiliary_vector)) self%auxiliary_field(aux_ID) = auxiliary_vector
+
+    end function add_auxiliary_field
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Allocate storage for a new auxiliary vector. Return index of new vector 
+    !!  in self%auxiliary_vectors(:)
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/24/2019
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    function new_auxiliary_field(self) result(aux_ID)
+        class(solverdata_t),    intent(inout)   :: self
+
+        integer(ik) :: naux_vectors, ierr, aux_ID, iaux
 
         type(string_t),         allocatable :: temp_names(:)
         type(chidg_vector_t),   allocatable :: temp_vectors(:)
 
-
-        ! Resize array storage
+        ! Get new size for self%auxiliary_field(:)
         if (allocated(self%auxiliary_field)) then
             naux_vectors = size(self%auxiliary_field) + 1
         else
             naux_vectors = 1
         end if
+        ! New auxiliary ID is last entry be default.
+        aux_ID = naux_vectors
 
-        
+
+        ! Allocate temp storage for new vectors and names 
         allocate(temp_names(naux_vectors), &
                  temp_vectors(naux_vectors), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
+        do iaux = 1,size(temp_vectors)
+            temp_vectors(iaux) = chidg_vector(trim(backend))
+        end do
+
 
         ! Copy previously added auxiliary fields to new array
         if (naux_vectors > 1) then
             temp_names(1:size(self%auxiliary_field_name)) = self%auxiliary_field_name(1:size(self%auxiliary_field_name))
-            temp_vectors(1:size(self%auxiliary_field))    = self%auxiliary_field(1:size(self%auxiliary_field))
+
+            ! TODO: Not working correctly with petsc, maybe due to elemental assignment not defined?
+            !temp_vectors(1:size(self%auxiliary_field))    = self%auxiliary_field(1:size(self%auxiliary_field))
+            ! Fix:
+            do iaux = 1,size(self%auxiliary_field)
+                temp_vectors(iaux) = self%auxiliary_field(iaux)
+            end do
         end if
 
 
-
-        ! Set field name
-        temp_names(naux_vectors) = string_t(trim(fieldname))
-
-
-        ! Release current storate
-        !if (allocated(self%auxiliary_field)) then
-        !    do i = 1,size(self%auxiliary_field)
-        !        call self%auxiliary_field(i)%release()
-        !    end do
-        !    deallocate(self%auxiliary_field)
-        !end if
-        ! Reallocate array
-        !allocate(self%auxiliary_field(naux_vectors), stat=ierr)
-        !if (ierr /= 0) call AllocationError
+        ! Set field name: default = 'empty'
+        temp_names(aux_ID) = string_t('empty')
+        temp_vectors(aux_ID) = chidg_vector(trim(backend))
 
 
         ! Move resized temp allocation back to solverdata_t container.
@@ -272,22 +309,8 @@ contains
         call move_alloc(temp_vectors,self%auxiliary_field)
 
 
-
-        !! Copy temp to permanent
-        !do i = 1,naux_vectors
-        !    associate( aux => self%auxiliary_field(i), tmp => temp_vectors(i))
-        !        aux = tmp
-        !    end associate
-        !end do
-
-
-
-        ! Store incoming vector if present
-        if (present(auxiliary_vector)) self%auxiliary_field(naux_vectors) = auxiliary_vector
-
-    end subroutine add_auxiliary_field
-    !*****************************************************************************************
-
+    end function new_auxiliary_field
+    !******************************************************************************************
 
 
 
@@ -314,24 +337,17 @@ contains
 
         integer(ik)                 :: field_index, ifield
         
-
-        !
         ! Loop through names to try and find field
-        !
         if (allocated(self%auxiliary_field_name)) then
-
-            field_index = 0
+            field_index = NO_ID
             do ifield = 1,size(self%auxiliary_field_name)
                 if (self%auxiliary_field_name(ifield)%get() == trim(fieldname)) then
                     field_index = ifield
                     exit
                 end if
             end do
-
         else
-
-            field_index = 0
-
+            field_index = NO_ID
         end if
 
 

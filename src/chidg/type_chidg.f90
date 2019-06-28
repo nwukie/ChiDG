@@ -126,6 +126,7 @@ module type_chidg
         procedure       :: write_mesh
         procedure       :: read_fields
         procedure       :: write_fields
+        procedure       :: read_auxiliary_field
         procedure       :: produce_visualization
 
     end type chidg_t
@@ -986,8 +987,8 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine read_fields(self,file_name)
-        class(chidg_t),     intent(inout)   :: self
-        character(*),       intent(in)      :: file_name
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: file_name
 
         call write_line(' ',                            ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line(' Reading solution... ',        ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -1003,6 +1004,36 @@ contains
     !*****************************************************************************************
 
 
+
+
+
+
+    !>  Read fields from file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  solutionfile    String containing a solution file name, including extension.
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine read_auxiliary_field(self,file_name,field,store_as)
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: file_name
+        character(*),       intent(in)              :: field
+        character(*),       intent(in)              :: store_as
+
+        call write_line(' ',                            ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line(' Reading solution... ',        ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('   reading from: ', file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
+
+        ! Read solution from hdf file
+        call read_auxiliary_field_hdf(file_name,self%data,field,store_as)
+
+        call write_line('Done reading solution.', io_proc=GLOBAL_MASTER)
+        call write_line(' ', ltrim=.false.,       io_proc=GLOBAL_MASTER)
+
+    end subroutine read_auxiliary_field
+    !*****************************************************************************************
 
 
 

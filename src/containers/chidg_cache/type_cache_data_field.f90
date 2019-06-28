@@ -168,7 +168,6 @@ contains
         end if
 
 
-
         !
         ! Re/Allocate 'value' component
         !

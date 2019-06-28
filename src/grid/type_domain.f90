@@ -5,7 +5,7 @@ module type_domain
                                           ORPHAN, INTERIOR, BOUNDARY, CHIMERA, TWO_DIM, &
                                           THREE_DIM, NO_NEIGHBOR_FOUND, NEIGHBOR_FOUND, &
                                           NO_PROC, NFACES, ZERO, NO_MM_ASSIGNED,        &
-                                          MAX_ELEMENTS_PER_NODE, NO_ELEMENT
+                                          MAX_ELEMENTS_PER_NODE, NO_ELEMENT, NO_ID
     use mod_grid,                   only: FACE_CORNERS
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use mpi_f08
@@ -57,7 +57,8 @@ module type_domain
         !
         integer(ik)                     :: idomain_g
         integer(ik)                     :: idomain_l
-        integer(ik)                     :: domain_dof_start
+        integer(ik)                     :: domain_dof_start         ! Based on Fortran 1-indexing
+        integer(ik)                     :: domain_dof_local_start   ! Based on Fortran 1-indexing
 
         integer(ik)                     :: neqns       = 0     ! N-equations being solved
         integer(ik)                     :: nterms_s    = 0     ! N-terms in solution expansion
@@ -131,6 +132,8 @@ module type_domain
 
         procedure,  public  :: get_dof_start
         procedure,  public  :: get_dof_end
+        procedure,  public  :: get_dof_local_start
+        procedure,  public  :: get_dof_local_end
 
         final               :: destructor
 
@@ -301,7 +304,7 @@ contains
     !!  @date   11/9/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_sol(self,interpolation,level,nterms_s,neqns,ntime,domain_dof_start)
+    subroutine init_sol(self,interpolation,level,nterms_s,neqns,ntime,domain_dof_start,domain_dof_local_start)
         class(domain_t),    intent(inout)   :: self
         character(*),       intent(in)      :: interpolation
         integer(ik),        intent(in)      :: level
@@ -309,14 +312,16 @@ contains
         integer(ik),        intent(in)      :: neqns
         integer(ik),        intent(in)      :: ntime
         integer(ik),        intent(in)      :: domain_dof_start
+        integer(ik),        intent(in)      :: domain_dof_local_start
 
         !
         ! Store number of equations and number of terms in solution expansion
         !
-        self%neqns            = neqns
-        self%nterms_s         = nterms_s
-        self%ntime            = ntime
-        self%domain_dof_start = domain_dof_start
+        self%neqns                  = neqns
+        self%nterms_s               = nterms_s
+        self%ntime                  = ntime
+        self%domain_dof_start       = domain_dof_start
+        self%domain_dof_local_start = domain_dof_local_start
 
         !
         ! Call numerics initialization for elements and faces
@@ -505,7 +510,7 @@ contains
         integer(ik),        intent(in)      :: ntime
         integer(ik)                         :: ielem
 
-        integer(ik) :: dof_start
+        integer(ik) :: dof_start, dof_local_start
 
         !
         ! Store number of equations and number of terms in the solution expansion
@@ -521,13 +526,14 @@ contains
         do ielem = 1,self%nelem
             ! Compute dof starting index
             if (ielem == 1) then
-                dof_start = self%domain_dof_start
+                dof_start       = self%domain_dof_start
+                dof_local_start = self%domain_dof_local_start
             else
-                !dof_start = self%elems(ielem-1)%dof_start + 1
-                dof_start = self%elems(ielem-1)%dof_start + nterms_s*neqns
+                dof_start       = self%elems(ielem-1)%dof_start       + nterms_s*neqns
+                dof_local_start = self%elems(ielem-1)%dof_local_start + nterms_s*neqns
             end if
 
-            call self%elems(ielem)%init_sol(interpolation,level,self%nterms_s,self%neqns,ntime,dof_start)
+            call self%elems(ielem)%init_sol(interpolation,level,self%nterms_s,self%neqns,ntime,dof_start,dof_local_start)
         end do
 
 
@@ -647,9 +653,9 @@ contains
                                    ineighbor_element_g, ineighbor_element_l,            &
                                    ineighbor_face,      ineighbor_proc,                 &
                                    ineighbor_neqns,     ineighbor_nterms_s,             &
-                                   ineighbor_dof_start,                                 &
+                                   ineighbor_dof_start, ineighbor_dof_local_start,      &
                                    neighbor_status, idomain_g, idomain_l, ielement_g,   &
-                                   ielement_l, nterms_s, neqns, dof_start
+                                   ielement_l, nterms_s, neqns, dof_start, dof_local_start
 
         logical                 :: boundary_face = .false.
 
@@ -701,10 +707,11 @@ contains
 
                     if ( neighbor_status == NEIGHBOR_FOUND ) then
 
-                        ftype               = INTERIOR
-                        ineighbor_neqns     = self%elems(ineighbor_element_l)%neqns
-                        ineighbor_nterms_s  = self%elems(ineighbor_element_l)%nterms_s
-                        ineighbor_dof_start = self%elems(ineighbor_element_l)%dof_start
+                        ftype                     = INTERIOR
+                        ineighbor_neqns           = self%elems(ineighbor_element_l)%neqns
+                        ineighbor_nterms_s        = self%elems(ineighbor_element_l)%nterms_s
+                        ineighbor_dof_start       = self%elems(ineighbor_element_l)%dof_start
+                        ineighbor_dof_local_start = self%elems(ineighbor_element_l)%dof_local_start
 
 
                     else
@@ -712,16 +719,16 @@ contains
                         ! ftype should be processed later; either by a boundary conditions (ftype=1), 
                         ! or a chimera boundary (ftype = 2)
                         ftype = ORPHAN
-                        ineighbor_domain_g  = 0
-                        ineighbor_domain_l  = 0
-                        ineighbor_element_g = 0
-                        ineighbor_element_l = 0
-                        ineighbor_face      = 0
-                        ineighbor_neqns     = 0
-                        ineighbor_nterms_s  = 0
-                        ineighbor_dof_start = 0
-                        ineighbor_proc      = NO_PROC
-                        ineighbor_dof_start = 0
+                        ineighbor_domain_g        = 0
+                        ineighbor_domain_l        = 0
+                        ineighbor_element_g       = 0
+                        ineighbor_element_l       = 0
+                        ineighbor_face            = 0
+                        ineighbor_neqns           = 0
+                        ineighbor_nterms_s        = 0
+                        ineighbor_dof_start       = NO_ID
+                        ineighbor_dof_local_start = NO_ID
+                        ineighbor_proc            = NO_PROC
 
                     end if
 
@@ -729,11 +736,11 @@ contains
                     !
                     ! Call face neighbor initialization routine
                     !
-                    call self%faces(ielem,iface)%set_neighbor(ftype,ineighbor_domain_g, ineighbor_domain_l,     &
-                                                                    ineighbor_element_g,ineighbor_element_l,    &
-                                                                    ineighbor_face,     ineighbor_neqns,        &
-                                                                    ineighbor_nterms_s, ineighbor_proc,         &
-                                                                    ineighbor_dof_start)
+                    call self%faces(ielem,iface)%set_neighbor(ftype,ineighbor_domain_g,  ineighbor_domain_l,     &
+                                                                    ineighbor_element_g, ineighbor_element_l,    &
+                                                                    ineighbor_face,      ineighbor_neqns,        &
+                                                                    ineighbor_nterms_s,  ineighbor_proc,         &
+                                                                    ineighbor_dof_start, ineighbor_dof_local_start)
 
                     !
                     ! Also, initialize neighbor face at the same time so we don't
@@ -742,17 +749,19 @@ contains
                     ! Only can initialize opposite neighbor if opposite element is on-proc.
                     !
                     if ( (neighbor_status == NEIGHBOR_FOUND) .and. (ineighbor_proc == IRANK) ) then
-                        idomain_g  = self%elems(ielem)%idomain_g
-                        idomain_l  = self%elems(ielem)%idomain_l
-                        ielement_g = self%elems(ielem)%ielement_g
-                        ielement_l = self%elems(ielem)%ielement_l
-                        neqns      = self%elems(ielem)%neqns
-                        nterms_s   = self%elems(ielem)%nterms_s
-                        dof_start  = self%elems(ielem)%dof_start
+                        idomain_g       = self%elems(ielem)%idomain_g
+                        idomain_l       = self%elems(ielem)%idomain_l
+                        ielement_g      = self%elems(ielem)%ielement_g
+                        ielement_l      = self%elems(ielem)%ielement_l
+                        neqns           = self%elems(ielem)%neqns
+                        nterms_s        = self%elems(ielem)%nterms_s
+                        dof_start       = self%elems(ielem)%dof_start
+                        dof_local_start = self%elems(ielem)%dof_local_start
                         call self%faces(ineighbor_element_l,ineighbor_face)%set_neighbor(ftype,idomain_g,  idomain_l,   &
                                                                                                ielement_g, ielement_l,  &
                                                                                                iface,      neqns,       &
-                                                                                               nterms_s,   IRANK, dof_start)
+                                                                                               nterms_s,   IRANK,       &
+                                                                                               dof_start,  dof_local_start)
                     end if
 
                 end if
@@ -797,7 +806,8 @@ contains
                                    ineighbor_domain_g,  ineighbor_domain_l,             &
                                    ineighbor_element_g, ineighbor_element_l,            &
                                    ineighbor_face,      ineighbor_proc,                 &
-                                   ineighbor_neqns,     ineighbor_nterms_s, neighbor_status, ineighbor_dof_start
+                                   ineighbor_neqns,     ineighbor_nterms_s, neighbor_status, &
+                                   ineighbor_dof_start, ineighbor_dof_local_start
 
         real(rk)                                :: neighbor_h(3)
         real(rk), allocatable, dimension(:,:)   :: neighbor_grad1,   neighbor_grad2,    &
@@ -828,24 +838,25 @@ contains
                     searching = .true.
                     call MPI_Bcast(searching,1,MPI_LOGICAL,IRANK,ChiDG_COMM,ierr)
 
-                    call self%find_neighbor_global(ielem,iface,             &
-                                                   ineighbor_domain_g,      &
-                                                   ineighbor_domain_l,      &
-                                                   ineighbor_element_g,     &
-                                                   ineighbor_element_l,     &
-                                                   ineighbor_face,          &
-                                                   ineighbor_neqns,         &
-                                                   ineighbor_nterms_s,      &
-                                                   ineighbor_dof_start,     &
-                                                   ineighbor_proc,          &
-                                                   neighbor_grad1,          &
-                                                   neighbor_grad2,          &
-                                                   neighbor_grad3,          &
-                                                   neighbor_br2_face,       &
-                                                   neighbor_br2_vol,        &
-                                                   neighbor_invmass,        &
-                                                   neighbor_h,              &
-                                                   neighbor_status,         &
+                    call self%find_neighbor_global(ielem,iface,               &
+                                                   ineighbor_domain_g,        &
+                                                   ineighbor_domain_l,        &
+                                                   ineighbor_element_g,       &
+                                                   ineighbor_element_l,       &
+                                                   ineighbor_face,            &
+                                                   ineighbor_neqns,           &
+                                                   ineighbor_nterms_s,        &
+                                                   ineighbor_dof_start,       &
+                                                   ineighbor_dof_local_start, &
+                                                   ineighbor_proc,            &
+                                                   neighbor_grad1,            &
+                                                   neighbor_grad2,            &
+                                                   neighbor_grad3,            &
+                                                   neighbor_br2_face,         &
+                                                   neighbor_br2_vol,          &
+                                                   neighbor_invmass,          &
+                                                   neighbor_h,                &
+                                                   neighbor_status,           &
                                                    ChiDG_COMM)
                             
                 
@@ -874,15 +885,16 @@ contains
                         ! condition(ftype=1), or a chimera boundary(ftype=2)
                         ! 
                         ftype = ORPHAN
-                        ineighbor_domain_g  = 0
-                        ineighbor_domain_l  = 0
-                        ineighbor_element_g = 0
-                        ineighbor_element_l = 0
-                        ineighbor_face      = 0
-                        ineighbor_neqns     = 0
-                        ineighbor_nterms_s  = 0
-                        ineighbor_dof_start = 0
-                        ineighbor_proc      = NO_PROC
+                        ineighbor_domain_g        = 0
+                        ineighbor_domain_l        = 0
+                        ineighbor_element_g       = 0
+                        ineighbor_element_l       = 0
+                        ineighbor_face            = 0
+                        ineighbor_neqns           = 0
+                        ineighbor_nterms_s        = 0
+                        ineighbor_dof_start       = NO_ID
+                        ineighbor_dof_local_start = NO_ID
+                        ineighbor_proc            = NO_PROC
 
                     end if
 
@@ -890,10 +902,11 @@ contains
                     !
                     ! Call face neighbor initialization routine
                     !
-                    call self%faces(ielem,iface)%set_neighbor(ftype,ineighbor_domain_g,  ineighbor_domain_l,   &
-                                                                    ineighbor_element_g, ineighbor_element_l,  &
-                                                                    ineighbor_face,      ineighbor_neqns,      &
-                                                                    ineighbor_nterms_s,  ineighbor_proc, ineighbor_dof_start)
+                    call self%faces(ielem,iface)%set_neighbor(ftype,ineighbor_domain_g,  ineighbor_domain_l,  &
+                                                                    ineighbor_element_g, ineighbor_element_l, &
+                                                                    ineighbor_face,      ineighbor_neqns,     &
+                                                                    ineighbor_nterms_s,  ineighbor_proc,      &
+                                                                    ineighbor_dof_start, ineighbor_dof_local_start)
 
 
                 end if
@@ -970,13 +983,13 @@ contains
                 !
                 ! Get indices for neighbor element
                 !
-                ineighbor_domain_g  = self%elems(ielem_l)%idomain_g
-                ineighbor_domain_l  = self%elems(ielem_l)%idomain_l
-                ineighbor_element_g = self%elems(ielem_l)%ielement_g
-                ineighbor_element_l = self%elems(ielem_l)%ielement_l
-                ineighbor_neqns     = self%elems(ielem_l)%neqns
-                ineighbor_nterms_s  = self%elems(ielem_l)%nterms_s
-                ineighbor_dof_start = self%elems(ielem_l)%dof_start
+                ineighbor_domain_g        = self%elems(ielem_l)%idomain_g
+                ineighbor_domain_l        = self%elems(ielem_l)%idomain_l
+                ineighbor_element_g       = self%elems(ielem_l)%ielement_g
+                ineighbor_element_l       = self%elems(ielem_l)%ielement_l
+                ineighbor_neqns           = self%elems(ielem_l)%neqns
+                ineighbor_nterms_s        = self%elems(ielem_l)%nterms_s
+                ineighbor_dof_start       = self%elems(ielem_l)%dof_start
 
                 
                 !
@@ -1124,7 +1137,6 @@ contains
                     ineighbor_element_g = self%elems(ielem_neighbor)%ielement_g
                     ineighbor_element_l = self%elems(ielem_neighbor)%ielement_l
                     ineighbor_face      = self%elems(ielem_neighbor)%get_face_from_corners(corner_indices)
-                    !ineighbor_proc      = self%elems(ielem_neighbor)%connectivity%get_element_partition()
                     ineighbor_proc      = IRANK
                     neighbor_status     = NEIGHBOR_FOUND
                     exit
@@ -1162,7 +1174,7 @@ contains
                                                        ineighbor_element_g, ineighbor_element_l, &
                                                        ineighbor_face,      ineighbor_neqns,     &
                                                        ineighbor_nterms_s,  ineighbor_dof_start, &
-                                                       ineighbor_proc,      &
+                                                       ineighbor_dof_local_start, ineighbor_proc,      &
                                                        neighbor_grad1, neighbor_grad2, neighbor_grad3, &
                                                        neighbor_br2_face, neighbor_br2_vol,      &
                                                        neighbor_invmass,    &
@@ -1180,6 +1192,7 @@ contains
         integer(ik),                    intent(inout)   :: ineighbor_neqns
         integer(ik),                    intent(inout)   :: ineighbor_nterms_s
         integer(ik),                    intent(inout)   :: ineighbor_dof_start
+        integer(ik),                    intent(inout)   :: ineighbor_dof_local_start
         integer(ik),                    intent(inout)   :: ineighbor_proc
         real(rk),   allocatable,        intent(inout)   :: neighbor_grad1(:,:)
         real(rk),   allocatable,        intent(inout)   :: neighbor_grad2(:,:)
@@ -1244,15 +1257,16 @@ contains
 
                     if (neighbor_element) then
                         call MPI_Recv(data,8,MPI_INTEGER4,iproc,4,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        ineighbor_domain_g  = data(1)
-                        ineighbor_domain_l  = data(2)
-                        ineighbor_element_g = data(3)
-                        ineighbor_element_l = data(4)
-                        ineighbor_face      = data(5)
-                        ineighbor_neqns     = data(6)
-                        ineighbor_nterms_s  = data(7)
-                        ineighbor_dof_start = data(8)
-                        ineighbor_proc      = iproc
+                        ineighbor_domain_g        = data(1)
+                        ineighbor_domain_l        = data(2)
+                        ineighbor_element_g       = data(3)
+                        ineighbor_element_l       = data(4)
+                        ineighbor_face            = data(5)
+                        ineighbor_neqns           = data(6)
+                        ineighbor_nterms_s        = data(7)
+                        ineighbor_dof_start       = data(8)
+                        ineighbor_dof_local_start = NO_ID
+                        ineighbor_proc            = iproc
 
                         call MPI_Recv(grad_size,    2,MPI_INTEGER4,iproc,5,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
                         call MPI_Recv(br2_face_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
@@ -1767,7 +1781,7 @@ contains
 
 
 
-    !>  Return the start
+    !>  Return the global dof end index of this domain.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   1/25/2019
@@ -1791,6 +1805,49 @@ contains
     !****************************************************************************************
 
 
+
+    !>  Return the starting index of the current domain dof's in the ChiDG-local dof list.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/26/2019
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_dof_local_start(self) result(dof_local_start)
+        class(domain_t),   intent(in)  :: self
+
+        integer(ik) :: dof_local_start
+
+        dof_local_start = self%domain_dof_local_start
+
+    end function get_dof_local_start
+    !****************************************************************************************
+
+
+
+
+
+    !>  Return the local dof end index of this domain.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/26/2019
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_dof_local_end(self) result(dof_local_end)
+        class(domain_t),   intent(in)  :: self
+
+        integer(ik) :: dof_local_end, ielem, dofs
+
+        ! Accumulate dof's
+        dofs = 0
+        do ielem = 1,self%nelements()
+            dofs = dofs + self%elems(ielem)%neqns*self%elems(ielem)%nterms_s
+        end do
+
+        dof_local_end = self%domain_dof_local_start + dofs - 1
+
+    end function get_dof_local_end
+    !****************************************************************************************
 
 
 

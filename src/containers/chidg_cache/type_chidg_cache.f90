@@ -30,7 +30,7 @@ module type_chidg_cache
     type, public :: chidg_cache_t
 
         !type(cache_data_t)              :: element
-        type(cache_data_t), allocatable :: element
+        type(cache_data_t)              :: element
         type(cache_data_t), allocatable :: faces(:,:)      ! (nfaces, side). side=1(INTERIOR), size=2(EXTERIOR)
         !type(cache_data_t)             :: faces(NFACES,2) ! Causes segfault due to incomplete compiler finalization support.
 
@@ -70,9 +70,6 @@ contains
 
         integer(ik) :: iface, ierr
 
-        if (allocated(self%element)) deallocate(self%element)
-        if (allocated(self%faces)) deallocate(self%faces)
-
 
         !
         ! Store logical indicating if lift is stored
@@ -87,7 +84,7 @@ contains
         ! finalization procedures implemented yet.
         !
         if (.not. allocated(self%faces)) then
-            allocate(self%element, self%faces(NFACES,2), stat=ierr)
+            allocate(self%faces(NFACES,2), stat=ierr)
             if (ierr /= 0) call AllocationError
         end if
 

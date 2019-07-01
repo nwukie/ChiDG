@@ -34,7 +34,7 @@ module mod_tecio
     use type_chidg_worker,      only: chidg_worker_t
     use type_chidg_cache,       only: chidg_cache_t
     use type_cache_handler,     only: cache_handler_t
-    use type_element_info,      only: element_info_t
+    use type_element_info,      only: element_info_t, element_info
     use type_timer,             only: timer_t
     use DNAD_D
     use iso_c_binding
@@ -237,20 +237,23 @@ contains
                     eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
 
                     ! Update location
-                    elem_info = element_info_t(idomain_g    = data%mesh%domain(idom)%elems(ielem)%idomain_g,    &
-                                               idomain_l    = data%mesh%domain(idom)%elems(ielem)%idomain_l,    &
-                                               ielement_g   = data%mesh%domain(idom)%elems(ielem)%ielement_g,   &
-                                               ielement_l   = data%mesh%domain(idom)%elems(ielem)%ielement_l,   &
-                                               iproc        = data%mesh%domain(idom)%elems(ielem)%iproc,        &
-                                               pelem_ID     = NO_ID,                                            &
-                                               eqn_ID       = data%mesh%domain(idom)%elems(ielem)%eqn_ID,       &
-                                               nfields      = data%mesh%domain(idom)%elems(ielem)%neqns,        &
-                                               nterms_s     = data%mesh%domain(idom)%elems(ielem)%nterms_s,     &
-                                               nterms_c     = data%mesh%domain(idom)%elems(ielem)%nterms_c,     &
-                                               dof_start    = data%mesh%domain(idom)%elems(ielem)%dof_start,    &
-                                               recv_comm    = data%mesh%domain(idom)%elems(ielem)%recv_comm,    &
-                                               recv_domain  = data%mesh%domain(idom)%elems(ielem)%recv_domain,  &
-                                               recv_element = data%mesh%domain(idom)%elems(ielem)%recv_element)
+                    elem_info = element_info(idomain_g       = data%mesh%domain(idom)%elems(ielem)%idomain_g,       &
+                                             idomain_l       = data%mesh%domain(idom)%elems(ielem)%idomain_l,       &
+                                             ielement_g      = data%mesh%domain(idom)%elems(ielem)%ielement_g,      &
+                                             ielement_l      = data%mesh%domain(idom)%elems(ielem)%ielement_l,      &
+                                             iproc           = data%mesh%domain(idom)%elems(ielem)%iproc,           &
+                                             pelem_ID        = NO_ID,                                               &
+                                             eqn_ID          = data%mesh%domain(idom)%elems(ielem)%eqn_ID,          &
+                                             nfields         = data%mesh%domain(idom)%elems(ielem)%nfields,         &
+                                             ntime           = data%mesh%domain(idom)%elems(ielem)%ntime,           &
+                                             nterms_s        = data%mesh%domain(idom)%elems(ielem)%nterms_s,        &
+                                             nterms_c        = data%mesh%domain(idom)%elems(ielem)%nterms_c,        &
+                                             dof_start       = data%mesh%domain(idom)%elems(ielem)%dof_start,       &
+                                             dof_local_start = data%mesh%domain(idom)%elems(ielem)%dof_local_start, &
+                                             recv_comm       = data%mesh%domain(idom)%elems(ielem)%recv_comm,       &
+                                             recv_domain     = data%mesh%domain(idom)%elems(ielem)%recv_domain,     &
+                                             recv_element    = data%mesh%domain(idom)%elems(ielem)%recv_element,    &
+                                             recv_dof        = data%mesh%domain(idom)%elems(ielem)%recv_dof)
 
 
                     call worker%set_element(elem_info)
@@ -488,20 +491,23 @@ contains
 
 
                         ! Update location
-                        elem_info = element_info_t(idomain_g    = data%mesh%domain(idom)%elems(ielem)%idomain_g,    &
-                                                   idomain_l    = data%mesh%domain(idom)%elems(ielem)%idomain_l,    &
-                                                   ielement_g   = data%mesh%domain(idom)%elems(ielem)%ielement_g,   &
-                                                   ielement_l   = data%mesh%domain(idom)%elems(ielem)%ielement_l,   &
-                                                   iproc        = data%mesh%domain(idom)%elems(ielem)%iproc,        &
-                                                   pelem_ID     = NO_ID,                                            &
-                                                   eqn_ID       = data%mesh%domain(idom)%elems(ielem)%eqn_ID,       &
-                                                   nfields      = data%mesh%domain(idom)%elems(ielem)%neqns,        &
-                                                   nterms_s     = data%mesh%domain(idom)%elems(ielem)%nterms_s,     &
-                                                   nterms_c     = data%mesh%domain(idom)%elems(ielem)%nterms_c,     &
-                                                   dof_start    = data%mesh%domain(idom)%elems(ielem)%dof_start,    &
-                                                   recv_comm    = data%mesh%domain(idom)%elems(ielem)%recv_comm,    &
-                                                   recv_domain  = data%mesh%domain(idom)%elems(ielem)%recv_domain,  &
-                                                   recv_element = data%mesh%domain(idom)%elems(ielem)%recv_element)
+                        elem_info = element_info(idomain_g       = data%mesh%domain(idom)%elems(ielem)%idomain_g,       &
+                                                 idomain_l       = data%mesh%domain(idom)%elems(ielem)%idomain_l,       &
+                                                 ielement_g      = data%mesh%domain(idom)%elems(ielem)%ielement_g,      &
+                                                 ielement_l      = data%mesh%domain(idom)%elems(ielem)%ielement_l,      &
+                                                 iproc           = data%mesh%domain(idom)%elems(ielem)%iproc,           &
+                                                 pelem_ID        = NO_ID,                                               &
+                                                 eqn_ID          = data%mesh%domain(idom)%elems(ielem)%eqn_ID,          &
+                                                 nfields         = data%mesh%domain(idom)%elems(ielem)%nfields,         &
+                                                 ntime           = data%mesh%domain(idom)%elems(ielem)%ntime,           &
+                                                 nterms_s        = data%mesh%domain(idom)%elems(ielem)%nterms_s,        &
+                                                 nterms_c        = data%mesh%domain(idom)%elems(ielem)%nterms_c,        &
+                                                 dof_start       = data%mesh%domain(idom)%elems(ielem)%dof_start,       &
+                                                 dof_local_start = data%mesh%domain(idom)%elems(ielem)%dof_local_start, &
+                                                 recv_comm       = data%mesh%domain(idom)%elems(ielem)%recv_comm,       &
+                                                 recv_domain     = data%mesh%domain(idom)%elems(ielem)%recv_domain,     &
+                                                 recv_element    = data%mesh%domain(idom)%elems(ielem)%recv_element,    &
+                                                 recv_dof        = data%mesh%domain(idom)%elems(ielem)%recv_dof)
 
 
                         call worker%set_element(elem_info)

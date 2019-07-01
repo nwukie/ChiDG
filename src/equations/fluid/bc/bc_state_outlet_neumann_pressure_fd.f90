@@ -10,7 +10,7 @@ module bc_state_outlet_neumann_pressure_fd
     use type_bc_patch,          only: bc_patch_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
-    use type_element_info,      only: element_info_t
+    use type_element_info,      only: element_info_t, element_info
     use mod_chidg_mpi,          only: IRANK
     use mod_interpolate,        only: interpolate_face_autodiff
     use mpi_f08,                only: MPI_REAL8, MPI_SUM, MPI_AllReduce, mpi_comm, &
@@ -177,25 +177,25 @@ contains
             ielement_l_coupled = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled)
             iface_coupled      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(     icoupled)
 
-            !face_info%idomain_g  = idomain_g_coupled
-            !face_info%idomain_l  = idomain_l_coupled
-            !face_info%ielement_g = ielement_g_coupled
-            !face_info%ielement_l = ielement_l_coupled
-            !face_info%iface      = iface_coupled
-            coupled_element = element_info_t(idomain_g    = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(icoupled),     &
-                                             idomain_l    = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(icoupled),     &
-                                             ielement_g   = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icoupled),    &
-                                             ielement_l   = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled),    &
-                                             iproc        = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(icoupled),          &
-                                             pelem_ID     = NO_ID,                                                                                          &
-                                             eqn_ID       = NO_ID,                                                                                          &
-                                             nfields      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%neqns(icoupled),         &
-                                             nterms_s     = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(icoupled),      &
-                                             nterms_c     = 0,                                                                                              &
-                                             dof_start    = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(icoupled),     &
-                                             recv_comm    = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(icoupled),     &
-                                             recv_domain  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(icoupled),   &
-                                             recv_element = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(icoupled))
+            coupled_element = element_info(idomain_g       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(icoupled),        &
+                                           idomain_l       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(icoupled),        &
+                                           ielement_g      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icoupled),       &
+                                           ielement_l      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled),       &
+                                           iproc           = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(icoupled),             &
+                                           pelem_ID        = NO_ID,                                                                                             &
+                                           eqn_ID          = NO_ID,                                                                                             &
+                                           nfields         = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nfields(icoupled),          &
+                                           ntime           = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ntime(icoupled),            &
+                                           nterms_s        = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(icoupled),         &
+                                           nterms_c        = 0,                                                                                                 &
+                                           dof_start       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(icoupled),        &
+                                           dof_local_start = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_local_start(icoupled),  &
+                                           recv_comm       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(icoupled),        &
+                                           recv_domain     = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(icoupled),      &
+                                           recv_element    = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(icoupled),     &
+                                           recv_dof        = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_dof(icoupled))
+
+
 
             coupled_iface = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(icoupled)
 

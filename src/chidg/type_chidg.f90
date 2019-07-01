@@ -1654,7 +1654,7 @@ contains
         type(chidg_vector_t), allocatable    :: q_diff
         real(rk)                            :: error_val, local_error_val
 
-        integer(ik)                         :: ndom, nelems, neqns, nterms, idom, ielem, iterm, ieqn
+        integer(ik)                         :: ndom, nelems, nfields, nterms, idom, ielem, iterm, ieqn
         real(rk), allocatable               :: temp(:)
         q_diff = q_ref
         q_diff = sub_chidg_vector_chidg_vector(self%data%sdata%q,q_ref)
@@ -1663,12 +1663,12 @@ contains
 
         ndom = self%data%mesh%ndomains()
         do idom = 1, ndom
-            nelems = self%data%mesh%domain(idom)%nelem
-            neqns = self%data%mesh%domain(idom)%neqns
-            nterms = self%data%mesh%domain(idom)%nterms_s
+            nelems  = self%data%mesh%domain(idom)%nelem
+            nfields = self%data%mesh%domain(idom)%nfields
+            nterms  = self%data%mesh%domain(idom)%nterms_s
             do ielem = 1, nelems
                 local_error_val = ZERO
-                do ieqn = 1, neqns
+                do ieqn = 1, nfields
                     temp = &
                         matmul(self%data%mesh%domain(idom)%elems(ielem)%basis_s%interpolator_element('Value'),&
                     q_diff%dom(idom)%vecs(ielem)%vec((ieqn-1)*nterms+1:ieqn*nterms))

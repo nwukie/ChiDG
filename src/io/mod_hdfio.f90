@@ -751,7 +751,8 @@ contains
                                      iproc           = data%mesh%domain(idom)%elems(ielem)%iproc,            &
                                      pelem_ID        = NO_ID,                                                &
                                      eqn_ID          = data%mesh%domain(idom)%elems(ielem)%eqn_ID,           &
-                                     nfields         = data%mesh%domain(idom)%elems(ielem)%neqns,            &
+                                     nfields         = data%mesh%domain(idom)%elems(ielem)%nfields,          &
+                                     ntime           = data%mesh%domain(idom)%elems(ielem)%ntime,            &
                                      nterms_s        = data%mesh%domain(idom)%elems(ielem)%nterms_s,         &
                                      nterms_c        = data%mesh%domain(idom)%elems(ielem)%nterms_c,         &
                                      dof_start       = data%mesh%domain(idom)%elems(ielem)%dof_start,        &
@@ -982,7 +983,8 @@ contains
                                      iproc           = data%mesh%domain(idom)%elems(ielem)%iproc,            &
                                      pelem_ID        = NO_ID,                                                &
                                      eqn_ID          = data%mesh%domain(idom)%elems(ielem)%eqn_ID,           &
-                                     nfields         = data%mesh%domain(idom)%elems(ielem)%neqns,            &
+                                     nfields         = data%mesh%domain(idom)%elems(ielem)%nfields,          &
+                                     ntime           = data%mesh%domain(idom)%elems(ielem)%ntime,            &
                                      nterms_s        = data%mesh%domain(idom)%elems(ielem)%nterms_s,         &
                                      nterms_c        = data%mesh%domain(idom)%elems(ielem)%nterms_c,         &
                                      dof_start       = data%mesh%domain(idom)%elems(ielem)%dof_start,        &

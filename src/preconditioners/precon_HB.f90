@@ -66,7 +66,7 @@ contains
 
         integer(ik) :: ierr, mat_size
 
-        mat_size = element%nterms_s*element%neqns*element%ntime 
+        mat_size = element%nterms_s*element%nfields*element%ntime 
 
         allocate(self%mat(mat_size,mat_size), stat=ierr)
         if (ierr /= 0) call AllocationError

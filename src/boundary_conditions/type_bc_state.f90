@@ -517,12 +517,12 @@ contains
         integer(ik) :: patch_ID, face_ID, elem_ID, patch_ID_coupled, face_ID_coupled,   &
                        idomain_g, idomain_l, ielement_g, ielement_l, iface,             &
                        bc_IRANK, bc_NRANK, ierr, iproc, nbc_elements,                   &
-                       ielem, neqns, nterms_s, dof_start, dof_local_start, ngq, ibc
+                       ielem, nfields, nterms_s, dof_start, dof_local_start, ngq, ibc
 
         integer(ik) :: idomain_g_coupled, idomain_l_coupled, ielement_g_coupled, ielement_l_coupled, &
                        iface_coupled, proc_coupled, send_size_a, send_size_b, send_size_c, send_size_d
 
-        integer(ik) :: etype, nnodes, nterms_c, nfields, ntime, pelem_ID, interpolation_level,    &
+        integer(ik) :: etype, nnodes, nterms_c, ntime, pelem_ID, interpolation_level,    &
                        coordinate_system, element_location(5), element_data(9), spacedim, inode
 
         real(rk),       allocatable :: interp_coords_def(:,:)
@@ -561,7 +561,7 @@ contains
                         iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%iface(     face_ID_coupled)
 
 
-                        neqns             = mesh%domain(idomain_l)%elems(ielement_l)%neqns
+                        nfields           = mesh%domain(idomain_l)%elems(ielement_l)%nfields
                         nterms_s          = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
                         dof_start         = mesh%domain(idomain_l)%elems(ielement_l)%dof_start
                         dof_local_start   = mesh%domain(idomain_l)%elems(ielement_l)%dof_local_start
@@ -584,7 +584,8 @@ contains
 
                         call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g,       &
                                                                                                              ielement_g,      &
-                                                                                                             neqns,           &
+                                                                                                             nfields,         &
+                                                                                                             ntime,           &
                                                                                                              nterms_s,        &
                                                                                                              dof_start,       &
                                                                                                              dof_local_start, &
@@ -636,7 +637,7 @@ contains
                         call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID),      1, MPI_INTEGER, iproc, bc_comm, ierr)
 
                         ! Broadcast auxiliary data
-                        call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%neqns,            1, MPI_INTEGER, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%nfields,          1, MPI_INTEGER, iproc, bc_comm, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,         1, MPI_INTEGER, iproc, bc_comm, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%dof_start,        1, MPI_INTEGER, iproc, bc_comm, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area, 1, MPI_INTEGER, iproc, bc_comm, ierr)
@@ -685,7 +686,7 @@ contains
                     call MPI_BCast(iface_coupled,      1, MPI_INTEGER, iproc, bc_COMM, ierr)
 
                     ! Receive auxiliary data
-                    call MPI_BCast(neqns,     1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                    call MPI_BCast(nfields,   1, MPI_INTEGER, iproc, bc_COMM, ierr)
                     call MPI_BCast(nterms_s,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
                     call MPI_BCast(dof_start, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
                     call MPI_BCast(total_area,1, MPI_INTEGER, iproc, bc_COMM, ierr)
@@ -793,7 +794,8 @@ contains
 
                             call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g_coupled,     &
                                                                                                                  ielement_g_coupled,    &
-                                                                                                                 neqns,                 &
+                                                                                                                 nfields,               &
+                                                                                                                 ntime,                 &
                                                                                                                  nterms_s,              &
                                                                                                                  dof_start,             &
                                                                                                                  NO_ID,                 &
@@ -835,7 +837,7 @@ contains
         type(mpi_comm),     intent(in)      :: bc_COMM
 
         integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l,         &
-                       ielement_g, ielement_l, iface, neqns, nterms_s,  &
+                       ielement_g, ielement_l, iface, nfields, nterms_s,  &
                        dof_start
 
 
@@ -871,7 +873,8 @@ contains
                 call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID,    &
                                                                                             idomain_g,  &
                                                                                             ielement_g, &
-                                                                                            mesh%domain(idomain_l)%elems(ielement_l)%neqns,                     &
+                                                                                            mesh%domain(idomain_l)%elems(ielement_l)%nfields,                   &
+                                                                                            mesh%domain(idomain_l)%elems(ielement_l)%ntime,                     &
                                                                                             mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,                  &
                                                                                             mesh%domain(idomain_l)%elems(ielement_l)%dof_start,                 &
                                                                                             mesh%domain(idomain_l)%elems(ielement_l)%dof_local_start,           &

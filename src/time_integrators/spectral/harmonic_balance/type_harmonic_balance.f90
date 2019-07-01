@@ -203,7 +203,7 @@ contains
                                        data%mesh%domain(idom)%elems(ielem)%idomain_l,  &
                                        data%mesh%domain(idom)%elems(ielem)%ielement_g, &
                                        data%mesh%domain(idom)%elems(ielem)%ielement_l, &
-                                       data%mesh%domain(idom)%elems(ielem)%neqns,      &
+                                       data%mesh%domain(idom)%elems(ielem)%nfields,    &
                                        data%mesh%domain(idom)%elems(ielem)%nterms_s,   &
                                        IRANK,                                          &
                                        itime_inner,                                    &

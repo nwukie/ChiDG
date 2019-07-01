@@ -251,12 +251,14 @@ contains
 
                                             ! Set the location where a face can find its off-processor neighbor 
                                             if (recv_element == bc_element_g) then
-                                                call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_recv(face_ID,      &
-                                                                                                                            bc_domain_g,  &
-                                                                                                                            bc_element_g, &
-                                                                                                                            comm,         &
-                                                                                                                            idom_recv,    &
-                                                                                                                            ielem_recv )
+                                                call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_recv(face_ID      = face_ID,      &
+                                                                                                                            idomain_g    = bc_domain_g,  &
+                                                                                                                            ielement_g   = bc_element_g, &
+                                                                                                                            recv_comm    = comm,         &
+                                                                                                                            recv_domain  = idom_recv,    &
+                                                                                                                            recv_element = ielem_recv,   &
+                                                                                                                            recv_dof     = NO_ID)
+                                                
                                                 bc_recv_found = .true.
                                                 exit
                                             end if

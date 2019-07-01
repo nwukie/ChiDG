@@ -20,7 +20,7 @@ module type_chidg_vector
     use mod_chidg_mpi,              only: GROUP_MASTER, ChiDG_COMM, IRANK
     use type_mesh,                  only: mesh_t
     use type_face_info,             only: face_info_t
-    use type_element_info,          only: element_info_t
+    use type_element_info,          only: element_info_t, element_info
     use type_function,              only: function_t
     use type_chidg_vector_send,     only: chidg_vector_send_t
     use type_chidg_vector_recv,     only: chidg_vector_recv_t
@@ -373,7 +373,7 @@ contains
         nlocal_rows = 0
         do idom = 1,mesh%ndomains()
             do ielem = 1,mesh%domain(idom)%nelements()
-                nlocal_rows = nlocal_rows + mesh%domain(idom)%elems(ielem)%nterms_s * mesh%domain(idom)%elems(ielem)%neqns
+                nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%nterms_s * ntime)
             end do !ielem
         end do !idom
 
@@ -551,7 +551,7 @@ contains
         PetscInt                :: istart
         PetscInt, allocatable   :: indices(:)
 
-        istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
+        istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
         indices = [(i, i=istart,(istart+element_info%nterms_s-1),1)]
 
         ! Decrement by 1 for 0-based indexing
@@ -587,7 +587,7 @@ contains
         PetscInt, allocatable   :: indices(:)
 
         istart = element_info%dof_start
-        indices = [(i, i=istart,(istart + element_info%nfields*element_info%nterms_s - 1),1)]
+        indices = [(i, i=istart,(istart + element_info%nfields*element_info%nterms_s*element_info%ntime - 1),1)]
 
         ! Decrement by 1 for 0-based indexing
         indices = indices - 1
@@ -625,7 +625,7 @@ contains
         PetscInt                :: istart
         PetscInt, allocatable   :: indices(:)
 
-        istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
+        istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
         indices = [(i, i=istart,(istart+element_info%nterms_s-1),1)]
 
         ! Decrement by 1 for 0-based indexing
@@ -734,7 +734,7 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
 
             ! Compute start and end indices for accessing modes of a variable
-            istart = element_info%dof_local_start + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
+            istart = element_info%dof_local_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
             iend = istart + (element_info%nterms_s-1)
 
             ! Access modes
@@ -753,7 +753,7 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
 
             ! Compute start and end indices for accessing modes of a variable
-            istart = element_info%recv_dof + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
+            istart = element_info%recv_dof + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
             iend = istart + (element_info%nterms_s-1)
 
             ! Access modes
@@ -809,7 +809,7 @@ contains
 
             ! Compute start and end indices for accessing modes of a variable
             istart = element_info%dof_local_start
-            iend = istart + (element_info%nfields*element_info%nterms_s) - 1
+            iend = istart + (element_info%nfields*element_info%ntime*element_info%nterms_s) - 1
 
             ! Access modes
             values = array(istart:iend)
@@ -829,7 +829,7 @@ contains
 
             ! Compute start and end indices for accessing modes of a variable
             istart = element_info%recv_dof
-            iend = istart + (element_info%nfields*element_info%nterms_s) - 1
+            iend = istart + (element_info%nfields*element_info%ntime*element_info%nterms_s) - 1
 
             ! Access modes
             values = array(istart:iend)
@@ -923,7 +923,7 @@ contains
         integer(ik)                 :: itime
         real(rk),       allocatable :: modes(:)
         character(:),   allocatable :: user_msg
-        type(element_info_t)    :: element_info
+        type(element_info_t)        :: elem_info
 
 
         ! Loop through elements in mesh and call function projection
@@ -931,21 +931,28 @@ contains
 
             ! Check that variable index 'ifield' is valid
             user_msg = 'project: variable index ifield exceeds the number of equations.'
-            if (ifield > mesh%domain(idom)%neqns ) call chidg_signal(FATAL,user_msg)
+            if (ifield > mesh%domain(idom)%nfields ) call chidg_signal(FATAL,user_msg)
 
             do ielem = 1,mesh%domain(idom)%nelem
 
-                element_info = element_info_t(idomain_g  = mesh%domain(idom)%elems(ielem)%idomain_g,    &
-                                              idomain_l  = mesh%domain(idom)%elems(ielem)%idomain_l,    &
-                                              ielement_g = mesh%domain(idom)%elems(ielem)%ielement_g,   &
-                                              ielement_l = mesh%domain(idom)%elems(ielem)%ielement_l,   &
-                                              iproc      = mesh%domain(idom)%elems(ielem)%iproc,        &
-                                              pelem_ID   = NO_ID,                                       &
-                                              eqn_ID     = mesh%domain(idom)%elems(ielem)%eqn_ID,       &
-                                              nfields    = mesh%domain(idom)%elems(ielem)%neqns,        &
-                                              nterms_s   = mesh%domain(idom)%elems(ielem)%nterms_s,     &
-                                              nterms_c   = NO_DATA,                                     &
-                                              dof_start  = mesh%domain(idom)%elems(ielem)%dof_start)
+                elem_info = element_info(idomain_g       = mesh%domain(idom)%elems(ielem)%idomain_g,       &
+                                         idomain_l       = mesh%domain(idom)%elems(ielem)%idomain_l,       &
+                                         ielement_g      = mesh%domain(idom)%elems(ielem)%ielement_g,      &
+                                         ielement_l      = mesh%domain(idom)%elems(ielem)%ielement_l,      &
+                                         iproc           = mesh%domain(idom)%elems(ielem)%iproc,           &
+                                         pelem_ID        = NO_ID,                                          &
+                                         eqn_ID          = mesh%domain(idom)%elems(ielem)%eqn_ID,          &
+                                         nfields         = mesh%domain(idom)%elems(ielem)%nfields,         &
+                                         ntime           = mesh%domain(idom)%elems(ielem)%ntime,           &
+                                         nterms_s        = mesh%domain(idom)%elems(ielem)%nterms_s,        &
+                                         nterms_c        = NO_DATA,                                        &
+                                         dof_start       = mesh%domain(idom)%elems(ielem)%dof_start,       &
+                                         dof_local_start = mesh%domain(idom)%elems(ielem)%dof_local_start, &
+                                         recv_comm       = mesh%domain(idom)%elems(ielem)%recv_comm,       &
+                                         recv_domain     = mesh%domain(idom)%elems(ielem)%recv_domain,     &
+                                         recv_element    = mesh%domain(idom)%elems(ielem)%recv_element,    &
+                                         recv_dof        = mesh%domain(idom)%elems(ielem)%recv_dof)
+
 
 
                 do itime = 1,mesh%domain(idom)%ntime
@@ -953,11 +960,7 @@ contains
                     modes = mesh%domain(idom)%elems(ielem)%project(fcn)
 
                     ! Store the projected modes to the solution expansion
-                    call self%set_field(modes,element_info,ifield,itime)
-
-!                    call self%assemble()
-!
-!                    modes  = self%get_field(element_info,ifield,itime)
+                    call self%set_field(modes,elem_info,ifield,itime)
 
                 end do ! itime
             end do ! ielem

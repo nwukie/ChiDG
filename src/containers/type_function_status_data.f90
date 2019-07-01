@@ -67,7 +67,7 @@ contains
         integer(ik) :: nelem, nfcn, neqn, ierr
 
         nelem = domain%nelem
-        neqn  = domain%neqns
+        neqn  = domain%nfields
 
 
         !

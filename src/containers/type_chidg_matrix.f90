@@ -205,10 +205,6 @@ contains
 
 
 
-
-
-
-
     !>  Subroutine for initializing chidg_matrix_t using chidg native backend storage.
     !!
     !!  @author Nathan A. Wukie
@@ -827,22 +823,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     !> Set all chidg_matrix matrix-values to zero
     !!
     !!  @author Nathan A. Wukie
@@ -953,7 +933,7 @@ contains
         nlocal_rows = 0
         do idom = 1,mesh%ndomains()
             do ielem = 1,mesh%domain(idom)%nelements()
-                nlocal_rows = nlocal_rows + mesh%domain(idom)%elems(ielem)%nterms_s * mesh%domain(idom)%elems(ielem)%neqns
+                nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nterms_s * mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%ntime)
             end do !ielem
         end do !idom
 
@@ -980,7 +960,7 @@ contains
 
 
         ! Preallocation
-        dof_per_element = mesh%domain(1)%elems(1)%nterms_s * mesh%domain(1)%elems(1)%neqns
+        dof_per_element = mesh%domain(1)%elems(1)%nterms_s * mesh%domain(1)%elems(1)%nfields * mesh%domain(1)%elems(1)%ntime
         nlocal_coupling = 7
         nparallel_coupling = 7
 
@@ -1088,12 +1068,14 @@ contains
         integer(ik) :: iarray, i
 
         PetscErrorCode          :: ierr
-        PetscInt                :: nrows, ncols, row_index_start, col_index_start
+        PetscInt                :: nrows, ncols, row_index_start, col_index_start, col_index_stop
         PetscInt, allocatable   :: col_indices(:)
         
-        row_index_start = element_info%dof_start + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
+        row_index_start = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
         col_index_start = seed%dof_start
-        col_indices = [(i, i=col_index_start,(col_index_start+seed%nfields*seed%nterms_s-1),1)]
+        col_index_stop  = col_index_start + seed%itime*(seed%nfields*seed%nterms_s) - 1
+        !col_indices = [(i, i=col_index_start,(col_index_start+seed%nfields*seed%nterms_s-1),1)]
+        col_indices = [(i, i=col_index_start,col_index_stop,1)]
 
         nrows = 1
         ncols = size(integral(1)%xp_ad_)
@@ -1136,7 +1118,7 @@ contains
         PetscInt                :: nrows, ncols, row_index_start, col_index_start
         PetscInt, allocatable   :: col_indices(:)
         
-        row_index_start = element_info%dof_start + (ifield-1)*element_info%nterms_s + (element_info%nfields*element_info%nterms_s)*(itime-1)
+        row_index_start = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
         col_index_start = row_index_start
         col_indices = [(i, i=row_index_start,(row_index_start+element_info%nterms_s-1),1)]
 
@@ -1225,6 +1207,8 @@ contains
         class(chidg_matrix_t),  intent(in)  :: self
 
         integer(ik)         :: ntime
+
+        if (allocated(self%wrapped_petsc_matrix)) call chidg_signal(FATAL,'chidg_matrix%get_ntime: not yet implemented for petsc storage.')
 
         ! Get ntime from densematrix vector array of the 1st domain
         ntime = size(self%dom(1)%lblks,2)
@@ -1415,6 +1399,8 @@ contains
        class(chidg_matrix_t),   intent(in)  :: self
        
        integer(ik)  :: ndomains_
+
+       if (allocated(self%wrapped_petsc_matrix)) call chidg_signal(FATAL,'chidg_matrix%ndomains: not yet implemented for petsc storage.')
        
        ndomains_ = size(self%dom) 
 
@@ -1439,15 +1425,8 @@ contains
 
         PetscErrorCode :: ierr
 
-        if (allocated(self%dom)) deallocate(self%dom)
-
+        if (allocated(self%dom))                  deallocate(self%dom)
         if (allocated(self%wrapped_petsc_matrix)) deallocate(self%wrapped_petsc_matrix)
-!        if (self%petsc_matrix_created) then
-!            call MatDestroy(self%wrapped_petsc_matrix%petsc_matrix,ierr)
-!            if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%release: error calling MatDestroy.')
-!            self%petsc_matrix_created = .false.
-!        end if
-
 
     end subroutine release
     !**********************************************************************************
@@ -1469,11 +1448,6 @@ contains
         PetscErrorCode :: perr
 
         if (allocated(self%wrapped_petsc_matrix)) deallocate(self%wrapped_petsc_matrix)
-!        if (self%petsc_matrix_created) then
-!            call MatDestroy(self%wrapped_petsc_matrix%petsc_matrix,perr)
-!            if (perr /= 0) call chidg_signal(FATAL,'chidg_matrix%destructor: error calling MatDestroy.')
-!            self%petsc_matrix_created = .false.
-!        end if
 
     end subroutine destructor
     !*********************************************************************************

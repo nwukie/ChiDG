@@ -1067,7 +1067,7 @@ contains
     function get_parallel_dofs(self) result(parallel_dofs)
         class(mesh_t),  intent(in)  :: self
 
-        integer(ik) :: dof_start, nterms_s, nfields, pelem_ID, idof
+        integer(ik) :: dof_start, nterms_s, ntime, nfields, pelem_ID, idof
 
         type(ivector_t)             :: parallel_dofs_vector
         integer(ik),    allocatable :: parallel_dofs(:)
@@ -1077,11 +1077,12 @@ contains
         do pelem_ID = 1,self%nparallel_elements()
 
             dof_start = self%parallel_element(pelem_ID)%dof_start
+            nfields   = self%parallel_element(pelem_ID)%nfields
             nterms_s  = self%parallel_element(pelem_ID)%nterms_s
-            nfields   = self%parallel_element(pelem_ID)%neqns
+            ntime     = self%parallel_element(pelem_ID)%ntime
 
             ! Store each dof index
-            do idof = dof_start, dof_start + (nterms_s*nfields - 1)
+            do idof = dof_start, dof_start + (nfields*nterms_s*ntime - 1)
                 call parallel_dofs_vector%push_back(idof)
             end do !idof
 
@@ -2005,7 +2006,7 @@ contains
             end if
 
             do ielem = 1,end_elem
-                ndof_prev = ndof_prev + self%domain(idom)%elems(ielem)%nterms_s*self%domain(idom)%elems(ielem)%neqns
+                ndof_prev = ndof_prev + self%domain(idom)%elems(ielem)%nterms_s*self%domain(idom)%elems(ielem)%nfields
             end do
 
         end do
@@ -2043,7 +2044,8 @@ contains
                                  iproc           = self%domain(idomain_l)%elems(ielement_l)%iproc,           &
                                  pelem_ID        = NO_ID,                                                    &
                                  eqn_ID          = self%domain(idomain_l)%elems(ielement_l)%eqn_ID,          &
-                                 nfields         = self%domain(idomain_l)%elems(ielement_l)%neqns,           &
+                                 nfields         = self%domain(idomain_l)%elems(ielement_l)%nfields,         &
+                                 ntime           = self%domain(idomain_l)%elems(ielement_l)%ntime,           &
                                  nterms_s        = self%domain(idomain_l)%elems(ielement_l)%nterms_s,        &
                                  nterms_c        = self%domain(idomain_l)%elems(ielement_l)%nterms_c,        &
                                  dof_start       = self%domain(idomain_l)%elems(ielement_l)%dof_start,       &

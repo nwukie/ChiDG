@@ -83,7 +83,7 @@ program driver
         !   2: read initial solution from ChiDG hdf5 file
         if (solutionfile_in == 'none') then
             call create_function(fcn,'constant')
-            do ifield = 1,chidg%data%mesh%domain(1)%neqns
+            do ifield = 1,chidg%data%mesh%domain(1)%nfields
                 call fcn%set_option('val',initial_fields(ifield))
                 call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,ifield)
             end do

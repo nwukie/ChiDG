@@ -62,12 +62,12 @@ module type_element
         integer(ik)                 :: iproc                ! Processor the element is associated with.
 
         ! Element data
-        integer(ik)                 :: element_data(9)      ! [element_type, spacedim, coordinate_system, neqns, nterms_s, nterms_c, ntime, interpolation_level, dof_start]
+        integer(ik)                 :: element_data(9)      ! [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level, dof_start]
         integer(ik)                 :: element_type         ! 1=linear, 2=quadratic, 3=cubic, 4=quartic, etc.
         integer(ik)                 :: spacedim             ! Number of spatial dimensions for the element.
         integer(ik)                 :: coordinate_system    ! CARTESIAN, CYLINDRICAL. parameters from mod_constants.
         integer(ik)                 :: eqn_ID = NO_ID       ! Equation set identifier the element is associated with.
-        integer(ik)                 :: neqns                ! Number of equations being solved.
+        integer(ik)                 :: nfields              ! Number of equations being solved.
         integer(ik)                 :: nterms_s             ! Number of terms in solution expansion.  
         integer(ik)                 :: nterms_c             ! Number of terms in coordinate expansion. 
         integer(ik)                 :: ntime                ! Number of time levels in solution.
@@ -429,7 +429,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  nterms_s    Number of terms in the modal representation of the solution
-    !!  @param[in]  neqns       Number of equations contained in the element solution
+    !!  @param[in]  nfields     Number of equations contained in the element solution
     !!
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/12/2016
@@ -452,7 +452,7 @@ contains
         
 
         self%nterms_s        = nterms_s     ! number of terms in solution expansion
-        self%neqns           = nfields      ! number of equations being solved
+        self%nfields         = nfields      ! number of equations being solved
         self%ntime           = ntime        ! number of time steps in solution
         self%dof_start       = dof_start
         self%dof_local_start = dof_local_start
@@ -545,7 +545,7 @@ contains
         !
         ! Store element_data(4-8)
         !
-        self%element_data(4) = self%neqns
+        self%element_data(4) = self%nfields
         self%element_data(5) = self%nterms_s
         self%element_data(6) = self%nterms_c
         self%element_data(7) = self%ntime

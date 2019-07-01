@@ -110,7 +110,8 @@ contains
                                          iproc           = domain%elems(ielem)%iproc,           &
                                          pelem_ID        = NO_ID,                               &
                                          eqn_ID          = domain%elems(ielem)%eqn_ID,          &
-                                         nfields         = domain%elems(ielem)%neqns,           &
+                                         nfields         = domain%elems(ielem)%nfields,         &
+                                         ntime           = domain%elems(ielem)%ntime,           &
                                          nterms_s        = domain%elems(ielem)%nterms_s,        &
                                          nterms_c        = domain%elems(ielem)%nterms_c,        &
                                          dof_start       = domain%elems(ielem)%dof_start,       &

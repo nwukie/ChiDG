@@ -51,7 +51,7 @@ module type_face
         integer(ik)             :: iparent_g       ! Domain-global index of the parent element
         integer(ik)             :: iparent_l       ! Processor-local index of the parent element
         integer(ik)             :: iface           ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
-        integer(ik)             :: neqns           ! Number of equations in equationset_t
+        integer(ik)             :: nfields         ! Number of equations in equationset_t
         integer(ik)             :: nterms_s        ! Number of terms in solution polynomial expansion
         integer(ik)             :: dof_start       ! Starting DOF index in ChiDG-global index 
         integer(ik)             :: dof_local_start ! Starting DOF index in ChiDG-local index 
@@ -67,8 +67,9 @@ module type_face
         integer(ik)             :: ineighbor_element_g       = 0         ! Domain-global index of the neighboring element
         integer(ik)             :: ineighbor_element_l       = 0         ! Processor-local index of the neighboring element
         integer(ik)             :: ineighbor_face            = 0
-        integer(ik)             :: ineighbor_neqns           = 0
+        integer(ik)             :: ineighbor_nfields         = 0
         integer(ik)             :: ineighbor_nterms_s        = 0
+        integer(ik)             :: ineighbor_ntime           = 0
         integer(ik)             :: ineighbor_dof_start       = NO_ID
         integer(ik)             :: ineighbor_dof_local_start = NO_ID
         integer(ik)             :: ineighbor_pelem_ID        = NO_ID
@@ -300,7 +301,7 @@ contains
         !
         ! Set indices and associate quadrature instances.
         !
-        self%neqns      = elem%neqns
+        self%nfields    = elem%nfields
         self%nterms_s   = elem%nterms_s
         self%dof_start  = elem%dof_start
         self%ntime      = elem%ntime
@@ -1179,10 +1180,11 @@ contains
     !!  @date   6/10/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine set_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,              &
-                                       ineighbor_element_g,ineighbor_element_l,            &
-                                       ineighbor_face,ineighbor_neqns, ineighbor_nterms_s, &
-                                       ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
+    subroutine set_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,                   &
+                                       ineighbor_element_g,ineighbor_element_l,                 &
+                                       ineighbor_face,ineighbor_nfields, ineighbor_ntime,       &
+                                       ineighbor_nterms_s, ineighbor_proc,ineighbor_dof_start,  &
+                                       ineighbor_dof_local_start)
         class(face_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: ftype
         integer(ik),    intent(in)      :: ineighbor_domain_g
@@ -1190,7 +1192,8 @@ contains
         integer(ik),    intent(in)      :: ineighbor_element_g
         integer(ik),    intent(in)      :: ineighbor_element_l
         integer(ik),    intent(in)      :: ineighbor_face
-        integer(ik),    intent(in)      :: ineighbor_neqns
+        integer(ik),    intent(in)      :: ineighbor_nfields
+        integer(ik),    intent(in)      :: ineighbor_ntime
         integer(ik),    intent(in)      :: ineighbor_nterms_s
         integer(ik),    intent(in)      :: ineighbor_proc
         integer(ik),    intent(in)      :: ineighbor_dof_start
@@ -1203,7 +1206,8 @@ contains
         self%ineighbor_element_g       = ineighbor_element_g
         self%ineighbor_element_l       = ineighbor_element_l
         self%ineighbor_face            = ineighbor_face
-        self%ineighbor_neqns           = ineighbor_neqns
+        self%ineighbor_nfields         = ineighbor_nfields
+        self%ineighbor_ntime           = ineighbor_ntime
         self%ineighbor_nterms_s        = ineighbor_nterms_s
         self%ineighbor_proc            = ineighbor_proc
         self%ineighbor_dof_start       = ineighbor_dof_start

@@ -23,6 +23,7 @@ module type_element_info
 
         integer(ik) :: eqn_ID          = NO_ID
         integer(ik) :: nfields         = NO_ID
+        integer(ik) :: ntime           = NO_ID
         integer(ik) :: nterms_s        = NO_ID
         integer(ik) :: nterms_c        = NO_ID
         integer(ik) :: dof_start       = NO_ID
@@ -54,7 +55,7 @@ contains
     !!  @date   5/7/2019
     !!
     !----------------------------------------------------------------------------------
-    function element_info_constructor(idomain_g, idomain_l, ielement_g, ielement_l, iproc, pelem_ID, eqn_ID, nfields, nterms_s, nterms_c, dof_start, dof_local_start, recv_comm, recv_domain, recv_element, recv_dof) result(elem_info)
+    function element_info_constructor(idomain_g, idomain_l, ielement_g, ielement_l, iproc, pelem_ID, eqn_ID, nfields, ntime, nterms_s, nterms_c, dof_start, dof_local_start, recv_comm, recv_domain, recv_element, recv_dof) result(elem_info)
         integer(ik),    intent(in)  :: idomain_g
         integer(ik),    intent(in)  :: idomain_l
         integer(ik),    intent(in)  :: ielement_g
@@ -63,6 +64,7 @@ contains
         integer(ik),    intent(in)  :: pelem_ID
         integer(ik),    intent(in)  :: eqn_ID
         integer(ik),    intent(in)  :: nfields
+        integer(ik),    intent(in)  :: ntime
         integer(ik),    intent(in)  :: nterms_s
         integer(ik),    intent(in)  :: nterms_c
         integer(ik),    intent(in)  :: dof_start
@@ -82,6 +84,7 @@ contains
         elem_info%pelem_ID        = pelem_ID
         elem_info%eqn_ID          = eqn_ID
         elem_info%nfields         = nfields
+        elem_info%ntime           = ntime
         elem_info%nterms_s        = nterms_s
         elem_info%nterms_c        = nterms_c
         elem_info%dof_start       = dof_start

@@ -24,6 +24,7 @@ module type_chimera_donor
 
         ! Donor properties
         integer(ik)                 :: nfields   = 0        ! Number of equations in donor element
+        integer(ik)                 :: ntime     = 0        ! Number of equations in donor element
         integer(ik)                 :: nterms_s  = 0        ! Number of terms in donor expansion
         integer(ik)                 :: nterms_c  = 0        ! Number of terms in donor expansion
         integer(ik)                 :: dof_start = 0        ! Starting gobal dof index for overset donor.
@@ -110,10 +111,11 @@ contains
     !!  @date   7/25/2017
     !!
     !------------------------------------------------------------------
-    subroutine set_properties(self,nterms_c,nterms_s,nfields,eqn_ID,dof_start,dof_local_start)
+    subroutine set_properties(self,nterms_c,nterms_s,ntime,nfields,eqn_ID,dof_start,dof_local_start)
         class(chimera_donor_t), intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms_c
         integer(ik),            intent(in)      :: nterms_s
+        integer(ik),            intent(in)      :: ntime
         integer(ik),            intent(in)      :: nfields
         integer(ik),            intent(in)      :: eqn_ID
         integer(ik),            intent(in)      :: dof_start
@@ -121,6 +123,7 @@ contains
 
         self%nterms_c        = nterms_c
         self%nterms_s        = nterms_s
+        self%ntime           = ntime
         self%nfields         = nfields
         self%eqn_ID          = eqn_ID
         self%dof_start       = dof_start

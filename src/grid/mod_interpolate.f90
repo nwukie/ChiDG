@@ -604,7 +604,8 @@ contains
                                  iproc           = mesh%domain(idomain_l)%elems(ielement_l)%iproc,           &
                                  pelem_ID        = NO_ID,                                                    &
                                  eqn_ID          = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID,          &
-                                 nfields         = mesh%domain(idomain_l)%elems(ielement_l)%neqns,           &
+                                 nfields         = mesh%domain(idomain_l)%elems(ielement_l)%nfields,         &
+                                 ntime           = mesh%domain(idomain_l)%elems(ielement_l)%ntime,           &
                                  nterms_s        = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,        &
                                  nterms_c        = mesh%domain(idomain_l)%elems(ielement_l)%nterms_c,        &
                                  dof_start       = mesh%domain(idomain_l)%elems(ielement_l)%dof_start,       &
@@ -675,7 +676,8 @@ contains
                                  iproc           = mesh%domain(idomain_l)%elems(ielement_l)%iproc,           &
                                  pelem_ID        = NO_ID,                                                    &
                                  eqn_ID          = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID,          &
-                                 nfields         = mesh%domain(idomain_l)%elems(ielement_l)%neqns,           &
+                                 nfields         = mesh%domain(idomain_l)%elems(ielement_l)%nfields,         &
+                                 ntime           = mesh%domain(idomain_l)%elems(ielement_l)%ntime,           &
                                  nterms_s        = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,        &
                                  nterms_c        = mesh%domain(idomain_l)%elems(ielement_l)%nterms_c,        &
                                  dof_start       = mesh%domain(idomain_l)%elems(ielement_l)%dof_start,       &
@@ -1214,7 +1216,8 @@ contains
                                           iproc           = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_proc,            &
                                           pelem_ID        = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_pelem_ID,        &
                                           eqn_ID          = NO_ID,                                                                                                   &
-                                          nfields         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_neqns,           &
+                                          nfields         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_nfields,         &
+                                          ntime           = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_ntime,           &
                                           nterms_s        = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_nterms_s,        &
                                           nterms_c        = 0,                                                                                                       &
                                           dof_start       = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_dof_start,       &
@@ -1239,6 +1242,7 @@ contains
                                           pelem_ID        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%pelem_ID,        &
                                           eqn_ID          = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%eqn_ID,          &
                                           nfields         = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nfields,         &
+                                          ntime           = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ntime,           &
                                           nterms_s        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nterms_s,        &
                                           nterms_c        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nterms_c,        &
                                           dof_start       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%dof_start,       &

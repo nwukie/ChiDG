@@ -496,7 +496,7 @@ contains
         eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff,worker%itime)
         worker%function_info%idepend = idepend
-        do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
+        do ieqn = 1,worker%mesh%domain(idomain_l)%nfields
             field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
             !
@@ -631,7 +631,7 @@ contains
         worker%function_info%idepend = idepend
         worker%function_info%idiff   = idiff
         eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
-        do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
+        do ieqn = 1,worker%mesh%domain(idomain_l)%nfields
 
             field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
@@ -2159,7 +2159,7 @@ contains
             !
             ! Compute lift for each equation
             !
-            do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
+            do ieqn = 1,worker%mesh%domain(idomain_l)%nfields
 
 
                 !

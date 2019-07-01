@@ -108,7 +108,7 @@ contains
         character(:),   allocatable :: user_msg
         integer(ik),    allocatable :: blocks(:)
         integer(ik)                 :: nelem, ierr, ielem, iblk, parent,                &
-                                       block_index, neqns, nterms_s, ntime,             &
+                                       block_index, nfields, nterms_s, ntime,             &
                                        nchimera_elements, maxdonors, idonor, iface,     &
                                        itime, dparent_g, dparent_l, eparent_g,          &
                                        eparent_l, tparent, parent_proc, eparent_l_trans,&
@@ -234,7 +234,7 @@ contains
                 do block_index = 1,size(blocks)
                     iblk = blocks(block_index)
                     nterms_s = mesh%domain(idom)%elems(ielem)%nterms_s
-                    neqns    = mesh%domain(idom)%elems(ielem)%neqns
+                    nfields  = mesh%domain(idom)%elems(ielem)%nfields
 
                     !
                     ! Parent is the element with respect to which the linearization is computed
@@ -262,11 +262,11 @@ contains
                     if (eparent_l /= NO_INTERIOR_NEIGHBOR) then
 
                         ! Initialize dense block
-                        call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
+                        call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
                         call self%lblks(ielem,itime)%push_back(temp_blk)
 
                         ! Store data about number of equations and number of terms in solution expansion
-                        self%ldata(ielem,1) = mesh%domain(idom)%elems(ielem)%neqns
+                        self%ldata(ielem,1) = mesh%domain(idom)%elems(ielem)%nfields
                         self%ldata(ielem,2) = mesh%domain(idom)%elems(ielem)%nterms_s
                         self%ldata(ielem,3) = mesh%domain(idom)%elems(ielem)%ntime
 
@@ -330,7 +330,7 @@ contains
                                 eparent_g   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
                                 eparent_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
                                 parent_proc = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc
-                                neqns       = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%nfields
+                                nfields     = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%nfields
                                 nterms_s    = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%nterms_s
 
 
@@ -356,7 +356,7 @@ contains
                                 ! If a block for the donor element hasn't yet been initialized, call initialization procedure
                                 !
                                 if (.not. already_added) then
-                                    call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
+                                    call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
                                     call self%chi_blks(ielem,itime)%push_back(temp_blk)
 
                                 end if
@@ -411,7 +411,7 @@ contains
                                     !
                                     ! Compute size of coupling matrix
                                     !
-                                    neqns    = mesh%domain(idomain_l)%elems(ielement_l)%neqns
+                                    nfields  = mesh%domain(idomain_l)%elems(ielement_l)%nfields
                                     nterms_s = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
 
 
@@ -450,7 +450,7 @@ contains
                                     ! Call initialization, store initialized matrix to bc_blks
                                     !
                                     if (.not. already_added) then
-                                        call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
+                                        call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
                                         call self%bc_blks(ielement_l,itime)%push_back(temp_blk)
                                     end if
 
@@ -485,7 +485,7 @@ contains
                     self%hb_blks(ielem,itime)%mass       = mesh%domain(idom)%elems(ielem)%mass
 
                     ! Get problem size for a given time-level
-                    neqns    = mesh%domain(idom)%elems(ielem)%neqns
+                    nfields  = mesh%domain(idom)%elems(ielem)%nfields
                     nterms_s = mesh%domain(idom)%elems(ielem)%nterms_s
 
                     ! Get indices for coupled element. Actually coupled with itself, but at different time-level
@@ -498,7 +498,7 @@ contains
                     ! Call initialization, store initialized matrix to hb_blks
                     do itime_couple = 1,mesh%domain(idom)%ntime
                         if (itime_couple /= itime) then
-                            call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime_couple)
+                            call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime_couple)
                             call self%hb_blks(ielem,itime)%push_back(temp_blk)
                         end if
                     end do !itime_couple
@@ -536,7 +536,7 @@ contains
                                             if (itime_couple /= itime) then
 
                                                 ! Compute size of coupling matrix
-                                                neqns    = mesh%domain(idomain_l)%elems(ielement_l)%neqns
+                                                nfields  = mesh%domain(idomain_l)%elems(ielement_l)%nfields
                                                 nterms_s = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
 
                                                 ! Get indices for coupled element
@@ -566,7 +566,7 @@ contains
 
                                                 ! Call initialization, store initialized matrix to hb_blks
                                                 if (.not. already_added) then
-                                                    call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime_couple)
+                                                    call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime_couple)
                                                     call self%hb_blks(ielement_l,itime)%push_back(temp_blk)
                                                 end if
 

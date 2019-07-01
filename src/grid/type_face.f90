@@ -135,6 +135,7 @@ module type_face
 
         ! Face area
         real(rk)                :: total_area
+        real(rk)                :: centroid(3)
         real(rk),   allocatable :: differential_areas(:)
         real(rk),   allocatable :: ale_area_ratio(:)
 
@@ -449,6 +450,7 @@ contains
         ddxi    = self%basis_c%interpolator_face('ddxi',  self%iface)
         ddeta   = self%basis_c%interpolator_face('ddeta', self%iface)
         ddzeta  = self%basis_c%interpolator_face('ddzeta',self%iface)
+
 
         !
         ! Compute element jacobian matrix at interpolation nodes
@@ -837,6 +839,14 @@ contains
         do inode = 1,self%basis_s%nnodes_face()
             self%interp_coords(inode,1:3) = [c1(inode), c2(inode), c3(inode)]
         end do !inode
+
+
+        !
+        ! Update face centroid, here we just take as an arithmetic average.
+        !
+        self%centroid(1) = sum(self%interp_coords(:,1))/size(self%interp_coords(:,1))
+        self%centroid(2) = sum(self%interp_coords(:,2))/size(self%interp_coords(:,2))
+        self%centroid(3) = sum(self%interp_coords(:,3))/size(self%interp_coords(:,3))
 
     end subroutine interpolate_coords
     !******************************************************************************************

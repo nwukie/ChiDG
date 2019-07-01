@@ -32,7 +32,8 @@ module type_chidg_worker
     use mod_io,                 only: face_lift_stab, elem_lift_stab
     use mod_constants,          only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA,  &
                                       ONE, THIRD, TWO, NOT_A_FACE, BOUNDARY,    &
-                                      CARTESIAN, CYLINDRICAL, INTERIOR, HALF
+                                      CARTESIAN, CYLINDRICAL, INTERIOR, HALF,   &
+                                      FOUR, NO_ID
 
     use mod_inv,                only: inv
     use mod_interpolate,        only: interpolate_element_autodiff, interpolate_general_autodiff
@@ -137,6 +138,8 @@ module type_chidg_worker
         procedure   :: quadrature_weights
         procedure   :: inverse_jacobian
         procedure   :: face_area
+        procedure   :: volume
+        procedure   :: centroid
         procedure   :: coordinate_system
         procedure   :: face_type
         procedure   :: time
@@ -775,7 +778,9 @@ contains
         type(AD_D),     allocatable :: var_gq(:), tmp_gq(:)
         character(:),   allocatable :: cache_component, cache_type, lift_source, lift_nodes, user_msg, interp_source
         integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface_loop, iface_use, iface_select, i
-        real(rk)                    :: stabilization
+        real(rk)                    :: stabilization, face_area, centroid_m(3), centroid_p(3), centroid_distance(3),    &
+                                       volume_m, volume_p, centroid_normal_distance, average_normals(3)
+        real(rk),       allocatable :: unit_normal_1(:), unit_normal_2(:), unit_normal_3(:)
         logical                     :: lift
 
 
@@ -797,6 +802,42 @@ contains
         if (present(iface)) iface_use = iface
 
 
+!        !
+!        ! Compute adaptive face lift stabilization: NOTE not verified or determined to be stable.
+!        !
+!        face_area = self%face_area()
+!        volume_m   = self%volume('interior')
+!        volume_p   = self%volume('exterior')
+!        centroid_m = self%centroid('interior')
+!        centroid_p = self%centroid('exterior')
+!        centroid_distance = abs(centroid_p - centroid_m)
+!        unit_normal_1 = self%unit_normal(1)
+!        unit_normal_2 = self%unit_normal(2)
+!        unit_normal_3 = self%unit_normal(3)
+!
+!        ! Compute average face normal
+!        average_normals(1) = abs(sum(unit_normal_1)/size(unit_normal_1))
+!        average_normals(2) = abs(sum(unit_normal_2)/size(unit_normal_2))
+!        average_normals(3) = abs(sum(unit_normal_3)/size(unit_normal_3))
+!
+!        ! Project centroid distance onto face normal vector
+!        centroid_normal_distance = abs(centroid_distance(1)*average_normals(1) + centroid_distance(2)*average_normals(2) + centroid_distance(3)*average_normals(3))
+!        print*, 'centroid m: ', centroid_m
+!        print*, 'centroid p: ', centroid_p
+!        print*, 'normal: ', average_normals
+!        print*, 'centroid normal: ', centroid_normal_distance
+!
+!        ! Compute adaptive face stabilization
+!        face_lift_stab = (FOUR/(face_area*centroid_normal_distance))*(volume_m * volume_p)/(volume_m + volume_p)
+!
+!        print*, 'pre comp: ', face_area, volume_m, volume_p, centroid_distance
+!        if (self%face_type() == BOUNDARY .and. (trim(interp_source) == 'face interior' .or. trim(interp_source) == 'face exterior')) print*, 'face stab: ', face_lift_stab, self%iface, trim(interp_source)
+!        print*, 'face stab: ', face_lift_stab, self%iface, trim(interp_source)
+!
+!        if (face_lift_stab > 4.5) print*, 'face_lift_stab: ', face_lift_stab
+!        if (face_lift_stab < 1.0) print*, 'face_lift_stab: ', face_lift_stab
+!
+!        if (face_lift_stab < 1.0_rk) face_lift_stab = 1.0_rk
 
 
 
@@ -846,6 +887,15 @@ contains
                             Try 'face interior', 'face exterior', 'boundary', or 'element'"
                 call chidg_signal_three(FATAL,user_msg,trim(field),trim(interp_type),trim(interp_source))
         end select
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2311,6 +2361,124 @@ contains
     !**************************************************************************************
 
 
+    !>  Return the volume of the interior/exterior element.
+    !!
+    !!  NOTE: this returns the volume of the reference physical element, not the deformed
+    !!  ALE volume.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   06/30/2019
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function volume(self,source) result(volume_)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: source
+
+        integer(ik) :: idomain_l, ielement_l, pelem_ID
+        real(rk)    :: volume_
+
+        if (trim(source) == 'interior') then
+            volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
+
+        else if (trim(source) == 'exterior') then
+
+            ! Interior face, find neighbor and account for local or parallel storage
+            if (self%face_type() == INTERIOR) then
+                idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
+                ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
+                pelem_ID   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_pelem_ID
+                if (pelem_ID == NO_ID) then
+                    volume_ = self%mesh%domain(idomain_l)%elems(ielement_l)%vol
+                else
+                    volume_ = self%mesh%parallel_element(pelem_ID)%vol
+                end if
+
+            ! Boundary face, assume ficticious exterior element of equal volume
+            else if (self%face_type() == BOUNDARY) then
+                volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
+
+            ! Overset face, assume ficticious exterior element of equal volume
+            else if (self%face_type() == CHIMERA) then
+                volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
+
+            end if
+
+
+
+        else
+            call chidg_signal(FATAL,"chidg_worker%volume: invalid source parameter. Valid inputs are ['interior', 'exterior']")
+        end if
+
+    end function volume
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Return the centroid of the interior/exterior element.
+    !!
+    !!  NOTE: this returns the centroid of the reference physical element, not the deformed
+    !!  ALE centroid.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   06/30/2019
+    !!
+    !--------------------------------------------------------------------------------------
+    function centroid(self,source) result(centroid_)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: source
+
+        integer(ik) :: idomain_l, ielement_l, pelem_ID
+        real(rk)    :: centroid_(3), face_centroid(3), interior_centroid(3), delta(3)
+
+        if (trim(source) == 'interior') then
+             centroid_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
+
+        else if (trim(source) == 'exterior') then
+
+            ! Interior face, find neighbor and account for local or parallel storage
+            if (self%face_type() == INTERIOR) then
+                idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
+                ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
+                pelem_ID   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_pelem_ID
+                if (pelem_ID == NO_ID) then
+                    centroid_ = self%mesh%domain(idomain_l)%elems(ielement_l)%centroid
+                else
+                    centroid_ = self%mesh%parallel_element(pelem_ID)%centroid
+                end if
+
+            ! Boundary face, assume ficticious exterior element and assume centroid at equal 
+            ! distance to face opposite interior element
+            else if (self%face_type() == BOUNDARY) then
+                face_centroid = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%centroid
+                interior_centroid = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
+                delta = face_centroid - interior_centroid
+                centroid_ = interior_centroid + TWO*delta
+
+            ! Overset face, assume ficticious exterior element and assume centroid at equal 
+            ! distance to face opposite interior element
+            else if (self%face_type() == CHIMERA) then
+                face_centroid = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%centroid
+                interior_centroid = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
+                delta = face_centroid - interior_centroid
+                centroid_ = interior_centroid + TWO*delta
+
+            end if
+
+
+
+        else
+            call chidg_signal(FATAL,"chidg_worker%centroid: invalid source parameter. Valid inputs are ['interior', 'exterior']")
+        end if
+
+    end function centroid 
+    !**************************************************************************************
+
 
 
 
@@ -2335,7 +2503,6 @@ contains
 
     end function face_area
     !**************************************************************************************
-
 
 
 

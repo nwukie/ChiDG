@@ -181,6 +181,7 @@ contains
         vorticity_2 = worker%get_field('Vorticity-2', 'value', 'element')
         vorticity_3 = worker%get_field('Vorticity-3', 'value', 'element')
 
+
         vorticity2 =  vorticity_1**TWO  +  vorticity_2**TWO  +  vorticity_3**TWO 
         epsilon_vorticity = 1.e-6_rk
         vorticity = vorticity2
@@ -263,6 +264,7 @@ contains
                     -(SA_c_b2/SA_sigma)*rho*(grad1_nutilde*grad1_nutilde + grad2_nutilde*grad2_nutilde + grad3_nutilde*grad3_nutilde)   &
                     +(ONE/SA_sigma)*(nu + f_n1*nutilde)*(grad1_rho*grad1_nutilde + grad2_rho*grad2_nutilde + grad3_rho*grad3_nutilde)   &
                   )
+
 
         call worker%integrate_volume_source('Density * NuTilde',source)
 

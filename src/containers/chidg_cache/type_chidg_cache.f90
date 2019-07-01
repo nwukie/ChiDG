@@ -29,7 +29,6 @@ module type_chidg_cache
     !--------------------------------------------------------------------------------------
     type, public :: chidg_cache_t
 
-        !type(cache_data_t)              :: element
         type(cache_data_t)              :: element
         type(cache_data_t), allocatable :: faces(:,:)      ! (nfaces, side). side=1(INTERIOR), size=2(EXTERIOR)
         !type(cache_data_t)             :: faces(NFACES,2) ! Causes segfault due to incomplete compiler finalization support.
@@ -71,41 +70,25 @@ contains
         integer(ik) :: iface, ierr
 
 
-        !
         ! Store logical indicating if lift is stored
-        !
         self%lift = lift
 
-
-
-        !
         ! Allocate face cache's. Fixes SegFault that occurs when these are declared as static 
         ! arrays at compile time (faces(NFACES,2)) because gfortran doesn't have complete
         ! finalization procedures implemented yet.
-        !
         if (.not. allocated(self%faces)) then
             allocate(self%faces(NFACES,2), stat=ierr)
             if (ierr /= 0) call AllocationError
         end if
 
-
-        !
         ! Allocate storage for element cache
-        !
         call self%element%resize('element',mesh,prop,idomain_l,ielement_l,differentiate=differentiate)
 
-
-
-        !
         ! Allocate storage for faces cache
-        !
         do iface = 1,size(self%faces,1)
-
             call self%faces(iface,CACHE_FACE_INTERIOR)%resize('face interior',mesh,prop,idomain_l,ielement_l,iface,differentiate=differentiate)
             call self%faces(iface,CACHE_FACE_EXTERIOR)%resize('face exterior',mesh,prop,idomain_l,ielement_l,iface,differentiate=differentiate)
-
         end do
-
 
     end subroutine resize
     !**************************************************************************************
@@ -131,13 +114,9 @@ contains
         type(seed_t),           intent(in)              :: seed
         integer(ik),            intent(in), optional    :: iface
 
-
         character(:),   allocatable :: user_msg
 
-
-        !
         ! Check if iface was provided for face-type caches
-        !
         if ((trim(cache_component) == 'face interior') .or. &
             (trim(cache_component) == 'face exterior')) then
             if (.not. present(iface)) then
@@ -148,11 +127,7 @@ contains
         end if
 
 
-
-
-        !
         ! Call accept routine on correct data component
-        !
         select case(cache_component)
             case('element')
                 call self%element%set_data(field,cache_data,data_type,idirection,seed)
@@ -168,11 +143,7 @@ contains
                             Valid values are either 'element', 'face interior', or 'face exterior' to indicate &
                             the cache type where the data is to be stored."
                 call chidg_signal_one(FATAL,user_msg,cache_component)
-
         end select
-
-
-
 
     end subroutine set_data
     !****************************************************************************************
@@ -201,10 +172,7 @@ contains
         type(seed_t),           intent(in)              :: seed
         integer(ik),            intent(in), optional    :: iface
 
-
         type(AD_D), allocatable, dimension(:) :: cache_data
-
-
 
         select case (trim(cache_component))
             case ('element')
@@ -219,8 +187,6 @@ contains
             case default
                 call chidg_signal(FATAL,'chidg_cache%get_data: Error in cache_component string')
         end select
-
-
 
     end function get_data
     !*****************************************************************************************
@@ -258,17 +224,8 @@ contains
                 call chidg_signal(FATAL,'chidg_cache%check_field_exists: Error in cache_component string')
         end select
 
-
-
     end function check_field_exists
     !*****************************************************************************************
-
-
-
-
-
-
-
 
 
 

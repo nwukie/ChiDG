@@ -90,11 +90,6 @@ subroutine test_integrate_boundary_constant()
                    recv_element=NO_ID)
 
     
-!    face%idomain_g  = 1
-!    face%idomain_l  = 1
-!    face%ielement_g = 1
-!    face%ielement_l = 1
-!    face%iface      = XI_MIN
     elem_info = element_info(idomain_g=1,       &
                              idomain_l=1,       &
                              ielement_g=1,      &
@@ -103,12 +98,15 @@ subroutine test_integrate_boundary_constant()
                              pelem_ID=NO_ID,    &
                              eqn_ID=1,          &
                              nfields=1,         &
+                             ntime=1,           &
                              nterms_s=8,        &
                              nterms_c=8,        &
-                             dof_start=0,       &
+                             dof_start=1,       &
+                             dof_local_start=1, &
                              recv_comm=NO_ID,   &
                              recv_domain=NO_ID, &
-                             recv_element=NO_ID)
+                             recv_element=NO_ID,&
+                             recv_dof=NO_ID)
 
 
 

@@ -51,12 +51,7 @@ contains
     subroutine setUp(this)
         class(test_bc_patch),    intent(inout)   :: this
         
-        integer(ik) :: ftype, mapping, ielem, idomain, spacedim,    &
-                       ntime, neqns, nterms_s
-        
-        !
         ! Start up ChiDG
-        !
         IO_DESTINATION = 'file'
         call this%chidg%start_up('core')
         
@@ -277,10 +272,11 @@ contains
         class(test_bc_patch),    intent(inout)   :: self
 
         type(bc_patch_t)            :: bc_patch
-        integer(ik)                 :: idomain_g,   idomain_l,  &
-                                       ielement_g,  ielement_l, &
-                                       proc, patch_face, iface, &
-                                       neqns, nterms_s, dof_start
+        integer(ik)                 :: idomain_g,   idomain_l,   &
+                                       ielement_g,  ielement_l,  &
+                                       proc, patch_face, iface,  &
+                                       nfields, nterms_s, ntime, &
+                                       dof_start, dof_local_start
         real(rk)                    :: total_area
         real(rk),       allocatable :: areas(:)
         real(rk)                    :: quad_pts(4,3)
@@ -301,16 +297,18 @@ contains
 
 
 
-        idomain_g  = 2
-        idomain_l  = 1
-        ielement_g = 4
-        ielement_l = 2
-        iface      = 1
-        neqns      = 1
-        nterms_s   = 8
-        dof_start  = 24
-        total_area = 1._rk
-        areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
+        idomain_g       = 2
+        idomain_l       = 1
+        ielement_g      = 4
+        ielement_l      = 2
+        iface           = 1
+        nfields         = 1
+        ntime           = 1
+        nterms_s        = 8
+        dof_start       = 24
+        dof_local_start = 24
+        total_area      = 1._rk
+        areas           = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
         quad_pts(1,:) = [0.1_rk,0.2_rk,0.3_rk]
         quad_pts(2,:) = [0.1_rk,0.2_rk,0.3_rk]
         quad_pts(3,:) = [0.1_rk,0.2_rk,0.3_rk]
@@ -327,13 +325,15 @@ contains
                                                       iface,        &
                                                       proc)
 
-        call bc_patch%set_coupled_element_data(patch_face,idomain_g,    &
-                                                          ielement_g,   &
-                                                          neqns,        &
-                                                          nterms_s,     &
-                                                          dof_start,    &
-                                                          total_area,   &
-                                                          areas,        &
+        call bc_patch%set_coupled_element_data(patch_face,idomain_g,        &
+                                                          ielement_g,       &
+                                                          nfields,          &
+                                                          ntime,            &
+                                                          nterms_s,         &
+                                                          dof_start,        &
+                                                          dof_local_start,  &
+                                                          total_area,       &
+                                                          areas,            &
                                                           quad_pts)
 
 
@@ -351,7 +351,8 @@ contains
         @assertEqual(bc_patch%coupling(patch_face)%ielement_g(1), ielement_g)
         @assertEqual(bc_patch%coupling(patch_face)%ielement_l(1), ielement_l)
         @assertEqual(bc_patch%coupling(patch_face)%iface(1),      iface)
-        @assertEqual(bc_patch%coupling(patch_face)%neqns(1),      neqns)
+        @assertEqual(bc_patch%coupling(patch_face)%nfields(1),    nfields)
+        @assertEqual(bc_patch%coupling(patch_face)%ntime(1),      ntime)
         @assertEqual(bc_patch%coupling(patch_face)%nterms_s(1),   nterms_s)
         @assertEqual(bc_patch%coupling(patch_face)%dof_start(1),  dof_start)
         @assertEqual(bc_patch%coupling(patch_face)%proc(1),       proc)
@@ -364,16 +365,18 @@ contains
 
 
 
-        idomain_g  = 3
-        idomain_l  = 2
-        ielement_g = 5
-        ielement_l = 3
-        iface      = 5
-        neqns      = 1
-        nterms_s   = 8
-        dof_start  = 0
-        total_area = 1._rk
-        areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
+        idomain_g       = 3
+        idomain_l       = 2
+        ielement_g      = 5
+        ielement_l      = 3
+        iface           = 5
+        nfields         = 1
+        ntime           = 1
+        nterms_s        = 8
+        dof_start       = 1
+        dof_local_start = 1
+        total_area      = 1._rk
+        areas           = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
         quad_pts(1,:) = [0.1_rk,0.2_rk,0.3_rk]
         quad_pts(2,:) = [0.1_rk,0.2_rk,0.3_rk]
         quad_pts(3,:) = [0.1_rk,0.2_rk,0.3_rk]
@@ -390,13 +393,15 @@ contains
                                                       iface,        &
                                                       proc)
 
-        call bc_patch%set_coupled_element_data(patch_face,idomain_g,    &
-                                                          ielement_g,   &
-                                                          neqns,        &
-                                                          nterms_s,     &
-                                                          dof_start,    &
-                                                          total_area,   &
-                                                          areas,        &
+        call bc_patch%set_coupled_element_data(patch_face,idomain_g,        &
+                                                          ielement_g,       &
+                                                          nfields,          &
+                                                          ntime,            &
+                                                          nterms_s,         &
+                                                          dof_start,        &
+                                                          dof_local_start,  &
+                                                          total_area,       &
+                                                          areas,            &
                                                           quad_pts)
 
         !
@@ -412,7 +417,8 @@ contains
         @assertEqual(bc_patch%coupling(patch_face)%ielement_g(2), ielement_g)
         @assertEqual(bc_patch%coupling(patch_face)%ielement_l(2), ielement_l)
         @assertEqual(bc_patch%coupling(patch_face)%iface(2),      iface)
-        @assertEqual(bc_patch%coupling(patch_face)%neqns(2),      neqns)
+        @assertEqual(bc_patch%coupling(patch_face)%nfields(2),    nfields)
+        @assertEqual(bc_patch%coupling(patch_face)%ntime(2),      ntime)
         @assertEqual(bc_patch%coupling(patch_face)%nterms_s(2),   nterms_s)
         @assertEqual(bc_patch%coupling(patch_face)%dof_start(2),  dof_start)
         @assertEqual(bc_patch%coupling(patch_face)%proc(2),       proc)

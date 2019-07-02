@@ -719,7 +719,7 @@ contains
     !-----------------------------------------------------------------------------------------------------------
     function interpolate_general_autodiff(mesh,vector,fcn_info,ifield,itime,interpolation_type,nodes,try_offset,donors,donor_nodes) result(var)
         type(mesh_t),           intent(in)              :: mesh
-        type(chidg_vector_t),   intent(in)              :: vector
+        type(chidg_vector_t),   intent(inout)           :: vector
         type(function_info_t),  intent(in)              :: fcn_info
         integer(ik),            intent(in)              :: ifield
         integer(ik),            intent(in)              :: itime
@@ -877,15 +877,17 @@ contains
 
 
             ! Retrieve modal coefficients for ifield from vector
-            print*, 'WARNING! UPDATE parallel data access in mod_interpolate%interpolate_general_autodiff.'
-            if (parallel_donor) then
-                recv_info%comm    = mesh%parallel_element(donor%pelem_ID)%recv_comm
-                recv_info%domain  = mesh%parallel_element(donor%pelem_ID)%recv_domain
-                recv_info%element = mesh%parallel_element(donor%pelem_ID)%recv_element
-                qdiff = vector%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ifield,itime)
-            else
-                qdiff = vector%dom(donor%idomain_l)%vecs(donor%ielement_l)%getvar(ifield,itime)
-            end if
+            !! OLD
+            !if (parallel_donor) then
+            !    recv_info%comm    = mesh%parallel_element(donor%pelem_ID)%recv_comm
+            !    recv_info%domain  = mesh%parallel_element(donor%pelem_ID)%recv_domain
+            !    recv_info%element = mesh%parallel_element(donor%pelem_ID)%recv_element
+            !    qdiff = vector%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ifield,itime)
+            !else
+            !    qdiff = vector%dom(donor%idomain_l)%vecs(donor%ielement_l)%getvar(ifield,itime)
+            !end if
+            ! NEW
+            qdiff = vector%get_field(donor,ifield,itime)
 
 
             ! If the current element is being differentiated (ielem == ielem_seed)

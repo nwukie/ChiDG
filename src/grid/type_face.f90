@@ -1182,7 +1182,7 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine set_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,                   &
                                        ineighbor_element_g,ineighbor_element_l,                 &
-                                       ineighbor_face,ineighbor_nfields, ineighbor_ntime,       &
+                                       ineighbor_face,ineighbor_nfields,ineighbor_ntime,        &
                                        ineighbor_nterms_s, ineighbor_proc,ineighbor_dof_start,  &
                                        ineighbor_dof_local_start)
         class(face_t),  intent(inout)   :: self

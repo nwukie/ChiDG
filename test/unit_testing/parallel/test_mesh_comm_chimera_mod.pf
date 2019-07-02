@@ -481,7 +481,7 @@ contains
     subroutine test_chimera_ale_comm(self)
         class(test_mesh_comm_chimera), intent(inout) :: self
 
-        integer(ik)             :: nelem, ierr, idomain_g, ielement_g, nterms_s, neqns, &
+        integer(ik)             :: nelem, ierr, idomain_g, ielement_g, nterms_s, nfields, &
                                    nparallel_elements, pelem_ID, ChiID
         real(rk)                :: computed_norm, expected_norm, det_jacobian_grid,     &
                                    det_jacobian_grid_grad(3), inv_jacobian_grid(3,3), grid_velocity(3), &
@@ -636,14 +636,14 @@ contains
                 ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
                 pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
                 nterms_s           = self%solution_order * self%solution_order * self%solution_order
-                neqns              = 1
+                nfields            = 1
 
                 ! Test indices
                 @assertEqual(1,nparallel_elements)
                 @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
                 @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
                 @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
-                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+                @assertEqual(nfields,    self%chidg%data%mesh%parallel_element(pelem_ID)%nfields)
 
                 ! Test element geometric/ALE quantities
                 !       .**.  
@@ -674,14 +674,14 @@ contains
                 ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
                 pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
                 nterms_s           = self%solution_order * self%solution_order * self%solution_order
-                neqns              = 1
+                nfields            = 1
 
                 ! Test indices
                 @assertEqual(1,nparallel_elements)
                 @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
                 @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
                 @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
-                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+                @assertEqual(nfields,    self%chidg%data%mesh%parallel_element(pelem_ID)%nfields)
 
                 ! Test element geometric/ALE quantities
                 !       .****.
@@ -727,14 +727,14 @@ contains
                 ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
                 pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
                 nterms_s           = self%solution_order * self%solution_order * self%solution_order
-                neqns              = 1
+                nfields            = 1
 
                 ! Test indices
                 @assertEqual(1,nparallel_elements)
                 @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
                 @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
                 @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
-                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+                @assertEqual(nfields,    self%chidg%data%mesh%parallel_element(pelem_ID)%nfields)
 
                 ! Test element geometric/ALE quantities
                 !       .**.  
@@ -761,14 +761,14 @@ contains
                 ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
                 pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
                 nterms_s           = self%solution_order * self%solution_order * self%solution_order
-                neqns              = 1
+                nfields            = 1
 
                 ! Test indices
                 @assertEqual(1,nparallel_elements)
                 @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
                 @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
                 @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
-                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+                @assertEqual(nfields,    self%chidg%data%mesh%parallel_element(pelem_ID)%nfields)
 
                 ! Test element geometric/ALE quantities
                 !       .****.
@@ -812,14 +812,14 @@ contains
                 ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
                 pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
                 nterms_s           = self%solution_order * self%solution_order * self%solution_order
-                neqns              = 1
+                nfields            = 1
 
                 ! Test indices
                 @assertEqual(1,nparallel_elements)
                 @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
                 @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
                 @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
-                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+                @assertEqual(nfields,    self%chidg%data%mesh%parallel_element(pelem_ID)%nfields)
 
                 ! Test element geometric/ALE quantities
                 !       .**.  
@@ -846,14 +846,14 @@ contains
                 ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
                 pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
                 nterms_s           = self%solution_order * self%solution_order * self%solution_order
-                neqns              = 1
+                nfields            = 1
 
                 ! Test indices
                 @assertEqual(1,nparallel_elements)
                 @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
                 @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
                 @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
-                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+                @assertEqual(nfields,    self%chidg%data%mesh%parallel_element(pelem_ID)%nfields)
 
                 ! Test element geometric/ALE quantities
                 !       .****.

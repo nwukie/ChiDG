@@ -36,7 +36,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
     type(AD_D)                  :: integral(8)
     type(element_info_t)        :: elem_info 
     type(seed_t)                :: seed
-    integer(ik)                 :: ielement_l, ivar, nderiv, i, neqns, imat,  &
+    integer(ik)                 :: ielement_l, ivar, nderiv, i, nfields, imat,  &
                                    nterms_c, idomain, spacedim, itime, ntime, &
                                    nelements_g, nterms_s
     real(rk),   allocatable     :: mat(:,:)
@@ -54,7 +54,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
                                       nelem_eta  = 3,                                   &
                                       nelem_zeta = 3 )
 
-    neqns    = 1
+    nfields  = 1
     nterms_s = 8
     call chidg%set('Solution Order', integer_input=2)
     call chidg%set('Time Integrator' , algorithm='Steady')
@@ -76,7 +76,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
     !
     ! Initialize AD variables with allocated derivative arrays
     !
-    nderiv = neqns*nterms_s
+    nderiv = nfields*nterms_s
     do i = 1,8
         integral(i) = AD_D(nderiv)
     end do
@@ -131,18 +131,21 @@ subroutine test_domain_matrix__store_1eq_8terms()
                               pelem_ID=NO_ID,       &
                               eqn_ID=1,             &
                               nfields=1,            &
+                              ntime=1,              &
                               nterms_s=8,           &
                               nterms_c=8,           &
                               dof_start=104,        &
+                              dof_local_start=104,  &
                               recv_comm=NO_ID,      &
                               recv_domain=NO_ID,    &
-                              recv_element=NO_ID)
+                              recv_element=NO_ID,   &
+                              recv_dof=NO_ID)
 
     call seed%init(idomain_g=1,         &
                    idomain_l=1,         &
                    ielement_g=13,       &
                    ielement_l=13,       &
-                   nfields=neqns,       &
+                   nfields=nfields,     &
                    nterms_s=nterms_s,   &
                    iproc=0,             &
                    itime=itime,         &
@@ -214,7 +217,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
     type(element_info_t)        :: elem_info
     type(seed_t)                :: seed
     type(AD_D)                  :: integral(8)
-    integer(ik)                 :: ivar, nderiv, i, neqns, imat, idomain, ielem, &
+    integer(ik)                 :: ivar, nderiv, i, nfields, imat, idomain, ielem, &
                                    nterms_c, spacedim, itime, ntime, nelements_g, nterms_s
     real(rk),   allocatable     :: mat(:,:)
     
@@ -231,7 +234,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
                                       nelem_zeta = 3 )
 
 
-    neqns    = 2
+    nfields  = 2
     nterms_s = 8
     call chidg%set('Solution Order', integer_input=2)
     call chidg%set('Time Integrator' , algorithm='Steady')
@@ -251,7 +254,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
     !
     ! Initialize AD variables with allocated derivative arrays
     !
-    nderiv = neqns*nterms_s
+    nderiv = nfields*nterms_s
     do i = 1,8
         integral(i) = AD_D(nderiv)
     end do
@@ -292,27 +295,30 @@ subroutine test_domain_matrix__store_2eq_8terms()
     !
     ! PROCEDURE BEING TESTED, bmat%store
     !
-    elem_info = element_info(idomain_g=1,       &
-                             idomain_l=1,       &
-                             ielement_g=14,     &
-                             ielement_l=14,     &
-                             iproc=0,           &
-                             pelem_ID=NO_ID,    &
-                             eqn_ID=1,          &
-                             nfields=neqns,     &
-                             nterms_s=8,        &
-                             nterms_c=8,        &
-                             dof_start=104,     &
-                             recv_comm=NO_ID,   &
-                             recv_domain=NO_ID, &
-                             recv_element=NO_ID)
+    elem_info = element_info(idomain_g=1,         &
+                             idomain_l=1,         &
+                             ielement_g=14,       &
+                             ielement_l=14,       &
+                             iproc=0,             &
+                             pelem_ID=NO_ID,      &
+                             eqn_ID=1,            &
+                             nfields=nfields,     &
+                             ntime=1,             &
+                             nterms_s=8,          &
+                             nterms_c=8,          &
+                             dof_start=104,       &
+                             dof_local_start=104, &
+                             recv_comm=NO_ID,     &
+                             recv_domain=NO_ID,   &
+                             recv_element=NO_ID,  &
+                             recv_dof=NO_ID)
 
 
     call seed%init(idomain_g=1,         &
                    idomain_l=1,         &
                    ielement_g=13,       &
                    ielement_l=13,       &
-                   nfields=neqns,       &
+                   nfields=nfields,     &
                    nterms_s=nterms_s,   &
                    iproc=0,             &
                    itime=itime,         &
@@ -389,7 +395,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     type(AD_D)                  :: integral(8)
     type(element_info_t)        :: elem_info 
     type(seed_t)                :: seed
-    integer(ik)                 :: ielement_l, ivar, nderiv, i, neqns, imat, ielem, &
+    integer(ik)                 :: ielement_l, ivar, nderiv, i, nfields, imat, ielem, &
                                    nterms_c, idomain, spacedim, ntime, itime, nelements_g, nterms_s
     real(rk)                    :: tol
     real(rk),   allocatable     :: mat(:,:)
@@ -407,7 +413,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
                                       nelem_zeta = 3 )
 
 
-    neqns    = 1
+    nfields  = 1
     nterms_s = 8
     call chidg%set('Solution Order', integer_input=2)
     call chidg%set('Time Integrator' , algorithm='Steady')
@@ -422,7 +428,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
 
 
     ! Initialize AD variables with allocated derivative arrays
-    nderiv = neqns*nterms_s
+    nderiv = nfields*nterms_s
     do i = 1,8
         integral(i) = AD_D(nderiv)
     end do
@@ -458,27 +464,30 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     ! Store Derivatives
     ivar  = 1
     itime = 1
-    elem_info = element_info(idomain_g=1,       &
-                             idomain_l=1,       &
-                             ielement_g=14,     &
-                             ielement_l=14,     &
-                             iproc=0,           &
-                             pelem_ID=NO_ID,    &
-                             eqn_ID=1,          &
-                             nfields=neqns,     &
-                             nterms_s=8,        &
-                             nterms_c=8,        &
-                             dof_start=104,     &
-                             recv_comm=NO_ID,   &
-                             recv_domain=NO_ID, &
-                             recv_element=NO_ID)
+    elem_info = element_info(idomain_g=1,         &
+                             idomain_l=1,         &
+                             ielement_g=14,       &
+                             ielement_l=14,       &
+                             iproc=0,             &
+                             pelem_ID=NO_ID,      &
+                             eqn_ID=1,            &
+                             nfields=nfields,     &
+                             ntime=1,             &
+                             nterms_s=8,          &
+                             nterms_c=8,          &
+                             dof_start=104,       &
+                             dof_local_start=104, &
+                             recv_comm=NO_ID,     &
+                             recv_domain=NO_ID,   &
+                             recv_element=NO_ID,  &
+                             recv_dof=NO_ID)
 
 
     call seed%init(idomain_g=1,         &
                    idomain_l=1,         &
                    ielement_g=13,       &
                    ielement_l=13,       &
-                   nfields=neqns,       &
+                   nfields=nfields,     &
                    nterms_s=nterms_s,   &
                    iproc=0,             &
                    itime=itime,         &

@@ -368,7 +368,7 @@ contains
             tol    = 1.e-13_rk
             ifield   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq    = elems(ielem)%basis_s%nnodes_elem()
-            nderiv = elems(ielem)%neqns  *  elems(ielem)%nterms_s
+            nderiv = elems(ielem)%nfields * elems(ielem)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
             ! not yet allocated.
@@ -539,7 +539,7 @@ contains
             tol    = 1.e-13_rk
             ifield   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq    = elems(ielem)%basis_s%nnodes_elem()          ! Number of quadrature nodes
-            nderiv = elems(ielem)%neqns  *  elems(ielem)%nterms_s
+            nderiv = elems(ielem)%nfields * elems(ielem)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
             ! not yet allocated.
@@ -638,11 +638,6 @@ contains
             !
             ! Set face
             !
-            !face%idomain_g  = idomain
-            !face%idomain_l  = idomain
-            !face%ielement_g = ielem
-            !face%ielement_l = ielem
-            !face%iface      = iface
             elem_info = element_info(idomain_g  = idomain,  &
                                      idomain_l  = idomain,  &
                                      ielement_g = ielem,    &
@@ -651,12 +646,15 @@ contains
                                      pelem_ID   = NO_ID,    &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
+                                     ntime      = 1,        &
                                      nterms_s   = 8,        &
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
+                                     dof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
-                                     recv_element = NO_ID)
+                                     recv_element = NO_ID,  &
+                                     recv_dof     = NO_ID)
 
 
 
@@ -744,11 +742,6 @@ contains
             !
             ! Set face
             !
-            !face%idomain_g  = idomain
-            !face%idomain_l  = idomain
-            !face%ielement_g = ielem
-            !face%ielement_l = ielem
-            !face%iface      = iface
             elem_info = element_info(idomain_g  = idomain,  &
                                      idomain_l  = idomain,  &
                                      ielement_g = ielem,    &
@@ -757,18 +750,21 @@ contains
                                      pelem_ID   = NO_ID,    &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
+                                     ntime      = 1,        &
                                      nterms_s   = 8,        &
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
+                                     dof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
-                                     recv_element = NO_ID)
+                                     recv_element = NO_ID,  &
+                                     recv_dof     = NO_ID)
 
 
             tol    = 1.e-13_rk
             ifield   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq    = faces(ielem,iface)%basis_s%nnodes_face()
-            nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
+            nderiv = faces(ielem,iface)%nfields * faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
             ! not yet allocated.
@@ -848,11 +844,6 @@ contains
             !
             ! Set face
             !
-            !face%idomain_g  = idomain
-            !face%idomain_l  = idomain
-            !face%ielement_g = ielem
-            !face%ielement_l = ielem
-            !face%iface      = iface
             elem_info = element_info(idomain_g  = idomain,  &
                                      idomain_l  = idomain,  &
                                      ielement_g = ielem,    &
@@ -861,12 +852,15 @@ contains
                                      pelem_ID   = NO_ID,    &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
+                                     ntime      = 1,        &
                                      nterms_s   = 8,        &
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
+                                     dof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
-                                     recv_element = NO_ID)
+                                     recv_element = NO_ID,  &
+                                     recv_dof     = NO_ID)
 
 
 
@@ -956,11 +950,6 @@ contains
             !
             ! Set face
             !
-            !face%idomain_g  = idomain
-            !face%idomain_l  = idomain
-            !face%ielement_g = ielem
-            !face%ielement_l = ielem
-            !face%iface      = iface
             elem_info = element_info(idomain_g  = idomain,  &
                                      idomain_l  = idomain,  &
                                      ielement_g = ielem,    &
@@ -969,18 +958,21 @@ contains
                                      pelem_ID   = NO_ID,    &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
+                                     ntime      = 1,        &
                                      nterms_s   = 8,        &
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
+                                     dof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
-                                     recv_element = NO_ID)
+                                     recv_element = NO_ID,  &
+                                     recv_dof     = NO_ID)
 
             
             tol    = 1.e-13_rk
             ifield   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq    = faces(ielem,iface)%basis_s%nnodes_face()
-            nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
+            nderiv = faces(ielem,iface)%nfields * faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays 
             ! are not yet allocated.
@@ -1070,11 +1062,6 @@ contains
             !
             ! Set face
             !
-            !face%idomain_g  = idomain
-            !face%idomain_l  = idomain
-            !face%ielement_g = ielem
-            !face%ielement_l = ielem
-            !face%iface      = iface
             elem_info = element_info(idomain_g  = idomain,  &
                                      idomain_l  = idomain,  &
                                      ielement_g = ielem,    &
@@ -1083,12 +1070,15 @@ contains
                                      pelem_ID   = NO_ID,    &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
+                                     ntime      = 1,        &
                                      nterms_s   = 8,        &
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
+                                     dof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
-                                     recv_element = NO_ID)
+                                     recv_element = NO_ID,  &
+                                     recv_dof     = NO_ID)
 
 
             tol  = 1.e-13_rk
@@ -1176,11 +1166,6 @@ contains
             !
             ! Set face
             !
-            !face%idomain_g  = idomain
-            !face%idomain_l  = idomain
-            !face%ielement_g = ielem
-            !face%ielement_l = ielem
-            !face%iface      = iface
             elem_info = element_info(idomain_g  = idomain,  &
                                      idomain_l  = idomain,  &
                                      ielement_g = ielem,    &
@@ -1189,19 +1174,22 @@ contains
                                      pelem_ID   = NO_ID,    &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
+                                     ntime      = 1,        &
                                      nterms_s   = 8,        &
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
+                                     dof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
-                                     recv_element = NO_ID)
+                                     recv_element = NO_ID,  &
+                                     recv_dof     = NO_ID)
 
 
 
             tol    = 1.e-13_rk
             ifield   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq    = faces(ielem,iface)%basis_s%nnodes_face()
-            nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
+            nderiv = faces(ielem,iface)%nfields * faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays 
             ! are not yet allocated.
@@ -1282,11 +1270,6 @@ contains
             !
             ! Set face
             !
-            !face%idomain_g  = idomain
-            !face%idomain_l  = idomain
-            !face%ielement_g = ielem
-            !face%ielement_l = ielem
-            !face%iface      = iface
             elem_info = element_info(idomain_g  = idomain,  &
                                      idomain_l  = idomain,  &
                                      ielement_g = ielem,    &
@@ -1295,12 +1278,15 @@ contains
                                      pelem_ID   = NO_ID,    &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
+                                     ntime      = 1,        &
                                      nterms_s   = 8,        &
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
+                                     dof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
-                                     recv_element = NO_ID)
+                                     recv_element = NO_ID,  &
+                                     recv_dof     = NO_ID)
 
 
             tol  = 1.e-13_rk
@@ -1388,11 +1374,6 @@ contains
             !
             ! Set face
             !
-            !face%idomain_g  = idomain
-            !face%idomain_l  = idomain
-            !face%ielement_g = ielem
-            !face%ielement_l = ielem
-            !face%iface      = iface
             elem_info = element_info(idomain_g  = idomain,  &
                                      idomain_l  = idomain,  &
                                      ielement_g = ielem,    &
@@ -1401,18 +1382,21 @@ contains
                                      pelem_ID   = NO_ID,    &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
+                                     ntime      = 1,        &
                                      nterms_s   = 8,        &
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
+                                     dof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
-                                     recv_element = NO_ID)
+                                     recv_element = NO_ID,  &
+                                     recv_dof     = NO_ID)
 
             
             tol    = 1.e-13_rk
             ifield   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq    = faces(ielem,iface)%basis_s%nnodes_face()
-            nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
+            nderiv = faces(ielem,iface)%nfields * faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
             ! not yet allocated.

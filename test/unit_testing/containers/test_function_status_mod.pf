@@ -340,25 +340,23 @@ subroutine test_function_status__compute(this)
     !
     ! Initialize elem_info and function_info containers to pass to function_status%compute_function
     !
-    !elem_info%idomain_g  = 1
-    !elem_info%idomain_l  = 1
-    !elem_info%ielement_g = 2
-    !elem_info%ielement_l = 2
-    !elem_info%iface      = 2
-    elem_info = element_info(idomain_g=1,       &
-                             idomain_l=1,       &
-                             ielement_g=2,      &
-                             ielement_l=2,      &
-                             iproc=0,           &
-                             pelem_ID=NO_ID,    &
-                             eqn_ID=1,          &
-                             nfields=1,         &
-                             nterms_s=8,        &
-                             nterms_c=8,        &
-                             dof_start=8,       &
-                             recv_comm=NO_ID,   &
-                             recv_domain=NO_ID, &
-                             recv_element=NO_ID)
+    elem_info = element_info(idomain_g=1,        &
+                             idomain_l=1,        &
+                             ielement_g=2,       &
+                             ielement_l=2,       &
+                             iproc=0,            &
+                             pelem_ID=NO_ID,     &
+                             eqn_ID=1,           &
+                             nfields=1,          &
+                             ntime=1,            &
+                             nterms_s=8,         &
+                             nterms_c=8,         &
+                             dof_start=8,        &
+                             dof_local_start=8,  &
+                             recv_comm=NO_ID,    &
+                             recv_domain=NO_ID,  &
+                             recv_element=NO_ID, &
+                             recv_dof=NO_ID)
 
 
 
@@ -486,12 +484,15 @@ subroutine test_function_status__linearize(this)
                              pelem_ID=NO_ID,    &
                              eqn_ID=1,          &
                              nfields=1,         &
+                             ntime=1,           &
                              nterms_s=8,        &
                              nterms_c=8,        &
                              dof_start=8,       &
+                             dof_local_start=8, &
                              recv_comm=NO_ID,   &
                              recv_domain=NO_ID, &
-                             recv_element=NO_ID)
+                             recv_element=NO_ID,&
+                             recv_dof=NO_ID)
 
     function_info%type  = 1
     function_info%ifcn  = 1

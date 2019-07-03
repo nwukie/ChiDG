@@ -2006,7 +2006,7 @@ contains
             end if
 
             do ielem = 1,end_elem
-                ndof_prev = ndof_prev + self%domain(idom)%elems(ielem)%nterms_s*self%domain(idom)%elems(ielem)%nfields
+                ndof_prev = ndof_prev + self%domain(idom)%elems(ielem)%nterms_s*self%domain(idom)%elems(ielem)%nfields*self%domain(idom)%elems(ielem)%ntime
             end do
 
         end do

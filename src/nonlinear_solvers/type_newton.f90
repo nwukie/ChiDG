@@ -139,6 +139,7 @@ contains
             ! for the solution update (n+1), q_(n+1)_k
             qold = q
 
+
             ! Update Spatial Residual and Linearization (rhs, lin)
             residual_ratio = resid/resid_prev
             if ( niter <= 2) residual_ratio = ONE
@@ -190,7 +191,6 @@ contains
             if (self%ptc) then
                 call contribute_pseudo_temporal(data,cfln)
             end if ! self%ptc
-
 
 
             ! Convergence check
@@ -414,29 +414,11 @@ contains
         ! Scale vector by (M/dtau)
         do idom = 1,data%mesh%ndomains()
             do ielem = 1,data%mesh%domain(idom)%nelem
-                eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
 
-                elem_info = element_info(idomain_g       = data%mesh%domain(idom)%elems(ielem)%idomain_g,       &
-                                         idomain_l       = data%mesh%domain(idom)%elems(ielem)%idomain_l,       &
-                                         ielement_g      = data%mesh%domain(idom)%elems(ielem)%ielement_g,      &
-                                         ielement_l      = data%mesh%domain(idom)%elems(ielem)%ielement_l,      &
-                                         iproc           = data%mesh%domain(idom)%elems(ielem)%iproc,           &
-                                         pelem_ID        = NO_ID,                                               &
-                                         eqn_ID          = data%mesh%domain(idom)%elems(ielem)%eqn_ID,          &
-                                         nfields         = data%mesh%domain(idom)%elems(ielem)%nfields,         &
-                                         ntime           = data%mesh%domain(idom)%elems(ielem)%ntime,           &
-                                         nterms_s        = data%mesh%domain(idom)%elems(ielem)%nterms_s,        &
-                                         nterms_c        = data%mesh%domain(idom)%elems(ielem)%nterms_c,        &
-                                         dof_start       = data%mesh%domain(idom)%elems(ielem)%dof_start,       &
-                                         dof_local_start = data%mesh%domain(idom)%elems(ielem)%dof_local_start, &
-                                         recv_comm       = data%mesh%domain(idom)%elems(ielem)%recv_comm,       &
-                                         recv_domain     = data%mesh%domain(idom)%elems(ielem)%recv_domain,     &
-                                         recv_element    = data%mesh%domain(idom)%elems(ielem)%recv_element,    &
-                                         recv_dof        = data%mesh%domain(idom)%elems(ielem)%recv_dof)
+                elem_info = data%mesh%get_element_info(idom,ielem)
 
-
-                do itime = 1,data%mesh%domain(idom)%ntime
-                    do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
+                do itime = 1,elem_info%ntime
+                    do ifield = 1,data%eqnset(elem_info%eqn_ID)%prop%nprimary_fields()
 
                         ! get element-local timestep
                         dtau = minval(data%mesh%domain(idom)%elems(ielem)%dtau)

@@ -81,11 +81,9 @@ contains
 
         call timer%start()
 
-        !
         ! Assemble variables string.
         !
         !   Default: Grid coordinates
-        !
         ieq = 1
         varstring = "X,Y,Z"
         eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
@@ -95,27 +93,18 @@ contains
         end do
 
         
-        !
         ! Open and initialize TecIO file
-        !
         handle = init_tecio_file('solnfile',trim(varstring),filename,0)
 
 
-        !
         ! Write volume data from 'mesh%domains'
-        !
         if (write_domains) call write_tecio_domains(handle,data)
 
-
-        !
         ! Write surface data from 'mesh%domains'
-        !
         if (write_surfaces) call write_tecio_surfaces(handle,data)
 
 
-        !
         ! Close the current TecIO file context
-        !
         call close_tecio_file(handle)
 
         call timer%stop()

@@ -169,9 +169,11 @@ contains
             do j = 1,self%nkrylov
                 nvecs = nvecs + 1
 
+
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 call self%timer_precon%start()
                 z(j) = M%apply(A,v(j))
+
 
                 ! Inner fgmres correction
                 if (self%inner_fgmres) then
@@ -180,6 +182,7 @@ contains
                     z(j) = z(j) + deltaz
                 end if
                 call self%timer_precon%stop()
+
 
                 ! Compute w = Av for the current iteration
                 call self%timer_mv%start()

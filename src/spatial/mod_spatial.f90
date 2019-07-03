@@ -188,7 +188,6 @@ contains
         call write_line('-- primary time: ',  cache_handler%timer_primary%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
         call write_line('-- model time: ',    cache_handler%timer_model%elapsed(),   delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
         call write_line('-- gradient time: ', cache_handler%timer_lift%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('--- model grad compute time: ', cache_handler%timer_model_grad_compute%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
         call write_line('- function time: ', function_timer%elapsed(),               delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
         if (present(timing)) then

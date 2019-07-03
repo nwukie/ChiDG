@@ -1414,9 +1414,9 @@ contains
                             worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff,worker%itime)
                             worker%function_info%idepend = idepend
 
-                            if (dependency=='f(Grad(Q))') call self%timer_model_grad_compute%start()
+                            !if (dependency=='f(Grad(Q))') call self%timer_model_grad_compute%start()
                             call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
-                            if (dependency=='f(Grad(Q))') call self%timer_model_grad_compute%stop()
+                            !if (dependency=='f(Grad(Q))') call self%timer_model_grad_compute%stop()
                         end do !idepend
                     end if !compute
 

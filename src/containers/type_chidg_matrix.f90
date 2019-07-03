@@ -38,7 +38,6 @@ module type_chidg_matrix
     type, public :: chidg_matrix_t
 
         ! PETSC
-        !Mat         :: petsc_matrix
         type(petsc_matrix_wrapper_t),   allocatable :: wrapped_petsc_matrix
         logical     :: petsc_matrix_created = .false.
 
@@ -55,6 +54,7 @@ module type_chidg_matrix
         procedure(store_interface),            pointer, pass :: store_chimera  => chidg_store_chimera
         procedure(store_interface),            pointer, pass :: store_bc       => chidg_store_bc
         procedure(store_interface),            pointer, pass :: store_hb       => chidg_store_hb
+        procedure(store_element_interface),    pointer, pass :: store_element  => chidg_store_element
         procedure(scale_diagonal_interface),   pointer, pass :: scale_diagonal => chidg_scale_diagonal
         procedure(get_diagonal_interface),     pointer, pass :: get_diagonal   => chidg_get_diagonal
         procedure(clear_interface),            pointer, pass :: clear          => chidg_clear
@@ -121,6 +121,20 @@ module type_chidg_matrix
     end interface
 
 
+    interface 
+        subroutine store_element_interface(self,mat,element_info,seed,itime)
+            import chidg_matrix_t
+            import element_info_t
+            import seed_t
+            import ik, rk
+            class(chidg_matrix_t),  intent(inout)   :: self
+            real(rk),               intent(in)      :: mat(:,:)
+            type(element_info_t),   intent(in)      :: element_info
+            type(seed_t),           intent(in)      :: seed
+            integer(ik),            intent(in)      :: itime
+        end subroutine store_element_interface
+    end interface
+
 
     interface 
         subroutine scale_diagonal_interface(self,mat,element_info,ifield,itime)
@@ -136,17 +150,6 @@ module type_chidg_matrix
         end subroutine scale_diagonal_interface
     end interface
 
-
-!    interface 
-!        function get_diagonal_interface(self,element_info) result(mat)
-!            import chidg_matrix_t
-!            import element_info_t
-!            import rk
-!            class(chidg_matrix_t),  intent(inout)   :: self
-!            type(element_info_t),   intent(in)      :: element_info
-!            real(rk), allocatable :: mat(:,:)
-!        end function get_diagonal_interface
-!    end interface
 
     interface 
         subroutine get_diagonal_interface(self,element_info,mat)
@@ -744,6 +747,40 @@ contains
 
 
 
+
+    !>  Store block of data for an element at a specific temporal dof (itime), with 
+    !!  respect to another temporal dof (seed%itime).
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/2/2019
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine chidg_store_element(self,mat,element_info,seed,itime)
+        class(chidg_matrix_t),      intent(inout)   :: self
+        real(rk),                   intent(in)      :: mat(:,:)
+        type(element_info_t),       intent(in)      :: element_info
+        type(seed_t),               intent(in)      :: seed
+        integer(ik),                intent(in)      :: itime
+
+        integer(ik) :: idomain_l
+
+        idomain_l = element_info%idomain_l
+
+        ! Store linearization in associated domain domain_matrix_t
+        call self%dom(idomain_l)%store_hb_element(mat,element_info,seed,itime)
+
+        ! Update stamp
+        call date_and_time(values=self%stamp)
+
+    end subroutine chidg_store_element
+    !*******************************************************************************************
+
+
+
+
+
+
+
     !> Procedure for storing linearization information
     !!
     !!  @author Nathan A. Wukie
@@ -1072,9 +1109,8 @@ contains
         PetscInt, allocatable   :: col_indices(:)
         
         row_index_start = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
-        col_index_start = seed%dof_start
-        col_index_stop  = col_index_start + seed%itime*(seed%nfields*seed%nterms_s) - 1
-        !col_indices = [(i, i=col_index_start,(col_index_start+seed%nfields*seed%nterms_s-1),1)]
+        col_index_start = seed%dof_start  + (seed%itime-1)*(seed%nfields*seed%nterms_s)
+        col_index_stop  = col_index_start + (seed%nfields*seed%nterms_s) - 1
         col_indices = [(i, i=col_index_start,col_index_stop,1)]
 
         nrows = 1
@@ -1093,6 +1129,67 @@ contains
 
     end subroutine petsc_store
     !******************************************************************************************
+
+
+
+
+    !>  Store a block of data to element at specific set of temporal dofs (itime) with respect 
+    !!  to specific temporal dofs (seed%itime).
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/2/2019
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_store_element(self,mat,element_info,seed,itime)
+        class(chidg_matrix_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: mat(:,:)
+        type(element_info_t),   intent(in)      :: element_info
+        type(seed_t),           intent(in)      :: seed
+        integer(ik),            intent(in)      :: itime
+
+        integer(ik) :: i
+
+        PetscErrorCode          :: ierr
+        PetscInt                :: irow, nrows, ncols, row_index_start, col_index_start, col_index_stop
+        PetscInt, allocatable   :: col_indices(:)
+
+        
+        !row_index_start = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
+        row_index_start = element_info%dof_start + (itime-1)*(element_info%nfields*element_info%nterms_s)
+        col_index_start = seed%dof_start  + (seed%itime-1)*(seed%nfields*seed%nterms_s)
+        col_index_stop  = col_index_start + (seed%nfields*seed%nterms_s) - 1
+
+
+        ! Compute column indices
+        col_indices = [(i, i=col_index_start,col_index_stop,1)]
+
+        if (any(ieee_is_nan(mat))) print*, 'petsc_store_element: storing NaN!'
+
+        nrows = 1
+        ncols = seed%nfields*seed%nterms_s
+        do irow = 1,size(mat,1)
+            ! subtract 1 from indices since petsc is 0-based
+            call MatSetValues(self%wrapped_petsc_matrix%petsc_matrix,nrows,[row_index_start + (irow-1) - 1],ncols,col_indices-1,mat(irow,:),ADD_VALUES,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"chidg_matrix%petsc_store_element: error calling MatSetValues.")
+        end do 
+
+        ! Update stamp
+        call date_and_time(values=self%stamp)
+
+    end subroutine petsc_store_element
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1466,6 +1563,7 @@ contains
         mat%store_chimera  => chidg_store_chimera
         mat%store_bc       => chidg_store_bc
         mat%store_hb       => chidg_store_hb
+        mat%store_element  => chidg_store_element
         mat%scale_diagonal => chidg_scale_diagonal
         mat%get_diagonal   => chidg_get_diagonal
         mat%clear          => chidg_clear
@@ -1482,6 +1580,7 @@ contains
         mat%store_chimera  => petsc_store
         mat%store_bc       => petsc_store
         mat%store_hb       => petsc_store
+        mat%store_element  => petsc_store_element
         mat%scale_diagonal => petsc_scale_diagonal
         mat%get_diagonal   => petsc_get_diagonal
         mat%clear          => petsc_clear

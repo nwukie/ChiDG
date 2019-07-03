@@ -718,6 +718,7 @@ contains
         PetscScalar, pointer :: array(:) => null()
         PetscErrorCode       :: ierr
 
+
         ! Get petsc array pointer
         if (allocated(self%wrapped_petsc_vector)) then
             if (self%petsc_needs_assembled) call self%assemble()
@@ -729,9 +730,11 @@ contains
         ! If local access
         if (element_info%iproc == IRANK) then
 
-            ! Get access to local data array
+            ! Get access to LOCAL data array from global vector. SO, we must ust processor-local indicess
+            ! to access this memory.
             call VecGetArrayF90(self%wrapped_petsc_vector%petsc_vector,array,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
+
 
             ! Compute start and end indices for accessing modes of a variable
             istart = element_info%dof_local_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
@@ -739,6 +742,7 @@ contains
 
             ! Access modes
             values = array(istart:iend)
+
 
             ! Restore petsc array
             call VecRestoreArrayF90(self%wrapped_petsc_vector%petsc_vector,array,ierr)
@@ -928,32 +932,12 @@ contains
 
         ! Loop through elements in mesh and call function projection
         do idom = 1,mesh%ndomains()
-
             ! Check that variable index 'ifield' is valid
             user_msg = 'project: variable index ifield exceeds the number of equations.'
             if (ifield > mesh%domain(idom)%nfields ) call chidg_signal(FATAL,user_msg)
-
             do ielem = 1,mesh%domain(idom)%nelem
 
-                elem_info = element_info(idomain_g       = mesh%domain(idom)%elems(ielem)%idomain_g,       &
-                                         idomain_l       = mesh%domain(idom)%elems(ielem)%idomain_l,       &
-                                         ielement_g      = mesh%domain(idom)%elems(ielem)%ielement_g,      &
-                                         ielement_l      = mesh%domain(idom)%elems(ielem)%ielement_l,      &
-                                         iproc           = mesh%domain(idom)%elems(ielem)%iproc,           &
-                                         pelem_ID        = NO_ID,                                          &
-                                         eqn_ID          = mesh%domain(idom)%elems(ielem)%eqn_ID,          &
-                                         nfields         = mesh%domain(idom)%elems(ielem)%nfields,         &
-                                         ntime           = mesh%domain(idom)%elems(ielem)%ntime,           &
-                                         nterms_s        = mesh%domain(idom)%elems(ielem)%nterms_s,        &
-                                         nterms_c        = NO_DATA,                                        &
-                                         dof_start       = mesh%domain(idom)%elems(ielem)%dof_start,       &
-                                         dof_local_start = mesh%domain(idom)%elems(ielem)%dof_local_start, &
-                                         recv_comm       = mesh%domain(idom)%elems(ielem)%recv_comm,       &
-                                         recv_domain     = mesh%domain(idom)%elems(ielem)%recv_domain,     &
-                                         recv_element    = mesh%domain(idom)%elems(ielem)%recv_element,    &
-                                         recv_dof        = mesh%domain(idom)%elems(ielem)%recv_dof)
-
-
+                elem_info = mesh%get_element_info(idom,ielem)
 
                 do itime = 1,mesh%domain(idom)%ntime
                     ! Call function projection

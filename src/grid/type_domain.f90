@@ -529,8 +529,9 @@ contains
                 dof_start       = self%domain_dof_start
                 dof_local_start = self%domain_dof_local_start
             else
-                dof_start       = self%elems(ielem-1)%dof_start       + nterms_s*nfields
-                dof_local_start = self%elems(ielem-1)%dof_local_start + nterms_s*nfields
+                ! TODO: Fix for adaptive. Assumes constant nterms, ntime, nfields
+                dof_start       = self%elems(ielem-1)%dof_start       + nterms_s*nfields*ntime
+                dof_local_start = self%elems(ielem-1)%dof_local_start + nterms_s*nfields*ntime
             end if
 
             call self%elems(ielem)%init_sol(interpolation,level,self%nterms_s,self%nfields,ntime,dof_start,dof_local_start)
@@ -1811,7 +1812,7 @@ contains
         ! Accumulate dof's
         dofs = 0
         do ielem = 1,self%nelements()
-            dofs = dofs + self%elems(ielem)%nfields*self%elems(ielem)%nterms_s
+            dofs = dofs + self%elems(ielem)%nfields*self%elems(ielem)%nterms_s*self%elems(ielem)%ntime
         end do
 
         dof_end = self%domain_dof_start + dofs - 1
@@ -1856,7 +1857,7 @@ contains
         ! Accumulate dof's
         dofs = 0
         do ielem = 1,self%nelements()
-            dofs = dofs + self%elems(ielem)%nfields*self%elems(ielem)%nterms_s
+            dofs = dofs + self%elems(ielem)%nfields*self%elems(ielem)%nterms_s*self%elems(ielem)%ntime
         end do
 
         dof_local_end = self%domain_dof_local_start + dofs - 1

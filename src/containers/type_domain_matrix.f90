@@ -892,8 +892,6 @@ contains
 
 
 
-
-
     !>  Set all denseblock_t storage to zero
     !!
     !!  @author Nathan A. Wukie

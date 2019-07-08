@@ -143,10 +143,6 @@ contains
         if (differentiate) call lhs%clear()
 
 
-!        ! Create copy of rhs so it doesn't have to be assembles between set/get
-!        rhs_tmp = rhs
-!        call rhs_tmp%clear()
-
         ! Set local variables equal to the values set in time_manager
         ntime = size(data%time_manager%times)
         D = data%time_manager%D
@@ -174,7 +170,7 @@ contains
                         if (allocated(hb_mat)) deallocate(hb_mat)
                         allocate(hb_mat(elem_info%nterms_s*elem_info%nfields,elem_info%nterms_s*elem_info%nfields), stat=ierr)
                         if (ierr /= 0) call AllocationError
-                        hb_mat(:,:) = ZERO
+                        hb_mat = ZERO
 
                         ! Accumulate variable contributions
                         do ifield = 1,data%eqnset(elem_info%eqn_ID)%prop%nprimary_fields()
@@ -185,13 +181,6 @@ contains
 
 
                             call rhs%add_field(temp_1,elem_info,ifield,itime_outer)
-
-!                            temp_2 = rhs%get_field(elem_info,ifield,itime_outer) + temp_1
-!
-!                            ! Store the temporal contributions in the rhs. Use tmp variable
-!                            ! to avoid locking in parallel since set_field will try and globally
-!                            ! assemble if it needs to.
-!                            call rhs_tmp%set_field(temp_2,elem_info,ifield,itime_outer)
 
                             ! Accumulate hb contribution for the variable
                             irow_start = 1 + (ifield-1)*elem_info%nterms_s
@@ -226,10 +215,6 @@ contains
                 end do  ! ielem
             end do  ! idom
         end do  ! itime_outer
-
-!        ! Copy rhs_tmp to rhs after completing assembly
-!        call rhs_tmp%assemble()
-!        rhs = rhs_tmp
 
         end associate
 

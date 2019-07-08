@@ -299,7 +299,15 @@ contains
 
 
         ! Must use PETSC storage if using petsc nonlinear/linear solvers
-        if (trim(nonlinear_solver) == 'petsc' .or. trim(linear_solver) == 'petsc') backend = 'petsc'
+        if (trim(nonlinear_solver) == 'petsc' .or. trim(linear_solver) == 'petsc') then
+            print*, "!----------------------------------------------------------------------!"
+            print*, ""
+            print*, "Input parameter 'nonlinear_solver' or 'linear_solver' were specifiec as 'petsc' so changing 'backend' storage parameter to 'petsc'."
+            print*, ""
+            print*, "!----------------------------------------------------------------------!"
+            call sleep(4)
+            backend = 'petsc'
+        end if
 
 
 

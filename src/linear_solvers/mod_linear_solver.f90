@@ -15,13 +15,13 @@ module mod_linear_solver
 
 contains
 
-    !>  Factory method for creating matrixsolver objects
+    !>  Factory method for creating linear_solver objects
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/17/2016
     !!
-    !!  @param[in]      mstring     Character string used to select the appropriate matrixsolver for allocation
-    !!  @param[inout]   msolver     matrixsolver_t that will be allocated to a concrete type.
+    !!  @param[in]      mstring     Character string used to select the appropriate linear_solver for allocation
+    !!  @param[inout]   msolver     linear_solver_t that will be allocated to a concrete type.
     !!
     !---------------------------------------------------------------------------------------------------------------------
     subroutine create_linear_solver(lstring,lsolver,options)
@@ -30,7 +30,6 @@ contains
         type(dict_t), optional,              intent(inout)   :: options
 
         integer(ik) :: ierr
-
 
         select case (trim(lstring))
             case ('fgmres','FGMRES')
@@ -43,7 +42,7 @@ contains
                 allocate(lsolver, source=FGMRES_CGS_MG_CORRECT, stat=ierr)
 
             case default
-                call chidg_signal(FATAL,"create_matrixsolver: matrix solver string did not match any valid type")
+                call chidg_signal_one(FATAL,"create_linear_solver: linear solver string did not match any valid type",trim(lstring))
 
         end select
         if (ierr /= 0) call AllocationError
@@ -54,7 +53,7 @@ contains
 
         
         ! Make sure the solver was allocated
-        if (.not. allocated(lsolver)) call chidg_signal(FATAL,"create_matrixsolver: solver was not allocated. Check that the desired solver was registered and instantiated in the mod_matrixsolver module")
+        if (.not. allocated(lsolver)) call chidg_signal(FATAL,"create_linear_solver: solver was not allocated. Check that the desired solver was registered and instantiated in the mod_linear_solver module")
 
     end subroutine create_linear_solver
     !*********************************************************************************************************************

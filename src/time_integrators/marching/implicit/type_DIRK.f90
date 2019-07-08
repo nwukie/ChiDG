@@ -357,18 +357,10 @@ contains
         call update_space(data,differentiate,timing)
 
         ! Get no. of time levels (=1 for time marching) and time step
-        dt    = data%time_manager%dt
+        dt = data%time_manager%dt
 
-        
-        ! Compute \f$ \Delta Q^{m}_{i}\f$
         ! Used to assemble rhs
-        delta_q = chidg_vector(trim(backend))
-        call delta_q%init(data%mesh,data%time_manager%ntime)
-        call delta_q%set_ntime(data%time_manager%ntime)
-        call delta_q%clear()
-        call delta_q%assemble()
         delta_q = (q - self%q_n - self%q_n_stage)/alpha
-
 
         ! Add mass/dt to sub-block diagonal in dR/dQ
         do idom = 1,data%mesh%ndomains()
@@ -378,8 +370,8 @@ contains
                     do ifield = 1,data%eqnset(elem_info%eqn_ID)%prop%nprimary_fields()
 
                         ! Add time derivative to left-hand side
-                        mat = data%mesh%domain(idom)%elems(ielem)%mass / (alpha*dt)
                         if (differentiate) then
+                            mat = data%mesh%domain(idom)%elems(ielem)%mass / (alpha*dt)
                             call data%sdata%lhs%scale_diagonal(mat,elem_info,ifield,itime)
                         end if
 
@@ -393,8 +385,8 @@ contains
         end do !idom
 
         ! Reassemble
-        call data%sdata%lhs%assemble()
         call data%sdata%rhs%assemble()
+        if (differentiate) call data%sdata%lhs%assemble()
 
         end associate
 

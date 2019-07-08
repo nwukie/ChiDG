@@ -76,6 +76,7 @@ contains
 
         PetscErrorCode :: perr
 
+
         if (self%petsc_initialized) then
             call KSPSetOperators(self%ksp,A%wrapped_petsc_matrix%petsc_matrix,A%wrapped_petsc_matrix%petsc_matrix,perr)
             if (perr /= 0) call chidg_signal(FATAL,'petsc_linear: error calling KSPSetOperators.')

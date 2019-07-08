@@ -14,8 +14,9 @@ module type_backward_euler
     use type_linear_solver,             only: linear_solver_t
     use type_preconditioner,            only: preconditioner_t
     use type_solver_controller,         only: solver_controller_t
-    use type_chidg_vector,              only: chidg_vector_t, sub_chidg_vector_chidg_vector
+    use type_chidg_vector
     use type_chidg_matrix,              only: chidg_matrix_t
+    use type_element_info,              only: element_info_t
 
     implicit none
     private
@@ -146,11 +147,8 @@ contains
         select type(associate_name => self%system)
             type is (assemble_backward_euler_t)
 
-                !
                 ! Store solution at nth time step to a separate vector
-                !
                 associate_name%q_n = data%sdata%q
-                
 
         end select
 
@@ -162,7 +160,8 @@ contains
         data%time_manager%t = data%time_manager%t + data%time_manager%dt
         !call update_grid(data)
         call data%update_grid()
-        call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner)
+        call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner,solver_controller)
+
 
         !
         ! Store end residual from nonlinear solver
@@ -196,11 +195,11 @@ contains
         logical,                            intent(in)                  :: differentiate
         real(rk),                           intent(inout),  optional    :: timing
 
-        integer(ik)                 :: ntime, itime, idom, ielem, ivar, imat, ierr, &
-                                       nterms, rstart, rend, cstart, cend
+        integer(ik)                 :: itime, idom, ielem, ifield, ierr
         real(rk)                    :: dt
         type(chidg_vector_t)        :: delta_q
-        real(rk),   allocatable     :: temp_1(:), temp_2(:)
+        real(rk),   allocatable     :: temp_1(:), mat(:,:)
+        type(element_info_t)        :: elem_info
 
 
         associate ( q   => data%sdata%q,   &
@@ -208,76 +207,48 @@ contains
                     lhs => data%sdata%lhs, &
                     rhs => data%sdata%rhs)
 
-        !
         ! Clear data containers
-        !
         call rhs%clear()
         if (differentiate) call lhs%clear()
 
-
-        !
         ! Get spatial update
-        !
         call update_space(data,differentiate,timing)
 
 
-            !
-            ! Get no. of time levels ( = 1 for time marching) and time step
-            !
-            ntime = data%time_manager%ntime
-            dt    = data%time_manager%dt
+        ! Get no. of time levels ( = 1 for time marching) and time step
+        dt    = data%time_manager%dt
 
-            
-            !
-            ! Compute \f$ q^{m} - q^{n} \f$
-            ! Used to assemble rhs
-            !
-            delta_q = sub_chidg_vector_chidg_vector(q,self%q_n)
+        ! Compute delta q
+        delta_q = q - self%q_n
 
+        do idom = 1,data%mesh%ndomains()
+            do ielem = 1,data%mesh%domain(idom)%nelem
+                do itime = 1,data%mesh%domain(idom)%ntime
+                    elem_info = data%mesh%get_element_info(idom,ielem)
 
-            do itime = 1,ntime
-                do idom = 1,data%mesh%ndomains()
+                    do ifield = 1,data%eqnset(elem_info%eqn_ID)%prop%nprimary_fields()
 
-                    !
-                    ! Allocate temporary arrays 
-                    !
-                    if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
-                    allocate(temp_1(data%mesh%domain(idom)%nterms_s), temp_2(data%mesh%domain(idom)%nterms_s), stat=ierr)
-                    if (ierr /= 0) call AllocationError
+                        ! Add time derivative to left-hand side
+                        if (differentiate) then
+                            mat = data%mesh%domain(idom)%elems(ielem)%mass * (ONE/dt)
+                            call data%sdata%lhs%scale_diagonal(mat,elem_info,ifield,itime)
+                        end if
 
-                    do ielem = 1,data%mesh%domain(idom)%nelem
-                        do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
+                        ! Add time derivative to right-hand side
+                        temp_1 = (ONE/dt)*matmul(data%mesh%domain(idom)%elems(ielem)%mass, delta_q%get_field(elem_info,ifield,itime))
+                        call rhs%add_field(temp_1,elem_info,ifield,itime)
+                               
+                    end do  ! ifield
 
-                            !
-                            ! Assemble lhs 
-                            !
-                            nterms = data%mesh%domain(idom)%elems(ielem)%nterms_s
-                            rstart = 1 + (ivar - 1)*nterms
-                            rend   = (rstart - 1) + nterms
-                            cstart = rstart
-                            cend   = rend
+                end do  ! itime
+            end do  ! ielem
+        end do  ! idom
 
-                            ! Add mass matrix divided by dt to the block diagonal
-                            imat   = lhs%dom(idom)%lblks(ielem,itime)%get_diagonal()
-                            lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend) = lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend) + &
-                            data%mesh%domain(idom)%elems(ielem)%mass*(ONE/dt)
-
-    
-                            !
-                            ! Assemble rhs
-                            !
-                            temp_1 = (ONE/dt)*matmul(data%mesh%domain(idom)%elems(ielem)%mass, delta_q%dom(idom)%vecs(ielem)%getvar(ivar,itime))
-                            temp_2 = rhs%dom(idom)%vecs(ielem)%getvar(ivar,itime) + temp_1
-                            call rhs%dom(idom)%vecs(ielem)%setvar(ivar,itime,temp_2)
-                                   
-                        end do  ! ivar
-                    end do  ! ielem
-
-                end do  ! idom
-            end do  ! itime
+        ! Reassemble
+        call data%sdata%rhs%assemble()
+        if (differentiate) call data%sdata%lhs%assemble()
 
         end associate
-
 
     end subroutine assemble
     !**************************************************************************************

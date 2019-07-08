@@ -28,6 +28,7 @@ module type_chidg_vector
     use mpi_f08,                    only: MPI_AllReduce, MPI_Reduce, MPI_COMM, MPI_REAL8,    &
                                           MPI_SUM, MPI_STATUS_IGNORE, MPI_Recv, MPI_Request, &
                                           MPI_STATUSES_IGNORE, MPI_INTEGER4
+    use ieee_arithmetic,            only: ieee_is_nan
     implicit none
 
 
@@ -473,6 +474,8 @@ contains
         integer(ik),            intent(in)      :: ifield
         integer(ik),            intent(in)      :: itime
 
+        if (any(ieee_is_nan(values))) print*, 'storing NaN!: ', ifield, itime
+
         call self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%setvar(ifield,itime,values)
 
     end subroutine chidg_set_field
@@ -522,6 +525,8 @@ contains
         integer(ik),            intent(in)      :: itime
 
         real(rk),   allocatable :: vals(:)
+
+        if (any(ieee_is_nan(values))) print*, 'adding NaN!: ', ifield, itime
 
         ! Access current field and add new contribution
         vals = self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%getvar(ifield,itime) + values

@@ -872,9 +872,11 @@ contains
         integer(ik) :: idom
     
         ! Call domain_matrix_t%clear() on all matrices
-        do idom = 1,size(self%dom)
-           call self%dom(idom)%clear() 
-        end do
+        if (allocated(self%dom)) then
+            do idom = 1,size(self%dom)
+               call self%dom(idom)%clear() 
+            end do
+        end if
     
     end subroutine chidg_clear
     !**********************************************************************************

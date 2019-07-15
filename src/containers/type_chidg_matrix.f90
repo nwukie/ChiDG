@@ -39,7 +39,6 @@ module type_chidg_matrix
 
         ! PETSC
         type(petsc_matrix_wrapper_t),   allocatable :: wrapped_petsc_matrix
-        logical     :: petsc_matrix_created = .false.
 
         ! ChiDG
         type(domain_matrix_t), allocatable    :: dom(:) ! Array of domain-matrices. One for each domain
@@ -959,7 +958,6 @@ contains
         ! Create matrix object
         call MatCreate(ChiDG_COMM%mpi_val, self%wrapped_petsc_matrix%petsc_matrix, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error creating PETSc matrix.')
-        self%petsc_matrix_created = .true.
 
 
 

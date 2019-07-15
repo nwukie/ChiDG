@@ -919,7 +919,7 @@ contains
             itime = 1
             time  = ZERO
             do idom = 1,data%mesh%ndomains()
-                do ielem = 1,data%mesh%domain(idom)%nelem
+                do ielem = 1,data%mesh%domain(idom)%nelements()
 
 
                     !
@@ -966,48 +966,6 @@ contains
 
     end function compute_DIRK_error
     !*****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   05/30/2017
-!    !!
-!    !!
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    function time_parameter(itime) result(param)
-!        integer(ik),    intent(in)  :: itime
-!
-!        real(rk)    :: dt, param
-!
-!        select case (itime)
-!            case(1)
-!                dt = 0.0125_rk
-!            case(2)
-!                dt = 0.00625_rk
-!            case default
-!                call chidg_signal(FATAL,"integration_test_DIRK_mod%time_parameter: invalid itime")
-!        end select
-!
-!        param = ONE/dt
-!
-!    end function time_parameter
-!    !****************************************************************************************
-
 
 
 

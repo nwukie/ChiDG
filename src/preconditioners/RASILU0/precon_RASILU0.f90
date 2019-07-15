@@ -56,6 +56,7 @@ module precon_RASILU0
 #include <messenger.h>
 #include "petsc/finclude/petscksp.h"
     use petscksp,                   only: tPC, PCCreate, PCApply, PCDestroy, PCSetUp, PCReset
+    use petscmat,                   only: PETSC_NULL_MAT
 
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: DIAG, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, &
@@ -150,7 +151,6 @@ contains
                 ! Initialize Lower-Diagonal matrix for processor-local data
                 self%LD = chidg_matrix(trim(backend))
                 call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
-                self%initialized = .true.
 
                 ! Initialize the overlap data
                 call write_line('       RAS: initializing send pattern...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
@@ -170,7 +170,6 @@ contains
                 if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCCreate.')
                 call PCSetType(self%pc,PCASM,perr)
                 if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCSetType.')
-                self%initialized = .true.
                 self%petsc_initialized = .true.
 
             case default
@@ -178,6 +177,7 @@ contains
 
         end select
             
+        self%initialized = .true.
 
     end subroutine init
     !******************************************************************************************
@@ -208,6 +208,7 @@ contains
         type(chidg_vector_t),       intent(in)      :: b
 
 
+        PetscErrorCode              :: perr
         character(:),   allocatable :: user_msg
         integer(ik)                 :: ielem, irow, icol, eparent_l, idom, ndom, ilower, ilowerA, ilowerLD,    &
                                        trans_elem, trans_blk, itranspose, nrowsA, ncolsA, ncolsB,      &
@@ -215,10 +216,10 @@ contains
                                        parent_proc, ierr, iproc, idiagLD, idiagA, dparent_g_lower, eparent_g_lower, itime
 
 
-        PetscErrorCode  :: perr
-
         if (self%petsc_initialized) then
         !******  petsc  implementation  ******!
+            call PCSetOperators(self%pc, PETSC_NULL_MAT, PETSC_NULL_MAT, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCSetOperators with NULL.')
             call PCSetOperators(self%pc, A%wrapped_petsc_matrix%petsc_matrix, A%wrapped_petsc_matrix%petsc_matrix, perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCSetOperators.')
             call PCSetUp(self%pc, perr)

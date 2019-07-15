@@ -33,8 +33,8 @@ module type_mesh
     !----------------------------------------------------------------------------------
     type, public :: mesh_t
 
-        integer(ik)                         :: ntime_
-        integer(ik)                         :: mesh_dof_start   ! Based on Fortran 1-indexing
+        integer(ik)                         :: ntime_         = NO_ID
+        integer(ik)                         :: mesh_dof_start = NO_ID ! Based on Fortran 1-indexing
 
         ! Local data
         type(domain_t),         allocatable :: domain(:)
@@ -991,11 +991,8 @@ contains
         type(element_t),    allocatable :: temp(:)
 
         
-        !
         ! Resize array storage
-        !
         allocate(temp(self%nparallel_elements() + 1), stat=ierr)
-
 
 
         ! Copy previously initialized instances to new array. Be careful about pointers 
@@ -1006,18 +1003,12 @@ contains
         end if
 
 
-
-        !
         ! Move resized temp allocation back to mesh container. 
         ! Be careful about pointer components here! Their location in memory has changed.
-        !
         call move_alloc(temp,self%parallel_element)
         
 
-
-        !
         ! Set domain identifier of newly allocated domain that will be returned
-        !
         pelem_ID = self%nparallel_elements()
 
 
@@ -1143,18 +1134,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     !>  Initialiate parallel communication of mesh quantities.
     !!
     !!  Currently communicates just ALE quantities.
@@ -1177,8 +1156,6 @@ contains
                                idomain_l, ielement_l
         type(mpi_request)   :: request(7)
         logical             :: interior_face, parallel_neighbor
-
-
 
 
         !

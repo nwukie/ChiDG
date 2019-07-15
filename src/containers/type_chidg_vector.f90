@@ -53,7 +53,7 @@ module type_chidg_vector
         type(petsc_vector_wrapper_t),   allocatable :: wrapped_petsc_vector_recv ! Local vector to store off-process dofs
         type(petsc_scatter_wrapper_t),  allocatable :: wrapped_petsc_scatter     ! Scatter context to execute exchange of dofs
         type(petsc_is_wrapper_t),       allocatable :: wrapped_petsc_is          ! Global indicess of off-process dofs needed locally
-        logical     :: petsc_needs_assembled = .false.
+        logical                                     :: petsc_needs_assembled = .false.
 
 
         ! ChiDG backend

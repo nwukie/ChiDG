@@ -391,7 +391,7 @@ endforeach()
 message(STATUS " ")
 message(STATUS "PETSc Summary:")
 set(PETSC_EXECUTABLE_RUNS YES) # Override variable, since the module for petsc does not yet treat Fortran properly.
-find_package (PETSc REQUIRED)
+find_package (PETSc 3.11.3 REQUIRED)
 include_directories(${PETSC_INCLUDES})
 add_definitions (${PETSC_DEFINITIONS})
 

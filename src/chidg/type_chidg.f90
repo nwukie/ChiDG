@@ -276,7 +276,8 @@ contains
 
                     ! Tear down. Maybe things need deallocated from another library 
                     ! before we deallocate here. (e.g. petsc)
-                    if (allocated(self%linear_solver)) call self%linear_solver%tear_down()
+                    if (allocated(self%linear_solver))  call self%linear_solver%tear_down()
+                    if (allocated(self%preconditioner)) call self%preconditioner%tear_down()
 
                     ! Deallocate algorithms
                     if (allocated(self%time_integrator))  deallocate(self%time_integrator)
@@ -329,12 +330,13 @@ contains
 
         character(:),   allocatable :: user_msg
         character(:),   allocatable :: interpolation_in
-        integer(ik)                 :: level_in
+        integer(ik)                 :: level_in, ierr
 
         select case (trim(activity))
 
             ! Call all initialization routines.
             case ('all')
+
                 ! geometry
                 call self%init('domains',interpolation,level)
 
@@ -348,7 +350,6 @@ contains
 
                 ! matrix/vector
                 call self%init('storage')
-
 
             ! Initialize domain data that depend on the solution expansion
             case ('domains')
@@ -598,8 +599,10 @@ contains
         call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('Reading mesh... ', io_proc=GLOBAL_MASTER)
 
+
         ! Read domain geometry. Also performs partitioning.
         call self%read_mesh_grids(grid_file,equation_set,partitions_in)
+
 
         ! Read boundary conditions.
         call self%read_mesh_boundary_conditions(grid_file, bc_wall,        &
@@ -612,11 +615,14 @@ contains
 
         ! Read mesh motion information.
         call self%read_mesh_motions(grid_file)
-                                                      
+
+
         ! Initialize data
         call self%init('all',interpolation,level)
 
+
         call self%record_mesh_size()
+
 
         call write_line('Done reading mesh.', io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
@@ -719,6 +725,7 @@ contains
 
         end if
 
+
         call MPI_Bcast(ndoms,  1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
         call MPI_Bcast(nnodes, 1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
         if (IRANK /= GLOBAL_MASTER) then
@@ -750,6 +757,7 @@ contains
 
 
 
+
         ! Add domains to ChiDG%data
         call write_line("   processing...", ltrim=.false., io_proc=GLOBAL_MASTER)
         do idom = 1,size(meshdata)
@@ -775,6 +783,7 @@ contains
                                             eqn_ID )
 
         end do !idom
+
 
         ! Sync
         call self%data%mesh%comm_nelements()

@@ -224,6 +224,7 @@ contains
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
         chidg_COMM%mpi_val = this%getMpiCommunicator()
+
         
         if (run_setup) then
 
@@ -248,12 +249,13 @@ contains
 
             call chidg%data%time_manager%init()
 
+
             ! Set linear solver options to pass during initialization
-            call loptions%set('tol',1.e-9_rk)
+            call loptions%set('tol',1.e-10_rk)
             call loptions%set('inner_fgmres',.true.)
 
             ! Set nonlinear solver options
-            call noptions%set('tol',1.e-7_rk)
+            call noptions%set('tol',1.e-8_rk)
             call noptions%set('cfl0',1.0_rk)
             call noptions%set('nsteps',100)
             call noptions%set('ptc',.true.)
@@ -302,6 +304,7 @@ contains
                                                                   nelem_zeta      = 1)
             end if
 
+
             ! Set ChiDG components
             call chidg%set('Solution Order',   integer_input=this%P+1)
             call chidg%set('Time Integrator',  algorithm=time_integrator)
@@ -311,6 +314,7 @@ contains
 
             ! Read grid
             call chidg%read_mesh(this%gridfile)
+
 
             ! Initialize solution
             if (this%P == 0) then

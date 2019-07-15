@@ -131,8 +131,7 @@ contains
 
 
 
-    !>  Test the parallel computation of the chidgVector norm. 
-    !!  This tests the routine: chidgVector%norm_comm
+    !>  Trigger setUp to verify initialization completes successfully.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/23/2016

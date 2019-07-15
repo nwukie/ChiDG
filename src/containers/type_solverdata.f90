@@ -136,7 +136,6 @@ contains
         
         integer(ik) :: ierr, ndom, maxelems, idom, iaux, aux_ID
         logical     :: increase_maxelems = .false.
-        
 
         ! Create vector/matrix containers
         self%q     = chidg_vector(trim(backend))
@@ -147,7 +146,6 @@ contains
 
         self%lhs   = chidg_matrix(trim(backend))
 
-
         ! Initialize vectors
         call self%q%init(    mesh,mesh%ntime_)
         call self%dq%init(   mesh,mesh%ntime_)
@@ -155,18 +153,15 @@ contains
         call self%q_in%init( mesh,mesh%ntime_)
         call self%q_out%init(mesh,mesh%ntime_)
 
-
         ! Initialize matrix and parallel recv data
         call self%lhs%init(mesh,'full')
         call self%lhs%init_recv(self%rhs)
-
 
         ! By default, create 5 auxiliary field vectors. Each initialized with 'empty' field string.
         do iaux = 1,5
             aux_ID = self%new_auxiliary_field()
             call self%auxiliary_field(aux_ID)%init(mesh,mesh%ntime_)
         end do
-
 
         ! Find maximum number of elements in any domain
         ndom = mesh%ndomains()
@@ -179,7 +174,6 @@ contains
         end do
 
 
-
         ! Allocate timestep storage
         if (allocated(self%dt)) deallocate(self%dt)
         allocate(self%dt(ndom,maxelems),stat=ierr)
@@ -189,7 +183,6 @@ contains
         ! Initialize storage on flux and linearization registration
         call self%function_status%init( mesh, function_data)
 
-        
         ! Confirm solver initialization
         self%solverInitialized = .true.
 
@@ -265,6 +258,7 @@ contains
 
         type(string_t),         allocatable :: temp_names(:)
         type(chidg_vector_t),   allocatable :: temp_vectors(:)
+
 
         ! Get new size for self%auxiliary_field(:)
         if (allocated(self%auxiliary_field)) then
@@ -598,17 +592,25 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine release(self)
-       class(solverdata_t), intent(inout)   :: self 
+        class(solverdata_t), intent(inout)   :: self 
+
+        integer(ik) :: iaux
 
         ! Release chidg_vector data
         call self%q%release()
         call self%dq%release()
         call self%q_in%release()
+        call self%q_out%release()
         call self%rhs%release()
 
         ! Release chidg_matrix data
         call self%lhs%release()
 
+        ! Release auxiliary_field vectors
+        do iaux = 1,self%nauxiliary_fields()
+            call self%auxiliary_field(iaux)%release()
+        end do
+        if (allocated(self%auxiliary_field)) deallocate(self%auxiliary_field)
 
     end subroutine release
     !****************************************************************************************

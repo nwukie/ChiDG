@@ -9,8 +9,8 @@
 !-----------------------------------------------------------------------------
 module mod_chidg_mpi
 #include <petsc/finclude/petsc.h>
-    use petsc,      only: PETSC_NULL_CHARACTER, PETSC_COMM_WORLD
-    use mod_kinds,  only: rk, ik
+    use petsc,                          only: PETSC_NULL_CHARACTER, PETSC_COMM_WORLD
+    use mod_kinds,                      only: rk, ik
     use mpi_f08
     implicit none
 
@@ -26,10 +26,10 @@ module mod_chidg_mpi
     integer             :: GROUP_MASTER  = 0   ! Master rank for group of processes. This 
                                                ! could be modified during run-time for a group.
 
+    logical :: mpi_is_initialized       = .false.
+    logical :: mpi_is_finalized         = .false.
+    logical :: mpi_initialized_by_chidg = .false.
 
-    logical :: mpi_is_initialized = .false.
-    logical :: mpi_is_finalized   = .false.
-!    logical :: petsc_is_initialized = .false.
 
 contains
 
@@ -53,16 +53,19 @@ contains
     subroutine chidg_mpi_init(comm)
         type(mpi_comm), intent(in), optional    :: comm
 
-        integer :: ierr
-        PetscErrorCode :: perr
-
+        PetscErrorCode  :: ierr
 
         ! Check if MPI_Init has been called already or by someone else
         call MPI_Initialized(mpi_is_initialized,ierr)
 
 
         ! Initialize MPI
-        if ( .not. mpi_is_initialized ) call MPI_Init(ierr)
+        if ( .not. mpi_is_initialized ) then
+            call MPI_Init(ierr)
+            mpi_initialized_by_chidg = .true.
+        else
+            mpi_initialized_by_chidg = .false.
+        end if
 
 
         ! Option to use incoming communicator instead of MPI_COMM_WORLD
@@ -78,17 +81,14 @@ contains
         call MPI_Comm_Rank(ChiDG_COMM,IRANK,ierr)
 
 
+
         ! Initialize PETSc
         PETSC_COMM_WORLD = ChiDG_COMM%mpi_val
-        if (.not. mpi_is_initialized) then
-            call PetscInitialize(PETSC_NULL_CHARACTER,perr)
-            if (perr .ne. 0) then
-              print*,'Unable to initialize PETSc'
-              stop
-            endif
+        call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
+        if (ierr .ne. 0) then
+            print*,'Unable to initialize PETSc'
+            stop
         end if
-
-
 
     end subroutine chidg_mpi_init
     !**********************************************************************************
@@ -109,32 +109,32 @@ contains
     !----------------------------------------------------------------------------------
     subroutine chidg_mpi_finalize()
 
-        integer :: ierr
+        PetscErrorCode :: ierr
 
+        if (mpi_initialized_by_chidg) then
 
-        !
-        ! Check if MPI_Finalize has been called already or by someone else
-        !
-        call MPI_Finalized(mpi_is_finalized,ierr)
-        if (ierr /= 0) then
-            print*, '********************* WARNING *******************'
-            print*, 'chidg_mpi_finalize: MPI_Finalized returned error.'
-            print*, '*************************************************'
-        end if
-
-
-        !
-        ! Initialize MPI
-        !
-        if ( .not. mpi_is_finalized ) then
-            call MPI_Finalize(ierr)
+            ! Check if MPI_Finalize has been called already or by someone else
+            call MPI_Finalized(mpi_is_finalized,ierr)
             if (ierr /= 0) then
-                print*, '********************* WARNING ******************'
-                print*, 'chidg_mpi_finalize: MPI_Finalize returned error.'
-                print*, '************************************************'
+                print*, '********************* WARNING *******************'
+                print*, 'chidg_mpi_finalize: MPI_Finalized returned error.'
+                print*, '*************************************************'
             end if
+
+            ! Finalize MPI, if necessary
+            if ( .not. mpi_is_finalized ) then
+                call MPI_Finalize(ierr)
+                if (ierr /= 0) then
+                    print*, '********************* WARNING ******************'
+                    print*, 'chidg_mpi_finalize: MPI_Finalize returned error.'
+                    print*, '************************************************'
+                end if
+            end if
+
         end if
 
+        ! Finalize PETSC
+        call PetscFinalize(ierr)
 
     end subroutine chidg_mpi_finalize
     !**********************************************************************************

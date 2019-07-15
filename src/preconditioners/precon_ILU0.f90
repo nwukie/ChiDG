@@ -409,10 +409,12 @@ contains
         if (self%petsc_initialized) then
             call PCDestroy(self%pc, perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_ILU0%tear_down: error calling PCDestroy.')
+            self%initialized = .false.
             self%petsc_initialized = .false.
 
         else
             call self%LD%release()
+            self%initialized = .false.
 
         end if
 

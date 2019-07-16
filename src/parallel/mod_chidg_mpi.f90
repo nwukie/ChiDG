@@ -111,6 +111,11 @@ contains
 
         PetscErrorCode :: ierr
 
+
+        ! Finalize PETSC
+        call PetscFinalize(ierr)
+
+
         if (mpi_initialized_by_chidg) then
 
             ! Check if MPI_Finalize has been called already or by someone else
@@ -133,8 +138,6 @@ contains
 
         end if
 
-        ! Finalize PETSC
-        call PetscFinalize(ierr)
 
     end subroutine chidg_mpi_finalize
     !**********************************************************************************

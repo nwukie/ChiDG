@@ -402,6 +402,7 @@ contains
         class(test_mesh_comm_interior), intent(inout) :: this
 
         call this%chidg%shut_down('core')
+        call this%chidg%shut_down('mpi')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)

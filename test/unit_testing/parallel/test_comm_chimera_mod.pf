@@ -117,6 +117,7 @@ contains
         class(test_comm_chimera), intent(inout) :: this
 
         call this%chidg%shut_down('core')
+        call this%chidg%shut_down('mpi')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)

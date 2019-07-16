@@ -102,25 +102,8 @@ contains
                 eqn_ID = worker%mesh%domain(idom)%elems(ielem)%eqn_ID
                 associate ( domain => data%mesh%domain(idom), eqnset => data%eqnset(eqn_ID) )
 
-
-                elem_info = element_info(idomain_g       = domain%elems(ielem)%idomain_g,       &
-                                         idomain_l       = domain%elems(ielem)%idomain_l,       &
-                                         ielement_g      = domain%elems(ielem)%ielement_g,      &
-                                         ielement_l      = domain%elems(ielem)%ielement_l,      &
-                                         iproc           = domain%elems(ielem)%iproc,           &
-                                         pelem_ID        = NO_ID,                               &
-                                         eqn_ID          = domain%elems(ielem)%eqn_ID,          &
-                                         nfields         = domain%elems(ielem)%nfields,         &
-                                         ntime           = domain%elems(ielem)%ntime,           &
-                                         nterms_s        = domain%elems(ielem)%nterms_s,        &
-                                         nterms_c        = domain%elems(ielem)%nterms_c,        &
-                                         dof_start       = domain%elems(ielem)%dof_start,       &
-                                         dof_local_start = domain%elems(ielem)%dof_local_start, &
-                                         recv_comm       = domain%elems(ielem)%recv_comm,       &
-                                         recv_domain     = domain%elems(ielem)%recv_domain,     &
-                                         recv_element    = domain%elems(ielem)%recv_element,    &
-                                         recv_dof        = domain%elems(ielem)%recv_dof)
-
+                ! Set local element
+                elem_info = worker%mesh%get_element_info(idom,ielem)
                 call worker%set_element(elem_info)
 
 

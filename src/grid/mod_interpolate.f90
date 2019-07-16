@@ -353,7 +353,6 @@ contains
             qtmp = vector%get_field(donor_info,ifield,itime)
 
 
-
             !
             ! Copy correct number of modes. We use this because there is the possibility
             ! that 'q' could be an auxiliary vector with nterms > nterms_s. For example,
@@ -1236,23 +1235,24 @@ contains
             elseif ( chimera_interpolation ) then
                 ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
 
-                donor_info = element_info(idomain_g       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%idomain_g,       &
-                                          idomain_l       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%idomain_l,       &
-                                          ielement_g      = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ielement_g,      &
-                                          ielement_l      = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ielement_l,      &
-                                          iproc           = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%iproc,           &
-                                          pelem_ID        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%pelem_ID,        &
-                                          eqn_ID          = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%eqn_ID,          &
-                                          nfields         = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nfields,         &
-                                          ntime           = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ntime,           &
-                                          nterms_s        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nterms_s,        &
-                                          nterms_c        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nterms_c,        &
-                                          dof_start       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%dof_start,       &
-                                          dof_local_start = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%dof_local_start, &
-                                          recv_comm       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_comm,       &
-                                          recv_domain     = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_domain,     &
-                                          recv_element    = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_element,    &
-                                          recv_dof        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_dof)
+                donor_info = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%elem_info
+!                donor_info = element_info(idomain_g       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%idomain_g,       &
+!                                          idomain_l       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%idomain_l,       &
+!                                          ielement_g      = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ielement_g,      &
+!                                          ielement_l      = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ielement_l,      &
+!                                          iproc           = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%iproc,           &
+!                                          pelem_ID        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%pelem_ID,        &
+!                                          eqn_ID          = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%eqn_ID,          &
+!                                          nfields         = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nfields,         &
+!                                          ntime           = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%ntime,           &
+!                                          nterms_s        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nterms_s,        &
+!                                          nterms_c        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%nterms_c,        &
+!                                          dof_start       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%dof_start,       &
+!                                          dof_local_start = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%dof_local_start, &
+!                                          recv_comm       = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_comm,       &
+!                                          recv_domain     = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_domain,     &
+!                                          recv_element    = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_element,    &
+!                                          recv_dof        = mesh%domain(source_info%idomain_l)%chimera%recv(ChiID)%donor(idonor)%recv_dof)
 
             else
                 call chidg_signal(FATAL,"get_elem_interpolation_info: neighbor conforming_interpolation nor chimera_interpolation were detected")

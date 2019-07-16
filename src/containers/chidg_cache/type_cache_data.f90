@@ -78,7 +78,7 @@ contains
                     eqn_ID = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
                 else if (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA) then
                     ChiID = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
-                    eqn_ID = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%eqn_ID
+                    eqn_ID = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%elem_info%eqn_ID
                 else
                     call chidg_signal(FATAL,'cache_data%resize: Bad logic in determining eqn_ID.')
                 end if
@@ -132,7 +132,7 @@ contains
                     ! we can query them here. For now, just use the source domain
                     ! and assume they have the same fields.
                     !nprimary_fields   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_neqns%at(1)
-                    nprimary_fields   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%nfields
+                    nprimary_fields   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%elem_info%nfields
                     nauxiliary_fields = prop(eqn_ID)%nauxiliary_fields()
                     nmodel_fields     = prop(eqn_ID)%nmodel_fields()
                 else

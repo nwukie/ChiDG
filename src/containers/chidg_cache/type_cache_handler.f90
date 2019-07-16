@@ -753,7 +753,7 @@ contains
                 eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             else if (worker%face_type() == CHIMERA) then
                 ChiID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
-                eqn_ID = worker%mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%eqn_ID
+                eqn_ID = worker%mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%elem_info%eqn_ID
             end if
 
 
@@ -1607,7 +1607,7 @@ contains
             eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         else if (worker%face_type() == CHIMERA) then
             ChiID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
-            eqn_ID = worker%mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%eqn_ID
+            eqn_ID = worker%mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%elem_info%eqn_ID
         end if
 
 

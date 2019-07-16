@@ -47,7 +47,7 @@ contains
 
         if ( chimera_face ) then
             ChiID  = mesh%domain(idom)%faces(ielem,iface)%ChiID
-            idom_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
+            idom_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_l
         else
             idom_n = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_l
         end if
@@ -86,7 +86,7 @@ contains
 
         if ( chimera_face ) then
             ChiID  = mesh%domain(idom)%faces(ielem,iface)%ChiID
-            idom_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
+            idom_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_g
         else
             idom_n = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_g
         end if
@@ -127,7 +127,7 @@ contains
         
         if ( chimera_face ) then
             ChiID   = mesh%domain(idom)%faces(ielem,iface)%ChiID
-            ielem_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
+            ielem_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_l
         else
             ielem_n = mesh%domain(idom)%faces(ielem,iface)%get_neighbor_element_l()
         end if
@@ -165,7 +165,7 @@ contains
         
         if ( chimera_face ) then
             ChiID   = mesh%domain(idom)%faces(ielem,iface)%ChiID
-            ielem_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
+            ielem_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_g
         else
             ielem_n = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_g
         end if
@@ -314,18 +314,18 @@ contains
                 elseif ( chimera_face ) then
                     ChiID = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
 
-                    call seed%init(idomain_g    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%idomain_g,      &
-                                   idomain_l    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%idomain_l,      &
-                                   ielement_g   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%ielement_g,     &
-                                   ielement_l   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%ielement_l,     &
-                                   nfields      = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nfields,        &
-                                   nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nterms_s,       &
-                                   iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%iproc,          &
-                                   itime        = itime,                                                                    &
-                                   dof_start    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%dof_start,      &
-                                   recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_comm,      &
-                                   recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_domain,    &
-                                   recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_element )
+                    call seed%init(idomain_g    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%idomain_g,      &
+                                   idomain_l    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%idomain_l,      &
+                                   ielement_g   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%ielement_g,     &
+                                   ielement_l   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%ielement_l,     &
+                                   nfields      = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%nfields,        &
+                                   nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%nterms_s,       &
+                                   iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%iproc,          &
+                                   itime        = itime,                                                                              &
+                                   dof_start    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%dof_start,      &
+                                   recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_comm,      &
+                                   recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_domain,    &
+                                   recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_element )
 
 
 
@@ -506,18 +506,18 @@ contains
                 elseif ( chimera_face ) then
                     ChiID = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
 
-                    call seed%init(idomain_g    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%idomain_g,      &
-                                   idomain_l    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%idomain_l,      &
-                                   ielement_g   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%ielement_g,     &
-                                   ielement_l   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%ielement_l,     &
-                                   nfields      = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nfields,        &
-                                   nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nterms_s,       &
-                                   iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%iproc,          &
-                                   itime        = itime_couple,                                                             &
-                                   dof_start    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%dof_start,      &
-                                   recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_comm,      &
-                                   recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_domain,    &
-                                   recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_element )
+                    call seed%init(idomain_g    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%idomain_g,      &
+                                   idomain_l    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%idomain_l,      &
+                                   ielement_g   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%ielement_g,     &
+                                   ielement_l   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%ielement_l,     &
+                                   nfields      = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%nfields,        &
+                                   nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%nterms_s,       &
+                                   iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%iproc,          &
+                                   itime        = itime_couple,                                                                       &
+                                   dof_start    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%dof_start,      &
+                                   recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_comm,      &
+                                   recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_domain,    &
+                                   recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_element )
 
 
                 !

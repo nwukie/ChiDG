@@ -1502,8 +1502,7 @@ contains
                     ! Loop through donor elements. If off-processor, add to list uniquely
                     ChiID = self%faces(ielem,iface)%ChiID
                     do idonor = 1,self%chimera%recv(ChiID)%ndonors()
-                        !donor_rank = self%chimera%recv(ChiID)%donor_proc%at(idonor)
-                        donor_rank = self%chimera%recv(ChiID)%donor(idonor)%iproc
+                        donor_rank = self%chimera%recv(ChiID)%donor(idonor)%elem_info%iproc
                         comm_donor = ( myrank /= donor_rank )
                         if ( comm_donor ) call comm_procs_vector%push_back_unique(donor_rank)
                     end do !idonor

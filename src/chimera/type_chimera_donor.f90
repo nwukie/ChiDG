@@ -1,7 +1,8 @@
 module type_chimera_donor
 #include <messenger.h>
-    use mod_kinds,      only: rk, ik
-    use mod_constants,  only: NO_ID
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: NO_ID
+    use type_element_info,  only: element_info_t
     implicit none
 
 
@@ -15,29 +16,31 @@ module type_chimera_donor
     !---------------------------------------------------------------
     type, public :: chimera_donor_t
 
-        ! Donor location
-        integer(ik)                 :: idomain_g
-        integer(ik)                 :: idomain_l
-        integer(ik)                 :: ielement_g
-        integer(ik)                 :: ielement_l
-        integer(ik)                 :: iproc            ! donor processor rank
+        type(element_info_t)    :: elem_info
 
-        ! Donor properties
-        integer(ik)                 :: nfields   = 0        ! Number of equations in donor element
-        integer(ik)                 :: ntime     = 0        ! Number of equations in donor element
-        integer(ik)                 :: nterms_s  = 0        ! Number of terms in donor expansion
-        integer(ik)                 :: nterms_c  = 0        ! Number of terms in donor expansion
-        integer(ik)                 :: dof_start = 0        ! Starting gobal dof index for overset donor.
-        integer(ik)                 :: dof_local_start = 0  ! Starting local dof index for overset donor
-        integer(ik)                 :: eqn_ID    = NO_ID    ! Equation set identifier
-
-
-        ! Parallel access information
-        integer(ik)                 :: pelem_ID     = NO_ID ! ID in mesh%parallel_elements(pelem_ID) (only if off-processor)
-        integer(ik)                 :: recv_comm    = NO_ID ! location of donor solution in native storage
-        integer(ik)                 :: recv_domain  = NO_ID ! location of donor solution in native storage
-        integer(ik)                 :: recv_element = NO_ID ! location of donor solution in native storage
-        integer(ik)                 :: recv_dof     = NO_ID ! location of donor solution in petsc storage
+!        ! Donor location
+!        integer(ik)                 :: idomain_g
+!        integer(ik)                 :: idomain_l
+!        integer(ik)                 :: ielement_g
+!        integer(ik)                 :: ielement_l
+!        integer(ik)                 :: iproc            ! donor processor rank
+!
+!        ! Donor properties
+!        integer(ik)                 :: nfields   = 0        ! Number of equations in donor element
+!        integer(ik)                 :: ntime     = 0        ! Number of equations in donor element
+!        integer(ik)                 :: nterms_s  = 0        ! Number of terms in donor expansion
+!        integer(ik)                 :: nterms_c  = 0        ! Number of terms in donor expansion
+!        integer(ik)                 :: dof_start = 0        ! Starting gobal dof index for overset donor.
+!        integer(ik)                 :: dof_local_start = 0  ! Starting local dof index for overset donor
+!        integer(ik)                 :: eqn_ID    = NO_ID    ! Equation set identifier
+!
+!
+!        ! Parallel access information
+!        integer(ik)                 :: pelem_ID     = NO_ID ! ID in mesh%parallel_elements(pelem_ID) (only if off-processor)
+!        integer(ik)                 :: recv_comm    = NO_ID ! location of donor solution in native storage
+!        integer(ik)                 :: recv_domain  = NO_ID ! location of donor solution in native storage
+!        integer(ik)                 :: recv_element = NO_ID ! location of donor solution in native storage
+!        integer(ik)                 :: recv_dof     = NO_ID ! location of donor solution in petsc storage
 
 
         ! Node information
@@ -56,7 +59,7 @@ module type_chimera_donor
 
     contains
 
-        procedure   :: set_properties
+!        procedure   :: set_properties
 
         procedure   :: add_node
         procedure   :: nnodes
@@ -74,8 +77,6 @@ module type_chimera_donor
 contains
 
 
-
-
     !>  Contructor for chimera_donor_t
     !!
     !!
@@ -83,54 +84,73 @@ contains
     !!  @date   7/25/2017
     !!
     !------------------------------------------------------------------
-    function chimera_donor(idomain_g, idomain_l, ielement_g, ielement_l, iproc) result(instance)
-        integer(ik),    intent(in)  :: idomain_g
-        integer(ik),    intent(in)  :: idomain_l
-        integer(ik),    intent(in)  :: ielement_g
-        integer(ik),    intent(in)  :: ielement_l
-        integer(ik),    intent(in)  :: iproc
+    function chimera_donor(donor) result(instance)
+        type(element_info_t),   intent(in)  :: donor
 
         type(chimera_donor_t)   :: instance
 
-        instance%idomain_g  = idomain_g
-        instance%idomain_l  = idomain_l
-        instance%ielement_g = ielement_g
-        instance%ielement_l = ielement_l
-        instance%iproc      = iproc
+        instance%elem_info = donor
 
     end function chimera_donor
     !******************************************************************
 
 
 
-
-    !>  Set the properties of the donor.
-    !!
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   7/25/2017
-    !!
-    !------------------------------------------------------------------
-    subroutine set_properties(self,nterms_c,nterms_s,ntime,nfields,eqn_ID,dof_start,dof_local_start)
-        class(chimera_donor_t), intent(inout)   :: self
-        integer(ik),            intent(in)      :: nterms_c
-        integer(ik),            intent(in)      :: nterms_s
-        integer(ik),            intent(in)      :: ntime
-        integer(ik),            intent(in)      :: nfields
-        integer(ik),            intent(in)      :: eqn_ID
-        integer(ik),            intent(in)      :: dof_start
-        integer(ik),            intent(in)      :: dof_local_start
-
-        self%nterms_c        = nterms_c
-        self%nterms_s        = nterms_s
-        self%ntime           = ntime
-        self%nfields         = nfields
-        self%eqn_ID          = eqn_ID
-        self%dof_start       = dof_start
-        self%dof_local_start = dof_local_start
-
-    end subroutine set_properties
-    !******************************************************************
+!    !>  Contructor for chimera_donor_t
+!    !!
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   7/25/2017
+!    !!
+!    !------------------------------------------------------------------
+!    function chimera_donor(idomain_g, idomain_l, ielement_g, ielement_l, iproc) result(instance)
+!        integer(ik),    intent(in)  :: idomain_g
+!        integer(ik),    intent(in)  :: idomain_l
+!        integer(ik),    intent(in)  :: ielement_g
+!        integer(ik),    intent(in)  :: ielement_l
+!        integer(ik),    intent(in)  :: iproc
+!
+!        type(chimera_donor_t)   :: instance
+!
+!        instance%idomain_g  = idomain_g
+!        instance%idomain_l  = idomain_l
+!        instance%ielement_g = ielement_g
+!        instance%ielement_l = ielement_l
+!        instance%iproc      = iproc
+!
+!    end function chimera_donor
+!    !******************************************************************
+!
+!
+!
+!
+!    !>  Set the properties of the donor.
+!    !!
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   7/25/2017
+!    !!
+!    !------------------------------------------------------------------
+!    subroutine set_properties(self,nterms_c,nterms_s,ntime,nfields,eqn_ID,dof_start,dof_local_start)
+!        class(chimera_donor_t), intent(inout)   :: self
+!        integer(ik),            intent(in)      :: nterms_c
+!        integer(ik),            intent(in)      :: nterms_s
+!        integer(ik),            intent(in)      :: ntime
+!        integer(ik),            intent(in)      :: nfields
+!        integer(ik),            intent(in)      :: eqn_ID
+!        integer(ik),            intent(in)      :: dof_start
+!        integer(ik),            intent(in)      :: dof_local_start
+!
+!        self%nterms_c        = nterms_c
+!        self%nterms_s        = nterms_s
+!        self%ntime           = ntime
+!        self%nfields         = nfields
+!        self%eqn_ID          = eqn_ID
+!        self%dof_start       = dof_start
+!        self%dof_local_start = dof_local_start
+!
+!    end subroutine set_properties
+!    !******************************************************************
 
 
 

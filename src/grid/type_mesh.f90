@@ -551,17 +551,24 @@ contains
                
         
                   ! Get donor location
-                  donor_proc = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc
+                  donor_proc = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%iproc
                   ref_coords = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords
                   npts = size(ref_coords,1)
         
                   parallel_donor = (donor_proc /= IRANK)
         
                   if (parallel_donor) then
-                      idomain_g   = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
-                      ielement_g  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
+                      idomain_g   = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_g
+                      ielement_g  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_g
                       pelem_ID    = self%find_parallel_element(idomain_g,ielement_g)
                       if (pelem_ID == NO_ID) call chidg_signal_three(FATAL,"mesh%assemble_chimera_data: did not find parallel chimera element.", IRANK, idomain_g, ielement_g)
+
+                      !! Store parallel access information in donor elem_info
+                      !self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%pelem_ID     = pelem_ID
+                      !self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_comm    = self%parallel_element(pelem_ID)%recv_comm
+                      !self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_domain  = self%parallel_element(pelem_ID)%recv_domain
+                      !self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_element = self%parallel_element(pelem_ID)%recv_element
+                      !self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_dof     = self%parallel_element(pelem_ID)%recv_dof
         
                       do ipt = 1, npts
                           igq  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%node_index(ipt)
@@ -579,8 +586,8 @@ contains
         
                    else
         
-                      idomain_l   = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
-                      ielement_l  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
+                      idomain_l   = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_l
+                      ielement_l  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_l
         
                       do ipt = 1, npts
                           igq  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%node_index(ipt)
@@ -831,11 +838,11 @@ contains
             do ChiID = 1,self%domain(idom)%chimera%nreceivers()
                 do idonor = 1,self%domain(idom)%chimera%recv(ChiID)%ndonors()
 
-                    proc_has_donor = (self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc == iproc)
+                    proc_has_donor = (self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%iproc == iproc)
                     if (proc_has_donor) then
 
-                        donor_domain_g  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
-                        donor_element_g = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
+                        donor_domain_g  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_g
+                        donor_element_g = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_g
 
                         ! Check if donor was already counted
                         already_counted = .false.
@@ -877,48 +884,76 @@ contains
     !>  Return the number of elements being received into self%parallel_elements
     !!  by the mesh.
     !!
-    !!  NOTE: currently, we are only receiving off-processor chimera donors into 
-    !!        self%parallel_elements. So, even though we may have interior neighbors
-    !!        that are off-processor, those elements are not included in this count
-    !!        atthe moment, because they are not stored in self%parallel_elements.
+    !!  NOTE: currently, we are only receiving off-processor INTERIOR and CHIMERA elements
+    !!        into self%parallel_elements. 
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/26/2017
-    !!
     !!
     !-----------------------------------------------------------------------------------
     function get_nelements_recv(self) result(n)
         class(mesh_t),  intent(in)  :: self
 
-        integer(ik)     :: idom, irecv, idonor, donor_iproc, idomain_g, ielement_g, &
+        integer(ik)     :: idom, ielem, iface, irecv, idonor, donor_iproc, idomain_g, ielement_g, &
                            idomain_g_list, ielement_g_list, ientry, n
         logical         :: parallel_donor, already_counted
-        type(ivector_t) :: donor_domain_g, donor_element_g
+        type(ivector_t) :: recv_domain_g, recv_element_g
 
 
+        ! Accumulate parallel INTERIOR neighbors
         do idom = 1,self%ndomains()
-            do irecv = 1,self%domain(idom)%chimera%nreceivers()
-                do idonor = 1,self%domain(idom)%chimera%recv(irecv)%ndonors()
+            do ielem = 1,self%domain(idom)%nelements()
+                do iface = 1,NFACES
 
-                    donor_iproc = self%domain(idom)%chimera%recv(irecv)%donor(idonor)%iproc
-
-                    parallel_donor = (donor_iproc /= IRANK)
-                    if (parallel_donor) then
-                        idomain_g  = self%domain(idom)%chimera%recv(irecv)%donor(idonor)%idomain_g
-                        ielement_g = self%domain(idom)%chimera%recv(irecv)%donor(idonor)%ielement_g
+                    if (self%domain(idom)%faces(ielem,iface)%ftype == INTERIOR .and. self%domain(idom)%faces(ielem,iface)%ineighbor_proc /= IRANK) then
+                        idomain_g  = self%domain(idom)%faces(ielem,iface)%ineighbor_domain_g
+                        ielement_g = self%domain(idom)%faces(ielem,iface)%ineighbor_element_g
 
                         already_counted = .false.
-                        do ientry = 1,donor_element_g%size()
-                            idomain_g_list  = donor_domain_g%at(ientry)
-                            ielement_g_list = donor_element_g%at(ientry)
+                        do ientry = 1,recv_element_g%size()
+                            idomain_g_list  = recv_domain_g%at(ientry)
+                            ielement_g_list = recv_element_g%at(ientry)
                             if ( (idomain_g_list  == idomain_g ) .and. &
                                  (ielement_g_list == ielement_g) ) already_counted = .true.
                             if (already_counted) exit
                         end do
 
                         if (.not. already_counted) then
-                            call donor_domain_g%push_back(idomain_g)
-                            call donor_element_g%push_back(ielement_g)
+                            call recv_domain_g%push_back(idomain_g)
+                            call recv_element_g%push_back(ielement_g)
+                        end if
+
+                    end if
+
+                end do
+            end do
+        end do
+
+
+        ! Accumulate parallel CHIMERA neighbors
+        do idom = 1,self%ndomains()
+            do irecv = 1,self%domain(idom)%chimera%nreceivers()
+                do idonor = 1,self%domain(idom)%chimera%recv(irecv)%ndonors()
+
+                    donor_iproc = self%domain(idom)%chimera%recv(irecv)%donor(idonor)%elem_info%iproc
+
+                    parallel_donor = (donor_iproc /= IRANK)
+                    if (parallel_donor) then
+                        idomain_g  = self%domain(idom)%chimera%recv(irecv)%donor(idonor)%elem_info%idomain_g
+                        ielement_g = self%domain(idom)%chimera%recv(irecv)%donor(idonor)%elem_info%ielement_g
+
+                        already_counted = .false.
+                        do ientry = 1,recv_element_g%size()
+                            idomain_g_list  = recv_domain_g%at(ientry)
+                            ielement_g_list = recv_element_g%at(ientry)
+                            if ( (idomain_g_list  == idomain_g ) .and. &
+                                 (ielement_g_list == ielement_g) ) already_counted = .true.
+                            if (already_counted) exit
+                        end do
+
+                        if (.not. already_counted) then
+                            call recv_domain_g%push_back(idomain_g)
+                            call recv_element_g%push_back(ielement_g)
                         end if
                     end if
 
@@ -929,10 +964,11 @@ contains
 
 
 
+
         !
         ! Get size of accumulated elements being received
         !
-        n = donor_element_g%size()
+        n = recv_element_g%size()
 
     end function get_nelements_recv
     !***********************************************************************************
@@ -1625,14 +1661,14 @@ contains
                 if (pelem_ID == NO_ID) then
                     pelem_ID = self%new_parallel_element()
 
-                    ! Only update recv_dof for new elements, since we don't want to 
-                    ! modify the access indices for existing elements.
-
-                    ! Update dof access indices for parallel elements on local process
-                    self%parallel_element(pelem_ID)%recv_dof = recv_dof
-
-                    ! Increment recv_dof
-                    recv_dof = recv_dof + (nterms_s*nfields*ntime)
+!                    ! Only update recv_dof for new elements, since we don't want to 
+!                    ! modify the access indices for existing elements.
+!
+!                    ! Update dof access indices for parallel elements on local process
+!                    self%parallel_element(pelem_ID)%recv_dof = recv_dof
+!
+!                    ! Increment recv_dof
+!                    recv_dof = recv_dof + (nterms_s*nfields*ntime)
                 end if
 
 
@@ -1652,9 +1688,10 @@ contains
                     call self%parallel_element(pelem_ID)%init_geom(nodes,connectivity,etype,element_location,trim(coord_system))
                 end if
 
-                if (.not. self%parallel_element(pelem_ID)%sol_initialized) then
-                    call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start,dof_local_start=NO_ID)
-                end if
+                !if (.not. self%parallel_element(pelem_ID)%sol_initialized) then
+                ! NOTE: we want to be able to reinitialize parallel_element solution data-space (e.g. for wall_distance calculation)
+                call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start,dof_local_start=NO_ID)
+                !end if
 
                 call self%parallel_element(pelem_ID)%set_displacements_velocities(nodes_disp,nodes_vel)
                 call self%parallel_element(pelem_ID)%update_interpolations_ale()
@@ -1665,151 +1702,28 @@ contains
 
 
 
+        !
+        ! Update recv_dof indices for all parallel elements. 
+        ! NOTE: this should be done after the previous loop structure to allow parallel elements
+        ! to be reinitialized (for example if we are reinitializing nterms_s).
+        !
+        recv_dof = 1    ! DOF indices are based on Fortran 1-indexing
+        do pelem_ID = 1,self%nparallel_elements()
+
+            ! Set current element
+            self%parallel_element(pelem_ID)%recv_dof = recv_dof
+
+            ! Update start of potential next element
+            nterms_s = self%parallel_element(pelem_ID)%nterms_s 
+            nfields  = self%parallel_element(pelem_ID)%nfields
+            ntime    = self%parallel_element(pelem_ID)%ntime
+
+            recv_dof = recv_dof + nterms_s*nfields*ntime
+
+        end do
 
 
 
-
-
-! PREVIOUS
-
-!        !
-!        ! Receive interior face data
-!        !
-!        recv_procs = self%get_recv_procs()
-!        do iproc = 1,size(recv_procs)
-!            do irecv = 1,self%get_proc_ninterior_neighbors(recv_procs(iproc))
-!
-!                ! The sending proc sent its neighbor location, which is a face on our local processor 
-!                ! here where we will store the incoming ALE data
-!                ! face_location = [idomain_g, idomain_l, ielement_g, ielement_l, iface, dof_start]
-!                call mpi_recv(face_location, 6, mpi_integer4, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-!                idom  = face_location(2)
-!                ielem = face_location(4)
-!                iface = face_location(5)
-!
-!                recv_size_a = size(self%domain(idom)%faces(ielem,iface)%neighbor_interp_coords_vel)
-!                recv_size_b = size(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g)
-!                recv_size_c = size(self%domain(idom)%faces(ielem,iface)%neighbor_ale_Dinv)
-!
-!                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_interp_coords_vel, recv_size_a, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-!                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g,             recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-!                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad1,       recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-!                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad2,       recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-!                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad3,       recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-!                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_Dinv,          recv_size_c, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-!
-!            end do !irecv
-!        end do !iproc
-!
-!
-!
-!
-!
-!        !
-!        ! Receive/construct parallel chimera donors
-!        !
-!        do iproc = 1,size(recv_procs)
-!            do irecv = 1,self%get_proc_nchimera_donors(recv_procs(iproc))
-!
-!
-!
-!                ! element_location = [idomain_g, idomain_l, ielement_g, ielement_l, iproc]
-!                call mpi_recv(element_location, 5, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-!                idomain_g  = element_location(1)
-!                ielement_g = element_location(3)
-!
-!
-!                ! element_data = [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level]
-!                call mpi_recv(element_data, 9, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-!                etype               = element_data(1)
-!                spacedim            = element_data(2)
-!                coordinate_system   = element_data(3)
-!                nfields             = element_data(4)
-!                nterms_s            = element_data(5)
-!                nterms_c            = element_data(6)
-!                ntime               = element_data(7)
-!                interpolation_level = element_data(8)
-!                dof_start           = element_data(9)
-!                nnodes = (etype+1)*(etype+1)*(etype+1)
-!                
-!
-!
-!                ! Allocate buffers and receive: nodes, displacements, and velocities. 
-!                ! These quantities are located at the element support nodes, not interpolation
-!                ! nodes.
-!                if (allocated(nodes)) deallocate(nodes, nodes_def, nodes_vel, connectivity)
-!                allocate(nodes(       nnodes,3), &
-!                         nodes_def(   nnodes,3), &
-!                         nodes_vel(   nnodes,3), &
-!                         connectivity(nnodes  ), stat=ierr)
-!                if (ierr /= 0) call AllocationError
-!
-!
-!                call mpi_recv(nodes,     nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-!                call mpi_recv(nodes_def, nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-!                call mpi_recv(nodes_vel, nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-!
-!                
-!                !
-!                ! Compute node displacements
-!                !
-!                nodes_disp = nodes_def - nodes
-!
-!                !
-!                ! Build local connectivity
-!                !   : we construct the parallel element using just a local ordering
-!                !   : so connectivity starts at 1 and goes to the number of nodes in 
-!                !   : the element, nnodes.
-!                !   :
-!                !   :   connectivity = [1, 2, 3, 4, 5, 6, 7, 8 ...]
-!                !   :
-!                !   : We assume here that the displacements and velocities are ordered
-!                !   : appropriately.
-!                !
-!                do inode = 1,nnodes
-!                    connectivity(inode) = inode
-!                end do
-!
-!
-!
-!                !
-!                ! Check for existing parallel element. If one does not
-!                ! exist, get an identifier for a new parallel element.
-!                !
-!                pelem_ID = self%find_parallel_element(idomain_g,ielement_g)
-!                if (pelem_ID == NO_ID) pelem_ID = self%new_parallel_element()
-!
-!
-!                !
-!                ! Initialize element geometry
-!                !
-!                select case(coordinate_system)
-!                    case(CARTESIAN)
-!                        coord_system = 'Cartesian'
-!                    case(CYLINDRICAL)
-!                        coord_system = 'Cylindrical'
-!                    case default
-!                        call chidg_signal(FATAL,"element%comm_recv: invalid coordinate system.")
-!                end select
-!
-!                
-!                !
-!                ! Construct/initialize/reinitialize parallel element
-!                !
-!                if (.not. self%parallel_element(pelem_ID)%geom_initialized) then
-!                    call self%parallel_element(pelem_ID)%init_geom(nodes,connectivity,etype,element_location,trim(coord_system))
-!                end if
-!
-!                if (.not. self%parallel_element(pelem_ID)%sol_initialized) then
-!                    call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start)
-!                end if
-!
-!                call self%parallel_element(pelem_ID)%set_displacements_velocities(nodes_disp,nodes_vel)
-!                call self%parallel_element(pelem_ID)%update_interpolations_ale()
-!
-!
-!            end do !irecv
-!        end do !iproc
 
 
 
@@ -1850,15 +1764,15 @@ contains
             do ChiID = 1,self%domain(idom)%chimera%nreceivers()
                 do idonor = 1,self%domain(idom)%chimera%recv(ChiID)%ndonors()
 
-                    parallel_donor = (self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc /= IRANK)
+                    parallel_donor = (self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%iproc /= IRANK)
                     if (parallel_donor) then
-                        idonor_domain_g  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
-                        idonor_element_g = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
+                        idonor_domain_g  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_g
+                        idonor_element_g = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_g
                         pelem_ID = self%find_parallel_element(idonor_domain_g,idonor_element_g)
                         if (pelem_ID == NO_ID) call chidg_signal(FATAL,'mesh%comm_recv: could not find overset donor parallel element.')
 
-                        self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%pelem_ID = pelem_ID
-                        self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_dof = self%parallel_element(pelem_ID)%recv_dof
+                        self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%pelem_ID = pelem_ID
+                        self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_dof = self%parallel_element(pelem_ID)%recv_dof
                     end if
 
                 end do !idonor

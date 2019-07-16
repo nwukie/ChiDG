@@ -325,13 +325,13 @@ contains
                             ! Call block initialization for each Chimera donor
                             !
                             do idonor = 1,ndonors
-                                dparent_g   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
-                                dparent_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
-                                eparent_g   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
-                                eparent_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
-                                parent_proc = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc
-                                nfields     = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%nfields
-                                nterms_s    = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%nterms_s
+                                dparent_g   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_g
+                                dparent_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_l
+                                eparent_g   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_g
+                                eparent_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_l
+                                parent_proc = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%iproc
+                                nfields     = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%nfields
+                                nterms_s    = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%nterms_s
 
 
                                 !

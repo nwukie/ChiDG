@@ -422,17 +422,21 @@ contains
                             end if
 
 
-                            !
-                            ! Add donor
-                            !
-                            donor_ID = mesh%domain(idom)%chimera%recv(ichimera_face)%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, donor%iproc)
-                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%set_properties(nterms_c        = donor%nterms_c,   &
-                                                                                                              nterms_s        = donor%nterms_s,   &
-                                                                                                              ntime           = donor%ntime,      &
-                                                                                                              nfields         = donor%nfields,    &
-                                                                                                              eqn_ID          = donor%eqn_ID,     &
-                                                                                                              dof_start       = donor%dof_start,  &
-                                                                                                              dof_local_start = donor%dof_local_start)
+!                            !
+!                            ! Add donor
+!                            !
+!                            donor_ID = mesh%domain(idom)%chimera%recv(ichimera_face)%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, donor%iproc)
+!                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%set_properties(nterms_c        = donor%nterms_c,   &
+!                                                                                                              nterms_s        = donor%nterms_s,   &
+!                                                                                                              ntime           = donor%ntime,      &
+!                                                                                                              nfields         = donor%nfields,    &
+!                                                                                                              eqn_ID          = donor%eqn_ID,     &
+!                                                                                                              dof_start       = donor%dof_start,  &
+!                                                                                                              dof_local_start = donor%dof_local_start)
+
+
+
+                            donor_ID = mesh%domain(idom)%chimera%recv(ichimera_face)%add_donor(donor)
                             call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%add_node(igq,donor_coord,donor_metric,donor_jinv)
 
 
@@ -631,11 +635,11 @@ contains
                 !
                 do idonor = 1,mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
 
-                    donor_idomain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
-                    donor_idomain_l  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
-                    donor_ielement_g = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
-                    donor_ielement_l = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
-                    donor_nterms_s   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%nterms_s
+                    donor_idomain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_g
+                    donor_idomain_l  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_l
+                    donor_ielement_g = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_g
+                    donor_ielement_l = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_l
+                    donor_nterms_s   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%nterms_s
 
                     !
                     ! Get number of GQ points this donor is responsible for

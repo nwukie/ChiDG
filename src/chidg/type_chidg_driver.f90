@@ -243,13 +243,14 @@ contains
             !       p = 2,4,6
             !
             iorder = 2
-            call noptions%set('tol',1.e-4_rk)   
+            call noptions%set('tol',1.e-3_rk)   
+            call noptions%set('rtol',1.e-16_rk)   
             call noptions%set('ptc',.true.)    
             call noptions%set('smooth',.false.)
             call loptions%set('tol',1.e-5_rk)   ! Set linear solver options
+            call loptions%set('rtol',1.e-16_rk) ! Set linear solver options
             call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
             call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
-!            wall_distance%nonlinear_solver%norders_reduction = 3
             do p = 2,6,2
                 call write_line('Wall Distance Driver : Loop 1 : p = ', p)
                 
@@ -306,15 +307,14 @@ contains
             !
             p = 6
             call set_p_poisson_parameter(real(p,rk))
-            call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
-            call noptions%set('ptc',.true.)   ! Set nonlinear solver options
-            call noptions%set('smooth',.false.)   ! Set nonlinear solver options
-            call loptions%set('tol',1.e-8_rk)   ! Set linear solver options
+            call noptions%set('tol',1.e-3_rk)   ! Set nonlinear solver options
+            call noptions%set('rtol',1.e-16_rk) ! Set nonlinear solver options
+            call noptions%set('ptc',.true.)     ! Set nonlinear solver options
+            call noptions%set('smooth',.false.) ! Set nonlinear solver options
+            call loptions%set('tol',1.e-7_rk)   ! Set linear solver options
+            call loptions%set('rtol',1.e-16_rk) ! Set linear solver options
             call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
             call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
-
-!            wall_distance%nonlinear_solver%norders_reduction = 8
-!            wall_distance%nonlinear_solver%norders_reduction = 30
 
             order = chidg%nterms_s_1d
             do iorder = 3,order

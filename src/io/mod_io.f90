@@ -111,6 +111,7 @@ module mod_io
     !-------------------------------------------------------------------
     logical,                save    :: initial_write    = .false.
     logical,                save    :: final_write      = .true.
+    logical,                save    :: tecio_write      = .false.
     integer(ik),            save    :: nwrite           = 100
     integer(ik),            save    :: verbosity        = 2
     character(len=100),     save    :: report           = 'none'
@@ -188,6 +189,7 @@ module mod_io
     namelist /io/                       nwrite,             &
                                         initial_write,      &
                                         final_write,        &
+                                        tecio_write,        &
                                         verbosity,          &
                                         report
 

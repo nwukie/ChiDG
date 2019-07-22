@@ -20,7 +20,7 @@ module mod_chidg_post_hdf2tec
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
     use mod_tecio_old,          only: write_tecio_old
-    use mod_tecio,              only: write_tecio
+    use mod_tecio,              only: write_tecio_file
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
     use mod_string,             only: get_file_prefix
@@ -123,27 +123,30 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------
-    subroutine chidg_post_hdf2tec_new(grid_file,solution_file)
-        character(*)    :: grid_file
-        character(*)    :: solution_file
+    subroutine chidg_post_hdf2tec_new(chidg,grid_file,solution_file)
+        type(chidg_t),  intent(inout)   :: chidg
+        character(*),   intent(in)      :: grid_file
+        character(*),   intent(in)      :: solution_file
     
-        type(chidg_t)                       :: chidg
         type(file_properties_t)             :: file_props
         character(:),           allocatable :: time_string, solution_file_prefix, plt_filename
-        integer(ik)                         :: nterms_s, solution_order
+        integer(ik)                         :: nterms_s, solution_order, ierr, iproc
 
-        ! Initialize ChiDG environment
-        call chidg%start_up('core')
-        call chidg%start_up('mpi')
 
         ! Get nterms_s 
-        file_props  = get_properties_hdf(solution_file)
-        nterms_s    = file_props%nterms_s(1)
-        time_string = file_props%time_integrator
+        do iproc = 0,NRANK-1
+            if (iproc == IRANK) then
+                file_props  = get_properties_hdf(solution_file)
+                nterms_s    = file_props%nterms_s(1)
+                time_string = file_props%time_integrator
 
-        solution_order = 0
-        do while (solution_order*solution_order*solution_order < nterms_s)
-            solution_order = solution_order + 1
+                solution_order = 0
+                do while (solution_order*solution_order*solution_order < nterms_s)
+                    solution_order = solution_order + 1
+                end do
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_post_hdf2tec_new: error in MPI_Barrier.')
         end do
 
 
@@ -163,20 +166,23 @@ contains
         call chidg%process()
 
 
+
         ! Get post processing data (q_out)
         call chidg%time_integrator%initialize_state(chidg%data)
-        call chidg%time_integrator%read_time_options(chidg%data,solution_file,'process')
-        call chidg%time_integrator%process_data_for_output(chidg%data)
+        do iproc = 0,NRANK-1
+            if (iproc == IRANK) then
+                call chidg%time_integrator%read_time_options(chidg%data,solution_file,'process')
+                call chidg%time_integrator%process_data_for_output(chidg%data)
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'chidg_post_hdf2tec_new: error in MPI_Barrier.')
+        end do
 
 
         ! Write solution
         solution_file_prefix = get_file_prefix(solution_file,'.h5')
-        call write_tecio(chidg%data,solution_file_prefix, write_domains=.true., write_surfaces=.true.)
+        call write_tecio_file(chidg%data,solution_file_prefix, write_domains=.true., write_surfaces=.true.)
         
-
-        ! Close ChiDG
-        call chidg%shut_down('core')
-
 
     end subroutine chidg_post_hdf2tec_new
     !******************************************************************************************

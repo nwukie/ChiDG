@@ -95,7 +95,7 @@ program driver
 
         ! Run ChiDG simulation
         call chidg%reporter('before')
-        call chidg%run(write_initial=initial_write, write_final=final_write)
+        call chidg%run(write_initial=initial_write, write_final=final_write, write_tecio=tecio_write)
         call chidg%reporter('after')
 
 
@@ -253,7 +253,7 @@ program driver
                 do
                     read(7,fmt='(a)', iostat=ierr) solution_file
                     if (ierr /= 0) exit
-                    call chidg_post_hdf2tec_new(trim(solution_file),trim(solution_file))
+                    call chidg_post_hdf2tec_new(chidg,trim(solution_file),trim(solution_file))
                 end do
                 close(7)
 
@@ -398,17 +398,13 @@ program driver
                 call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' 'inputs' and 'forces'.")
         end select
 
+
         call chidg%shut_down('core')
+        call chidg%shut_down('mpi')
 
 
 
     end if
-
-
-
-
-
-
 
 
 

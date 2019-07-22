@@ -1,4 +1,4 @@
-project(chidg Fortran C)
+project(chidg Fortran C CXX)
 cmake_minimum_required(VERSION 3.7.1)
 
 set(ChiDG_VERSION_MAJOR 0)
@@ -168,12 +168,18 @@ endforeach()
 message(STATUS " ")
 message(STATUS "MPI Summary:")
 set(MPI_Fortran_COMPILER $ENV{MPI_Fortran_COMPILER})
+set(MPI_C_COMPILER $ENV{MPI_C_COMPILER})
+set(MPI_CXX_COMPILER $ENV{MPI_CXX_COMPILER})
 
 
 
-find_package(MPI REQUIRED COMPONENTS Fortran)
+#find_package(MPI REQUIRED COMPONENTS Fortran)
+find_package(MPI REQUIRED COMPONENTS MPICXX Fortran)
 include_directories(${MPI_Fortran_INCLUDE_PATH})
+include_directories(${MPI_CXX_INCLUDE_PATH})
 
+message(STATUS "        " ${MPI_Fortran_LIBRARIES})
+message(STATUS "        " ${MPI_CXX_LIBRARIES})
 
 if (MPI_Fortran_FOUND)
     message(STATUS "    MPI Fortran Libraries: ")
@@ -186,12 +192,26 @@ if (MPI_Fortran_FOUND)
     endforeach()
 endif()
 
+if (MPI_CXX_FOUND)
+    message(STATUS "    MPI CXX Libraries: ")
+    foreach (L ${MPI_CXX_LIBRARIES})
+        message(STATUS "        " ${L})
+    endforeach()
+    message(STATUS "    MPI CXX Include Path: ")
+    foreach (L ${MPI_CXX_INCLUDE_PATH})
+        message(STATUS "        " ${L})
+    endforeach()
+endif()
 
 
 # Assemble libraries in form for linking with f2py Python interface
 unset(TRIMMED_LIBRARIES)
 # Trim path and extension
 foreach(LIBFULL ${MPI_Fortran_LIBRARIES})
+    get_filename_component(LIB ${LIBFULL} NAME_WE)
+    set(TRIMMED_LIBRARIES ${TRIMMED_LIBRARIES} ${LIB})
+endforeach()
+foreach(LIBFULL ${MPI_CXX_LIBRARIES})
     get_filename_component(LIB ${LIBFULL} NAME_WE)
     set(TRIMMED_LIBRARIES ${TRIMMED_LIBRARIES} ${LIB})
 endforeach()
@@ -207,7 +227,6 @@ endforeach()
 foreach(LIB ${MPI_Fortran_LIBRARIES})
     get_filename_component(MPI_LIBRARY_PATH ${LIB} DIRECTORY)
 endforeach()
-
 
 
 #----------------------------------------------------------------------------------------------
@@ -345,17 +364,26 @@ message(STATUS "Tecplot Summary: ")
 # Select TecIO library based on detected OS
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
     set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/mac)
-    set(TECIO_LIBRARY_NAME libtecio.dylib)
+    #set(TECIO_LIBRARY_NAME libtecio.dylib)
+    set(TECIO_LIBRARY_NAME libteciompi.dylib)
     add_custom_target(update_tecio_install_name 
-                      COMMAND ${CMAKE_INSTALL_NAME_TOOL} -id '@executable_path/libtecio.dylib' ${CMAKE_CURRENT_BINARY_DIR}/bin/libtecio.dylib)
-    install(FILES ${TEC_ROOT}/lib/libtecio.dylib DESTINATION lib)
+                      #COMMAND ${CMAKE_INSTALL_NAME_TOOL} -id '@executable_path/libtecio.dylib' ${CMAKE_CURRENT_BINARY_DIR}/bin/libtecio.dylib)
+                      COMMAND ${CMAKE_INSTALL_NAME_TOOL} -id '@executable_path/libteciompi.dylib' ${CMAKE_CURRENT_BINARY_DIR}/bin/libteciompi.dylib 
+                                                         -change '/usr/local/lib/libmpi_cxx.1.dylib' 'libmpi_cxx.dylib'
+                                                         -change '/usr/local/lib/libmpi.12.dylib' 'libmpi.dylib')
+    #install(FILES ${TEC_ROOT}/lib/libtecio.dylib DESTINATION lib)
+    install(FILES ${TEC_ROOT}/lib/libteciompi.dylib DESTINATION lib)
 elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
     set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/linux)
-    set(TECIO_LIBRARY_NAME libtecio.so)
+    #set(TECIO_LIBRARY_NAME libtecio.so)
+    set(TECIO_LIBRARY_NAME libteciompi.so)
     set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
     add_custom_target(update_tecio_install_name 
-                      COMMAND "")
-    install(FILES ${TEC_ROOT}/lib/libtecio.so DESTINATION lib)
+                      COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change '/usr/local/lib/libmpi_cxx.1.dylib' 'libmpi_cxx.dylib'
+                                                         -change '/usr/local/lib/libmpi.12.dylib' 'libmpi.dylib')
+                      #COMMAND "")
+    #install(FILES ${TEC_ROOT}/lib/libtecio.so DESTINATION lib)
+    install(FILES ${TEC_ROOT}/lib/libteciompi.so DESTINATION lib)
 else()
     message(SEND_ERROR "Invalid operating system detected for TecIO")
 endif()
@@ -644,8 +672,11 @@ install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION include/chidg)
 
 # Update Tecplot rpath in installed executable so the user doesn't have to change their environment
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
-    set(INSTALL_SNIPPET "${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg")
-    install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
+    #set(INSTALL_SNIPPET "${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg")
+    #install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
+    #set(INSTALL_SNIPPET "${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libteciompi.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libteciompi.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg")
+    install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libteciompi.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libteciompi.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
+    install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"/usr/local/lib/libmpi_cxx.1.dylib\" \"libmpi_cxx.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
 endif()
 
 

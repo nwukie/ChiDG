@@ -14,7 +14,8 @@ module type_mesh
     use type_mpi_request_vector,    only: mpi_request_vector_t
     use mpi_f08,                    only: mpi_isend, mpi_recv, mpi_integer4, mpi_real8, &
                                           mpi_waitall, mpi_request, mpi_status_ignore,  &
-                                          mpi_statuses_ignore, mpi_character, mpi_sum
+                                          mpi_statuses_ignore, mpi_character, mpi_sum,  &
+                                          mpi_max, mpi_logical, mpi_lor
     use type_octree,                only: octree_t
     implicit none
     private
@@ -96,6 +97,7 @@ module type_mesh
 
         ! Communication 
         procedure           :: comm_nelements
+        procedure           :: comm_domain_procs
         procedure           :: comm_send
         procedure           :: comm_recv
         procedure           :: comm_wait
@@ -1162,6 +1164,88 @@ contains
 
     end subroutine comm_nelements
     !*********************************************************************************
+
+
+
+
+    !>  Communicate domain partition neighbors.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/22/2019
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine comm_domain_procs(self)
+        class(mesh_t),  intent(inout)   :: self
+
+        integer(ik)     :: ierr, idomain_g_local_max, idomain_g_global_max, iproc, idom, idomain_g, idomain_l_index
+        type(ivector_t) :: procs
+        logical         :: ranks_with_domain(NRANK), ranks_with_domain_reduced(NRANK)
+
+        ! Find largest domain index, proc-local
+        idomain_g_local_max = 0
+        do idom = 1,self%ndomains()
+            if (idomain_g_local_max < self%domain(idom)%idomain_g) idomain_g_local_max = self%domain(idom)%idomain_g
+        end do
+
+
+        ! Get global idomain_g max 
+        call MPI_AllReduce(idomain_g_local_max, idomain_g_global_max, NRANK, MPI_INTEGER4, MPI_MAX, ChiDG_COMM, ierr)
+
+
+        ! For each domain, check if local proc has and register if so. Then reduce registration
+        ! for domain and collect participating processes into list to store for domain.
+        do idomain_g = 1,idomain_g_global_max
+
+            ranks_with_domain = .false.
+            do idom = 1,self%ndomains()
+                if (self%domain(idom)%idomain_g == idomain_g) then
+                    ! Indexing from 1, so add 1 to IRANK since it is 0-based.
+                    ranks_with_domain(IRANK+1) = .true.
+                    idomain_l_index = idom
+                    exit
+                end if
+            end do
+
+
+            ! Reduce results
+            ranks_with_domain_reduced = .false.
+            call MPI_AllReduce(ranks_with_domain,ranks_with_domain_reduced,NRANK,MPI_LOGICAL,MPI_LOR,ChiDG_COMM,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'mesh%comm_neighbors: error calling MPI_AllReduce.')
+
+
+            ! If current proc has domain, register all participating procs 
+            if (ranks_with_domain(IRANK+1)) then
+
+                ! Collect participating procs
+                do iproc = 1,NRANK
+                    if (ranks_with_domain_reduced(iproc)) then
+                        call procs%push_back(iproc-1)
+                    end if
+                end do
+
+                ! Register
+                self%domain(idomain_l_index)%procs = procs%data()
+            end if
+
+
+        end do
+
+    end subroutine comm_domain_procs
+    !*********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

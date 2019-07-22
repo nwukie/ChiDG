@@ -65,7 +65,8 @@ module type_domain
         integer(ik)                     :: nelements_g = 0     ! Number of elements in the global domain
         integer(ik)                     :: nelem       = 0     ! Number of total elements
         integer(ik)                     :: ntime       = 0     ! Number of time instances
-        integer(ik)                     :: mm_ID      = NO_MM_ASSIGNED
+        integer(ik)                     :: mm_ID       = NO_MM_ASSIGNED
+        integer(ik),    allocatable     :: procs(:)            ! A list of all processors owning a part of idomain_g
         character(:),   allocatable     :: coordinate_system   ! 'Cartesian' or 'Cylindrical'
 
         

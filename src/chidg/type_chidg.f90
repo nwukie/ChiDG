@@ -16,7 +16,7 @@ module type_chidg
     use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
     use type_chidg_data,            only: chidg_data_t
-    use type_chidg_vector,          only: chidg_vector_t, sub_chidg_vector_chidg_vector
+    use type_chidg_vector
     use type_time_integrator,       only: time_integrator_t
     use mod_time,                   only: time_manager_global
     use type_linear_solver,         only: linear_solver_t
@@ -44,7 +44,7 @@ module type_chidg
 
     use mod_hdfio
     use mod_hdf_utilities
-    use mod_tecio,                  only: write_tecio
+    use mod_tecio,                  only: write_tecio_file
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
     use mpi_f08
@@ -787,6 +787,7 @@ contains
 
         ! Sync
         call self%data%mesh%comm_nelements()
+        call self%data%mesh%comm_domain_procs()
 
 
 
@@ -1287,7 +1288,7 @@ contains
 
         ! Write solution
         solution_file_prefix = get_file_prefix(solution_file,'.h5')
-        call write_tecio(self%data,solution_file_prefix, write_domains=.true., write_surfaces=.true.)
+        call write_tecio_file(self%data,solution_file_prefix, write_domains=.true., write_surfaces=.true.)
 
 
         call write_line("Done writing visualization.", io_proc=GLOBAL_MASTER)
@@ -1378,15 +1379,16 @@ contains
     !!  @date   2/7/2017
     !!
     !------------------------------------------------------------------------------------------
-    subroutine run(self, write_initial, write_final)
+    subroutine run(self, write_initial, write_final, write_tecio)
         class(chidg_t), intent(inout)           :: self
         logical,        intent(in), optional    :: write_initial
         logical,        intent(in), optional    :: write_final
+        logical,        intent(in), optional    :: write_tecio
 
         character(100)              :: filename
-        character(:),   allocatable :: prefix
+        character(:),   allocatable :: prefix, tecio_file_prefix
         integer(ik)                 :: istep, nsteps, wcount, iread, ierr, myunit
-        logical                     :: option_write_initial, option_write_final, exists
+        logical                     :: option_write_initial, option_write_final, option_write_tecio, exists
         real(rk)                    :: force(3), work
 
         class(chidg_t), pointer :: chidg
@@ -1412,8 +1414,10 @@ contains
         ! Check optional incoming parameters
         option_write_initial = .false.
         option_write_final   = .true.
+        option_write_tecio   = .false.
         if (present(write_initial)) option_write_initial = write_initial
         if (present(write_final))   option_write_final   = write_final
+        if (present(write_tecio))   option_write_tecio   = write_tecio
 
 
         ! Write initial solution
@@ -1484,6 +1488,24 @@ contains
         if (option_write_final) then
             call self%write_mesh(solutionfile_out)
             call self%write_fields(solutionfile_out)
+        end if
+
+
+        ! Write tecio visualization 
+        if (option_write_tecio) then
+            ! Initialize interpolation to Uniform for TecIO output.
+            call self%init('all','Uniform',level=OUTPUT_RES)
+
+            ! Re-initialize solution and process for output
+            call self%read_fields(solutionfile_out)
+
+            ! Get post processing data (q_in -> q -> q_out)
+            call self%time_integrator%initialize_state(self%data)
+            call self%time_integrator%process_data_for_output(self%data)
+
+            ! Write solution
+            tecio_file_prefix = get_file_prefix(solutionfile_out,'.h5')
+            call write_tecio_file(self%data, tecio_file_prefix, write_domains=.true., write_surfaces=.true.)
         end if
 
     end subroutine run
@@ -1666,7 +1688,8 @@ contains
         integer(ik)                         :: ndom, nelems, nfields, nterms, idom, ielem, iterm, ieqn
         real(rk), allocatable               :: temp(:)
         q_diff = q_ref
-        q_diff = sub_chidg_vector_chidg_vector(self%data%sdata%q,q_ref)
+        !q_diff = sub_chidg_vector_chidg_vector(self%data%sdata%q,q_ref)
+        q_diff = self%data%sdata%q - q_ref
         error_val = ZERO
         !error_val = q_diff%norm_local()
 

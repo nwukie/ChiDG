@@ -92,7 +92,7 @@ contains
         if (write_surfaces .and. NRANK > 1) then
             surface_switch = .false.
             if (IRANK == GLOBAL_MASTER) then
-                call chidg_signal(MSG,'write_tecio_file: NOTE: surface zones can only be writted in serial due to current restrictions in TecIO library. Writing surface zones has been disabled.')
+                call chidg_signal(MSG,'write_tecio_file: NOTE: surface zones can only be written in serial due to current restrictions in TecIO library. Writing surface zones has been disabled.')
             end if
         end if
 
@@ -220,6 +220,7 @@ contains
                 zone_string = 'Domain '//data%mesh%domain(idom)%name
                 zone_index = init_tecio_volume_zone(handle,zone_string,data%mesh%domain(idom),data%time_manager%times(itime),numvars)
 
+
                 ! For each coordinate, compute it's value pointwise and save
                 ! For each actual element, create a sub-sampling of elements to resolve solution variation
                 nelem = data%mesh%domain(idom)%nelem
@@ -327,8 +328,10 @@ contains
                 end do ! ielem
 
 
+
                 tecstat = tecZoneNodeMapWrite32(handle,zone_index,ipartition,int(1,c_int32_t),int(size(connectivity),c_int64_t),reshape(int(connectivity,c_int32_t),[size(connectivity)]))
                 if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneNodeMapWrite32")
+
 
             end do ! idom
 
@@ -703,6 +706,7 @@ contains
         integer(c_int32_t)      :: zoneindex, tecstat
         integer(ik)             :: ierr
 
+
         ! Handle time index
         strandID = strandID + 1
 
@@ -722,6 +726,7 @@ contains
         locations   = 1
         sharevars   = 0
         passivevars = 0
+
 
         ! Create zone
         tecstat = tecZoneCreateFE(handle,                   &

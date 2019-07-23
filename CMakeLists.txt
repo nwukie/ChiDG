@@ -1,5 +1,6 @@
 project(chidg Fortran C CXX)
 cmake_minimum_required(VERSION 3.7.1)
+include(ExternalProject)
 
 set(ChiDG_VERSION_MAJOR 0)
 set(ChiDG_VERSION_MINOR 2)
@@ -361,50 +362,85 @@ endif()
 message(STATUS " ")
 message(STATUS "Tecplot Summary: ")
 
-# Select TecIO library based on detected OS
-if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
-    set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/mac)
-    #set(TECIO_LIBRARY_NAME libtecio.dylib)
-    set(TECIO_LIBRARY_NAME libteciompi.dylib)
-    add_custom_target(update_tecio_install_name 
-                      #COMMAND ${CMAKE_INSTALL_NAME_TOOL} -id '@executable_path/libtecio.dylib' ${CMAKE_CURRENT_BINARY_DIR}/bin/libtecio.dylib)
-                      COMMAND ${CMAKE_INSTALL_NAME_TOOL} -id '@executable_path/libteciompi.dylib' ${CMAKE_CURRENT_BINARY_DIR}/bin/libteciompi.dylib 
-                                                         -change '/usr/local/lib/libmpi_cxx.1.dylib' 'libmpi_cxx.dylib'
-                                                         -change '/usr/local/lib/libmpi.12.dylib' 'libmpi.dylib')
-    #install(FILES ${TEC_ROOT}/lib/libtecio.dylib DESTINATION lib)
-    install(FILES ${TEC_ROOT}/lib/libteciompi.dylib DESTINATION lib)
-elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
-    set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/linux)
-    #set(TECIO_LIBRARY_NAME libtecio.so)
-    set(TECIO_LIBRARY_NAME libteciompi.so)
-    set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
-    add_custom_target(update_tecio_install_name 
-                      COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change '/usr/local/lib/libmpi_cxx.1.dylib' 'libmpi_cxx.dylib'
-                                                         -change '/usr/local/lib/libmpi.12.dylib' 'libmpi.dylib')
-                      #COMMAND "")
-    #install(FILES ${TEC_ROOT}/lib/libtecio.so DESTINATION lib)
-    install(FILES ${TEC_ROOT}/lib/libteciompi.so DESTINATION lib)
-else()
-    message(SEND_ERROR "Invalid operating system detected for TecIO")
-endif()
+
+# Unpack Boost headers to support building teciompi
+message(STATUS "    Unpacking tecio_boost.tar.gz ...")
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/tecio/tecio_boost.tar.gz
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
 
 
-find_package(Tecplot REQUIRED)
-include_directories(${TECPLOT_INCLUDE_DIR})
+set(TecIOMPICMakeArgs
+    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/teciompi
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DBOOST_ROOT=${CMAKE_BINARY_DIR}/tecio_boost
+    )
+
+
+ExternalProject_Add(
+    teciompi
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/tecio/teciompisrc
+    BINARY_DIR ${PROJECT_BINARY_DIR}/teciompi/teciompi-build
+    STAMP_DIR ${PROJECT_BINARY_DIR}/teciompi/teciompi-stamp
+    TMP_DIR ${PROJECT_BINARY_DIR}/teciompi/teciompi-tmp
+    INSTALL_DIR ${PROJECT_BINARY_DIR}/bin
+    INSTALL_COMMAND cmake -E echo "Skipping install step."
+    CMAKE_ARGS ${TecIOMPICMakeArgs}
+    EXCLUDE_FROM_ALL 1
+    )
+
+set(TECPLOT_LIBRARIES ${PROJECT_BINARY_DIR}/teciompi/teciompi-build/libteciompi.a)
 
 
 
-
-# Copy tecio library to build directory so it is available
-file(COPY        "${TECIO_LIBRARY}" 
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(TECPLOT_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/bin/${TECIO_LIBRARY_NAME} "stdc++" "pthread")
-
-
-message(STATUS "    Tecplot Libraries: ")
-foreach (L ${TECPLOT_LIBRARIES})
-    message(STATUS "        " ${L})
-endforeach()
+## Select TecIO library based on detected OS
+#if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
+#    set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/mac)
+#    #set(TECIO_LIBRARY_NAME libtecio.dylib)
+#    set(TECIO_LIBRARY_NAME libteciompi.dylib)
+#    add_custom_target(update_tecio_install_name 
+#                      #COMMAND ${CMAKE_INSTALL_NAME_TOOL} -id '@executable_path/libtecio.dylib' ${CMAKE_CURRENT_BINARY_DIR}/bin/libtecio.dylib)
+#                      COMMAND ${CMAKE_INSTALL_NAME_TOOL} -id '@executable_path/libteciompi.dylib' ${CMAKE_CURRENT_BINARY_DIR}/bin/libteciompi.dylib 
+#                                                         -change '/usr/local/lib/libmpi_cxx.1.dylib' 'libmpi_cxx.dylib'
+#                                                         -change '/usr/local/lib/libmpi.12.dylib' 'libmpi.dylib')
+#    #install(FILES ${TEC_ROOT}/lib/libtecio.dylib DESTINATION lib)
+#    install(FILES ${TEC_ROOT}/lib/libteciompi.dylib DESTINATION lib)
+#elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
+#    set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/linux)
+#    #set(TECIO_LIBRARY_NAME libtecio.so)
+#    set(TECIO_LIBRARY_NAME libteciompi.so)
+#    set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
+#    add_custom_target(update_tecio_install_name 
+#                      COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change '/usr/local/lib/libmpi_cxx.1.dylib' 'libmpi_cxx.dylib'
+#                                                         -change '/usr/local/lib/libmpi.12.dylib' 'libmpi.dylib')
+#                      #COMMAND "")
+#    #install(FILES ${TEC_ROOT}/lib/libtecio.so DESTINATION lib)
+#    install(FILES ${TEC_ROOT}/lib/libteciompi.so DESTINATION lib)
+#else()
+#    message(SEND_ERROR "Invalid operating system detected for TecIO")
+#endif()
+#
+#
+#find_package(Tecplot REQUIRED)
+#include_directories(${PROJECT_SOURCE_DIR}/tecio/include)
+include_directories(${PROJECT_SOURCE_DIR}/tecio/teciompisrc)
+#
+#
+#
+#
+## Copy tecio library to build directory so it is available
+#file(COPY        "${TECIO_LIBRARY}" 
+#     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin)
+#set(TECPLOT_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/bin/${TECIO_LIBRARY_NAME} "stdc++" "pthread")
+#
+#
+#message(STATUS "    Tecplot Libraries: ")
+#foreach (L ${TECPLOT_LIBRARIES})
+#    message(STATUS "        " ${L})
+#endforeach()
 
 
 
@@ -555,7 +591,8 @@ list(APPEND LIB_SRCS "${CMAKE_CURRENT_BINARY_DIR}/mod_kinds.f90")
 #----------------------------------------------------------------------------------------------
 message(STATUS " ")
 add_library(chidg-core STATIC ${LIB_SRCS})
-add_dependencies(chidg-core update_tecio_install_name)
+#add_dependencies(chidg-core update_tecio_install_name)
+add_dependencies(chidg-core teciompi)
 target_link_libraries(chidg-core
                       ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES} 
                       ${LAPACK_LIBRARIES}
@@ -670,14 +707,14 @@ install(TARGETS chidg chidg-core
 install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION include/chidg)
 
 
-# Update Tecplot rpath in installed executable so the user doesn't have to change their environment
-if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
-    #set(INSTALL_SNIPPET "${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg")
-    #install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
-    #set(INSTALL_SNIPPET "${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libteciompi.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libteciompi.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg")
-    install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libteciompi.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libteciompi.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
-    install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"/usr/local/lib/libmpi_cxx.1.dylib\" \"libmpi_cxx.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
-endif()
+## Update Tecplot rpath in installed executable so the user doesn't have to change their environment
+#if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
+#    #set(INSTALL_SNIPPET "${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg")
+#    #install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
+#    #set(INSTALL_SNIPPET "${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libteciompi.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libteciompi.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg")
+#    install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libteciompi.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libteciompi.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
+#    install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"/usr/local/lib/libmpi_cxx.1.dylib\" \"libmpi_cxx.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
+#endif()
 
 
 #----------------------------------------------------------------------------------------------
@@ -720,7 +757,6 @@ add_custom_target(
 #   An archive of pFUnit can be obtained at: https://sourceforge.net/projects/pfunit
 #
 #----------------------------------------------------------------------------------------------
-include(ExternalProject)
 
 
 if (PFUNIT_TAR)

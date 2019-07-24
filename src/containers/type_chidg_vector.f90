@@ -27,7 +27,7 @@ module type_chidg_vector
     use type_domain_vector
     use mpi_f08,                    only: MPI_AllReduce, MPI_Reduce, MPI_COMM, MPI_REAL8,    &
                                           MPI_SUM, MPI_STATUS_IGNORE, MPI_Recv, MPI_Request, &
-                                          MPI_STATUSES_IGNORE, MPI_INTEGER4
+                                          MPI_STATUSES_IGNORE, MPI_INTEGER4, MPI_MAX
     use ieee_arithmetic,            only: ieee_is_nan
     implicit none
 
@@ -1191,7 +1191,7 @@ contains
         else
 
             ! Compute sum of the squared elements of the processor-local vector
-            sumsqr = self%sumsqr_fields()
+            sumsqr = self%sumsqr_fields(comm)
 
             ! Alloate norm
             norm = sumsqr
@@ -1255,21 +1255,38 @@ contains
     !!  @return res     sum of the squared chidg_vector entries
     !!
     !------------------------------------------------------------------------------------------
-    function sumsqr_fields(self) result(res)
-        class(chidg_vector_t),   intent(in)   :: self
+    function sumsqr_fields(self,comm) result(res)
+        class(chidg_vector_t),  intent(in)  :: self
+        type(mpi_comm),         intent(in)  :: comm
 
         real(rk),   allocatable :: res(:)
-        integer(ik) :: idom, ielem
-
+        integer(ik) :: ierr, idom, ielem, nfields, nfields_global
 
         ! Allocate size of res based on assumption of same equation set across domains.
-        res = self%dom(1)%sumsqr_fields()
+        if (size(self%dom) > 0) then
+            res = self%dom(1)%sumsqr_fields()
+            res = ZERO
+            nfields = size(res)
+        else
+            nfields = 0
+        end if
+
+        call MPI_AllReduce(nfields,nfields_global,1,MPI_INTEGER4,MPI_MAX,comm,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%sumsqr_fields: error in MPI_AllReduce computing global nfields.')
+
+
+        if (allocated(res)) deallocate(res)
+        allocate(res(nfields_global), stat=ierr)
+        if (ierr /= 0) call AllocationError
         res = ZERO
 
+
         ! Loop through domain vectors and compute contribution to vector sum of the squared elements
-        do idom = 1,size(self%dom)
-            res = res + self%dom(idom)%sumsqr_fields()
-        end do ! idom
+        if (allocated(self%dom)) then
+            do idom = 1,size(self%dom)
+                res = res + self%dom(idom)%sumsqr_fields()
+            end do ! idom
+        end if
 
 
     end function sumsqr_fields

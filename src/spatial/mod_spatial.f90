@@ -164,14 +164,14 @@ contains
 
 
         ! Timing IO
-        call write_line('- total time: ',    total_timer%elapsed(),                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('- comm time: ',     comm_timer%elapsed(),                   delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('- cache time: ',    cache_timer%elapsed(),                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('-- resize time: ',   cache_handler%timer_resize%elapsed(),  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('-- primary time: ',  cache_handler%timer_primary%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('-- model time: ',    cache_handler%timer_model%elapsed(),   delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('-- gradient time: ', cache_handler%timer_lift%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('- function time: ', function_timer%elapsed(),               delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('- total time: ',    total_timer%elapsed(),                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('- comm time: ',     comm_timer%elapsed(),                   delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('- cache time: ',    cache_timer%elapsed(),                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- resize time: ',   cache_handler%timer_resize%elapsed(),  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- primary time: ',  cache_handler%timer_primary%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- model time: ',    cache_handler%timer_model%elapsed(),   delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- gradient time: ', cache_handler%timer_lift%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('- function time: ', function_timer%elapsed(),               delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
         if (present(timing)) then
             timing = total_timer%elapsed()

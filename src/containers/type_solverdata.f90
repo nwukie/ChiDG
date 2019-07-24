@@ -137,6 +137,7 @@ contains
         integer(ik) :: ierr, ndom, maxelems, idom, iaux, aux_ID
         logical     :: increase_maxelems = .false.
 
+
         ! Create vector/matrix containers
         self%q     = chidg_vector(trim(backend))
         self%dq    = chidg_vector(trim(backend))
@@ -185,6 +186,7 @@ contains
 
         ! Confirm solver initialization
         self%solverInitialized = .true.
+
 
     end subroutine init_base
     !******************************************************************************************

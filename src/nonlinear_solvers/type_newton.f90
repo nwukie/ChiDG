@@ -73,7 +73,7 @@ contains
         integer(ik)             :: niter, ierr
         real(rk)                :: cfl, timing, resid, resid_prev, resid0, resid_new,    &
                                    alpha, f0, fn, forcing_term, residual_ratio
-        real(rk), allocatable   :: cfln(:), rnorm(:), fn_fields(:)
+        real(rk), allocatable   :: cfln(:), fn_fields(:)
         type(chidg_vector_t)    :: b, qn, qold, q0, f_smooth
         logical                 :: absolute_convergence, relative_convergence, stop_run, iteration_convergence
 
@@ -147,7 +147,6 @@ contains
                                   timing=timing,    &
                                   differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
 
-
             if (niter == 1) then
                 resid0 = rhs%norm(ChiDG_COMM)
                 cfln = rhs%norm_fields(ChiDG_COMM) !initialize
@@ -155,7 +154,6 @@ contains
             end if
             resid_prev = resid
             resid = rhs%norm(ChiDG_COMM)
-            rnorm = rhs%norm_fields(ChiDG_COMM)
 
 
             ! Update smoother(preconditioner), PRIOR to ptc contribution
@@ -163,9 +161,8 @@ contains
             ! Mavriplis, "A residual smoothing strategy for accelerating Newton method continuation", 2018.
             !
             if (self%smooth) then
-                if (controller%update_preconditioner(data%sdata%lhs,smoother)) call smoother%update(data%sdata%lhs,data%sdata%rhs)
+                if (controller%update_preconditioner(data%sdata%lhs,smoother,ChiDG_COMM)) call smoother%update(data%sdata%lhs,data%sdata%rhs)
             end if
-
 
 
             ! Residual-smoothing
@@ -207,7 +204,6 @@ contains
             call timer_linear%start()
             call linear_solver%solve(lhs,dq,b,preconditioner,controller,data)
             call timer_linear%stop()
-
 
 
             ! Line Search for appropriate step

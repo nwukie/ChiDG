@@ -33,7 +33,7 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine establish_neighbor_communication(mesh,ChiDG_COMM)
         type(mesh_t),   intent(inout)   :: mesh
-        type(mpi_comm),     intent(in)      :: ChiDG_COMM
+        type(mpi_comm), intent(in)      :: ChiDG_COMM
 
         integer(ik) :: idom, iproc, idomain_g, idomain_l, ielem_l, ierr
         integer(ik) :: ineighbor_domain_g, ineighbor_domain_l, &
@@ -51,9 +51,6 @@ contains
         do idom = 1,mesh%ndomains()
             call mesh%domain(idom)%init_comm_local()
         end do
-
-
-
 
 
 
@@ -109,6 +106,7 @@ contains
 
 
                         ! Search through local domains and check indices
+                        has_domain = .false.
                         do idom = 1,mesh%ndomains()
                             has_domain = ( idomain_g == mesh%domain(idom)%idomain_g )
                             if ( has_domain ) then
@@ -116,16 +114,11 @@ contains
                             end if
                         end do
 
-
                         
                         ! Send domain status. If we have a match, initiate handle_neighbor_request
                         call MPI_Send(has_domain,1,MPI_LOGICAL,iproc,1,ChiDG_COMM,ierr)
 
-                        if ( has_domain ) then
-                            call mesh%domain(idom)%handle_neighbor_request(iproc,ChiDG_COMM)
-                        end if
-
-
+                        if (has_domain) call mesh%domain(idom)%handle_neighbor_request(iproc,ChiDG_COMM)
 
                         ! Detect if iproc is still sending out face requests. 
                         call MPI_BCast(searching,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
@@ -139,21 +132,9 @@ contains
 
             end if !iproc
 
-
-
-
-
-            !
-            ! Barrier
-            !
             call MPI_Barrier(ChiDG_COMM,ierr)
 
-
         end do ! iproc
-
-
-
-
 
 
     end subroutine establish_neighbor_communication
@@ -188,9 +169,9 @@ contains
     !!                              Particularly useful for testing.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine establish_chimera_communication(mesh, ChiDG_COMM)
+    subroutine establish_chimera_communication(mesh,ChiDG_COMM)
         type(mesh_t),   intent(inout)   :: mesh
-        type(mpi_comm)                      :: ChiDG_COMM
+        type(mpi_comm)                  :: ChiDG_COMM
 
         integer :: idom, ierr
 
@@ -217,6 +198,7 @@ contains
 
         ! Barrier
         call MPI_Barrier(ChiDG_COMM,ierr)
+
 
     end subroutine establish_chimera_communication
     !*****************************************************************************************

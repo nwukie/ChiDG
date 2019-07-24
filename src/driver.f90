@@ -15,6 +15,7 @@ program driver
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use mod_file_utilities,         only: delete_file
+    use mpi_f08,                    only: MPI_AllReduce, MPI_INTEGER4, MPI_MAX
     use mod_io
 
     ! Actions
@@ -31,6 +32,7 @@ program driver
     implicit none
     type(chidg_t)                               :: chidg
     integer                                     :: narg, ierr, ifield
+    integer(ik)                                 :: nfields, nfields_global
     character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern, tutorial, patch_group
     character(len=10)                           :: time_string
     character(:),                   allocatable :: command, tmp_file
@@ -83,7 +85,12 @@ program driver
         !   2: read initial solution from ChiDG hdf5 file
         if (solutionfile_in == 'none') then
             call create_function(fcn,'constant')
-            do ifield = 1,chidg%data%mesh%domain(1)%nfields
+            
+            nfields = 0
+            if (chidg%data%mesh%ndomains() > 0) nfields = chidg%data%mesh%domain(1)%nfields
+            call MPI_AllReduce(nfields,nfields_global,1,MPI_INTEGER4,MPI_MAX,ChiDG_COMM,ierr)
+
+            do ifield = 1,nfields_global
                 call fcn%set_option('val',initial_fields(ifield))
                 call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,ifield)
             end do

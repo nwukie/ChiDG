@@ -997,7 +997,11 @@ contains
 
 
         ! Preallocation
-        dof_per_element = mesh%domain(1)%elems(1)%nterms_s * mesh%domain(1)%elems(1)%nfields * mesh%domain(1)%elems(1)%ntime
+        if (mesh%ndomains() < 1) then
+            dof_per_element = 1
+        else
+            dof_per_element = mesh%domain(1)%elems(1)%nterms_s * mesh%domain(1)%elems(1)%nfields * mesh%domain(1)%elems(1)%ntime
+        end if
         nlocal_coupling = 7
         nparallel_coupling = 7
 

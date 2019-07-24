@@ -27,6 +27,7 @@ module mod_tecio
     use mod_constants,          only: ONE, HALF, TWO, OUTPUT_RES, XI_MIN, XI_MAX, &
                                       ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NO_ID, CYLINDRICAL
     use mod_chidg_mpi,          only: GLOBAL_MASTER, IRANK
+    use mpi_f08,                only: MPI_AllReduce, MPI_INTEGER4, MPI_MAX
 
     use type_chidg_data,        only: chidg_data_t
     use type_domain,            only: domain_t
@@ -75,7 +76,7 @@ contains
         logical,                intent(in)      :: write_surfaces
 
 
-        integer(ik)     :: ierr, ieq, eqn_ID
+        integer(ik)     :: ierr, ieq, eqn_ID, eqn_ID_global
         type(c_ptr)     :: handle
         character(1000) :: varstring
         type(timer_t)   :: timer
@@ -101,9 +102,15 @@ contains
         !   Default: Grid coordinates
         ieq = 1
         varstring = "X,Y,Z"
-        eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
-        do while (ieq <= data%eqnset(eqn_ID)%prop%nio_fields())
-            varstring = trim(varstring)//","//trim(data%eqnset(eqn_ID)%prop%get_io_field_name(ieq))
+
+        ! Synchronize on equation set to get io_fields from
+        if (data%mesh%ndomains() > 0) eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
+        call MPI_AllReduce(eqn_ID,eqn_ID_global,1,MPI_INTEGER4,MPI_MAX,ChiDG_COMM,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'write_tecio_file: error reducing eqn_ID to synchronize across ranks.')
+
+
+        do while (ieq <= data%eqnset(eqn_ID_global)%prop%nio_fields())
+            varstring = trim(varstring)//","//trim(data%eqnset(eqn_ID_global)%prop%get_io_field_name(ieq))
             ieq = ieq + 1
         end do
 
@@ -113,12 +120,12 @@ contains
 
 
         ! Write volume data from 'mesh%domains'
-        if (write_domains .and. domain_switch) call write_tecio_domains(handle,data)
+        if (write_domains .and. domain_switch) call write_tecio_domains(handle,data,eqn_ID_global)
 
 
 
         ! Write surface data from 'mesh%domains'
-        if (write_surfaces .and. surface_switch) call write_tecio_surfaces(handle,data)
+        if (write_surfaces .and. surface_switch) call write_tecio_surfaces(handle,data,eqn_ID_global)
 
 
         ! Close the current TecIO file context
@@ -151,9 +158,10 @@ contains
     !!  @date   6/7/2016
     !!
     !-----------------------------------------------------------------------------------
-    subroutine write_tecio_domains(handle,data)
+    subroutine write_tecio_domains(handle,data,eqn_ID)
         type(c_ptr),            intent(in)      :: handle
         type(chidg_data_t),     intent(inout)   :: data
+        integer(ik),            intent(in)      :: eqn_ID
 
 
         integer(ik)        :: nelem_xi, nelem_eta, nelem_zeta,  &
@@ -169,7 +177,7 @@ contains
         real(rdouble),  allocatable, dimension(:)   :: val, r, theta, z
 
 
-        integer(ik)                 :: eqn_ID, numvars
+        integer(ik)                 :: numvars
         type(AD_D),     allocatable :: var(:)
         character(:),   allocatable :: zone_string, var_string
 
@@ -189,7 +197,7 @@ contains
         call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, data%time_manager, cache)
 
 
-        eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
+        !eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
         numvars = 3 + data%eqnset(eqn_ID)%prop%nio_fields()
 
 
@@ -255,7 +263,7 @@ contains
 
                 ! For each variable in equation set, compute value pointwise and save
                 do ielem = 1,nelem
-                    eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
+                    !eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
 
                     ! Update location
                     elem_info = data%mesh%get_element_info(idom,ielem)
@@ -369,9 +377,10 @@ contains
     !!  @date   5/24/2017
     !!
     !-----------------------------------------------------------------------------------
-    subroutine write_tecio_surfaces(handle,data)
+    subroutine write_tecio_surfaces(handle,data,eqn_ID)
         type(c_ptr),        intent(in)      :: handle
         type(chidg_data_t), intent(inout)   :: data
+        integer(ik),        intent(in)      :: eqn_ID
 
 
         integer(ik)        :: nelem_xi, nelem_eta, nelem_zeta,  &
@@ -392,7 +401,7 @@ contains
         integer(c_int32_t) :: ipartition, zone_index, tecstat, iproc, numvars
 
 
-        integer(ik)                 :: eqn_ID, bc_ID
+        integer(ik)                 :: bc_ID
         character(:),   allocatable :: zone_string, var_string
 
         type(chidg_worker_t)        :: worker
@@ -412,7 +421,7 @@ contains
 
 
 
-        eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
+        !eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
         numvars = 3 + data%eqnset(eqn_ID)%prop%nio_fields()
 
         !
@@ -514,7 +523,7 @@ contains
                                                                                                lift          = .false.)
 
                             ! For each variable in equation set, compute value pointwise and save
-                            eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
+                            !eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
 
                             ! Retrieve name of current field, retrieve interpolation, write interpolation to file
                             do ifield = 1,data%eqnset(eqn_ID)%prop%nio_fields()

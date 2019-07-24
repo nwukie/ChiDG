@@ -147,7 +147,6 @@ contains
         integer(ik) :: eqn_ID, idom, ielem, itime, imat, ifield, irow_start, icol_start, nterms, nfields, ifield_row, ifield_col
         real(rk),   allocatable     :: elem_field(:), elem_res(:)
 
-
         call data%sdata%rhs%clear()
         if (differentiate) call data%sdata%lhs%clear()
 
@@ -155,6 +154,7 @@ contains
         data%time_manager%itime = 1
         call data%update_grid()
         !call update_grid(data)
+
         call update_space(data,differentiate,timing)
 
     end subroutine assemble

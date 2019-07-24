@@ -50,6 +50,9 @@ module type_mesh
         real(rk), allocatable               :: global_nodes(:,:)
         type(octree_t)                      :: octree
 
+        ! Interpolation node set ('Uniform', 'Quadrature')
+        character(:),           allocatable :: interpolation
+
     contains
 
         ! Mesh procedures
@@ -1189,7 +1192,7 @@ contains
 
 
         ! Get global idomain_g max 
-        call MPI_AllReduce(idomain_g_local_max, idomain_g_global_max, NRANK, MPI_INTEGER4, MPI_MAX, ChiDG_COMM, ierr)
+        call MPI_AllReduce(idomain_g_local_max, idomain_g_global_max, 1, MPI_INTEGER4, MPI_MAX, ChiDG_COMM, ierr)
 
 
         ! For each domain, check if local proc has and register if so. Then reduce registration
@@ -1217,6 +1220,7 @@ contains
             if (ranks_with_domain(IRANK+1)) then
 
                 ! Collect participating procs
+                call procs%clear()
                 do iproc = 1,NRANK
                     if (ranks_with_domain_reduced(iproc)) then
                         call procs%push_back(iproc-1)
@@ -1227,19 +1231,11 @@ contains
                 self%domain(idomain_l_index)%procs = procs%data()
             end if
 
-
         end do
+
 
     end subroutine comm_domain_procs
     !*********************************************************************************
-
-
-
-
-
-
-
-
 
 
 
@@ -1683,6 +1679,7 @@ contains
                 ielement_g = element_location(3)
 
 
+
                 ! element_data = [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level]
                 call mpi_recv(element_data, 9, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
                 etype               = element_data(1)
@@ -1772,13 +1769,15 @@ contains
                     call self%parallel_element(pelem_ID)%init_geom(nodes,connectivity,etype,element_location,trim(coord_system))
                 end if
 
-                !if (.not. self%parallel_element(pelem_ID)%sol_initialized) then
+
                 ! NOTE: we want to be able to reinitialize parallel_element solution data-space (e.g. for wall_distance calculation)
-                call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start,dof_local_start=NO_ID)
-                !end if
+                !call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start,dof_local_start=NO_ID)
+                call self%parallel_element(pelem_ID)%init_sol(self%interpolation,interpolation_level,nterms_s,nfields,ntime,dof_start,dof_local_start=NO_ID)
+
 
                 call self%parallel_element(pelem_ID)%set_displacements_velocities(nodes_disp,nodes_vel)
                 call self%parallel_element(pelem_ID)%update_interpolations_ale()
+
 
 
             end do !irecv

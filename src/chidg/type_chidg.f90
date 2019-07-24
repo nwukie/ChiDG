@@ -332,6 +332,24 @@ contains
         character(:),   allocatable :: interpolation_in
         integer(ik)                 :: level_in, ierr
 
+
+        ! Default interpolation set = 'Quadrature'
+        if (present(interpolation)) then
+            interpolation_in = interpolation
+        else 
+            interpolation_in = 'Quadrature'
+        end if
+
+        ! Default interpolation level = gq_rule  (from mod_io)
+        if (present(level)) then
+            level_in = level
+        else
+            level_in = gq_rule
+        end if
+
+
+
+
         select case (trim(activity))
 
             ! Call all initialization routines.
@@ -359,20 +377,6 @@ contains
                             'call chidg%set('Solution Order',integer_input=my_order)' &
                             where my_order=1-7 indicates the solution order-of-accuracy."
                 if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
-
-                ! Default interpolation set = 'Quadrature'
-                if (present(interpolation)) then
-                    interpolation_in = interpolation
-                else 
-                    interpolation_in = 'Quadrature'
-                end if
-
-                ! Default interpolation level = gq_rule  (from mod_io)
-                if (present(level)) then
-                    level_in = level
-                else
-                    level_in = gq_rule
-                end if
 
                 call self%data%initialize_solution_domains(interpolation_in,level_in,self%nterms_s)
 
@@ -757,7 +761,6 @@ contains
 
 
 
-
         ! Add domains to ChiDG%data
         call write_line("   processing...", ltrim=.false., io_proc=GLOBAL_MASTER)
         do idom = 1,size(meshdata)
@@ -791,6 +794,7 @@ contains
 
 
 
+
         !!!-------------------------  REVISIT  --------------------------------!!!
         call self%data%mesh%set_global_nodes(self%data%sdata%global_nodes)
         call self%data%mesh%octree%init(32, 0.0_rk, (/1, 1, 1/), .true.)
@@ -798,6 +802,7 @@ contains
         call self%data%mesh%octree%build_octree_depth_first(self%data%mesh%global_nodes)
         call write_line("   building octree - completed...", ltrim=.false., io_proc=GLOBAL_MASTER)
         call self%data%construct_rbf_arrays()
+
 
         ! Wait for all processors to finish initializing their meshes, then communicate RBF info.
         nelems = sum(nelems_per_domain)
@@ -1484,6 +1489,7 @@ contains
 
         end do !istep
 
+
         ! Write the final solution to hdf file
         if (option_write_final) then
             call self%write_mesh(solutionfile_out)
@@ -1493,6 +1499,7 @@ contains
 
         ! Write tecio visualization 
         if (option_write_tecio) then
+
             ! Initialize interpolation to Uniform for TecIO output.
             call self%init('all','Uniform',level=OUTPUT_RES)
 
@@ -1506,6 +1513,7 @@ contains
             ! Write solution
             tecio_file_prefix = get_file_prefix(solutionfile_out,'.h5')
             call write_tecio_file(self%data, tecio_file_prefix, write_domains=.true., write_surfaces=.true.)
+
         end if
 
     end subroutine run

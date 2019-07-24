@@ -135,14 +135,14 @@ macro (add_test_target target_subdirectory test_type)
 
     #-------------------------------------------------------------------------------------------------------
     #
-	#   Define test target and link with pfunit and chidg-core libraries. These targets are
+	#   Define test target and link with pfunit and chidg libraries. These targets are
     #   excluded from the 'all' target and are instead added as dependencies to the 'check' target.
     #
     #   Build test targets using 'make check'
     #
 	#-------------------------------------------------------------------------------------------------------
 	add_executable(${target_name} EXCLUDE_FROM_ALL ${PF_ROOT}/include/driver.F90 ${_test_sources} )
-	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a chidg-core -lstdc++ -lpthread ${MPI_Fortran_LIBRARIES} ${METIS_LIBRARIES})
+	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a chidg -lstdc++ -lpthread ${MPI_Fortran_LIBRARIES} ${METIS_LIBRARIES})
     	
 	set_target_properties(${target_name} PROPERTIES 
                              COMPILE_FLAGS "-DUSE_MPI=True -DBUILD_ROBUST=True ${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
@@ -152,7 +152,7 @@ macro (add_test_target target_subdirectory test_type)
     #
     # Add test executable to the 'check' target. This allows the test to be build with 'make check'
     #
-    add_dependencies(check ${target_name} chidg-core)
+    add_dependencies(check ${target_name} chidg_library)
 
 
 	#-------------------------------------------------------------------------------------------------------

@@ -175,7 +175,7 @@ set(MPI_CXX_COMPILER $ENV{MPI_CXX_COMPILER})
 
 
 #find_package(MPI REQUIRED COMPONENTS Fortran)
-find_package(MPI REQUIRED COMPONENTS MPICXX Fortran)
+find_package(MPI REQUIRED COMPONENTS CXX Fortran)
 include_directories(${MPI_Fortran_INCLUDE_PATH})
 include_directories(${MPI_CXX_INCLUDE_PATH})
 
@@ -369,12 +369,19 @@ message(STATUS "Tecplot Summary: ")
 
 
 # Unpack Boost headers to support building teciompi
-message(STATUS "    Unpacking tecio_boost.tar.gz ...")
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/tecio/tecio_boost.tar.gz
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    )
-message(STATUS "    Done: ${CMAKE_BINARY_DIR}/tecio_boost")
+set(BOOST_UNPACKED FALSE CACHE BOOL "")
+mark_as_advanced(BOOST_UNPACKED)
+if (NOT ${BOOST_UNPACKED})
+    message(STATUS "    Unpacking tecio_boost.tar.gz ...")
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/tecio/tecio_boost.tar.gz
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        )
+    message(STATUS "    Done: ${CMAKE_BINARY_DIR}/tecio_boost")
+    set(BOOST_UNPACKED TRUE CACHE BOOL "" FORCE)
+else()
+    message(STATUS "    Boost already unpacked: ${CMAKE_BINARY_DIR}/tecio_boost")
+endif()
 
 
 set(TecIOMPICMakeArgs
@@ -549,10 +556,9 @@ list(APPEND LIB_SRCS "${CMAKE_CURRENT_BINARY_DIR}/mod_kinds.f90")
 #                                         Build library
 #----------------------------------------------------------------------------------------------
 message(STATUS " ")
-add_library(chidg-core STATIC ${LIB_SRCS})
-#add_dependencies(chidg-core update_tecio_install_name)
-add_dependencies(chidg-core teciompi)
-target_link_libraries(chidg-core
+add_library(chidg_library STATIC ${LIB_SRCS})
+add_dependencies(chidg_library teciompi)
+target_link_libraries(chidg_library
                       ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES} 
                       ${LAPACK_LIBRARIES}
                       ${BLAS_LIBRARIES} 
@@ -561,9 +567,11 @@ target_link_libraries(chidg-core
                       ${METIS_LIBRARIES}
                       ${PETSC_LIBRARIES}
                       )
-set_target_properties(chidg-core PROPERTIES 
+set_target_properties(chidg_library PROPERTIES 
                              COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
-                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")
+                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}"
+                             OUTPUT_NAME   "chidg")
+
 
 
 
@@ -572,12 +580,13 @@ set_target_properties(chidg-core PROPERTIES
 #----------------------------------------------------------------------------------------------
 #                                       Build Interfaces
 #----------------------------------------------------------------------------------------------
-# Add driver executable linked to chidg-core library
-add_executable(chidg ${EXE_SRCS})
-target_link_libraries(chidg chidg-core)
-set_target_properties(chidg PROPERTIES 
+# Add driver executable linked to chidg library
+add_executable(chidg_binary ${EXE_SRCS})
+target_link_libraries(chidg_binary chidg_library)
+set_target_properties(chidg_binary PROPERTIES 
                             COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
-                            LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")
+                            LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}"
+                            OUTPUT_NAME   "chidg")
                             
 
 
@@ -600,14 +609,14 @@ file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/pychidg"
 
 # PYTHON 1:
 # Build python extension module using f2py to process opaque interfaces
-set(PYTHON_INTERFACE_MODULE _chidg_core.so)
+set(PYTHON_INTERFACE_MODULE _chidg.so)
 add_custom_command(OUTPUT ${PYTHON_INTERFACE_MODULE}
                    COMMAND f2py-f90wrap
                            -c ${PYTHON_SRCS}
-                           -m _chidg_core
+                           -m _chidg
                            --f90exec=${CMAKE_Fortran_COMPILER}
                            --build-dir "${CMAKE_BINARY_DIR}/pychidg"
-                           ${CMAKE_BINARY_DIR}/lib/libchidg-core.a
+                           ${CMAKE_BINARY_DIR}/lib/libchidg.a
                            ${METIS_LIBRARIES}
                            -L${TEC_ROOT}/lib
                            -ltecio
@@ -618,9 +627,9 @@ add_custom_command(OUTPUT ${PYTHON_INTERFACE_MODULE}
                            --link-lapack_opt
                            -I${CMAKE_BINARY_DIR}/lib
                            ${QUIET_STATUS}
-                   DEPENDS ${PYTHON_SRCS} chidg-core
+                   DEPENDS ${PYTHON_SRCS} chidg
                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pychidg
-                   COMMENT "f2py: Building Python module _chidg_core")
+                   COMMENT "f2py: Building Python module _chidg")
 
 
 # Define/configure setup.py 
@@ -656,7 +665,7 @@ install(CODE
 #----------------------------------------------------------------------------------------------
 #                                       Install targets
 #----------------------------------------------------------------------------------------------
-install(TARGETS chidg chidg-core
+install(TARGETS chidg_binary chidg_library
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib

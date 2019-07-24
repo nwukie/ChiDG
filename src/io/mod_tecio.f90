@@ -82,6 +82,7 @@ contains
         type(timer_t)   :: timer
         logical         :: surface_switch, domain_switch
 
+
         call timer%start()
 
         ! Default switch overrides to true
@@ -97,6 +98,7 @@ contains
             end if
         end if
 
+
         ! Assemble variables string.
         !
         !   Default: Grid coordinates
@@ -107,7 +109,6 @@ contains
         if (data%mesh%ndomains() > 0) eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
         call MPI_AllReduce(eqn_ID,eqn_ID_global,1,MPI_INTEGER4,MPI_MAX,ChiDG_COMM,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'write_tecio_file: error reducing eqn_ID to synchronize across ranks.')
-
 
         do while (ieq <= data%eqnset(eqn_ID_global)%prop%nio_fields())
             varstring = trim(varstring)//","//trim(data%eqnset(eqn_ID_global)%prop%get_io_field_name(ieq))
@@ -123,9 +124,7 @@ contains
         if (write_domains .and. domain_switch) call write_tecio_domains(handle,data,eqn_ID_global)
 
 
-
         ! Write surface data from 'mesh%domains'
-        !surface_switch = .false.
         if (write_surfaces .and. surface_switch) call write_tecio_surfaces(handle,data,eqn_ID_global)
 
 
@@ -211,8 +210,9 @@ contains
             ! Write proc-local domain partitions
             do idom = 1,data%mesh%ndomains()
 
+
                 ! Initialize new domain partition in the TecIO file
-                zone_index = data%mesh%domain(idom)%idomain_g + (itime-1)*ndomains_g
+                zone_index = int(data%mesh%domain(idom)%idomain_g + (itime-1)*ndomains_g,c_int32_t)
                 ipartition = init_volume_partition(handle,data%mesh%domain(idom),zone_index)
 
 
@@ -323,6 +323,7 @@ contains
                     
 
                 end do ! ielem
+
 
                 tecstat = tecZoneNodeMapWrite32(handle,zone_index,ipartition,int(1,c_int32_t),int(size(connectivity),c_int64_t),reshape(int(connectivity,c_int32_t),[size(connectivity)]))
                 if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneNodeMapWrite32")
@@ -677,28 +678,31 @@ contains
         integer(ik),        intent(in)  :: eqn_ID
         integer(ik),        intent(in)  :: itime
 
-        integer(TEC)        :: zonetype         = 5    ! 5 = FEBRICK
-        integer(TEC)        :: fnmode           = 0
-        integer(TEC)        :: sharconnfrom     = 0
+        integer(c_int32_t)  :: zonetype         = 5    ! 5 = FEBRICK
+        integer(c_int32_t)  :: fnmode           = 0
+        integer(c_int32_t)  :: sharconnfrom     = 0
         integer(c_int64_t)  :: nfconns          = 0
-        integer(c_int64_t)  :: nnodes_g, nnodes_l, nnodes_g_reduced
-        integer(c_int64_t)  :: nelements_g, nelements_l, nelements_g_reduced
 
         integer(TEC),   allocatable :: datatypes(:)
         integer(TEC),   allocatable :: locations(:)
         integer(TEC),   allocatable :: sharevars(:)
         integer(TEC),   allocatable :: passivevars(:)
 
+        ! These should be declared with (ik) since we are using MPI_INTEGER4
+        ! to communicate. We can convert afterwards to c_int if necessary.
+        integer(ik) :: nnodes_g, nnodes_g_reduced
+        integer(ik) :: nelements_g, nelements_g_reduced
+        integer(ik) :: domain_master, domain_master_reduced
+        integer(ik) :: ndomain_procs
+
         ! Partition Data
-        integer(c_int32_t)              :: ipartition, npartitions, iproc
+        integer(c_int32_t)              :: zoneindex, tecstat, ipartition, npartitions
         integer(c_int64_t)              :: nghost_nodes, nghost_elements
         integer(c_int32_t), allocatable :: ghost_nodes(:), neighbor_nodes(:), ghost_elements(:)
         integer(c_int32_t), allocatable :: neighbor_partitions(:), partition_ranks(:)
 
-        integer(c_int32_t)      :: zoneindex, tecstat
         integer(ik)             :: ierr, idomain_g_local_max, idomain_g_global_max, idom,   &
-                                   idomain_g, domain_master, domain_master_reduced,         &
-                                   ndomain_procs, nvars, ndomains_g
+                                   idomain_g, nvars, ndomains_g
         integer(ik), allocatable :: domain_procs(:)
         character(100)          :: domain_name
         real(rk) :: solution_time
@@ -733,7 +737,7 @@ contains
         !
         ! SET FUNCTION RETURN VALUE
         !
-        ndomains_g = idomain_g_global_max ! NOTE, this is the function return value
+        ndomains_g = idomain_g_global_max
 
 
         !
@@ -762,7 +766,7 @@ contains
 
             
             ! Synchronize across all ranks. 
-            ! NOTE: check that c_int64_t is valid here with MPI_INTEGER4
+            ! NOTE: be sure not to mix different c_int datatypes with MPI_INTEGER4
             call MPI_AllReduce(nnodes_g,nnodes_g_reduced,1,MPI_INTEGER4,MPI_MAX,ChiDG_COMM,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'mod_tecio%init_volue_zones: Error reducing nnodes_g.')
             call MPI_AllReduce(nelements_g,nelements_g_reduced,1,MPI_INTEGER4,MPI_MAX,ChiDG_COMM,ierr)
@@ -790,18 +794,18 @@ contains
 
 
             ! Create zone
-            tecstat = tecZoneCreateFE(handle,                       &
-                                      trim(domain_name)//char(0),   &
-                                      zonetype,                     &
-                                      nnodes_g_reduced,             &
-                                      nelements_g_reduced,          &
-                                      datatypes,                    &
-                                      sharevars,                    &
-                                      locations,                    &
-                                      passivevars,                  &
-                                      sharconnfrom,                 &
-                                      nfconns,                      &
-                                      fnmode,                       &
+            tecstat = tecZoneCreateFE(handle,                               &
+                                      trim(domain_name)//char(0),           &
+                                      int(zonetype,c_int32_t),              &
+                                      int(nnodes_g_reduced,c_int64_t),      &
+                                      int(nelements_g_reduced,c_int64_t),   &
+                                      datatypes,                            &
+                                      sharevars,                            &
+                                      locations,                            &
+                                      passivevars,                          &
+                                      sharconnfrom,                         &
+                                      nfconns,                              &
+                                      fnmode,                               &
                                       zoneindex)
             if(tecstat /= 0) call chidg_signal(FATAL,"mod_tecio%init_volume_zones: Error in TecIO zone initialization.")
 
@@ -880,6 +884,9 @@ contains
         if (npartitions > 1) then
             tecstat = tecFEPartitionCreate32(handle, int(zone_index,c_int32_t), ipartition, nnodes_l, nelements_l, nghost_nodes, ghost_nodes, neighbor_partitions, neighbor_nodes, nghost_elements, ghost_elements)
             if(tecstat /= 0) call chidg_signal(FATAL,"init_tecio_volume_zone: Error in TecIO zone partition creation.")
+        else
+            ! Return ipartition=0 if zone not partitioned
+            ipartition = 0
         end if
 
 

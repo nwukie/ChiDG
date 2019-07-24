@@ -142,7 +142,7 @@ macro (add_test_target target_subdirectory test_type)
     #
 	#-------------------------------------------------------------------------------------------------------
 	add_executable(${target_name} EXCLUDE_FROM_ALL ${PF_ROOT}/include/driver.F90 ${_test_sources} )
-	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a chidg -lstdc++ -lpthread ${MPI_Fortran_LIBRARIES} ${METIS_LIBRARIES})
+	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a chidg_library -lstdc++ -lpthread ${MPI_Fortran_LIBRARIES} ${METIS_LIBRARIES})
     	
 	set_target_properties(${target_name} PROPERTIES 
                              COMPILE_FLAGS "-DUSE_MPI=True -DBUILD_ROBUST=True ${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"

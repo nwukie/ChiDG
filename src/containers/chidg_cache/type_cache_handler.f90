@@ -237,12 +237,6 @@ contains
 
 
 
-
-
-
-
-
-
         call self%timer_model%start()
         if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
         call self%timer_model%stop()

@@ -1506,6 +1506,10 @@ contains
             ! Re-initialize solution and process for output
             call self%read_fields(solutionfile_out)
 
+            ! Prerun processing
+            !   : Getting/computing auxiliary fields etc.
+            call self%process()
+
             ! Get post processing data (q_in -> q -> q_out)
             call self%time_integrator%initialize_state(self%data)
             call self%time_integrator%process_data_for_output(self%data)

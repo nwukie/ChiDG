@@ -250,7 +250,7 @@ contains
             ! Get nodes/elements
             !
             nodes    = get_block_points_plot3d(coords(:,:,:,1),coords(:,:,:,2),coords(:,:,:,3))
-            elements = get_block_elements_plot3d(coords(:,:,:,1),coords(:,:,:,2),coords(:,:,:,3),mapping=4,idomain=idomain)
+            elements = get_block_elements_plot3d(coords(:,:,:,1),coords(:,:,:,2),coords(:,:,:,3),order=4,idomain=idomain)
 
 
             !

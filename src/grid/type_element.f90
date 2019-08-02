@@ -303,6 +303,7 @@ contains
             nodes_l(ipt,:) = nodes(inode,:)
         end do !ipt
 
+
         !
         ! Accumulate vertex indices
         !

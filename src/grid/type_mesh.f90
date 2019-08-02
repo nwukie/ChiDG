@@ -167,7 +167,6 @@ contains
 
 
 
-
         !
         ! Check for grid velocity specification in grid_velocity.nml
         !

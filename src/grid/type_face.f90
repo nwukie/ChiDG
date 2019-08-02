@@ -1282,33 +1282,13 @@ contains
         integer(ik) :: neighbor_e
         integer(ik) :: neighbor_f
 
-
         neighbor_e = self%get_neighbor_element_l()
 
-
         if ( neighbor_e == NO_INTERIOR_NEIGHBOR ) then
-            
             neighbor_f = NO_INTERIOR_NEIGHBOR
-
         else
-
-            !& ASSUMPTION: All elements have same orientation.
-            if ( self%iface == XI_MIN ) then
-                neighbor_f = XI_MAX
-            else if ( self%iface == XI_MAX ) then
-                neighbor_f = XI_MIN
-            else if ( self%iface == ETA_MIN ) then
-                neighbor_f = ETA_MAX
-            else if ( self%iface == ETA_MAX ) then
-                neighbor_f = ETA_MIN
-            else if ( self%iface == ZETA_MIN ) then
-                neighbor_f = ZETA_MAX
-            else if ( self%iface == ZETA_MAX ) then
-                neighbor_f = ZETA_MIN
-            end if
-
+            neighbor_f = self%ineighbor_face
         end if
-
 
     end function get_neighbor_face
     !******************************************************************************************

@@ -205,7 +205,6 @@ contains
         self%nodes_elems = NO_ELEMENT
 
 
-
         !
         ! Call geometry initialization for elements and faces
         !

@@ -21,6 +21,9 @@ contains
 
         call chidg_convert_p3d_hdf5(filename)
 
+!        call chidg_convert_gmsh_hdf5(filename)
+
+
 
     end subroutine chidg_convert
     !**************************************************************************

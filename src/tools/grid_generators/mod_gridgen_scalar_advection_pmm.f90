@@ -83,7 +83,7 @@ contains
         ! Get nodes/elements
         !
         nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
-        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping=4,idomain=1)
+        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,order=4,idomain=1)
 
 
 
@@ -307,7 +307,7 @@ contains
         ! Get nodes/elements
         !
         nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
-        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping=4,idomain=1)
+        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,order=4,idomain=1)
 
 
 

@@ -204,7 +204,7 @@ contains
         type(AD_D), allocatable     :: integrand_n(:)
         type(function_info_t)       :: function_n
         type(element_info_t)        :: elem_info_n
-        integer(ik)                 :: ineighbor_element_l, ineighbor_face, ineighbor_proc, idiff_n, ierr, iface_n
+        integer(ik)                 :: ineighbor_element_l, ineighbor_face, ineighbor_proc, idiff_n, ierr
         logical                     :: parallel_neighbor, diff_none, diff_interior, diff_exterior
 
 
@@ -220,7 +220,6 @@ contains
         ! Neighbor indices
         ineighbor_proc      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc
         ineighbor_element_l = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_element_l()
-        ineighbor_face      = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
 
         parallel_neighbor = ( IRANK /= ineighbor_proc )
 
@@ -281,8 +280,9 @@ contains
                                            recv_dof        = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_dof)
 
 
-
-                iface_n = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
+                ! Get neighbor face: we have already decided it is a proc-local, interior face, 
+                ! so it must have a local neighbor.
+                ineighbor_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
 
                     
 
@@ -324,8 +324,8 @@ contains
                     !
                     integral = -matmul(valtrans_n,integrand_n)
 
-                    call store_boundary_integral_residual(     mesh,sdata,elem_info_n,function_n,iface_n,ieqn,itime,integral)
-                    call store_boundary_integral_linearization(mesh,sdata,elem_info_n,function_n,iface_n,ieqn,itime,integral)
+                    call store_boundary_integral_residual(     mesh,sdata,elem_info_n,function_n,ineighbor_face,ieqn,itime,integral)
+                    call store_boundary_integral_linearization(mesh,sdata,elem_info_n,function_n,ineighbor_face,ieqn,itime,integral)
 
                 end associate
 

@@ -56,7 +56,7 @@ contains
 
         class(bc_state_t),  allocatable             :: bc_state
         integer(HID_T)                              :: file_id, dom_id, bcface_id, bcgroup_id, patch_id, mmgroup_id
-        integer(ik)                                 :: ierr, mapping, bcface, igroup, istate
+        integer(ik)                                 :: ierr, order, bcface, igroup, istate
         character(8)                                :: patch_names(6)
         real(rk),           allocatable             :: nodes(:,:)
         integer(ik),        allocatable             :: elements(:,:), faces(:,:)
@@ -84,7 +84,7 @@ contains
         ! Get nodes/elements
         !
         nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
-        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping=1,idomain=1)
+        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,order=1,idomain=1)
 
 
 
@@ -262,7 +262,7 @@ contains
         character(8)                                    :: faces(6)
         integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface1_id, bcface2_id, &
                                                            bcgroup_id, patch1_id, patch2_id, mmgroup_id
-        integer(ik)                                     :: mapping, bcface, ierr, igroup, istate, &
+        integer(ik)                                     :: order, bcface, ierr, igroup, istate, &
                                                            nxi_max, neta_max, nzeta_max,xi_mid
         real(rk),       allocatable                     :: nodes1(:,:), nodes2(:,:)
         integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
@@ -360,11 +360,11 @@ contains
         !
         ! Get nodes/elements
         !
-        mapping = 1
+        order = 1
         nodes1    = get_block_points_plot3d(xcoords1,ycoords1,zcoords1)
         nodes2    = get_block_points_plot3d(xcoords2,ycoords2,zcoords2)
-        elements1 = get_block_elements_plot3d(xcoords1,ycoords1,zcoords1,mapping,idomain=1)
-        elements2 = get_block_elements_plot3d(xcoords2,ycoords2,zcoords2,mapping,idomain=2)
+        elements1 = get_block_elements_plot3d(xcoords1,ycoords1,zcoords1,order,idomain=1)
+        elements2 = get_block_elements_plot3d(xcoords2,ycoords2,zcoords2,order,idomain=2)
 
 
         !
@@ -392,8 +392,8 @@ contains
         bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
         do bcface = 1,6
             ! Get face node indices for boundary 'bcface'
-            faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords1,zcoords1,mapping,bcface)
-            faces2 = get_block_boundary_faces_plot3d(xcoords2,ycoords2,zcoords2,mapping,bcface)
+            faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords1,zcoords1,order,bcface)
+            faces2 = get_block_boundary_faces_plot3d(xcoords2,ycoords2,zcoords2,order,bcface)
 
 
             ! Set bc patch face indices

@@ -241,7 +241,7 @@ contains
             call partitions(1)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(1)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(1)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])    ! nodes
+            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 5, 4, 7, 8, 11, 10])      ! nodes
             call partitions(1)%connectivities(1)%data(1)%set_element_partition(0)                           ! IRANK
 
             ! element 2
@@ -249,7 +249,7 @@ contains
             call partitions(1)%connectivities(1)%data(2)%set_domain_index(1)                                ! idomain_g
             call partitions(1)%connectivities(1)%data(2)%set_element_index(2)                               ! ielement_g
             call partitions(1)%connectivities(1)%data(2)%set_element_mapping(1)                             ! mapping
-            call partitions(1)%connectivities(1)%data(2)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
+            call partitions(1)%connectivities(1)%data(2)%set_element_nodes([2, 3, 6, 5, 8, 9, 12, 11])      ! nodes
             call partitions(1)%connectivities(1)%data(2)%set_element_partition(0)                           ! IRANK
 
 
@@ -266,7 +266,7 @@ contains
             call partitions(2)%connectivities(1)%data(1)%set_domain_index(2)                                ! idomain_g
             call partitions(2)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(2)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])    ! nodes
+            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([1, 2, 5, 4, 7, 8, 11, 10])      ! nodes
             call partitions(2)%connectivities(1)%data(1)%set_element_partition(1)                           ! IRANK
 
             ! element 4
@@ -274,7 +274,7 @@ contains
             call partitions(2)%connectivities(1)%data(2)%set_domain_index(2)                                ! idomain_g
             call partitions(2)%connectivities(1)%data(2)%set_element_index(2)                               ! ielement_g
             call partitions(2)%connectivities(1)%data(2)%set_element_mapping(1)                             ! mapping
-            call partitions(2)%connectivities(1)%data(2)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])   ! nodes
+            call partitions(2)%connectivities(1)%data(2)%set_element_nodes([2, 3, 6, 5, 8, 9, 12, 11])      ! nodes
             call partitions(2)%connectivities(1)%data(2)%set_element_partition(1)                           ! IRANK
 
 
@@ -304,7 +304,7 @@ contains
             call partitions(1)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(1)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(1)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])      ! nodes
+            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 5, 4, 7, 8, 11, 10])      ! nodes
             call partitions(1)%connectivities(1)%data(1)%set_element_partition(0)                           ! IRANK
 
 
@@ -319,7 +319,7 @@ contains
             call partitions(2)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(2)%connectivities(1)%data(1)%set_element_index(2)                               ! ielement_g
             call partitions(2)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
+            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 6, 5, 8, 9, 12, 11])      ! nodes
             call partitions(2)%connectivities(1)%data(1)%set_element_partition(1)                           ! IRANK
 
 
@@ -335,7 +335,7 @@ contains
             call partitions(3)%connectivities(1)%data(1)%set_domain_index(2)                                ! idomain_g
             call partitions(3)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(3)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])      ! nodes
+            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([1, 2, 5, 4, 7, 8, 11, 10])      ! nodes
             call partitions(3)%connectivities(1)%data(1)%set_element_partition(2)                           ! IRANK
 
             ! element 4
@@ -343,7 +343,7 @@ contains
             call partitions(3)%connectivities(1)%data(2)%set_domain_index(2)                                ! idomain_g
             call partitions(3)%connectivities(1)%data(2)%set_element_index(2)                               ! ielement_g
             call partitions(3)%connectivities(1)%data(2)%set_element_mapping(1)                             ! mapping
-            call partitions(3)%connectivities(1)%data(2)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
+            call partitions(3)%connectivities(1)%data(2)%set_element_nodes([2, 3, 6, 5, 8, 9, 12, 11])      ! nodes
             call partitions(3)%connectivities(1)%data(2)%set_element_partition(2)                           ! IRANK
 
         else if (NRANK == 4) then
@@ -371,7 +371,7 @@ contains
             call partitions(1)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(1)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(1)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])      ! nodes
+            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 5, 4, 7, 8, 11, 10])      ! nodes
             call partitions(1)%connectivities(1)%data(1)%set_element_partition(0)                           ! IRANK
 
 
@@ -387,7 +387,7 @@ contains
             call partitions(2)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(2)%connectivities(1)%data(1)%set_element_index(2)                               ! ielement_g
             call partitions(2)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
+            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 6, 5, 8, 9, 12, 11])      ! nodes
             call partitions(2)%connectivities(1)%data(1)%set_element_partition(1)                           ! IRANK
 
 
@@ -403,7 +403,7 @@ contains
             call partitions(3)%connectivities(1)%data(1)%set_domain_index(2)                                ! idomain_g
             call partitions(3)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(3)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])      ! nodes
+            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([1, 2, 5, 4, 7, 8, 11, 10])      ! nodes
             call partitions(3)%connectivities(1)%data(1)%set_element_partition(2)                           ! IRANK
 
 
@@ -419,7 +419,7 @@ contains
             call partitions(4)%connectivities(1)%data(1)%set_domain_index(2)                                ! idomain_g
             call partitions(4)%connectivities(1)%data(1)%set_element_index(2)                               ! ielement_g
             call partitions(4)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(4)%connectivities(1)%data(1)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
+            call partitions(4)%connectivities(1)%data(1)%set_element_nodes([2, 3, 6, 5, 8, 9, 12, 11])      ! nodes
             call partitions(4)%connectivities(1)%data(1)%set_element_partition(3)                           ! IRANK
 
 

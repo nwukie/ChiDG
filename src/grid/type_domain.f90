@@ -1411,16 +1411,11 @@ contains
         logical                     :: has_neighbor, comm_neighbor
         character(:),   allocatable :: user_msg
 
-        !
         ! Test if global communication has been initialized
-        !
         user_msg = "mesh%get_comm_procs: mesh global communication not initialized."
         if ( .not. self%global_comm_initialized) call chidg_signal(WARN,user_msg)
 
-
-        !
         ! Get current processor rank
-        !
         myrank = IRANK
 
         do ielem = 1,self%nelem
@@ -1428,24 +1423,18 @@ contains
 
                 ! Get face properties
                 has_neighbor = ( self%faces(ielem,iface)%ftype == INTERIOR )
-
                 ! For interior neighbor
                 if ( has_neighbor ) then
-
                     ! Get neighbor processor rank. If off-processor, add to list uniquely
                     neighbor_rank = self%faces(ielem,iface)%ineighbor_proc
                     comm_neighbor = ( myrank /= neighbor_rank )
                     if ( comm_neighbor ) call comm_procs_vector%push_back_unique(neighbor_rank)
-
                 end if
 
             end do !iface
         end do !ielem
 
-
-        !
         ! Set vector data to array to be returned.
-        !
         comm_procs = comm_procs_vector%data()
 
     end function get_recv_procs_local
@@ -1479,16 +1468,11 @@ contains
         logical                     :: is_chimera, comm_donor
         type(ivector_t)             :: comm_procs_vector
 
-        !
         ! Test if global communication has been initialized
-        !
         user_msg = "mesh%get_recv_procs_chimera: mesh global communication not initialized."
         if ( .not. self%global_comm_initialized) call chidg_signal(WARN,user_msg)
 
-
-        !
         ! Get current processor rank
-        !
         myrank = IRANK
 
         do ielem = 1,self%nelem
@@ -1496,9 +1480,7 @@ contains
 
                 ! Get face properties
                 is_chimera   = ( self%faces(ielem,iface)%ftype == CHIMERA  )
-
                 if ( is_chimera ) then
-
                     ! Loop through donor elements. If off-processor, add to list uniquely
                     ChiID = self%faces(ielem,iface)%ChiID
                     do idonor = 1,self%chimera%recv(ChiID)%ndonors()
@@ -1506,17 +1488,12 @@ contains
                         comm_donor = ( myrank /= donor_rank )
                         if ( comm_donor ) call comm_procs_vector%push_back_unique(donor_rank)
                     end do !idonor
-
                 end if !is_chimera
-
 
             end do !iface
         end do !ielem
 
-
-        !
         ! Set vector data to array to be returned.
-        !
         comm_procs = comm_procs_vector%data()
 
     end function get_recv_procs_chimera
@@ -1550,43 +1527,26 @@ contains
         character(:),   allocatable :: user_msg
 
 
-
-        !
         ! Test if global communication has been initialized
-        !
         user_msg = "mesh%get_send_procs: mesh global communication not initialized."
         if ( .not. self%global_comm_initialized) call chidg_signal(WARN,user_msg)
 
-
-
-        !
         ! Get procs we are receiving neighbor data from
-        !
         comm_procs_local = self%get_send_procs_local()
         do iproc = 1,size(comm_procs_local)
             proc = comm_procs_local(iproc)
             call comm_procs_vector%push_back_unique(proc)
         end do !iproc
 
-
-
-        !
         ! Get procs we are receiving chimera donors from
-        !
         comm_procs_chimera = self%get_send_procs_chimera()
         do iproc = 1,size(comm_procs_chimera)
             proc = comm_procs_chimera(iproc)
             call comm_procs_vector%push_back_unique(proc)
         end do !iproc
 
-
-
-        !
         ! Set vector data to array to be returned.
-        !
         comm_procs = comm_procs_vector%data()
-
-
 
 
     end function get_send_procs
@@ -1618,16 +1578,11 @@ contains
         logical                     :: has_neighbor, comm_neighbor
         character(:),   allocatable :: user_msg
 
-        !
         ! Test if global communication has been initialized
-        !
         user_msg = "mesh%get_send_procs_local: mesh global communication not initialized."
         if ( .not. self%global_comm_initialized) call chidg_signal(WARN,user_msg)
 
-
-        !
         ! Get current processor rank
-        !
         myrank = IRANK
 
         do ielem = 1,self%nelem
@@ -1635,7 +1590,6 @@ contains
 
                 ! Get face properties
                 has_neighbor = ( self%faces(ielem,iface)%ftype == INTERIOR )
-
                 ! For interior neighbor
                 if ( has_neighbor ) then
                     ! Get neighbor processor rank. If off-processor add to list uniquely
@@ -1643,15 +1597,11 @@ contains
                     comm_neighbor = ( myrank /= neighbor_rank )
                     if ( comm_neighbor ) call comm_procs_vector%push_back_unique(neighbor_rank)
                 end if
-                
 
             end do !iface
         end do !ielem
 
-
-        !
         ! Set vector data to array to be returned.
-        !
         comm_procs = comm_procs_vector%data()
 
     end function get_send_procs_local
@@ -1685,22 +1635,14 @@ contains
         logical                     :: comm_donor
         character(:),   allocatable :: user_msg
 
-        !
         ! Test if global communication has been initialized
-        !
         user_msg = "mesh%get_send_procs_chimera: mesh global communication not initialized."
         if ( .not. self%global_comm_initialized) call chidg_signal(WARN,user_msg)
 
-
-        !
         ! Get current processor rank
-        !
         myrank = IRANK
 
-
-        !
         ! Collect processors that we are sending chimera donor elements to
-        !
         do isend_elem = 1,self%chimera%nsend()
             do isend_proc = 1,self%chimera%send(isend_elem)%nsend_procs()
 
@@ -1712,20 +1654,11 @@ contains
             end do !isend_proc
         end do !isend_elem
 
-
-
-
-
-        !
         ! Set vector data to array to be returned.
-        !
         comm_procs = comm_procs_vector%data()
-
 
     end function get_send_procs_chimera
     !*****************************************************************************************
-
-
 
 
 

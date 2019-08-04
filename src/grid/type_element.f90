@@ -1392,7 +1392,6 @@ contains
             polyvals(iterm)  = polynomial_val(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
         end do
 
-
         ! Evaluate x from dot product of modes and polynomial values
         yval = dot_product(self%coords%getvar(2,itime = 1),polyvals)
 
@@ -2127,28 +2126,22 @@ contains
         !   We want to find their element-local connectivity indices:
         !       corner_position = [1, 2, 5, 6]
         !   
-        !
         do cindex = 1,size(corner_indices)
             do eindex = 1,size(self%connectivity)
 
-
                 node_matches = (corner_indices(cindex) == self%connectivity(eindex))
-
                 if (node_matches) then
                     corner_position(cindex) = eindex
                     exit
                 end if
-
 
             end do
         end do
 
 
 
-        !
         ! Test corner positions against known face configurations 
         ! to determine face index:
-        !
         do iface_test = 1,NFACES
 
             face_indices = face_corners(iface_test,:,self%element_type)

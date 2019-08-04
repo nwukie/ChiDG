@@ -1,7 +1,7 @@
 module type_reference_element
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: NFACES, NEDGES, ZERO, ONE, XI_DIR, ETA_DIR, ZETA_DIR
+    use mod_constants,      only: NFACES, NEDGES, ZERO, ONE, HALF, TWO, THREE, XI_DIR, ETA_DIR, ZETA_DIR
     use mod_gauss_legendre, only: quadrature_nodes, quadrature_weights
     use mod_nodes_uniform,  only: uniform_nodes, uniform_weights
     use mod_polynomial,     only: polynomial_val, dpolynomial_val, ddpolynomial_val
@@ -272,6 +272,10 @@ contains
         ! Invert matrix so that it can multiply a vector of
         ! element points to compute the mode amplitudes of the x,y mappings
         self%nodes_to_modes = inv(temp)
+
+!        !
+!        ! Iterative refinement?
+!        !
 
 
         self%element_initialized = .true.
@@ -1202,7 +1206,19 @@ contains
 
 
         nnodes1d = level+1
-        line_space = linspace(-ONE,ONE,nnodes1d)
+        !line_space = linspace(-ONE,ONE,nnodes1d)
+        select case (nnodes1d)
+            case (2)
+                line_space = [-ONE,ONE]
+            case (3)
+                line_space = [-ONE,ZERO,ONE]
+            case (4)
+                line_space = [-ONE,-ONE/THREE,ONE/THREE,ONE]
+            case (5)
+                line_space = [-ONE,-HALF,ZERO,HALF,ONE]
+            case default
+                call chidg_signal(FATAL,'type_reference_element%get_reference_nodes: unimplemented reference element.')
+        end select
 
         !
         ! Uniform distribution starts with two nodes at end points.

@@ -38,6 +38,7 @@ submodule (type_chidg) type_chidg_driver
     use mod_hdf_utilities,      only: get_properties_hdf, check_file_exists_hdf
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
     use type_file_properties,   only: file_properties_t
+    use precon_RASILU0,         only: precon_RASILU0_t
     implicit none
 
 
@@ -157,6 +158,15 @@ contains
         call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
         call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
         call wall_distance%set('Preconditioner'  , algorithm='RASILU0')
+
+
+        ! Set RASILU settings for petsc
+        select type (precon => wall_distance%preconditioner)
+            type is (precon_RASILU0_t)
+                precon%asm_overlap = 6
+                precon%ilu_levels = 3
+        end select
+
 
         order = chidg%nterms_s_1d
         call wall_distance%set('Solution Order', integer_input=order)

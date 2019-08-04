@@ -567,14 +567,7 @@ contains
                       pelem_ID    = self%find_parallel_element(idomain_g,ielement_g)
                       if (pelem_ID == NO_ID) call chidg_signal_three(FATAL,"mesh%assemble_chimera_data: did not find parallel chimera element.", IRANK, idomain_g, ielement_g)
 
-                      !! Store parallel access information in donor elem_info
-                      !self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%pelem_ID     = pelem_ID
-                      !self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_comm    = self%parallel_element(pelem_ID)%recv_comm
-                      !self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_domain  = self%parallel_element(pelem_ID)%recv_domain
-                      !self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_element = self%parallel_element(pelem_ID)%recv_element
-                      !self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_dof     = self%parallel_element(pelem_ID)%recv_dof
-        
-                      do ipt = 1, npts
+                      do ipt = 1,npts
                           igq  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%node_index(ipt)
                           xi   = ref_coords(ipt,1)
                           eta  = ref_coords(ipt,2)
@@ -1667,7 +1660,6 @@ contains
         !
         ! Receive/construct parallel neighbors/chimera donors
         !
-        recv_dof = 1    ! DOF indices are based on Fortran 1-indexing
         do iproc = 1,size(recv_procs)
             do irecv = 1,(self%get_proc_ninterior_neighbors(recv_procs(iproc)) + self%get_proc_nchimera_donors(recv_procs(iproc)))
 
@@ -1692,7 +1684,6 @@ contains
                 dof_start           = element_data(9)
                 nnodes = (etype+1)*(etype+1)*(etype+1)
                 
-
 
                 ! Allocate buffers and receive: nodes, displacements, and velocities. 
                 ! These quantities are located at the element support nodes, not interpolation
@@ -1738,18 +1729,7 @@ contains
                 !
                 pelem_ID = self%find_parallel_element(idomain_g,ielement_g)
 
-                if (pelem_ID == NO_ID) then
-                    pelem_ID = self%new_parallel_element()
-
-!                    ! Only update recv_dof for new elements, since we don't want to 
-!                    ! modify the access indices for existing elements.
-!
-!                    ! Update dof access indices for parallel elements on local process
-!                    self%parallel_element(pelem_ID)%recv_dof = recv_dof
-!
-!                    ! Increment recv_dof
-!                    recv_dof = recv_dof + (nterms_s*nfields*ntime)
-                end if
+                if (pelem_ID == NO_ID) pelem_ID = self%new_parallel_element()
 
 
                 ! Initialize element geometry
@@ -1770,7 +1750,6 @@ contains
 
 
                 ! NOTE: we want to be able to reinitialize parallel_element solution data-space (e.g. for wall_distance calculation)
-                !call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start,dof_local_start=NO_ID)
                 call self%parallel_element(pelem_ID)%init_sol(self%interpolation,interpolation_level,nterms_s,nfields,ntime,dof_start,dof_local_start=NO_ID)
 
 
@@ -1803,9 +1782,6 @@ contains
             recv_dof = recv_dof + nterms_s*nfields*ntime
 
         end do
-
-
-
 
 
 

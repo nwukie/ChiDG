@@ -86,12 +86,12 @@ contains
         !
         nodes(1,:) = [1._rk, 0._rk,  0._rk]
         nodes(2,:) = [2._rk, 0._rk,  0._rk]
-        nodes(3,:) = [1._rk, PI/TWO, 0._rk]
-        nodes(4,:) = [2._rk, PI/TWO, 0._rk]
+        nodes(3,:) = [2._rk, PI/TWO, 0._rk]
+        nodes(4,:) = [1._rk, PI/TWO, 0._rk]
         nodes(5,:) = [1._rk, 0._rk,  1._rk]
         nodes(6,:) = [2._rk, 0._rk,  1._rk]
-        nodes(7,:) = [1._rk, PI/TWO, 1._rk]
-        nodes(8,:) = [2._rk, PI/TWO, 1._rk]
+        nodes(7,:) = [2._rk, PI/TWO, 1._rk]
+        nodes(8,:) = [1._rk, PI/TWO, 1._rk]
         this%nodes = nodes
 
         

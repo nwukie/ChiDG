@@ -55,8 +55,9 @@
 module precon_RASILU0
 #include <messenger.h>
 #include "petsc/finclude/petscksp.h"
-    use petscksp,                   only: tPC, PCCreate, PCApply, PCDestroy, PCSetUp, PCReset
-    use petscmat,                   only: PETSC_NULL_MAT
+#include "petsc/finclude/petscpc.h"
+    use petscksp,                   only: tPC, PCCreate, PCApply, PCDestroy, PCSetUp, PCReset, tKSP, KSPGetPC
+    use petscmat,                   only: PETSC_NULL_MAT, PETSC_NULL_INTEGER
 
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: DIAG, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, &
@@ -99,8 +100,10 @@ module precon_RASILU0
 
 
         ! petsc
-        PC      :: pc
-        logical :: petsc_initialized = .false.
+        PetscInt    :: asm_overlap = 1
+        PetscInt    :: ilu_levels = 0
+        PC          :: pc
+        logical     :: petsc_initialized = .false.
 
 
     contains
@@ -137,10 +140,6 @@ contains
         class(precon_RASILU0_t),    intent(inout)   :: self
         type(chidg_data_t),         intent(in)      :: data
 
-        integer :: ierr
-
-        integer(ik) :: iread, ielem, iblk, diag
-
         PetscErrorCode  :: perr
 
         call write_line('   Restricted Additive Schwarz(RAS) preconditioner: ', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
@@ -170,6 +169,7 @@ contains
                 if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCCreate.')
                 call PCSetType(self%pc,PCASM,perr)
                 if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCSetType.')
+
                 self%petsc_initialized = .true.
 
             case default
@@ -215,15 +215,37 @@ contains
                                        iblk_diag_parent, iblk_diag, iblk, icomm,            &
                                        parent_proc, ierr, iproc, idiagLD, idiagA, dparent_g_lower, eparent_g_lower, itime
 
+        PC              :: sub_pc
+        KSP             :: ksp(1)
 
         if (self%petsc_initialized) then
         !******  petsc  implementation  ******!
+
+            call PCASMSetOverlap(self%pc, self%asm_overlap, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCASMSetOverlap.')
+
+
+        
             call PCSetOperators(self%pc, PETSC_NULL_MAT, PETSC_NULL_MAT, perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCSetOperators with NULL.')
             call PCSetOperators(self%pc, A%wrapped_petsc_matrix%petsc_matrix, A%wrapped_petsc_matrix%petsc_matrix, perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCSetOperators.')
             call PCSetUp(self%pc, perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCSetUp.')
+
+
+
+            ! Procedure for setting subdomain ILU solver fill levels
+            call PCASMGetSubKSP(self%pc, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ksp, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCGetSubKSP.')
+            call KSPGetPC(ksp(1), sub_pc, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling KSPGetPC.')
+            call PCFactorSetLevels(sub_pc, self%ilu_levels, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCFactorSetLevels.')
+
+
+
+
 
 
         else

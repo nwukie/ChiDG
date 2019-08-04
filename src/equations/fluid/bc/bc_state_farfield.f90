@@ -208,8 +208,6 @@ contains
         unorm_3 = worker%unit_normal(3)
 
 
-
-
         !
         ! Dot momentum with normal vector
         !
@@ -293,6 +291,7 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
+
 
 
         !

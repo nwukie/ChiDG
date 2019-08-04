@@ -81,12 +81,12 @@ contains
         inv_sqrt_two    = 1._rk/sqrt_two
         nodes(1,:) = [0._rk,         0._rk,  0._rk       ]
         nodes(2,:) = [inv_sqrt_two,  0._rk,  inv_sqrt_two]
-        nodes(3,:) = [inv_sqrt_two,  0._rk, -inv_sqrt_two]
-        nodes(4,:) = [sqrt_two,      0._rk,  0._rk       ]
+        nodes(3,:) = [sqrt_two,      0._rk,  0._rk       ]
+        nodes(4,:) = [inv_sqrt_two,  0._rk, -inv_sqrt_two]
         nodes(5,:) = [0._rk,         1._rk,  0._rk       ]
         nodes(6,:) = [inv_sqrt_two,  1._rk,  inv_sqrt_two]
-        nodes(7,:) = [inv_sqrt_two,  1._rk, -inv_sqrt_two]
-        nodes(8,:) = [sqrt_two,      1._rk,  0._rk       ]
+        nodes(7,:) = [sqrt_two,      1._rk,  0._rk       ]
+        nodes(8,:) = [inv_sqrt_two,  1._rk, -inv_sqrt_two]
 
 
         

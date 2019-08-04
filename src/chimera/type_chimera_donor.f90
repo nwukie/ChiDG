@@ -18,31 +18,6 @@ module type_chimera_donor
 
         type(element_info_t)    :: elem_info
 
-!        ! Donor location
-!        integer(ik)                 :: idomain_g
-!        integer(ik)                 :: idomain_l
-!        integer(ik)                 :: ielement_g
-!        integer(ik)                 :: ielement_l
-!        integer(ik)                 :: iproc            ! donor processor rank
-!
-!        ! Donor properties
-!        integer(ik)                 :: nfields   = 0        ! Number of equations in donor element
-!        integer(ik)                 :: ntime     = 0        ! Number of equations in donor element
-!        integer(ik)                 :: nterms_s  = 0        ! Number of terms in donor expansion
-!        integer(ik)                 :: nterms_c  = 0        ! Number of terms in donor expansion
-!        integer(ik)                 :: dof_start = 0        ! Starting gobal dof index for overset donor.
-!        integer(ik)                 :: dof_local_start = 0  ! Starting local dof index for overset donor
-!        integer(ik)                 :: eqn_ID    = NO_ID    ! Equation set identifier
-!
-!
-!        ! Parallel access information
-!        integer(ik)                 :: pelem_ID     = NO_ID ! ID in mesh%parallel_elements(pelem_ID) (only if off-processor)
-!        integer(ik)                 :: recv_comm    = NO_ID ! location of donor solution in native storage
-!        integer(ik)                 :: recv_domain  = NO_ID ! location of donor solution in native storage
-!        integer(ik)                 :: recv_element = NO_ID ! location of donor solution in native storage
-!        integer(ik)                 :: recv_dof     = NO_ID ! location of donor solution in petsc storage
-
-
         ! Node information
         integer(ik),    allocatable :: node_index(:)    ! index in a node set the donor is providing data for
         real(rk),       allocatable :: coords(:,:)      ! donor-local node coordinate(xi,eta,zeta)

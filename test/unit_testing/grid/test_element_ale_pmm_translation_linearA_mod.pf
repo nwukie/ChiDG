@@ -85,12 +85,12 @@ contains
         !
         nodes(1,:) = [0._rk, 0._rk, 0._rk]
         nodes(2,:) = [5._rk, 0._rk, 0._rk]
-        nodes(3,:) = [0._rk, 1._rk, 0._rk]
-        nodes(4,:) = [5._rk, 1._rk, 0._rk]
+        nodes(3,:) = [5._rk, 1._rk, 0._rk]
+        nodes(4,:) = [0._rk, 1._rk, 0._rk]
         nodes(5,:) = [0._rk, 0._rk, 1._rk]
         nodes(6,:) = [5._rk, 0._rk, 1._rk]
-        nodes(7,:) = [0._rk, 1._rk, 1._rk]
-        nodes(8,:) = [5._rk, 1._rk, 1._rk]
+        nodes(7,:) = [5._rk, 1._rk, 1._rk]
+        nodes(8,:) = [0._rk, 1._rk, 1._rk]
         this%nodes = nodes
 
         mapping = 1

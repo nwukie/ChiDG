@@ -15,7 +15,7 @@ program driver
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use mod_file_utilities,         only: delete_file
-    use mpi_f08,                    only: MPI_AllReduce, MPI_INTEGER4, MPI_MAX
+    use mpi_f08,                    only: MPI_AllReduce, MPI_INTEGER4, MPI_MAX, MPI_CHARACTER, MPI_LOGICAL
     use mod_io
 
     ! Actions
@@ -37,7 +37,7 @@ program driver
     character(len=10)                           :: time_string
     character(:),                   allocatable :: command, tmp_file
     class(function_t),              allocatable :: fcn
-    logical                                     :: run_chidg_action
+    logical                                     :: run_chidg_action, file_exists, exit_signal
 
 
     ! Check for command-line arguments
@@ -249,22 +249,52 @@ program driver
                 call chidg%start_up('core',header=.false.)
                 if (narg /= 2) call chidg_signal(FATAL,"The '2tec' action expects: chidg 2tec file.h5")
 
-                call date_and_time(time=time_string)
-                tmp_file = 'chidg_2tec_files'//time_string//'.txt'
-                call get_command_argument(2,pattern)
-                command = 'ls '//trim(pattern)//' > '//tmp_file
-                call system(command)
+                if (IRANK == GLOBAL_MASTER) then
+                    call date_and_time(time=time_string)
+                    tmp_file = 'chidg_2tec_files'//time_string//'.txt'
+                    call get_command_argument(2,pattern)
+                    command = 'ls '//trim(pattern)//' > '//tmp_file
+                    call system(command)
+
+                    ! Make sure file syncs with filesystem first
+                    file_exists = .false.
+                    do while (.not. file_exists)
+                        inquire(file=tmp_file,exist=file_exists)
+                        call sleep(1)
+                    end do
+
+                    open(7,file=tmp_file,action='read')
+                end if
             
 
-                open(7,file=tmp_file,action='read')
+                exit_signal = .false.
                 do
-                    read(7,fmt='(a)', iostat=ierr) solution_file
-                    if (ierr /= 0) exit
+
+                    if (IRANK == GLOBAL_MASTER) then
+                        read(7,fmt='(a)', iostat=ierr) solution_file
+                        if (ierr /= 0) exit_signal = .true.
+                    end if
+
+                    call MPI_BCast(solution_file,1024,MPI_CHARACTER,GLOBAL_MASTER,ChiDG_COMM,ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,'chidg 2tec: error broadcasting solution file.')
+
+                    call MPI_BCast(exit_signal,1,MPI_LOGICAL,GLOBAL_MASTER,ChiDG_COMM,ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,'chidg 2tec: error broadcasting exit signal.')
+                        
+                    if (exit_signal) exit
+
+
+
                     call chidg_post_hdf2tec_new(chidg,trim(solution_file),trim(solution_file))
                 end do
-                close(7)
 
-                call delete_file(tmp_file)
+
+                ! Clean up
+                if (IRANK == GLOBAL_MASTER) then
+                    close(7)
+                    call delete_file(tmp_file)
+                end if
+
             !*****************************************************************************
 
 

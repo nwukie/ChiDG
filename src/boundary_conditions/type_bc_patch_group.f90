@@ -35,6 +35,10 @@ module type_bc_patch_group
         type(bc_patch_t),   allocatable :: patch(:)
         integer(ik)                     :: group_ID
 
+        ! Global meta-data
+        integer(ik)                     :: nfaces_g
+        integer(ik)                     :: igroup_g
+
     contains
 
         ! Patch routines
@@ -409,12 +413,9 @@ contains
         class(bc_patch_group_t),    intent(in)  :: self
         type(mpi_comm),             intent(in)  :: bc_COMM
 
-        integer(ik) :: n_local, n_global, bc_NRANK, ierr
+        integer(ik) :: n_local, n_global, ierr
 
         n_local = self%get_nfaces_local()
-
-        call MPI_Comm_Size(bc_COMM,bc_NRANK,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'bc_patch_group%get_nfaces_global: error in MPI_Comm_Size.')
 
         call MPI_AllReduce(n_local,n_global,1,MPI_INTEGER4,MPI_SUM,bc_COMM,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'bc_patch_group%get_nfaces_global: error in MPI_AllReduce.')

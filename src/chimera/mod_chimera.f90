@@ -347,7 +347,8 @@ contains
                                 use_parallel = .true.
 
                             else
-                                call chidg_signal(FATAL,"detect_chimera_donor: no valid donor found")
+                                !call chidg_signal(FATAL,"detect_chimera_donor: no valid donor found")
+                                call chidg_signal_three(FATAL,"detect_chimera_donor: no valid donor found",gq_node(1),gq_node(2),gq_node(3))
                             end if
 
 

@@ -67,6 +67,13 @@ program driver
         call chidg%start_up('namelist')
         call chidg%start_up('core')
 
+        ! Check input files are valid
+        inquire(file=trim(gridfile), exist=file_exists)
+        if (.not. file_exists) call chidg_signal_one(FATAL,"open_file_hdf: Could not find file.",trim(gridfile))
+        if (trim(solutionfile_in) /= 'none') then
+            inquire(file=trim(solutionfile_in), exist=file_exists)
+            if (.not. file_exists) call chidg_signal_one(FATAL,"open_file_hdf: Could not find file.",trim(solutionfile_in))
+        end if
 
         ! Set ChiDG Algorithms, Accuracy
         call chidg%set('Time Integrator' , algorithm=time_integrator                   )
@@ -75,10 +82,8 @@ program driver
         call chidg%set('Preconditioner'  , algorithm=preconditioner                    )
         call chidg%set('Solution Order'  , integer_input=solution_order                )
 
-
         ! Read grid and boundary condition data
         call chidg%read_mesh(gridfile)
-
 
         ! Initialize solution
         !   1: 'none', init fields with values from mod_io module variable initial_fields(:)

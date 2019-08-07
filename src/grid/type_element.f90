@@ -1907,12 +1907,15 @@ contains
     !!  @result     coord_comp  Coordinate in the element-local coordinate system[xi,eta,zeta]
     !!
     !-----------------------------------------------------------------------------------------
-    function computational_point(self,coord) result(coord_comp)
-        class(element_t),   intent(in)  :: self
-        real(rk),           intent(in)  :: coord(3)
+    function computational_point(self,coord,tol,rtol) result(coord_comp)
+        class(element_t),   intent(in)           :: self
+        real(rk),           intent(in)           :: coord(3)
+        real(rk),           intent(in), optional :: tol
+        real(rk),           intent(in), optional :: rtol
 
         integer(ik) :: inewton
-        real(rk)    :: coord_comp(3), coord_phys(3), minv(3,3), R(3), dcoord(3), res, tol
+        real(rk)    :: coord_comp(3), coord_phys(3), minv(3,3), R(3), dcoord(3), res, res0, user_tol, user_rtol
+        logical     :: absolute_convergence, relative_convergence
 
         !
         ! Newton iteration to find the donor local coordinates
@@ -1920,8 +1923,17 @@ contains
         !tol = 1000000._rk*RKTOL
         !tol = 100000._rk*RKTOL
         !tol = 100._rk*RKTOL
-        tol = 1000._rk*RKTOL
+
+
+        user_tol = 1000._rk*RKTOL
+        if (present(tol)) user_tol = tol
+
+        user_rtol = 1.e-14_rk
+        if (present(rtol)) user_rtol = rtol
+
         coord_comp = ZERO
+        absolute_convergence = .false.
+        relative_convergence = .false.
         do inewton = 1,20
 
 
@@ -1934,18 +1946,22 @@ contains
             ! Assemble residual vector
             R = -(coord_phys - coord)
 
+            ! Set initial residual
+            if (inewton == 1) res0 = norm2(R)
+
             ! Solve linear system for Newton update
             dcoord = matmul(minv,R)
 
             ! Apply Newton update
             coord_comp = coord_comp + dcoord
 
-            ! Exit if converged
+            ! Measure residual
             res = norm2(R)
-            if ( res < tol ) then
-                exit
-            end if
 
+            !if ( res < user_tol ) exit
+            absolute_convergence  = (res < user_tol)
+            relative_convergence  = (res/res0 < user_rtol)
+            if ( absolute_convergence .or. relative_convergence ) exit
 
             !
             ! Limit computational coordinates, in case they go out of bounds.

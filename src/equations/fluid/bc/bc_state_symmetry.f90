@@ -188,9 +188,19 @@ contains
         !
         ! Subtract relative normal momentum from relative momentum
         !
-        mom1_bc = mom1_m  -  TWO*normal_momentum*unorm_1
-        mom2_bc = mom2_m  -  TWO*normal_momentum*unorm_2
-        mom3_bc = mom3_m  -  TWO*normal_momentum*unorm_3
+        !mom1_bc = mom1_m  -  TWO*normal_momentum*unorm_1
+        !mom2_bc = mom2_m  -  TWO*normal_momentum*unorm_2
+        !mom3_bc = mom3_m  -  TWO*normal_momentum*unorm_3
+
+        ! Now we think that just the normal momentum should be
+        ! subtracted instead of twice that, since we are in fact not
+        ! computing a reflected momentum since there is no 'opposite'
+        ! point about which the flux is cancelled. Rather, we are evaluating
+        ! the boundary state on the boundary, so it makes sense to impose 
+        ! the state that we want, which is no normal flow.
+        mom1_bc = mom1_m  -  normal_momentum*unorm_1
+        mom2_bc = mom2_m  -  normal_momentum*unorm_2
+        mom3_bc = mom3_m  -  normal_momentum*unorm_3
 
 
         !

@@ -35,124 +35,14 @@ contains
         type(mesh_t),   intent(inout)   :: mesh
         type(mpi_comm), intent(in)      :: ChiDG_COMM
 
-        integer(ik) :: idom, iproc, idomain_g, idomain_l, ielem_l, ierr
-        integer(ik) :: ineighbor_domain_g, ineighbor_domain_l, &
-                       ineighbor_element_g, ineighbor_element_l
-        integer(ik) :: data(4), corner_indices(4)
-        logical     :: has_domain, searching, neighbor_element, searching_mesh
-        logical     :: includes_corner_one, includes_corner_two, &
-                       includes_corner_three, includes_corner_four
-
-
-        !
         ! All ranks initialize local communication
-        !
-        call write_line("Initialize: proc-local neighbor communication...", io_proc=GLOBAL_MASTER)
-        do idom = 1,mesh%ndomains()
-            call mesh%domain(idom)%init_comm_local()
-        end do
+        call mesh%init_comm_local()
 
-
-
-        !
-        ! Loop through mesh types
-        !
-        call write_line("Initialize: proc-global neighbor communication...", io_proc=GLOBAL_MASTER)
-        do iproc = 0,NRANK-1
-
-
-
-            !
-            ! For current rank, send out requests for neighbors
-            !
-            if ( iproc == IRANK ) then
-
-                do idom = 1,mesh%ndomains()
-                    ! Broadcast that a mesh from iproc is searching for face neighbors
-                    searching_mesh=.true.
-                    call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
-
-                    ! Initiate search for communication across processors
-                    call mesh%domain(idom)%init_comm_global(ChiDG_COMM)
-
-                end do !idom
-
-
-                ! Broadcast that no more mesh instances are searching for face neighbors
-                searching_mesh=.false.
-                call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
-            end if ! iproc
-
-
-
-
-
-            ! 
-            ! All other procs, listen for requests and send back matches
-            !
-            if ( iproc /= IRANK ) then
-
-
-                ! Check if iproc is searching mesh instances
-                call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
-                do while ( searching_mesh )
-
-
-                    call MPI_BCast(searching,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
-                    do while ( searching )
-                        
-                        ! Receive global domain index of mesh being searched
-                        call MPI_Recv(idomain_g,1,MPI_INTEGER4,iproc,0,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-
-
-                        ! Search through local domains and check indices
-                        has_domain = .false.
-                        do idom = 1,mesh%ndomains()
-                            has_domain = ( idomain_g == mesh%domain(idom)%idomain_g )
-                            if ( has_domain ) then
-                                exit
-                            end if
-                        end do
-
-                        
-                        ! Send domain status. If we have a match, initiate handle_neighbor_request
-                        call MPI_Send(has_domain,1,MPI_LOGICAL,iproc,1,ChiDG_COMM,ierr)
-
-                        if (has_domain) call mesh%domain(idom)%handle_neighbor_request(iproc,ChiDG_COMM)
-
-                        ! Detect if iproc is still sending out face requests. 
-                        call MPI_BCast(searching,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
-
-                    end do ! searching faces
-
-
-                    ! Check if iproc is searching another mesh or finished.
-                    call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
-                end do ! searching_mesh
-
-            end if !iproc
-
-            call MPI_Barrier(ChiDG_COMM,ierr)
-
-        end do ! iproc
-
+        ! All ranks initialize global communication
+        call mesh%init_comm_global(ChiDG_COMM)
 
     end subroutine establish_neighbor_communication
     !*****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

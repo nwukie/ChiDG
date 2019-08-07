@@ -1,7 +1,8 @@
 module type_mesh
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: NO_ID, INTERIOR, NFACES, CARTESIAN, CYLINDRICAL
+    use mod_constants,              only: NO_ID, INTERIOR, NFACES, CARTESIAN, CYLINDRICAL, NO_PROC
+    use mod_grid,                   only: NFACE_CORNERS
     use mod_chidg_mpi,              only: NRANK, IRANK
     use type_element,               only: element_t
     use type_domain,                only: domain_t
@@ -15,7 +16,7 @@ module type_mesh
     use mpi_f08,                    only: mpi_isend, mpi_recv, mpi_integer4, mpi_real8, &
                                           mpi_waitall, mpi_request, mpi_status_ignore,  &
                                           mpi_statuses_ignore, mpi_character, mpi_sum,  &
-                                          mpi_max, mpi_logical, mpi_lor
+                                          mpi_max, mpi_logical, mpi_lor, mpi_comm
     use type_octree,                only: octree_t
     implicit none
     private
@@ -99,6 +100,9 @@ module type_mesh
         procedure           :: stub_new_domain
 
         ! Communication 
+        procedure           :: init_comm_local
+        procedure           :: init_comm_global
+
         procedure           :: comm_nelements
         procedure           :: comm_domain_procs
         procedure           :: comm_send
@@ -2011,7 +2015,133 @@ contains
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init_comm_local(self)
+        class(mesh_t),  intent(inout)  :: self
 
+        integer(ik) :: idom
+
+        ! All ranks initialize local communication
+        call write_line("Initialize: proc-local neighbor communication...", io_proc=GLOBAL_MASTER)
+        do idom = 1,self%ndomains()
+            call self%domain(idom)%init_comm_local()
+        end do
+
+    end subroutine init_comm_local
+    !********************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init_comm_global(self,ChiDG_COMM)
+        class(mesh_t),  intent(inout)   :: self
+        type(mpi_comm), intent(in)      :: ChiDG_COMM
+
+        integer(ik) :: iproc, idom, idomain_g, nfaces_search, ierr
+
+        integer(ik), allocatable :: face_search_corners(:,:), face_owner_rank(:), face_owner_rank_reduced(:)
+        logical     :: has_domain, searching_mesh, searching
+
+        call write_line("Initialize: proc-global neighbor communication...", io_proc=GLOBAL_MASTER)
+        do iproc = 0,NRANK-1
+
+            ! For current rank, send out request for neighbors
+            if (iproc == IRANK) then
+
+                ! Search
+                do idom = 1,self%ndomains()
+
+                    ! Broadcast that a mesh from iproc is searching for face neighbors
+                    searching_mesh=.true.
+                    call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
+
+                    ! send global domain index of mesh being searched
+                    call MPI_BCast(self%domain(idom)%idomain_g,1,MPI_INTEGER4,iproc,ChiDG_COMM,ierr)
+
+                    ! Trigger comm for current domain
+                    call self%domain(idom)%init_comm_global(ChiDG_COMM)
+
+                end do
+
+                ! Broadcast that a mesh from iproc is searching for face neighbors
+                searching_mesh=.false.
+                call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
+
+            end if !iproc
+
+
+            if (iproc /= IRANK) then
+
+                    ! Does iproc have any domains in mesh
+                    searching_mesh=.true.
+                    call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
+
+                    do while (searching_mesh)
+
+                        ! What domain is being searched
+                        call MPI_BCast(idomain_g,1,MPI_INTEGER4,iproc,ChiDG_COMM,ierr)
+
+                        ! Get information about faces being searched for
+                        call MPI_BCast(nfaces_search,1,MPI_INTEGER4,iproc,ChiDG_COMM,ierr)
+
+
+                        ! Allocate buffer to receive face search data
+                        if (allocated(face_search_corners)) deallocate(face_search_corners)
+                        if (allocated(face_owner_rank)) deallocate(face_owner_rank)
+                        if (allocated(face_owner_rank_reduced)) deallocate(face_owner_rank_reduced)
+                        allocate(face_search_corners(nfaces_search,NFACE_CORNERS), &
+                                 face_owner_rank(nfaces_search), &
+                                 face_owner_rank_reduced(nfaces_search), stat=ierr)
+                        if (ierr /= 0) call AllocationError
+
+                        ! Get faces being searched for
+                        call MPI_BCast(face_search_corners,nfaces_search*NFACE_CORNERS,MPI_INTEGER4,iproc,ChiDG_COMM,ierr)
+
+
+                        ! Search through local domains and check if we have part of domain being searched
+                        has_domain = .false.
+                        do idom = 1,self%ndomains()
+                            has_domain = ( idomain_g == self%domain(idom)%idomain_g )
+                            if ( has_domain ) exit
+                        end do
+                        
+                        ! Initialize face_owner_rank, and try and find owner on local process
+                        face_owner_rank = NO_PROC
+                        if (has_domain) call self%domain(idom)%find_face_owner(face_search_corners,face_owner_rank)
+
+
+                        ! Synchronize result across all ranks
+                        call MPI_Reduce(face_owner_rank,face_owner_rank_reduced,nfaces_search,MPI_INTEGER4,MPI_MAX,iproc,ChiDG_COMM,ierr)
+                        if (ierr /= 0) call chidg_signal(FATAL,'mesh%init_comm_global: error reducing face owners.')
+
+                        ! For each face we found, send information
+                        if (has_domain) call self%domain(idom)%transmit_face_info(face_search_corners,face_owner_rank,iproc,ChiDG_COMM)
+
+                        ! Is there another domain to be searched
+                        call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
+
+                    end do !searching_mesh
+
+            end if !iproc
+
+
+        end do !iproc
+        
+
+    end subroutine init_comm_global
+    !********************************************************************************
 
 
 

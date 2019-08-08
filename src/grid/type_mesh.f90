@@ -2085,7 +2085,6 @@ contains
             if (iproc /= IRANK) then
 
                     ! Does iproc have any domains in mesh
-                    searching_mesh=.true.
                     call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
 
                     do while (searching_mesh)

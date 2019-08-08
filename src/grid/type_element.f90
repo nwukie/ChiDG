@@ -1928,7 +1928,7 @@ contains
         user_tol = 1000._rk*RKTOL
         if (present(tol)) user_tol = tol
 
-        user_rtol = 1.e-14_rk
+        user_rtol = 1.e-12_rk
         if (present(rtol)) user_rtol = rtol
 
         coord_comp = ZERO

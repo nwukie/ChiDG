@@ -662,18 +662,23 @@ contains
                                    ielement_l, nterms_s, nfields, ntime,                &
                                    dof_start, dof_local_start
 
+        logical :: orphan_face, local_interior_face, parallel_interior_face
+
         !
         ! Loop through each local element and call initialization for each face
         !
         do ielem = 1,self%nelem
-
             do iface = 1,NFACES
+
+                orphan_face            = (self%faces(ielem,iface)%ftype == ORPHAN)
+                local_interior_face    = (self%faces(ielem,iface)%ftype == INTERIOR) .and. (self%faces(ielem,iface)%ineighbor_proc == IRANK)
+                parallel_interior_face = (self%faces(ielem,iface)%ftype == INTERIOR) .and. (self%faces(ielem,iface)%ineighbor_proc /= IRANK)
 
                 !
                 ! Check if face has neighbor on local partition.
                 !   - ORPHAN means the exterior state is empty and we want to try and find a connection
                 !
-                if ( self%faces(ielem,iface)%ftype == ORPHAN ) then
+                if ( orphan_face ) then
                     call self%find_neighbor_local(ielem,iface,              &
                                                   ineighbor_domain_g,       &
                                                   ineighbor_domain_l,       &
@@ -688,7 +693,7 @@ contains
                 !     the info, for example nterms_s if the order has been increased. So here,
                 !     we just access the location that is already initialized.
                 !
-                else if ( self%faces(ielem,iface)%ftype == INTERIOR )  then
+                else if ( local_interior_face .or. parallel_interior_face )  then
                     
                     ineighbor_domain_g  = self%faces(ielem,iface)%ineighbor_domain_g
                     ineighbor_domain_l  = self%faces(ielem,iface)%ineighbor_domain_l
@@ -705,8 +710,7 @@ contains
                 !
                 ! If no neighbor found, either boundary condition face or chimera face
                 !
-                if ( (self%faces(ielem,iface)%ftype == ORPHAN) .or. &
-                     (self%faces(ielem,iface)%ftype == INTERIOR) ) then
+                if ( orphan_face .or. local_interior_face) then
 
                     if ( neighbor_status == NEIGHBOR_FOUND ) then
 
@@ -798,7 +802,6 @@ contains
         class(domain_t),    intent(inout)   :: self
         type(mpi_comm),     intent(in)      :: ChiDG_COMM
 
-
         integer(ik)  :: iface,ftype,idomain_g, ielem,ierr, iface_search, iproc,  &
                         ineighbor_domain_g,  ineighbor_domain_l,        &
                         ineighbor_element_g, ineighbor_element_l,       &
@@ -811,13 +814,10 @@ contains
         real(rk), allocatable, dimension(:,:)   :: neighbor_grad1,   neighbor_grad2,    &
                                                    neighbor_grad3,   neighbor_br2_face, &
                                                    neighbor_br2_vol, neighbor_invmass
-        logical :: searching
+
+        logical :: searching, orphan_face, parallel_interior_face
 
         integer(ik) :: grad_size(2), br2_face_size(2), br2_vol_size(2), invmass_size(2), data(9)
-
-
-
-
         integer(ik) :: corner_one, corner_two, corner_three, corner_four, mapping
         integer(ik), allocatable :: face_search_corners(:,:), face_owner_rank(:), face_owner_rank_reduced(:)
         integer(ik) :: nfaces_search
@@ -826,6 +826,10 @@ contains
         nfaces_search = 0
         do ielem = 1,self%nelem
             do iface = 1,NFACES
+
+                orphan_face            = (self%faces(ielem,iface)%ftype == ORPHAN)
+                parallel_interior_face = (self%faces(ielem,iface)%ftype == INTERIOR) .and. (self%faces(ielem,iface)%ineighbor_proc /= IRANK)
+
                 ! Check if face has neighbor on another MPI rank.
                 !
                 !   Do this for ORPHAN faces, that are looking for a potential neighbor
@@ -833,10 +837,8 @@ contains
                 !   this is being called as a reinitialization routine, so that 
                 !   element-specific information gets updated, such as neighbor_grad1, 
                 !   etc. because these could have changed if the order of the solution changed
-                if ( (self%faces(ielem,iface)%ftype == ORPHAN) .or.         &
-                     ( (self%faces(ielem,iface)%ftype == INTERIOR) .and.    &
-                       (self%faces(ielem,iface)%ineighbor_proc /= IRANK) )  &
-                   ) then
+                !
+                if (orphan_face .or. parallel_interior_face) then
                    nfaces_search = nfaces_search + 1
                 end if !search_face
 
@@ -867,10 +869,10 @@ contains
         do ielem = 1,self%nelem
             do iface = 1,NFACES
 
-                if ( (self%faces(ielem,iface)%ftype == ORPHAN) .or.         &
-                     ( (self%faces(ielem,iface)%ftype == INTERIOR) .and.    &
-                       (self%faces(ielem,iface)%ineighbor_proc /= IRANK) )  &
-                   ) then
+                orphan_face            = (self%faces(ielem,iface)%ftype == ORPHAN)
+                parallel_interior_face = (self%faces(ielem,iface)%ftype == INTERIOR) .and. (self%faces(ielem,iface)%ineighbor_proc /= IRANK)
+
+                if (orphan_face .or. parallel_interior_face) then
 
                     iface_search = iface_search + 1
 
@@ -900,7 +902,6 @@ contains
 
 
         ! Reduce face owners
-        face_owner_rank = NO_PROC
         call MPI_Reduce(face_owner_rank,face_owner_rank_reduced,nfaces_search,MPI_INTEGER4,MPI_MAX,IRANK,ChiDG_COMM,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'mesh%init_comm_global: error reducing face owners.')
 
@@ -911,10 +912,10 @@ contains
         do ielem = 1,self%nelem
             do iface = 1,NFACES
 
-                if ( (self%faces(ielem,iface)%ftype == ORPHAN) .or.         &
-                     ( (self%faces(ielem,iface)%ftype == INTERIOR) .and.    &
-                       (self%faces(ielem,iface)%ineighbor_proc /= IRANK) )  &
-                   ) then
+                orphan_face            = (self%faces(ielem,iface)%ftype == ORPHAN)
+                parallel_interior_face = (self%faces(ielem,iface)%ftype == INTERIOR) .and. (self%faces(ielem,iface)%ineighbor_proc /= IRANK)
+
+                if (orphan_face .or. parallel_interior_face) then
 
                     iface_search = iface_search + 1
                     if (face_owner_rank_reduced(iface_search) /= NO_PROC) then
@@ -1016,162 +1017,10 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   6/17/2016
-!    !!
-!    !!
-!    !!
-!    !-----------------------------------------------------------------------------------------
-!    subroutine init_comm_global(self,ChiDG_COMM)
-!        class(domain_t),    intent(inout)   :: self
-!        type(mpi_comm),     intent(in)      :: ChiDG_COMM
-!
-!
-!        integer(ik)  :: iface,ftype,ielem,ierr, ielem_neighbor,         &
-!                        ineighbor_domain_g,  ineighbor_domain_l,        &
-!                        ineighbor_element_g, ineighbor_element_l,       &
-!                        ineighbor_face,      ineighbor_proc,            &
-!                        ineighbor_nfields,   ineighbor_ntime,           &
-!                        ineighbor_nterms_s,  neighbor_status,           &
-!                        ineighbor_dof_start, ineighbor_dof_local_start
-!
-!        real(rk)                                :: neighbor_h(3)
-!        real(rk), allocatable, dimension(:,:)   :: neighbor_grad1,   neighbor_grad2,    &
-!                                                   neighbor_grad3,   neighbor_br2_face, &
-!                                                   neighbor_br2_vol, neighbor_invmass
-!        logical :: searching
-!
-!
-!
-!        do ielem = 1,self%nelem
-!            do iface = 1,NFACES
-!
-!                !
-!                ! Check if face has neighbor on another MPI rank.
-!                !
-!                !   Do this for ORPHAN faces, that are looking for a potential neighbor
-!                !   Do this also for INTERIOR faces with off-processor neighbors, in case 
-!                !   this is being called as a reinitialization routine, so that 
-!                !   element-specific information gets updated, such as neighbor_grad1, 
-!                !   etc. because these could have changed if the order of the solution changed
-!                !
-!                if ( (self%faces(ielem,iface)%ftype == ORPHAN) .or.         &
-!                     ( (self%faces(ielem,iface)%ftype == INTERIOR) .and.    &
-!                       (self%faces(ielem,iface)%ineighbor_proc /= IRANK) )  &
-!                   ) then
-!
-!                    ! send search request for neighbor face among global MPI ranks.
-!                    searching = .true.
-!                    call MPI_Bcast(searching,1,MPI_LOGICAL,IRANK,ChiDG_COMM,ierr)
-!
-!                    call self%find_neighbor_global(ielem,iface,               &
-!                                                   ineighbor_domain_g,        &
-!                                                   ineighbor_domain_l,        &
-!                                                   ineighbor_element_g,       &
-!                                                   ineighbor_element_l,       &
-!                                                   ineighbor_face,            &
-!                                                   ineighbor_nfields,         &
-!                                                   ineighbor_ntime,           &
-!                                                   ineighbor_nterms_s,        &
-!                                                   ineighbor_dof_start,       &
-!                                                   ineighbor_dof_local_start, &
-!                                                   ineighbor_proc,            &
-!                                                   neighbor_grad1,            &
-!                                                   neighbor_grad2,            &
-!                                                   neighbor_grad3,            &
-!                                                   neighbor_br2_face,         &
-!                                                   neighbor_br2_vol,          &
-!                                                   neighbor_invmass,          &
-!                                                   neighbor_h,                &
-!                                                   neighbor_status,           &
-!                                                   ChiDG_COMM)
-!                            
-!                
-!                    !
-!                    ! If no neighbor found, either boundary condition face or chimera face
-!                    !
-!                    if ( neighbor_status == NEIGHBOR_FOUND ) then
-!                        ! Neighbor data should already be set, from previous routines. 
-!                        ! Set face type.
-!                        ftype = INTERIOR
-!
-!                        !
-!                        ! Set neighbor data
-!                        !
-!                        self%faces(ielem,iface)%neighbor_h        = neighbor_h
-!                        self%faces(ielem,iface)%neighbor_grad1    = neighbor_grad1
-!                        self%faces(ielem,iface)%neighbor_grad2    = neighbor_grad2
-!                        self%faces(ielem,iface)%neighbor_grad3    = neighbor_grad3
-!                        self%faces(ielem,iface)%neighbor_br2_face = neighbor_br2_face
-!                        self%faces(ielem,iface)%neighbor_br2_vol  = neighbor_br2_vol
-!                        self%faces(ielem,iface)%neighbor_invmass  = neighbor_invmass
-!
-!                    else
-!                        ! Default ftype to ORPHAN face and clear neighbor index data.
-!                        ! ftype should be processed later; either by a boundary 
-!                        ! condition(ftype=1), or a chimera boundary(ftype=2)
-!                        ! 
-!                        ftype = ORPHAN
-!                        ineighbor_domain_g        = 0
-!                        ineighbor_domain_l        = 0
-!                        ineighbor_element_g       = 0
-!                        ineighbor_element_l       = 0
-!                        ineighbor_face            = 0
-!                        ineighbor_nfields         = 0
-!                        ineighbor_ntime           = 0
-!                        ineighbor_nterms_s        = 0
-!                        ineighbor_dof_start       = NO_ID
-!                        ineighbor_dof_local_start = NO_ID
-!                        ineighbor_proc            = NO_PROC
-!
-!                    end if
-!
-!
-!                    !
-!                    ! Call face neighbor initialization routine
-!                    !
-!                    call self%faces(ielem,iface)%set_neighbor(ftype,ineighbor_domain_g,  ineighbor_domain_l,  &
-!                                                                    ineighbor_element_g, ineighbor_element_l, &
-!                                                                    ineighbor_face,      ineighbor_nfields,   &
-!                                                                    ineighbor_ntime,     ineighbor_nterms_s,  &
-!                                                                    ineighbor_proc,      ineighbor_dof_start, &
-!                                                                    ineighbor_dof_local_start)
-!
-!
-!                end if
-!
-!
-!            end do !iface
-!        end do !ielem
-!
-!
-!        ! End search for global faces
-!        searching = .false.
-!        call MPI_Bcast(searching,1,MPI_LOGICAL,IRANK,ChiDG_COMM,ierr)
-!
-!
-!        ! Set initialized
-!        self%global_comm_initialized = .true.
-!
-!
-!    end subroutine init_comm_global
-!    !*****************************************************************************************
-
-
-
-
-
-
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   8/9/2018
     !!
     !-----------------------------------------------------------------------------------------
     subroutine find_face_owner(self,face_search_corners,face_owner_rank)

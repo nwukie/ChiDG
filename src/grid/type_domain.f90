@@ -662,8 +662,6 @@ contains
                                    ielement_l, nterms_s, nfields, ntime,                &
                                    dof_start, dof_local_start
 
-        logical                 :: boundary_face = .false.
-
         !
         ! Loop through each local element and call initialization for each face
         !
@@ -1473,12 +1471,12 @@ contains
     !!  @date   6/16/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine find_neighbor_local(self,ielem_l,iface,ineighbor_domain_g, ineighbor_domain_l,   &
+    subroutine find_neighbor_local(self,ielement_l,iface,ineighbor_domain_g, ineighbor_domain_l,   &
                                                       ineighbor_element_g,ineighbor_element_l,  &
                                                       ineighbor_face,     ineighbor_proc,       &
                                                       neighbor_status)
         class(domain_t),    intent(inout)   :: self
-        integer(ik),        intent(in)      :: ielem_l
+        integer(ik),        intent(in)      :: ielement_l
         integer(ik),        intent(in)      :: iface
         integer(ik),        intent(inout)   :: ineighbor_domain_g
         integer(ik),        intent(inout)   :: ineighbor_domain_l
@@ -1500,7 +1498,7 @@ contains
         ! Get the element-local node indices of the corner nodes that correspond 
         ! to the current face in an element connectivity list
         !
-        mapping = self%elems(ielem_l)%element_type
+        mapping = self%elems(ielement_l)%element_type
         corner_one   = FACE_CORNERS(iface,1,mapping)
         corner_two   = FACE_CORNERS(iface,2,mapping)
         corner_three = FACE_CORNERS(iface,3,mapping)
@@ -1511,10 +1509,10 @@ contains
         ! For the current face, get the global-indices of the coordinate nodes 
         ! for the corners
         !
-        corner_indices(1) = self%elems(ielem_l)%connectivity(corner_one)
-        corner_indices(2) = self%elems(ielem_l)%connectivity(corner_two)
-        corner_indices(3) = self%elems(ielem_l)%connectivity(corner_three)
-        corner_indices(4) = self%elems(ielem_l)%connectivity(corner_four)
+        corner_indices(1) = self%elems(ielement_l)%connectivity(corner_one)
+        corner_indices(2) = self%elems(ielement_l)%connectivity(corner_two)
+        corner_indices(3) = self%elems(ielement_l)%connectivity(corner_three)
+        corner_indices(4) = self%elems(ielement_l)%connectivity(corner_four)
 
         
         !
@@ -1523,7 +1521,7 @@ contains
         !
         neighbor_element = .false.
         do ielem_neighbor = 1,self%nelem
-            if (ielem_neighbor /= ielem_l) then
+            if (ielem_neighbor /= ielement_l) then
 
                 !element_nodes = self%elems(ielem_neighbor)%connectivity%get_element_nodes()
                 element_nodes = self%elems(ielem_neighbor)%connectivity

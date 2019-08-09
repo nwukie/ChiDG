@@ -113,15 +113,9 @@ contains
         grad1 = worker%get_field('Density * k'   , 'grad1', 'boundary')
         grad2 = worker%get_field('Density * k'   , 'grad2', 'boundary')
         grad3 = worker%get_field('Density * k'   , 'grad3', 'boundary')
-<<<<<<< HEAD
-        flux_1 = -(h(1)**TWO*sst_avc+mu_neg*sigma_k)*grad1
-        flux_2 = -(h(2)**TWO*sst_avc+mu_neg*sigma_k)*grad2
-        flux_3 = -(h(3)**TWO*sst_avc+mu_neg*sigma_k)*grad3
-=======
         flux_1 = -(h_s(:,1)**TWO*sst_avc+mu_neg*sigma_k)*grad1
         flux_2 = -(h_s(:,2)**TWO*sst_avc+mu_neg*sigma_k)*grad2
         flux_3 = -(h_s(:,3)**TWO*sst_avc+mu_neg*sigma_k)*grad3
->>>>>>> dev_tecio
         
         
 

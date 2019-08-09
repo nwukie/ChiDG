@@ -92,6 +92,7 @@ contains
 
 
                 !call rans_rstm_eqns%add_model('Ideal Gas RSTM')
+                !call rans_rstm_eqns%add_model('Primary Fluid Fields')
                 call rans_rstm_eqns%add_model('Ideal Gas')
                 call rans_rstm_eqns%add_model('Constant Viscosity')
                 !call rans_rstm_eqns%add_model('Sutherlands Law')
@@ -103,7 +104,8 @@ contains
                 call rans_rstm_eqns%add_model('Velocity Gradient')
                 call rans_rstm_eqns%add_model('Strain Rate')
                 call rans_rstm_eqns%add_model('Rotation Rate')
-                call rans_rstm_eqns%add_model('Wall Distance : p-Poisson Normalization')
+                !call rans_rstm_eqns%add_model('Wall Distance : p-Poisson Normalization')
+                !call rans_rstm_eqns%add_model('h Smooth')
                 !call rans_rstm_eqns%add_model('Zero Turbulent Model Fields')
                 
                 
@@ -152,11 +154,14 @@ contains
 
                 ! Add shear stress after turbulence viscosity models from SA so they are computed first
                 call rans_rstm_eqns%add_model('Reynolds Shear Stress')
+                !call rans_rstm_eqns%add_model('Self Blended Reynolds Shear Stress')
                 call rans_rstm_eqns%add_model('Temperature Gradient')
 
 
                 call rans_rstm_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
+                !call rans_rstm_eqns%add_io_field('Smoothed h Field - 2')
+                call rans_rstm_eqns%add_io_field('Turbulent Viscosity')
 
             case default
                 call chidg_signal_one(FATAL, "build_rans_rstm: I didn't recognize the &

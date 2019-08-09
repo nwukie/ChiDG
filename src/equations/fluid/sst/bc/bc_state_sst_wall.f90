@@ -95,7 +95,8 @@ contains
             invdensity
 
 
-        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3
+        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, distance_field
+        real(rk),   allocatable, dimension(:,:) :: h_sm
         real(rk) :: h(3), distance, alpha_p, y_plus
         integer(ik) :: ii, nnodes, order
 
@@ -232,6 +233,8 @@ contains
         distance = minval(abs(h))
 
 
+        h_sm = worker%h_smooth('boundary')
+        distance_field =  h_sm(:,1)*unorm_1 + h_sm(:,2)*unorm_2 + h_sm(:,3)*unorm_3
         !
         ! Store boundary condition state - Dirichlet Zero
         !
@@ -253,7 +256,7 @@ contains
         ! Set a lower bound
         !
         density_omega_lb = density_m
-        density_omega_lb = density_m*log(6.0_rk*mu_l/(density_m*sst_w_beta_k*(alpha_p*distance)**TWO+1.0e-15_rk))
+        density_omega_lb = density_m*log(6.0_rk*mu_l/(density_m*sst_w_beta_k*(alpha_p*distance_field)**TWO+1.0e-15_rk))
 
         !density_omega_m = density_omega_lb
         nnodes = size(density_omega_m)

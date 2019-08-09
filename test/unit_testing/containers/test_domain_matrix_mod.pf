@@ -212,7 +212,7 @@ contains
             end do
             
             ! Test first element, linearization block sizes
-            size1d = domain%nterms_s * domain%neqns
+            size1d = domain%nterms_s * domain%nfields
             do imat = 1,lblks(ielem,itime)%size()
                 mat = lblks(ielem,itime)%dmat(imat)
 
@@ -260,7 +260,7 @@ contains
 
             
             ! Test  linearization block sizes
-            size1d = domain%nterms_s * domain%neqns
+            size1d = domain%nterms_s * domain%nfields
             do imat = 1,lblks(ielem,itime)%size()
                 mat = lblks(ielem,itime)%dmat(imat)
 

@@ -28,34 +28,24 @@ subroutine test__detect_chimera_faces()
     type(chidg_t)           :: chidg
     character(len=100)      :: filename = 'D2E8M1_overlapping_matching.h5'
 
-
     IO_DESTINATION  = 'file'
 
 
-    !
     ! Initialize ChiDG environment
-    !
     call chidg%start_up('core')
 
 
-    !
     ! Set accuracy of the solution expansion
-    !
     call chidg%set('Solution Order', integer_input=2)
 
 
-    !
     ! Create grid file
-    !
     call create_mesh_file("D2 E8 M1 : Overlapping : Matching", filename)
 
 
-    !
     ! Read 2-Domain overlapping grid
-    !
     call chidg%read_mesh_grids(filename)
     call chidg%read_mesh_boundary_conditions(filename)
-
 
 
     call chidg%init('domains')
@@ -106,16 +96,8 @@ subroutine test__detect_chimera_faces()
     end associate
 
 
-
-    !
-    ! Close ChiDG interface
-    !
+    ! Close ChiDG interface and clean-up.
     call chidg%shut_down('core')
-
-
-    !
-    ! Clean-up
-    !
     call delete_file(filename)
 
 end subroutine test__detect_chimera_faces

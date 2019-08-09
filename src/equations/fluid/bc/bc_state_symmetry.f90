@@ -93,7 +93,7 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            normal_momentum
+            normal_momentum, normal_grad
 
         real(rk), allocatable, dimension(:) :: &
             unorm_1, unorm_2, unorm_3, r
@@ -153,9 +153,9 @@ contains
         !
         ! Get unit normal vector
         !
-        unorm_1 = worker%unit_normal(1)
-        unorm_2 = worker%unit_normal(2)
-        unorm_3 = worker%unit_normal(3)
+        unorm_1 = worker%unit_normal_ale(1)
+        unorm_2 = worker%unit_normal_ale(2)
+        unorm_3 = worker%unit_normal_ale(3)
 
 
         !   ANALYSIS
@@ -188,9 +188,9 @@ contains
         !
         ! Subtract relative normal momentum from relative momentum
         !
-        mom1_bc = mom1_m  -  TWO*normal_momentum*unorm_1
-        mom2_bc = mom2_m  -  TWO*normal_momentum*unorm_2
-        mom3_bc = mom3_m  -  TWO*normal_momentum*unorm_3
+        mom1_bc = mom1_m  -  normal_momentum*unorm_1
+        mom2_bc = mom2_m  -  normal_momentum*unorm_2
+        mom3_bc = mom3_m  -  normal_momentum*unorm_3
 
 
         !
@@ -214,22 +214,62 @@ contains
         
         
         
+        !call worker%store_bc_state('Density'   , ZERO*grad1_density_m, 'grad1')
+        !call worker%store_bc_state('Density'   , ZERO*grad2_density_m, 'grad2')
+        !call worker%store_bc_state('Density'   , ZERO*grad3_density_m, 'grad3')
+        !                                        
+        !call worker%store_bc_state('Momentum-1', ZERO*grad1_mom1_m,    'grad1')
+        !call worker%store_bc_state('Momentum-1', ZERO*grad2_mom1_m,    'grad2')
+        !call worker%store_bc_state('Momentum-1', ZERO*grad3_mom1_m,    'grad3')
+        !                                        
+        !call worker%store_bc_state('Momentum-2', ZERO*grad1_mom2_m,    'grad1')
+        !call worker%store_bc_state('Momentum-2', ZERO*grad2_mom2_m,    'grad2')
+        !call worker%store_bc_state('Momentum-2', ZERO*grad3_mom2_m,    'grad3')
+        !                                        
+        !call worker%store_bc_state('Momentum-3', ZERO*grad1_mom3_m,    'grad1')
+        !call worker%store_bc_state('Momentum-3', ZERO*grad2_mom3_m,    'grad2')
+        !call worker%store_bc_state('Momentum-3', ZERO*grad3_mom3_m,    'grad3')
+        !                                        
+        !call worker%store_bc_state('Energy'    , ZERO*grad1_energy_m,  'grad1')
+        !call worker%store_bc_state('Energy'    , ZERO*grad2_energy_m,  'grad2')
+        !call worker%store_bc_state('Energy'    , ZERO*grad3_energy_m,  'grad3')
+        
+        normal_grad = grad1_density_m*unorm_1 + grad2_density_m*unorm_2 + grad3_density_m*unorm_3
+        grad1_density_m = grad1_density_m-normal_grad*unorm_1
+        grad2_density_m = grad2_density_m-normal_grad*unorm_2
+        grad3_density_m = grad3_density_m-normal_grad*unorm_3
         call worker%store_bc_state('Density'   , grad1_density_m, 'grad1')
         call worker%store_bc_state('Density'   , grad2_density_m, 'grad2')
         call worker%store_bc_state('Density'   , grad3_density_m, 'grad3')
-                                                
+        
+        normal_grad = grad1_mom1_m*unorm_1 + grad2_mom1_m*unorm_2 + grad3_mom1_m*unorm_3
+        grad1_mom1_m = grad1_mom1_m-normal_grad*unorm_1
+        grad2_mom1_m = grad2_mom1_m-normal_grad*unorm_2
+        grad3_mom1_m = grad3_mom1_m-normal_grad*unorm_3
         call worker%store_bc_state('Momentum-1', grad1_mom1_m,    'grad1')
         call worker%store_bc_state('Momentum-1', grad2_mom1_m,    'grad2')
         call worker%store_bc_state('Momentum-1', grad3_mom1_m,    'grad3')
                                                 
+        normal_grad = grad1_mom2_m*unorm_1 + grad2_mom2_m*unorm_2 + grad3_mom2_m*unorm_3
+        grad1_mom2_m = grad1_mom2_m-normal_grad*unorm_1
+        grad2_mom2_m = grad2_mom2_m-normal_grad*unorm_2
+        grad3_mom2_m = grad3_mom2_m-normal_grad*unorm_3
         call worker%store_bc_state('Momentum-2', grad1_mom2_m,    'grad1')
         call worker%store_bc_state('Momentum-2', grad2_mom2_m,    'grad2')
         call worker%store_bc_state('Momentum-2', grad3_mom2_m,    'grad3')
                                                 
+        normal_grad = grad1_mom3_m*unorm_1 + grad2_mom3_m*unorm_2 + grad3_mom3_m*unorm_3
+        grad1_mom3_m = grad1_mom3_m-normal_grad*unorm_1
+        grad2_mom3_m = grad2_mom3_m-normal_grad*unorm_2
+        grad3_mom3_m = grad3_mom3_m-normal_grad*unorm_3
         call worker%store_bc_state('Momentum-3', grad1_mom3_m,    'grad1')
         call worker%store_bc_state('Momentum-3', grad2_mom3_m,    'grad2')
         call worker%store_bc_state('Momentum-3', grad3_mom3_m,    'grad3')
                                                 
+        normal_grad = grad1_energy_m*unorm_1 + grad2_energy_m*unorm_2 + grad3_energy_m*unorm_3
+        grad1_energy_m = grad1_energy_m-normal_grad*unorm_1
+        grad2_energy_m = grad2_energy_m-normal_grad*unorm_2
+        grad3_energy_m = grad3_energy_m-normal_grad*unorm_3
         call worker%store_bc_state('Energy'    , grad1_energy_m,  'grad1')
         call worker%store_bc_state('Energy'    , grad2_energy_m,  'grad2')
         call worker%store_bc_state('Energy'    , grad3_energy_m,  'grad3')

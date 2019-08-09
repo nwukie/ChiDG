@@ -33,7 +33,7 @@ module type_DIRK
     use mod_constants,                  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, NO_ID
     use mod_spatial,                    only: update_space
 !    use mod_update_grid,                only: update_grid
-    use mod_io,                         only: verbosity
+    use mod_io,                         only: verbosity, backend
     use mod_force,                      only: report_aerodynamics
 
     use type_time_integrator_marching,  only: time_integrator_marching_t
@@ -201,7 +201,7 @@ contains
         type(chidg_vector_t)        :: dq(nstage), q_temp, q_n, residual
         real(rk)                    :: t_n, force(3), work
         real(rk),   allocatable     :: elem_field(:)
-        integer(ik)                 :: istage, jstage, myunit, idom, ielem, ifield, eqn_ID
+        integer(ik)                 :: istage, myunit, idom, ielem, ifield
         logical                     :: exists
 
         type(DIRK_solver_controller_t),    save    :: solver_controller
@@ -223,8 +223,8 @@ contains
 !            write(myunit,*) force(1), force(2), force(3), work
 !            close(myunit)
 !        end if
-!
-!
+
+
 
 
 
@@ -241,15 +241,12 @@ contains
         end select
 
 
-        !
         ! Initialize update vector array
-        !
         do istage = 1, nstage
-
+            dq(istage) = chidg_vector(trim(backend))
             call dq(istage)%init(data%mesh, data%time_manager%ntime)
             call dq(istage)%set_ntime(data%time_manager%ntime)
             call dq(istage)%clear()
-
         end do
 
 
@@ -258,42 +255,42 @@ contains
             
             do istage = 1, nstage
 
-                !
                 ! For each stage, compute the assembly variables
                 ! Also compute the time as \f$ t = t_{n} + c_{i}*dt \f$ at the current stage
                 ! The correct time is needed for time-varying boundary conditions
-                !
                 select case(istage)
                     case(1)
                         select type(an => self%system)
                             type is (assemble_DIRK_t)
+                                an%q_n_stage = chidg_vector(trim(backend))
                                 call an%q_n_stage%init(data%mesh,data%time_manager%ntime)
                                 call an%q_n_stage%set_ntime(data%time_manager%ntime)
                                 call an%q_n_stage%clear()
-
                         end select
+
                         q_temp = q_n
                         data%time_manager%t = t_n + alpha*dt
+
                     case(2)
                         select type(an => self%system)
                             type is (assemble_DIRK_t)
                                 an%q_n_stage = (tau - alpha)*dq(1)
-
                         end select
+
                         q_temp = q_n + (tau - alpha)*dq(1)
                         data%time_manager%t = t_n + tau*dt
+
                     case(3)
                         select type(an => self%system)
                             type is (assemble_DIRK_t)
                                 an%q_n_stage = b1*dq(1) + b2*dq(2)
-
                         end select
+
                         q_temp = q_n + b1*dq(1) + b2*dq(2)
                         data%time_manager%t = t_n + dt
 
                 end select
 
-                !
                 ! Solve assembled nonlinear system, the nonlinear update is the stagewise update
                 ! System assembled in subroutine assemble
                 !
@@ -302,73 +299,13 @@ contains
                 call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner,solver_controller)
 
 
-                !
                 ! Store stagewise update
-                !
                 dq(istage) = (q - q_temp)/alpha
 
             end do
 
 
-
-
-            !
-            ! Filter
-            !
-            do idom = 1,data%mesh%ndomains()
-                do ielem = 1,data%mesh%domain(idom)%nelements()
-                    eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
-                    if (index(trim(data%eqnset(eqn_ID)%name),'Filtered Euler') /= 0) then
-                        do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
-                            
-                            !
-                            ! Get solution field
-                            !
-                            elem_field = data%sdata%q%dom(idom)%vecs(ielem)%getvar(ifield,1)
-
-                            !
-                            ! Apply spatial filtering
-                            !   : ZERO all but the constant mode
-                            !
-                            if (     index(trim(data%eqnset(eqn_ID)%name),'FP0') /= 0) then
-                                elem_field(2:size(elem_field)) = ZERO
-                            else if (index(trim(data%eqnset(eqn_ID)%name),'FP1') /= 0) then
-                                elem_field(9:size(elem_field)) = ZERO
-                            else if (index(trim(data%eqnset(eqn_ID)%name),'FP2') /= 0) then
-                                elem_field(28:size(elem_field)) = ZERO
-                            else if (index(trim(data%eqnset(eqn_ID)%name),'FP3') /= 0) then
-                                elem_field(65:size(elem_field)) = ZERO
-                            else if (index(trim(data%eqnset(eqn_ID)%name),'FP4') /= 0) then
-                                elem_field(126:size(elem_field)) = ZERO
-                            else
-
-                                ! Default, filter to piecewise constant
-                                elem_field(2:size(elem_field)) = ZERO
-
-                            end if
-
-                            !
-                            ! Add the temporal contributions in the rhs
-                            !
-                            call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ifield,1,elem_field)
-
-
-
-                        end do !ifield
-                    end if
-                end do !ielem
-            end do !idom
-
-
-
-
-
-
-
-
-            !
             ! Store end residual(change in solution)
-            !
             residual = q - q_n
             call self%residual_norm%push_back( residual%norm(ChiDG_COMM) )
 
@@ -402,90 +339,54 @@ contains
         real(rk),               intent(inout),  optional    :: timing
 
         type(chidg_vector_t)        :: delta_q 
+        type(element_info_t)        :: elem_info
         real(rk)                    :: dt
-        integer(ik)                 :: ntime, itime, idom, ielem, ivar, imat, ierr, &       
-                                       nterms, rstart, rend, cstart, cend, eqn_ID
-        real(rk),   allocatable     :: temp_1(:), temp_2(:)
+        integer(ik)                 :: itime, idom, ielem, ifield, ierr
+        real(rk),   allocatable     :: mat(:,:), values(:)
 
         associate( q   => data%sdata%q,   &
                    dq  => data%sdata%dq,  &
                    lhs => data%sdata%lhs, & 
                    rhs => data%sdata%rhs)
 
-
-
-        !
         ! Clear data containers
-        !
         call rhs%clear()
         if (differentiate) call lhs%clear()
         
-
-        !
         ! Get spatial update
-        !
         call update_space(data,differentiate,timing)
 
+        ! Get no. of time levels (=1 for time marching) and time step
+        dt = data%time_manager%dt
 
-            !
-            ! Get no. of time levels (=1 for time marching) and time step
-            !
-            ntime = data%time_manager%ntime
-            dt    = data%time_manager%dt
+        ! Used to assemble rhs
+        delta_q = (q - self%q_n - self%q_n_stage)/alpha
 
-            
-            !
-            ! Compute \f$ \Delta Q^{m}_{i}\f$
-            ! Used to assemble rhs
-            !
-            call delta_q%init(data%mesh,data%time_manager%ntime)
-            call delta_q%set_ntime(data%time_manager%ntime)
-            call delta_q%clear()
-            delta_q = (q - self%q_n - self%q_n_stage)/alpha
+        ! Add mass/dt to sub-block diagonal in dR/dQ
+        do idom = 1,data%mesh%ndomains()
+            do ielem = 1,data%mesh%domain(idom)%nelem
+                elem_info = data%mesh%get_element_info(idom,ielem)
+                do itime = 1,data%mesh%domain(idom)%ntime
+                    do ifield = 1,data%eqnset(elem_info%eqn_ID)%prop%nprimary_fields()
 
-            do itime = 1,ntime
-                do idom = 1,data%mesh%ndomains()
+                        ! Add time derivative to left-hand side
+                        if (differentiate) then
+                            mat = data%mesh%domain(idom)%elems(ielem)%mass / (alpha*dt)
+                            call data%sdata%lhs%scale_diagonal(mat,elem_info,ifield,itime)
+                        end if
 
-                    !
-                    ! Allocate temporary arrays
-                    !
-                    if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
-                    allocate(temp_1(data%mesh%domain(idom)%nterms_s), temp_2(data%mesh%domain(idom)%nterms_s), stat=ierr)
-                    if (ierr /= 0) call AllocationError
+                        ! Add time derivative to right-hand side
+                        values = matmul(data%mesh%domain(idom)%elems(ielem)%mass,delta_q%get_field(elem_info,ifield,itime))/dt
+                        call rhs%add_field(values,elem_info,ifield,itime)
 
-                    do ielem = 1,data%mesh%domain(idom)%nelem
-                        eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
-                        do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
+                    end do !ifield
+                end do !itime
+            end do !ielem
+        end do !idom
 
-                            !
-                            ! Assemble lhs
-                            !
-                            nterms = data%mesh%domain(idom)%elems(ielem)%nterms_s
-                            rstart = 1 + (ivar - 1)*nterms
-                            rend   = (rstart - 1) + nterms
-                            cstart = rstart
-                            cend   = rend
-
-
-                            ! Add mass matrix divided by (alpha*dt) to the block diagonal
-                            imat = lhs%dom(idom)%lblks(ielem,itime)%get_diagonal()
-                            if (differentiate) then
-                                lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend) = (lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)) + (data%mesh%domain(idom)%elems(ielem)%mass/(alpha*dt))
-                            end if
-
-
-                            !
-                            ! Assemble rhs
-                            !
-                            temp_1 = matmul(data%mesh%domain(idom)%elems(ielem)%mass,delta_q%dom(idom)%vecs(ielem)%getvar(ivar,itime))/dt
-                            temp_2 = rhs%dom(idom)%vecs(ielem)%getvar(ivar,itime) + temp_1
-                            call rhs%dom(idom)%vecs(ielem)%setvar(ivar,itime,temp_2)
-
-                        end do  ! ivar
-                    end do  ! ielem
-
-                end do  ! idom
-            end do  ! itime
+        ! Reassemble
+        call data%sdata%rhs%assemble()
+        if (differentiate) call data%sdata%lhs%assemble()
 
         end associate
 

@@ -87,6 +87,7 @@ contains
 
         integer(ik) :: p
         real(rk)    :: h(3), avc
+        real(rk),   allocatable :: h_s(:,:)
 
 
        
@@ -97,19 +98,21 @@ contains
         !
 
 
+        h_s = worker%h_smooth()
         
         h = worker%element_size('interior')
         p = worker%solution_order('interior')
         h = h/real(p+1,rk)
+        h_s = h_s/real(p+1,rk)
 
         mu_neg = worker%get_field('SST Artificial Viscosity k-neg'   , 'value', 'element')
         sigma_k = worker%get_field('SST sigma_k'   , 'value', 'element')
         grad1 = worker%get_field('Density * k'   , 'grad1', 'element')
         grad2 = worker%get_field('Density * k'   , 'grad2', 'element')
         grad3 = worker%get_field('Density * k'   , 'grad3', 'element')
-        flux_1 = -(h(1)**TWO*sst_avc+mu_neg*sigma_k)*grad1
-        flux_2 = -(h(2)**TWO*sst_avc+mu_neg*sigma_k)*grad2
-        flux_3 = -(h(3)**TWO*sst_avc+mu_neg*sigma_k)*grad3
+        flux_1 = -(h_s(:,1)**TWO*sst_avc+mu_neg*sigma_k)*grad1
+        flux_2 = -(h_s(:,2)**TWO*sst_avc+mu_neg*sigma_k)*grad2
+        flux_3 = -(h_s(:,3)**TWO*sst_avc+mu_neg*sigma_k)*grad3
         
         
         call worker%integrate_volume_flux('Density * k','Diffusion',flux_1,flux_2,flux_3)

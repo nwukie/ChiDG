@@ -46,11 +46,12 @@ contains
         character(*)    :: filename
         character(*)    :: patch_group
     
+        character(:),   allocatable :: user_msg
         type(chidg_t)               :: chidg
         type(file_properties_t)     :: file_props
         integer(ik)                 :: nterms_s, solution_order, group_ID, &
                                        ibc, patch_ID, face_ID, idomain_g, &
-                                       ielement_g, iface, itime, myunit
+                                       ielement_g, iface, itime, myunit, idomain_l, ielement_l
         logical                     :: exists
 
         type(chidg_worker_t)        :: worker
@@ -76,37 +77,23 @@ contains
 
         gq_rule = 3
 
-        !
         ! Initialize ChiDG environment
-        !
         call chidg%start_up('mpi')
         call chidg%start_up('core')
 
+        user_msg = "NOTE: if using a constant-viscosity model, make sure the models.nml &
+                    file with the appropriate viscosity constant is available in the &
+                    working directory. Otherwise the default viscosity will be used, &
+                    which will cause forces to be computed incorrectly."
+        call chidg_signal(WARN,user_msg)
 
-        !
         ! Get nterms_s from file
-        !
         file_props = get_properties_hdf(filename)
         nterms_s   = file_props%nterms_s(1)
-
         solution_order = 0
         do while (solution_order*solution_order*solution_order < nterms_s)
             solution_order = solution_order + 1
         end do
-
-
-
-
-
-        ! Set linear solver options to pass during initialization
-        call loptions%set('tol',1.e-9_rk)
-
-        ! Set nonlinear solver options
-        call noptions%set('tol',3.e-5_rk)
-        call noptions%set('cfl0',1.0_rk)
-        call noptions%set('nsteps',100)
-
-
 
 
         call chidg%set('Solution Order', integer_input=solution_order)
@@ -117,112 +104,62 @@ contains
 
 
 
-
-        !
         ! Initialize solution data storage
-        !
-        !
         ! Read grid data from file
-        !
         gridfile = filename
         call chidg%read_mesh(filename)
 
+        ! Read solution modes from HDF5
+        call chidg%read_fields(filename)
         
-        !
         ! Process for getting wall distance
-        !
         call chidg%process()
 
+        ! Initialize time integrator state
+        call chidg%time_integrator%initialize_state(chidg%data)
 
-        !
-        ! Read solution modes from HDF5
-        !
-        call chidg%read_fields(filename)
-        chidg%data%sdata%q = chidg%data%sdata%q_in
-
-
-
-        !
         ! Initialize Chidg Worker references
-        !
         call worker%init(chidg%data%mesh, chidg%data%eqnset(:)%prop, chidg%data%sdata, chidg%data%time_manager, cache)
 
 
 
-
-        !
-        ! Get 'Airfoil' boundary group ID
-        !
+        ! Get patch group ID and check to make sure it was found.
         group_ID = chidg%data%mesh%get_bc_patch_group_id(trim(patch_group))
+        if (group_ID == NO_ID) call chidg_signal_one(FATAL,"chidg forces: Patch was not found.", trim(patch_group))
 
 
-        !
-        ! Check if an 'Airfoil' boundary was found
-        !
-        if (group_ID == 0) call chidg_signal(FATAL,"chidg airfoil: No airfoil boundary was found.")
-
-
-
-
-        !
         ! Loop over domains/elements/faces for 'Airfoil' patches
-        !
         force(1:3) = AD_D(1)
         force(1:3) = ZERO
-        !lift = AD_D(1)
-        !drag = AD_D(1)
-        !lift = ZERO
-        !drag = ZERO
         do patch_ID = 1,chidg%data%mesh%bc_patch_group(group_ID)%npatches()
-
-            !
-            ! Loop over faces in the patch
-            !
             do face_ID = 1,chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
                 idomain_g  = chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
+                idomain_l  = chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
                 ielement_g = chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
+                ielement_l = chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
                 iface      = chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
-
-
                 call write_line(trim(patch_group), idomain_g, ielement_g, iface)
 
 
-                !
-                ! Initialize element location object
-                ! 
-                elem_info%idomain_g  = idomain_g
-                elem_info%idomain_l  = idomain_g
-                elem_info%ielement_g = ielement_g
-                elem_info%ielement_l = ielement_g
+                ! Initialize element location with worker
+                elem_info = chidg%data%mesh%get_element_info(idomain_l,ielement_l)
                 call worker%set_element(elem_info)
                 worker%itime = 1
 
-
-                !
                 ! Update the element cache and all models so they are available
-                !
                 call cache_handler%update(worker,chidg%data%eqnset,chidg%data%bc_state_group,   &
                                                                    components    = 'all',       &
                                                                    face          = NO_ID,       &
                                                                    differentiate = .false.,     &
                                                                    lift          = .true.)     
 
-
-
                 call worker%set_face(iface)
 
-
-                !
                 ! Get pressure
-                !
                 pressure = worker%get_field('Pressure', 'value', 'face interior')
 
-
-                
-                !
                 ! Get shear stress tensor
-                !
                 tau_11 = worker%get_field('Shear-11', 'value', 'face interior')
                 tau_22 = worker%get_field('Shear-22', 'value', 'face interior')
                 tau_33 = worker%get_field('Shear-33', 'value', 'face interior')
@@ -235,19 +172,14 @@ contains
                 tau_31 = tau_13
                 tau_32 = tau_23
 
-                
-                !
                 ! Add pressure component
-                !
                 tau_11 = tau_11 - pressure
                 tau_22 = tau_22 - pressure
                 tau_33 = tau_33 - pressure
 
 
-                !
                 ! Get normal vectors and reverse, because we want outward-facing vector from
                 ! the geometry.
-                !
                 norm_1  = -worker%normal(1)
                 norm_2  = -worker%normal(2)
                 norm_3  = -worker%normal(3)
@@ -257,11 +189,9 @@ contains
                 unorm_3 = -worker%unit_normal(3)
                 
 
-                !
                 ! Compute \vector{n} dot \tensor{tau}
-                !   : These should produce the same result since the tensor is 
-                !   : symmetric. Not sure which is more correct.
-                !
+                !   These should produce the same result since the tensor is 
+                !   symmetric. Not sure which is more correct.
                 !stress_x = unorm_1*tau_11 + unorm_2*tau_21 + unorm_3*tau_31
                 !stress_y = unorm_1*tau_12 + unorm_2*tau_22 + unorm_3*tau_32
                 !stress_z = unorm_1*tau_13 + unorm_2*tau_23 + unorm_3*tau_33
@@ -270,10 +200,7 @@ contains
                 stress_z = tau_31*unorm_1 + tau_32*unorm_2 + tau_33*unorm_3
 
 
-
-                !
                 ! Integrate
-                !
                 weights = worker%mesh%domain(idomain_g)%faces(ielement_g,iface)%basis_s%weights_face(iface)
                 areas   = sqrt(norm_1*norm_1 + norm_2*norm_2 + norm_3*norm_3)
 
@@ -282,17 +209,12 @@ contains
                 force(3) = force(3) + sum( stress_z * weights * areas)
 
 
-
-
-
-
             end do !iface
-
         end do !ipatch
 
 
-
         call write_line('Force: ', force(1)%x_ad_, force(2)%x_ad_, force(3)%x_ad_)
+
 
         if (IRANK == GLOBAL_MASTER) then
             inquire(file="forces.txt", exist=exists)
@@ -307,15 +229,8 @@ contains
         end if
 
 
-
-
-
-
-        !
         ! Close ChiDG
-        !
         call chidg%shut_down('core')
-
 
 
     end subroutine chidg_forces

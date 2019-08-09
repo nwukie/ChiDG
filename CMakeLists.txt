@@ -1,5 +1,6 @@
-project(chidg Fortran C)
+project(chidg Fortran C CXX)
 cmake_minimum_required(VERSION 3.7.1)
+include(ExternalProject)
 
 set(ChiDG_VERSION_MAJOR 0)
 set(ChiDG_VERSION_MINOR 2)
@@ -14,7 +15,6 @@ if ( (CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION EQUAL 6 AND CMAKE_PATC
     message(FATAL_ERROR "cmake versions 3.6.0, 3.6.1, 3.6.2, 3.7.0, and 3.7.2 have regressions that \
                          break the build. Please use a different version of cmake.")
 endif()
-
 
 
 #-----------------------------------------------------------------------------------
@@ -69,24 +69,21 @@ if (CMAKE_Fortran_COMPILER_ID MATCHES Intel)
 elseif (CMAKE_Fortran_COMPILER_ID MATCHES GNU)
 
     # Enforce gfortran minimum version requirement
-    if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS 7.0.0)
-        message(FATAL_ERROR "Require at least gfortran 7.0.0.")
+    if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS 6.3.0)
+        message(FATAL_ERROR "Require at least gfortran 6.3.0.")
     endif()
 
     # Set compile/link flags
-    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp --coverage -ffree-form \
+    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -ffree-form \
                                      -ffree-line-length-none -fbacktrace \
                                      -fstack-protector -fcheck=bounds \
-                                     -p -g")    
-    #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form \
-    #                                 -ffree-line-length-none -fexternal-blas \
-    #                                 -funroll-loops")
+                                     -g")    
     set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form \
                                      -ffree-line-length-none -fexternal-blas \
-                                     -funroll-loops -fopenmp")
+                                     -funroll-loops")
                                      #-march=native -funroll-loops")
 
-    set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-O0 --coverage")
+    set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-O0")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "-O3")
     
     set (PROFILE_FLAGS "-p -g")
@@ -103,8 +100,6 @@ if (PROFILE)
     set (CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} ${PROFILE_FLAGS}")
     set (CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} ${PROFILE_FLAGS}")
 endif()
-
-
 
 
 #----------------------------------------------------------------------------------------------
@@ -174,31 +169,50 @@ endforeach()
 message(STATUS " ")
 message(STATUS "MPI Summary:")
 set(MPI_Fortran_COMPILER $ENV{MPI_Fortran_COMPILER})
+set(MPI_C_COMPILER $ENV{MPI_C_COMPILER})
+set(MPI_CXX_COMPILER $ENV{MPI_CXX_COMPILER})
 
 
 
-find_package(MPI REQUIRED COMPONENTS Fortran)
+#find_package(MPI REQUIRED COMPONENTS Fortran)
+find_package(MPI REQUIRED COMPONENTS CXX Fortran)
 include_directories(${MPI_Fortran_INCLUDE_PATH})
+include_directories(${MPI_CXX_INCLUDE_PATH})
 
-
+message(STATUS "        " ${MPI_Fortran_LIBRARIES})
+message(STATUS "        " ${MPI_CXX_LIBRARIES})
 
 if (MPI_Fortran_FOUND)
     message(STATUS "    MPI Fortran Libraries: ")
     foreach (L ${MPI_Fortran_LIBRARIES})
         message(STATUS "        " ${L})
     endforeach()
-    message(STATUS "    MPI Include Path: ")
+    message(STATUS "    MPI Fortran Include Path: ")
     foreach (L ${MPI_Fortran_INCLUDE_PATH})
         message(STATUS "        " ${L})
     endforeach()
 endif()
 
+if (MPI_CXX_FOUND)
+    message(STATUS "    MPI CXX Libraries: ")
+    foreach (L ${MPI_CXX_LIBRARIES})
+        message(STATUS "        " ${L})
+    endforeach()
+    message(STATUS "    MPI CXX Include Path: ")
+    foreach (L ${MPI_CXX_INCLUDE_PATH})
+        message(STATUS "        " ${L})
+    endforeach()
+endif()
 
 
 # Assemble libraries in form for linking with f2py Python interface
 unset(TRIMMED_LIBRARIES)
 # Trim path and extension
 foreach(LIBFULL ${MPI_Fortran_LIBRARIES})
+    get_filename_component(LIB ${LIBFULL} NAME_WE)
+    set(TRIMMED_LIBRARIES ${TRIMMED_LIBRARIES} ${LIB})
+endforeach()
+foreach(LIBFULL ${MPI_CXX_LIBRARIES})
     get_filename_component(LIB ${LIBFULL} NAME_WE)
     set(TRIMMED_LIBRARIES ${TRIMMED_LIBRARIES} ${LIB})
 endforeach()
@@ -216,7 +230,6 @@ foreach(LIB ${MPI_Fortran_LIBRARIES})
 endforeach()
 
 
-
 #----------------------------------------------------------------------------------------------
 #                                         Find Lapack
 #----------------------------------------------------------------------------------------------
@@ -225,6 +238,7 @@ message(STATUS "BLAS/LAPACK Summary:")
 find_package(LAPACK REQUIRED)
 
 if (LAPACK_FOUND)
+    set(LAPACK_DIRECTORIES)
     message(STATUS "    LAPACK Libraries: ")
     foreach (L ${LAPACK_LIBRARIES})
         message(STATUS "        " ${L})
@@ -251,16 +265,29 @@ if (LAPACK_FOUND)
         "end program main\n")
 
 
+
     # Try compiling and running test program that uses BLAS/LAPACK routines.
     # We are checking here to make sure that the detected libraries actually
     # work on the current machine. 
-    try_run(RUN_RESULTS COMPILE_RESULTS
-            ${CMAKE_CURRENT_BINARY_DIR} ${test_lapack_file}
-            LINK_LIBRARIES ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} 
-            OUTPUT_VARIABLE out_var)
+    #
+    # NOTE: 
+    # We only try this when the project is first generated. For some reason, 
+    # if CMake needs to regenerate, it seems to remove the rpath in the compiled
+    # program, which then fails because it can't load the blas/lapack libraries.
+    # This was a problem when compiling with MKL, but not Apple Accelerate.
+    #
+    set(LAPACK_TESTED FALSE CACHE BOOL "")
+    mark_as_advanced(LAPACK_TESTED)
+    if (NOT ${LAPACK_TESTED})
+        try_run(RUN_RESULTS COMPILE_RESULTS
+                ${CMAKE_CURRENT_BINARY_DIR} ${test_lapack_file}
+                LINK_LIBRARIES ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES}
+                COMPILE_OUTPUT_VARIABLE compile_out
+                RUN_OUTPUT_VARIABLE run_out)
+    endif()
+
 
     # Interpret RUN/COMPILE results as good/bad
-    set(COMPILED_OKAY ${COMPILE_RESULTS})
     if (${RUN_RESULTS} EQUAL 0)
         set(RAN_OKAY TRUE)
     else()
@@ -269,6 +296,7 @@ if (LAPACK_FOUND)
 
     # Handle RUN/COMPILE results
     if (NOT ${COMPILED_OKAY})
+        message(STATUS ${compile_out} )
         message(SEND_ERROR "We couldn't compile a test program using the BLAS/LAPACK \
                             Libraries that were detected. You can try and influence \
                             the BLAS library that is detected using the configuration\
@@ -276,6 +304,7 @@ if (LAPACK_FOUND)
                             to use the Apple Accelerate Framework you can pass\
                             -DBLA_VENDOR=Apple during configuration.")
     elseif(NOT ${RAN_OKAY} )
+        message(STATUS ${run_out} )
         message(SEND_ERROR "A test program failed when trying to use the BLAS/LAPACK \
                             Libraries that were detected. This could mean that they \
                             are not compatible with your machine, which is possible \
@@ -287,6 +316,9 @@ if (LAPACK_FOUND)
                             -DBLA_VENDOR=Apple during configuration.")
     endif()
 
+    # If we made it through, signal that LAPACK has been tested so we don't need 
+    # to test it again, since tested in regeneration seems to fail due to rpath issues.
+    set(LAPACK_TESTED TRUE CACHE BOOL "" FORCE)
 
 endif()
 
@@ -319,52 +351,178 @@ endif()
 #                                           Find Tecplot
 # Shouldn't need user-intervention here.
 #
-# TEC_ROOT is defined as a path such that 
-#       ${TEC_ROOT}/lib/libtecio.a  
-#       ${TEC_ROOT}/include/tecio.f90 
-# are valid.
+#   TecIO MPI uses some of the header-only Boost libraries. These have
+#   been extracted from the Boost source into a Boost subset that includes
+#   only the necessary Boost files that TecIO MPI depends on. These are
+#   archived in tecio/tecio_boost.tar.gz.
 #
-# ${TEC_ROOT} gets used by the find_package(Tecplot) module.
+#   The TecIO MPI source is distributed here in tecio/teciompisrc. This is build as 
+#   a separate project and statically linked with the ChiDG executable.
+#
+#   Step 1: Unpack tecio_boost.tar
+#   Step 2: Configure and build teciompi
+#   Step 3: Set libraries variable, include directory to later link with ChiDG.
 #
 #----------------------------------------------------------------------------------------------
 message(STATUS " ")
 message(STATUS "Tecplot Summary: ")
 
-# Select TecIO library based on detected OS
-if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
-    set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/mac)
-    set(TECIO_LIBRARY_NAME libtecio.dylib)
-    add_custom_target(update_tecio_install_name 
-                      COMMAND ${CMAKE_INSTALL_NAME_TOOL} -id '@executable_path/libtecio.dylib' ${CMAKE_CURRENT_BINARY_DIR}/bin/libtecio.dylib)
-    install(FILES ${TEC_ROOT}/lib/libtecio.dylib DESTINATION lib)
-elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
-    set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/linux)
-    set(TECIO_LIBRARY_NAME libtecio.so)
-    set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
-    add_custom_target(update_tecio_install_name 
-                      COMMAND "")
-    install(FILES ${TEC_ROOT}/lib/libtecio.so DESTINATION lib)
+
+# Unpack Boost headers to support building teciompi
+set(BOOST_UNPACKED FALSE CACHE BOOL "")
+mark_as_advanced(BOOST_UNPACKED)
+if (NOT ${BOOST_UNPACKED})
+    message(STATUS "    Unpacking tecio_boost.tar.gz ...")
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/tecio/tecio_boost.tar.gz
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        )
+    message(STATUS "    Done: ${CMAKE_BINARY_DIR}/tecio_boost")
+    set(BOOST_UNPACKED TRUE CACHE BOOL "" FORCE)
 else()
-    message(SEND_ERROR "Invalid operating system detected for TecIO")
+    message(STATUS "    Boost already unpacked: ${CMAKE_BINARY_DIR}/tecio_boost")
 endif()
 
 
-find_package(Tecplot REQUIRED)
-include_directories(${TECPLOT_INCLUDE_DIR})
+set(TecIOMPICMakeArgs
+    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/teciompi
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DBOOST_ROOT=${CMAKE_BINARY_DIR}/tecio_boost
+    )
+
+
+ExternalProject_Add(
+    teciompi
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/tecio/teciompisrc
+    BINARY_DIR ${PROJECT_BINARY_DIR}/teciompi/teciompi-build
+    STAMP_DIR ${PROJECT_BINARY_DIR}/teciompi/teciompi-stamp
+    TMP_DIR ${PROJECT_BINARY_DIR}/teciompi/teciompi-tmp
+    INSTALL_DIR ${PROJECT_BINARY_DIR}/bin
+    INSTALL_COMMAND cmake -E echo "Skipping install step."
+    CMAKE_ARGS ${TecIOMPICMakeArgs}
+    EXCLUDE_FROM_ALL 1
+    )
+
+
+set(TECPLOT_LIBRARIES ${PROJECT_BINARY_DIR}/teciompi/teciompi-build/libteciompi.a "stdc++")
+include_directories(${PROJECT_SOURCE_DIR}/tecio/teciompisrc)
 
 
 
 
-# Copy tecio library to build directory so it is available
-file(COPY        "${TECIO_LIBRARY}" 
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(TECPLOT_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/bin/${TECIO_LIBRARY_NAME} "stdc++" "pthread")
 
 
-message(STATUS "    Tecplot Libraries: ")
-foreach (L ${TECPLOT_LIBRARIES})
-    message(STATUS "        " ${L})
-endforeach()
+
+#----------------------------------------------------------------------------------------------
+#                                           Find PETSc
+#----------------------------------------------------------------------------------------------
+message(STATUS " ")
+message(STATUS "PETSc Summary:")
+set(PETSC_EXECUTABLE_RUNS YES) # Override variable, since the module for petsc does not yet treat Fortran properly.
+find_package (PETSc 3.11.3 REQUIRED)
+include_directories(${PETSC_INCLUDES})
+add_definitions (${PETSC_DEFINITIONS})
+
+
+if (PETSC_FOUND)
+    message(STATUS "    PETSC Libraries: ")
+    foreach (L ${PETSC_LIBRARIES})
+        message(STATUS "        " ${L})
+    endforeach()
+    message(STATUS "    PETSC Compiler: ")
+    message(STATUS "        " ${PETSC_COMPILER})
+
+
+
+    # Write test program to file.
+    set(test_petsc_file ${CMAKE_CURRENT_BINARY_DIR}/test_petsc.f90)
+
+    # Try compiling and running test
+    # petsc/src/vec/vec/examples/tutorials/ex11f.F
+    file(WRITE ${test_petsc_file}
+        "program main\n"
+        "#include <petsc/finclude/petscvec.h>\n"
+        "   use petscvec\n"
+        "   implicit none\n"
+        "   Vec               x\n"
+        "   PetscReal         norm\n"
+        "   PetscBool         flg\n"
+        "   PetscMPIInt       rank\n"
+        "   PetscInt          n,bs,comp\n"
+        "   PetscErrorCode    ierr\n"
+        "   PetscScalar       one\n"
+        "   call PetscInitialize(PETSC_NULL_CHARACTER,ierr)\n"
+        "   print*, ierr\n"
+        "   if (ierr .ne. 0) stop\n"
+        "   call MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr)\n"
+        "   n   = 20\n"
+        "   one = 1.0\n"
+        "   call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER, '-n',n,flg,ierr)\n"
+        "   call VecCreate(PETSC_COMM_WORLD,x,ierr)\n"
+        "   call VecSetSizes(x,PETSC_DECIDE,n,ierr)\n"
+        "   bs = 2\n"
+        "   call VecSetBlockSize(x,bs,ierr)\n"
+        "   call VecSetFromOptions(x,ierr)\n"
+        "   call VecSet(x,one,ierr)\n"
+        "   call VecNorm(x,NORM_2,norm,ierr)\n"
+        "   comp = 0\n"
+        "   call VecStrideNorm(x,comp,NORM_2,norm,ierr)\n"
+        "   comp = 1\n"
+        "   call VecStrideNorm(x,comp,NORM_2,norm,ierr)\n"
+        "   call VecStrideNorm(x,comp,NORM_1,norm,ierr)\n"
+        "   call VecStrideNorm(x,comp,NORM_INFINITY,norm,ierr)\n"
+        "   call VecDestroy(x,ierr)\n"
+        "   call PetscFinalize(ierr)\n"
+        "end program main\n")
+
+
+    # Try compiling and running test program that uses PETSC routines.
+    # We are checking here to make sure that the detected libraries actually
+    # work on the current machine. 
+    set(PETSC_TESTED FALSE CACHE BOOL "")
+    mark_as_advanced(PETSC_TESTED)
+    if (NOT ${PETSC_TESTED})
+        try_run(RUN_RESULTS COMPILE_RESULTS
+                ${CMAKE_CURRENT_BINARY_DIR} ${test_petsc_file}
+                CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${PETSC_INCLUDES}"
+                COMPILE_DEFINITIONS ${CMAKE_Fortran_FLAGS_RELEASE}
+                LINK_LIBRARIES ${PETSC_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${MPI_Fortran_LIBRARIES}
+                COMPILE_OUTPUT_VARIABLE compile_out
+                RUN_OUTPUT_VARIABLE run_out)
+    endif()
+
+    # Interpret RUN/COMPILE results as good/bad
+    set(COMPILED_OKAY ${COMPILE_RESULTS})
+    if (${RUN_RESULTS} EQUAL 0)
+        set(RAN_OKAY TRUE)
+    else()
+        set(RAN_OKAY FALSE)
+    endif()
+
+    # Handle RUN/COMPILE results
+    if (NOT ${COMPILED_OKAY})
+        message(STATUS ${compile_out} )
+        message(SEND_ERROR "We couldn't compile a test program using the PETSC \
+                            Libraries that were detected.")
+    elseif(NOT ${RAN_OKAY} )
+        message(STATUS ${run_out} )
+        message(SEND_ERROR "A test program compiled but failed when trying to use the PETSC \
+                            Libraries that were detected.")
+    endif()
+
+
+    # If we made it through, signal that PETSc has been tested so we don't need 
+    # to test it again, since tested in regeneration seems to fail due to rpath issues.
+    set(PETSC_TESTED TRUE CACHE BOOL "" FORCE)
+
+
+endif()
+
+
+
+
 
 #----------------------------------------------------------------------------------------------
 #                                   Add source tree and includes
@@ -398,19 +556,22 @@ list(APPEND LIB_SRCS "${CMAKE_CURRENT_BINARY_DIR}/mod_kinds.f90")
 #                                         Build library
 #----------------------------------------------------------------------------------------------
 message(STATUS " ")
-add_library(chidg-core STATIC ${LIB_SRCS})
-add_dependencies(chidg-core update_tecio_install_name)
-target_link_libraries(chidg-core
+add_library(chidg_library STATIC ${LIB_SRCS})
+add_dependencies(chidg_library teciompi)
+target_link_libraries(chidg_library
                       ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES} 
                       ${LAPACK_LIBRARIES}
                       ${BLAS_LIBRARIES} 
                       ${TECPLOT_LIBRARIES} 
                       ${MPI_Fortran_LIBRARIES}
                       ${METIS_LIBRARIES}
+                      ${PETSC_LIBRARIES}
                       )
-set_target_properties(chidg-core PROPERTIES 
+set_target_properties(chidg_library PROPERTIES 
                              COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
-                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")
+                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}"
+                             OUTPUT_NAME   "chidg")
+
 
 
 
@@ -419,12 +580,13 @@ set_target_properties(chidg-core PROPERTIES
 #----------------------------------------------------------------------------------------------
 #                                       Build Interfaces
 #----------------------------------------------------------------------------------------------
-# Add driver executable linked to chidg-core library
-add_executable(chidg ${EXE_SRCS})
-target_link_libraries(chidg chidg-core)
-set_target_properties(chidg PROPERTIES 
+# Add driver executable linked to chidg library
+add_executable(chidg_binary ${EXE_SRCS})
+target_link_libraries(chidg_binary chidg_library)
+set_target_properties(chidg_binary PROPERTIES 
                             COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
-                            LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")
+                            LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}"
+                            OUTPUT_NAME   "chidg")
                             
 
 
@@ -447,14 +609,14 @@ file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/pychidg"
 
 # PYTHON 1:
 # Build python extension module using f2py to process opaque interfaces
-set(PYTHON_INTERFACE_MODULE _chidg_core.so)
+set(PYTHON_INTERFACE_MODULE _chidg.so)
 add_custom_command(OUTPUT ${PYTHON_INTERFACE_MODULE}
                    COMMAND f2py-f90wrap
                            -c ${PYTHON_SRCS}
-                           -m _chidg_core
+                           -m _chidg
                            --f90exec=${CMAKE_Fortran_COMPILER}
                            --build-dir "${CMAKE_BINARY_DIR}/pychidg"
-                           ${CMAKE_BINARY_DIR}/lib/libchidg-core.a
+                           ${CMAKE_BINARY_DIR}/lib/libchidg.a
                            ${METIS_LIBRARIES}
                            -L${TEC_ROOT}/lib
                            -ltecio
@@ -465,9 +627,9 @@ add_custom_command(OUTPUT ${PYTHON_INTERFACE_MODULE}
                            --link-lapack_opt
                            -I${CMAKE_BINARY_DIR}/lib
                            ${QUIET_STATUS}
-                   DEPENDS ${PYTHON_SRCS} chidg-core
+                   DEPENDS ${PYTHON_SRCS} chidg
                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pychidg
-                   COMMENT "f2py: Building Python module _chidg_core")
+                   COMMENT "f2py: Building Python module _chidg")
 
 
 # Define/configure setup.py 
@@ -503,21 +665,14 @@ install(CODE
 #----------------------------------------------------------------------------------------------
 #                                       Install targets
 #----------------------------------------------------------------------------------------------
-install(TARGETS chidg chidg-core
+install(TARGETS chidg_binary chidg_library
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
         )
 
-
 install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION include/chidg)
 
-
-# Update Tecplot rpath in installed executable so the user doesn't have to change their environment
-if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
-    set(INSTALL_SNIPPET "${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg")
-    install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
-endif()
 
 
 #----------------------------------------------------------------------------------------------
@@ -560,7 +715,6 @@ add_custom_target(
 #   An archive of pFUnit can be obtained at: https://sourceforge.net/projects/pfunit
 #
 #----------------------------------------------------------------------------------------------
-include(ExternalProject)
 
 
 if (PFUNIT_TAR)

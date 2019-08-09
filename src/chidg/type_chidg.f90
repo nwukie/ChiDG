@@ -8,13 +8,15 @@ module type_chidg
     use mod_function,               only: register_functions
     use mod_prescribed_mesh_motion_function, only: register_prescribed_mesh_motion_functions
     use mod_radial_basis_function,  only: register_radial_basis_functions
+    use mod_force,                      only: report_aerodynamics
+
 
     use mod_grid,                   only: initialize_grid
     use type_svector,               only: svector_t
     use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
     use type_chidg_data,            only: chidg_data_t
-    use type_chidg_vector,          only: chidg_vector_t, sub_chidg_vector_chidg_vector
+    use type_chidg_vector
     use type_time_integrator,       only: time_integrator_t
     use mod_time,                   only: time_manager_global
     use type_linear_solver,         only: linear_solver_t
@@ -42,7 +44,7 @@ module type_chidg
 
     use mod_hdfio
     use mod_hdf_utilities
-    use mod_tecio,                  only: write_tecio
+    use mod_tecio,                  only: write_tecio_file
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
     use mpi_f08
@@ -113,7 +115,7 @@ module type_chidg
         ! Run
         procedure       :: process
         procedure       :: run
-        procedure       :: report
+        procedure       :: reporter
 
         ! IO
         procedure       :: read_mesh
@@ -124,9 +126,8 @@ module type_chidg
         procedure       :: write_mesh
         procedure       :: read_fields
         procedure       :: write_fields
+        procedure       :: read_auxiliary_field
         procedure       :: produce_visualization
-
-
 
     end type chidg_t
     !*****************************************************************************************
@@ -148,8 +149,6 @@ contains
 
 
 
-
-
     !>  ChiDG Start-Up Activities.
     !!
     !!  activity:
@@ -164,10 +163,11 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine start_up(self,activity,comm)
+    subroutine start_up(self,activity,comm,header)
         class(chidg_t), intent(inout)           :: self
         character(*),   intent(in)              :: activity
         type(mpi_comm), intent(in), optional    :: comm
+        logical,        intent(in), optional    :: header
 
         integer(ik) :: ierr, iread
 
@@ -181,9 +181,10 @@ contains
             ! Start up ChiDG core
             case ('core')
 
+                if (.not. log_initialized) call log_init(header)
+
                 ! Call environment initialization routines by default on first init call
                 if (.not. self%envInitialized ) then
-                    call log_init()
 
                     ! Call environment initialization routines by default on first init call
                     ! Order matters here. Functions need to come first. Used by 
@@ -196,6 +197,7 @@ contains
                     call register_bcs()
                     call register_equation_builders()
                     call register_time_integrators()
+                    call register_radial_basis_functions()
                     call initialize_grid()
                     self%envInitialized = .true.
 
@@ -273,12 +275,19 @@ contains
                     call log_finalize()
                     call close_hdf()
 
+                    ! Tear down. Maybe things need deallocated from another library 
+                    ! before we deallocate here. (e.g. petsc)
+                    if (allocated(self%linear_solver))  call self%linear_solver%tear_down()
+                    if (allocated(self%preconditioner)) call self%preconditioner%tear_down()
+
+                    ! Deallocate algorithms
                     if (allocated(self%time_integrator))  deallocate(self%time_integrator)
                     if (allocated(self%preconditioner))   deallocate(self%preconditioner)
                     if (allocated(self%linear_solver))    deallocate(self%linear_solver)
                     if (allocated(self%nonlinear_solver)) deallocate(self%nonlinear_solver)
-                    call self%data%release()
 
+                    ! Release storage
+                    call self%data%release()
 
                 case default
                     call chidg_signal(FATAL,"chidg%shut_down: invalid shut_down string")
@@ -322,12 +331,31 @@ contains
 
         character(:),   allocatable :: user_msg
         character(:),   allocatable :: interpolation_in
-        integer(ik)                 :: level_in
+        integer(ik)                 :: level_in, ierr
+
+
+        ! Default interpolation set = 'Quadrature'
+        if (present(interpolation)) then
+            interpolation_in = interpolation
+        else 
+            interpolation_in = 'Quadrature'
+        end if
+
+        ! Default interpolation level = gq_rule  (from mod_io)
+        if (present(level)) then
+            level_in = level
+        else
+            level_in = gq_rule
+        end if
+
+
+
 
         select case (trim(activity))
 
             ! Call all initialization routines.
             case ('all')
+
                 ! geometry
                 call self%init('domains',interpolation,level)
 
@@ -342,8 +370,6 @@ contains
                 ! matrix/vector
                 call self%init('storage')
 
-
-
             ! Initialize domain data that depend on the solution expansion
             case ('domains')
 
@@ -352,20 +378,6 @@ contains
                             'call chidg%set('Solution Order',integer_input=my_order)' &
                             where my_order=1-7 indicates the solution order-of-accuracy."
                 if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
-
-                ! Default interpolation set = 'Quadrature'
-                if (present(interpolation)) then
-                    interpolation_in = interpolation
-                else 
-                    interpolation_in = 'Quadrature'
-                end if
-
-                ! Default interpolation level = gq_rule  (from mod_io)
-                if (present(level)) then
-                    level_in = level
-                else
-                    level_in = gq_rule
-                end if
 
                 call self%data%initialize_solution_domains(interpolation_in,level_in,self%nterms_s)
 
@@ -608,17 +620,19 @@ contains
 
         ! Read mesh motion information.
         call self%read_mesh_motions(grid_file)
-                                                      
+
 
         ! Initialize data
         call self%init('all',interpolation,level)
 
-        call self%record_mesh_size()
 
+        ! Mesh size fields + smoothing
+        call self%data%compute_area_weighted_h()
+        call self%record_mesh_size()
+        call self%data%perform_h_smoothing()
 
         call write_line('Done reading mesh.', io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
-
 
     end subroutine read_mesh
     !*****************************************************************************************
@@ -702,28 +716,34 @@ contains
 
         !!!-------------------------  REVISIT  --------------------------------!!!
         if (IRANK == GLOBAL_MASTER) then
+
             call read_global_nodes_hdf(grid_file,global_nodes)
             nnodes = size(global_nodes(:,1))
             ndoms = size(connectivities)
-            allocate(nelems_per_domain(size(connectivities)))
-            allocate(nnodes_per_domain(size(connectivities)))
+
+            allocate(nelems_per_domain(size(connectivities)), &
+                     nnodes_per_domain(size(connectivities)), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
             do idom = 1, size(connectivities)
                 nelems_per_domain(idom) = connectivities(idom)%nelements
                 nnodes_per_domain(idom) = connectivities(idom)%nnodes
             end do
+
         end if
 
 
         call MPI_Bcast(ndoms,  1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
         call MPI_Bcast(nnodes, 1, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
         if (IRANK /= GLOBAL_MASTER) then
-            allocate(nelems_per_domain(ndoms))
-            allocate(nnodes_per_domain(ndoms))
-            allocate(global_nodes(nnodes,3))
+            allocate(nelems_per_domain(ndoms), &
+                     nnodes_per_domain(ndoms), &
+                     global_nodes(nnodes,3), stat=ierr)
+            if (ierr /= 0) call AllocationError
         end if
-        call MPI_Bcast(nelems_per_domain, ndoms, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
-        call MPI_Bcast(nnodes_per_domain, ndoms, MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
-        call MPI_Bcast(global_nodes, 3*nnodes, MPI_REAL8, GLOBAL_MASTER, ChiDG_COMM, ierr)
+        call MPI_Bcast(nelems_per_domain, ndoms,    MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
+        call MPI_Bcast(nnodes_per_domain, ndoms,    MPI_INTEGER4, GLOBAL_MASTER, ChiDG_COMM, ierr)
+        call MPI_Bcast(global_nodes,      3*nnodes, MPI_REAL8,    GLOBAL_MASTER, ChiDG_COMM, ierr)
 
         call self%data%sdata%set_nelems_per_domain(nelems_per_domain)
         call self%data%sdata%set_nnodes_per_domain(nnodes_per_domain)
@@ -771,29 +791,43 @@ contains
         end do !idom
 
 
+        ! Sync
+        call self%data%mesh%comm_nelements()
+        call self%data%mesh%comm_domain_procs()
+
+
 
 
         !!!-------------------------  REVISIT  --------------------------------!!!
+        call self%data%mesh%set_nelems_per_domain(nelems_per_domain)
         call self%data%mesh%set_global_nodes(self%data%sdata%global_nodes)
-        call self%data%mesh%octree%init(32, 0.0_rk, (/1, 1, 1/), .true.)
+
+        call self%data%mesh%octree%init(8, 0.0_rk, (/1, 1, 1/), .true.)
         call write_line("   building octree...", ltrim=.false., io_proc=GLOBAL_MASTER)
         call self%data%mesh%octree%build_octree_depth_first(self%data%mesh%global_nodes)
         call write_line("   building octree - completed...", ltrim=.false., io_proc=GLOBAL_MASTER)
         call self%data%construct_rbf_arrays()
 
+
         ! Wait for all processors to finish initializing their meshes, then communicate RBF info.
         nelems = sum(nelems_per_domain)
-        allocate(rbf_center_recv(nelems,3))
-        allocate(rbf_radius_recv(nelems,3))
+        allocate(rbf_center_recv(nelems,3), &
+                 rbf_radius_recv(nelems,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
-        rbf_center_recv = ZERO
-        rbf_radius_recv = ZERO
+        call write_line("   communicating RBF arrays...", ltrim=.false., io_proc=GLOBAL_MASTER)
         rbf_center_sendv = self%data%sdata%rbf_center
         rbf_radius_sendv = self%data%sdata%rbf_radius
-        call MPI_Allreduce(rbf_center_sendv, rbf_center_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
-        call MPI_Allreduce(rbf_radius_sendv, rbf_radius_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
+        call MPI_AllReduce(rbf_center_sendv, rbf_center_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
+        call MPI_AllReduce(rbf_radius_sendv, rbf_radius_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
         self%data%sdata%rbf_center = rbf_center_recv
         self%data%sdata%rbf_radius = rbf_radius_recv
+        call write_line("   communicating RBF arrays - completed...", ltrim=.false., io_proc=GLOBAL_MASTER)
+
+        call write_line("   finding RBF connectivities...", ltrim=.false., io_proc=GLOBAL_MASTER)
+        call self%data%find_who_rbfs_touch() 
+        call write_line("   finding RBF connectivities - done...", ltrim=.false., io_proc=GLOBAL_MASTER)
+
         !!!-------------------------  REVISIT  --------------------------------!!!
 
 
@@ -851,7 +885,6 @@ contains
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
         end do
-
 
 
         ! Add all boundary condition state groups
@@ -978,8 +1011,8 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine read_fields(self,file_name)
-        class(chidg_t),     intent(inout)   :: self
-        character(*),       intent(in)      :: file_name
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: file_name
 
         call write_line(' ',                            ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line(' Reading solution... ',        ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -995,6 +1028,36 @@ contains
     !*****************************************************************************************
 
 
+
+
+
+
+    !>  Read fields from file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  solutionfile    String containing a solution file name, including extension.
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine read_auxiliary_field(self,file_name,field,store_as)
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: file_name
+        character(*),       intent(in)              :: field
+        character(*),       intent(in)              :: store_as
+
+        call write_line(' ',                            ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line(' Reading solution... ',        ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('   reading from: ', file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
+
+        ! Read solution from hdf file
+        call read_auxiliary_field_hdf(file_name,self%data,field,store_as)
+
+        call write_line('Done reading solution.', io_proc=GLOBAL_MASTER)
+        call write_line(' ', ltrim=.false.,       io_proc=GLOBAL_MASTER)
+
+    end subroutine read_auxiliary_field
+    !*****************************************************************************************
 
 
 
@@ -1239,7 +1302,7 @@ contains
 
         ! Write solution
         solution_file_prefix = get_file_prefix(solution_file,'.h5')
-        call write_tecio(self%data,solution_file_prefix, write_domains=.true., write_surfaces=.true.)
+        call write_tecio_file(self%data,solution_file_prefix, write_domains=.true., write_surfaces=.true.)
 
 
         call write_line("Done writing visualization.", io_proc=GLOBAL_MASTER)
@@ -1330,15 +1393,17 @@ contains
     !!  @date   2/7/2017
     !!
     !------------------------------------------------------------------------------------------
-    subroutine run(self, write_initial, write_final)
+    subroutine run(self, write_initial, write_final, write_tecio)
         class(chidg_t), intent(inout)           :: self
         logical,        intent(in), optional    :: write_initial
         logical,        intent(in), optional    :: write_final
+        logical,        intent(in), optional    :: write_tecio
 
         character(100)              :: filename
-        character(:),   allocatable :: prefix
-        integer(ik)                 :: istep, nsteps, wcount, iread, ierr
-        logical                     :: option_write_initial, option_write_final
+        character(:),   allocatable :: prefix, tecio_file_prefix
+        integer(ik)                 :: istep, nsteps, wcount, iread, ierr, myunit
+        logical                     :: option_write_initial, option_write_final, option_write_tecio, exists
+        real(rk)                    :: force(3), work
 
         class(chidg_t), pointer :: chidg
     
@@ -1363,8 +1428,10 @@ contains
         ! Check optional incoming parameters
         option_write_initial = .false.
         option_write_final   = .true.
+        option_write_tecio   = .false.
         if (present(write_initial)) option_write_initial = write_initial
         if (present(write_final))   option_write_final   = write_final
+        if (present(write_tecio))   option_write_tecio   = write_tecio
 
 
         ! Write initial solution
@@ -1394,13 +1461,25 @@ contains
         nsteps = self%data%time_manager%nsteps
         call write_line("Step","System residual", columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
         do istep = 1,nsteps
+
+
+            ! Report to file: report from mod_io
+            call self%reporter(report)
+
             
             ! Call time integrator to take a step. 
             call self%time_integrator%step(self%data,               &
                                            self%nonlinear_solver,   &
                                            self%linear_solver,      &
                                            self%preconditioner)
+
+
+            if (istep == nsteps) then
+                call self%reporter(report)
+            end if
+
            
+
             ! Write solution every nwrite steps
             if (wcount == self%data%time_manager%nwrite) then
                 if (self%data%time_manager%t < 1.) then
@@ -1415,15 +1494,39 @@ contains
 
             ! Print diagnostics
             call write_line("TIME INTEGRATOR", istep, self%time_integrator%residual_norm%at(istep), io_proc=GLOBAL_MASTER)
-
             wcount = wcount + 1
 
         end do !istep
+
 
         ! Write the final solution to hdf file
         if (option_write_final) then
             call self%write_mesh(solutionfile_out)
             call self%write_fields(solutionfile_out)
+        end if
+
+
+        ! Write tecio visualization 
+        if (option_write_tecio) then
+
+            ! Initialize interpolation to Uniform for TecIO output.
+            call self%init('all','Uniform',level=OUTPUT_RES)
+
+            ! Re-initialize solution and process for output
+            call self%read_fields(solutionfile_out)
+
+            ! Prerun processing
+            !   : Getting/computing auxiliary fields etc.
+            call self%process()
+
+            ! Get post processing data (q_in -> q -> q_out)
+            call self%time_integrator%initialize_state(self%data)
+            call self%time_integrator%process_data_for_output(self%data)
+
+            ! Write solution
+            tecio_file_prefix = get_file_prefix(solutionfile_out,'.h5')
+            call write_tecio_file(self%data, tecio_file_prefix, write_domains=.true., write_surfaces=.true.)
+
         end if
 
     end subroutine run
@@ -1446,39 +1549,57 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine report(self,selection)
+    subroutine reporter(self,selection)
         class(chidg_t), intent(inout)   :: self
         character(*),   intent(in)      :: selection
 
-        integer(ik) :: ireport, ierr
+        integer(ik) :: ireport, ierr, myunit
+        real(rk)    :: force(3), work
+        logical     :: exists
 
 
-        if ( trim(selection) == 'before' ) then
+        select case(trim(selection))
+            case ('before') 
 
+                do ireport = 0,NRANK-1
+                    if ( ireport == IRANK ) then
+                        call write_line('MPI Rank: ', IRANK, io_proc=IRANK)
+                        call self%data%report('grid')
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
+                end do
 
-            do ireport = 0,NRANK-1
-                if ( ireport == IRANK ) then
-                    call write_line('MPI Rank: ', IRANK, io_proc=IRANK)
-                    call self%data%report('grid')
+            case ('after')
+
+                if ( IRANK == GLOBAL_MASTER ) then
+                    !call self%time_integrator%report()
+                    call self%nonlinear_solver%report()
+                    !call self%preconditioner%report()
                 end if
-                call MPI_Barrier(ChiDG_COMM,ierr)
-            end do
+
+            case ('aerodynamics')
+
+                call report_aerodynamics(self%data,'Airfoil',force=force, work=work)
+                if (IRANK == GLOBAL_MASTER) then
+                    inquire(file="aero.txt", exist=exists)
+                    if (exists) then
+                        open(newunit=myunit, file="aero.txt", status="old", position="append",action="write")
+                    else
+                        open(newunit=myunit, file="aero.txt", status="new",action="write")
+                        write(myunit,*) 'force-1', 'force-2', 'force-3', 'work'
+                    end if
+                    write(myunit,*) force(1), force(2), force(3), work
+                    close(myunit)
+                end if
+
+            case default
 
 
-        else if ( trim(selection) == 'after' ) then
-
-            if ( IRANK == GLOBAL_MASTER ) then
-                !call self%time_integrator%report()
-                call self%nonlinear_solver%report()
-                !call self%preconditioner%report()
-            end if
-
-        end if
+        end select
 
 
-    end subroutine report
+    end subroutine reporter
     !*****************************************************************************************
-
 
 
 
@@ -1525,6 +1646,13 @@ contains
 
         self%data%sdata%mesh_size_vertex = recv
 
+        recv = ZERO
+        sendv = self%data%sdata%sum_mesh_h_vertex
+        call MPI_Allreduce(sendv, recv, 3*nnodes, MPI_REAL8, MPI_MAX,ChiDG_COMM, ierr)
+
+        self%data%sdata%sum_mesh_h_vertex = recv
+
+
         if (allocated(sendv_r)) deallocate(sendv_r)
         if (allocated(recv_r)) deallocate(recv_r)
         allocate(sendv_r(nnodes))
@@ -1556,12 +1684,14 @@ contains
         do inode = 1, size(recv_i)
             if (self%data%sdata%num_elements_touching_vertex(inode) /= 0) then
                 self%data%sdata%avg_mesh_size_vertex(inode) = self%data%sdata%sum_mesh_size_vertex(inode)/real(self%data%sdata%num_elements_touching_vertex(inode), rk)
+                self%data%sdata%avg_mesh_h_vertex(inode,:) = self%data%sdata%sum_mesh_h_vertex(inode,:)/real(self%data%sdata%num_elements_touching_vertex(inode), rk)
             end if
 
         end do
 
     end subroutine record_mesh_size 
     !********************************************************************************
+
 
 
 
@@ -1584,21 +1714,22 @@ contains
         type(chidg_vector_t), allocatable    :: q_diff
         real(rk)                            :: error_val, local_error_val
 
-        integer(ik)                         :: ndom, nelems, neqns, nterms, idom, ielem, iterm, ieqn
+        integer(ik)                         :: ndom, nelems, nfields, nterms, idom, ielem, iterm, ieqn
         real(rk), allocatable               :: temp(:)
         q_diff = q_ref
-        q_diff = sub_chidg_vector_chidg_vector(self%data%sdata%q,q_ref)
+        !q_diff = sub_chidg_vector_chidg_vector(self%data%sdata%q,q_ref)
+        q_diff = self%data%sdata%q - q_ref
         error_val = ZERO
         !error_val = q_diff%norm_local()
 
         ndom = self%data%mesh%ndomains()
         do idom = 1, ndom
-            nelems = self%data%mesh%domain(idom)%nelem
-            neqns = self%data%mesh%domain(idom)%neqns
-            nterms = self%data%mesh%domain(idom)%nterms_s
+            nelems  = self%data%mesh%domain(idom)%nelem
+            nfields = self%data%mesh%domain(idom)%nfields
+            nterms  = self%data%mesh%domain(idom)%nterms_s
             do ielem = 1, nelems
                 local_error_val = ZERO
-                do ieqn = 1, neqns
+                do ieqn = 1, nfields
                     temp = &
                         matmul(self%data%mesh%domain(idom)%elems(ielem)%basis_s%interpolator_element('Value'),&
                     q_diff%dom(idom)%vecs(ielem)%vec((ieqn-1)*nterms+1:ieqn*nterms))

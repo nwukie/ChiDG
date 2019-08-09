@@ -1,6 +1,6 @@
 module bc_state_HP_extrapolate
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO
+    use mod_constants,      only: ZERO, ONE
     use type_bc_state,      only: bc_state_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -38,21 +38,11 @@ contains
     subroutine init(self)    
         class(HP_extrapolate_t),  intent(inout)   :: self
 
-        !
-        ! Set name
-        !
         call self%set_name('HP Extrapolate')
         call self%set_family('Scalar')
 
-
     end subroutine init
     !******************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -81,7 +71,8 @@ contains
             grad1_u_bc, grad2_u_bc, grad3_u_bc,     &
             grad1_p_bc, grad2_p_bc, grad3_p_bc,     &
             grad1_q_bc, grad2_q_bc, grad3_q_bc,     &
-            grad1_r_bc, grad2_r_bc, grad3_r_bc, gradu_normal
+            grad1_r_bc, grad2_r_bc, grad3_r_bc, gradu_normal, gradu_normal_old, gradu_normal_new, gradu_tang, &
+            pt_bc, qt_bc, rt_bc, mag
 
         real(rk), allocatable, dimension(:) :: unorm_1, unorm_2, unorm_3
                     
@@ -112,6 +103,7 @@ contains
         grad3_r_bc = worker%get_field('r','grad3', 'face interior')
 
 
+! Homogeneous Neumann
         ! Get normal component of gradient
         unorm_1 = worker%unit_normal(1)
         unorm_2 = worker%unit_normal(2)
@@ -122,6 +114,59 @@ contains
         p_bc = p_bc - gradu_normal*unorm_1
         q_bc = q_bc - gradu_normal*unorm_2
         r_bc = r_bc - gradu_normal*unorm_3
+
+
+!!! Extrapolate tangential gradient
+!        ! Get normal component of gradient
+!        unorm_1 = worker%unit_normal(1)
+!        unorm_2 = worker%unit_normal(2)
+!        unorm_3 = worker%unit_normal(3)
+!        gradu_normal_old = p_bc*unorm_1 + q_bc*unorm_2 + r_bc*unorm_3
+!
+!
+!        ! Subtract from total to get tangential
+!        pt_bc = p_bc - gradu_normal_old*unorm_1
+!        qt_bc = q_bc - gradu_normal_old*unorm_2
+!        rt_bc = r_bc - gradu_normal_old*unorm_3
+!
+!
+!        ! Magnitude of tangential
+!        gradu_tang = sqrt(pt_bc*pt_bc + qt_bc*qt_bc + rt_bc*rt_bc + 1.e-6_rk)
+!
+!
+!        ! If we want the magnitude of the gradient to be 1, and we are extrapolating the tangential part, scale the normal part
+!        ! so that the total equals 1
+!        gradu_normal_new = ONE - gradu_tang
+!
+!
+!
+!        ! Add scaled normal component
+!!        p_bc = p_bc*(gradu_normal_new/gradu_normal_old)
+!!        q_bc = q_bc*(gradu_normal_new/gradu_normal_old)
+!!        r_bc = r_bc*(gradu_normal_new/gradu_normal_old)
+!
+!        p_bc = pt_bc + gradu_normal_new*worker%unit_normal(1)
+!        q_bc = qt_bc + gradu_normal_new*worker%unit_normal(2)
+!        r_bc = rt_bc + gradu_normal_new*worker%unit_normal(3)
+!
+!
+!
+!
+!! Scaled magnitude
+!        ! Get normal component of gradient
+!        unorm_1 = worker%unit_normal(1)
+!        unorm_2 = worker%unit_normal(2)
+!        unorm_3 = worker%unit_normal(3)
+!        gradu_normal_old = p_bc*unorm_1 + q_bc*unorm_2 + r_bc*unorm_3
+!
+!        mag = sqrt(p_bc*p_bc + q_bc*q_bc + r_bc*r_bc + 1.e-6_rk)
+!
+!        ! Subtract from total to get tangential
+!        p_bc = p_bc/mag
+!        q_bc = q_bc/mag
+!        r_bc = r_bc/mag
+
+
 
 
         !

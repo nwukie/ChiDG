@@ -117,25 +117,18 @@ contains
         type(AD_D), dimension(:),   allocatable :: &
             viscosity, T
 
-        !
         ! Interpolate solution to quadrature nodes
-        !
         T = worker%get_field('Temperature','value')
     
 
-        !
         ! Constant Viscosity for Laminar Viscosity
         !   - initialize derivatives first...
-        !
         viscosity = T
         viscosity = self%mu
 
 
-        !
         ! Contribute laminar viscosity
-        !
         call worker%store_model_field('Laminar Viscosity', 'value', viscosity)
-
 
     end subroutine compute
     !***************************************************************************************

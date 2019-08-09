@@ -134,9 +134,9 @@ contains
         !
         ! Get unit normal vector
         !
-        unorm_1 = worker%unit_normal(1)
-        unorm_2 = worker%unit_normal(2)
-        unorm_3 = worker%unit_normal(3)
+        unorm_1 = worker%unit_normal_ale(1)
+        unorm_2 = worker%unit_normal_ale(2)
+        unorm_3 = worker%unit_normal_ale(3)
 
 
         !   ANALYSIS

@@ -91,26 +91,26 @@ contains
         type(mpi_comm),             intent(in)      :: bc_COMM
 
 
-        type(AD_D), allocatable, dimension(:)   :: u_bc, grad1u_bc, grad2u_bc, grad3u_bc
+        type(AD_D), allocatable, dimension(:)   :: u_bc, grad1u_bc, grad2u_bc, grad3u_bc, grad1u_t, grad2u_t, grad3u_t
         real(rk),   allocatable, dimension(:)   :: normal_gradient
 
 
         !
         ! Get 'u' value from face interior to extrapolate
         !
-        u_bc = worker%get_field('u', 'value', 'face interior')
+        u_bc      = worker%get_field('u', 'value', 'face interior')
+        grad1u_bc = worker%get_field('u', 'grad1', 'face interior')
+        grad2u_bc = worker%get_field('u', 'grad2', 'face interior')
+        grad3u_bc = worker%get_field('u', 'grad3', 'face interior')
 
 
         !
         ! Initialize derivative arrays
         !
-        grad1u_bc = ZERO*u_bc
-        grad2u_bc = ZERO*u_bc
-        grad3u_bc = ZERO*u_bc
 
-
-        
-        ! Retrieve normal gradient and get components
+        ! Normal gradient by taking advantage of the fact that only the normal component
+        ! is felt in the flux anyways since it is dotted with the normal vector. So, just
+        ! compose the boundary gradient from the normal component of the gradient.
         normal_gradient = self%bcproperties%compute("Normal Gradient",worker%time(),worker%coords())
         grad1u_bc = normal_gradient*worker%unit_normal(1)
         grad2u_bc = normal_gradient*worker%unit_normal(2)
@@ -118,15 +118,27 @@ contains
 
 
 
+!        ! Normal gradient by extrapolating tangential and adding back normal
+!        normal_gradient = self%bcproperties%compute("Normal Gradient",worker%time(),worker%coords())
+!
+!
+!        ! Subtract the normal component of the gradient to leave the tangential part
+!        grad1u_t = grad1u_bc - (grad1u_bc*worker%unit_normal(1))*worker%unit_normal(1)
+!        grad2u_t = grad2u_bc - (grad2u_bc*worker%unit_normal(2))*worker%unit_normal(2)
+!        grad3u_t = grad3u_bc - (grad3u_bc*worker%unit_normal(3))*worker%unit_normal(3)
+!
+!
+!        ! Add back the prescribed normal component of the gradient to the tangential part to get the total
+!        grad1u_bc = grad1u_t + normal_gradient*worker%unit_normal(1)
+!        grad2u_bc = grad2u_t + normal_gradient*worker%unit_normal(2)
+!        grad3u_bc = grad3u_t + normal_gradient*worker%unit_normal(3)
+
+
         ! Store
         call worker%store_bc_state('u', u_bc,      'value')
         call worker%store_bc_state('u', grad1u_bc, 'grad1')
         call worker%store_bc_state('u', grad2u_bc, 'grad2')
         call worker%store_bc_state('u', grad3u_bc, 'grad3')
-
-
-
-
 
 
     end subroutine compute_bc_state

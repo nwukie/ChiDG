@@ -72,7 +72,7 @@ contains
             case('default')
                 call euler_ani_av_eqns%add_operator('Euler Volume Flux')
                 call euler_ani_av_eqns%add_operator('Euler Boundary Average Flux')
-                call euler_ani_av_eqns%add_operator('Euler Roe Flux')
+                call euler_ani_av_eqns%add_operator('Euler Regularized Roe Flux')
                 call euler_ani_av_eqns%add_operator('Euler BC Flux')
                 call euler_ani_av_eqns%add_operator('Euler Volume Cylindrical Source')
 
@@ -80,46 +80,16 @@ contains
                 call euler_ani_av_eqns%add_operator('Fluid Laplacian Anisotropic AV Boundary Average Operator')
                 call euler_ani_av_eqns%add_operator('Fluid Laplacian Anisotropic AV BC Operator')
 
-                call euler_ani_av_eqns%add_model('Ideal Gas')
-                !call euler_ani_av_eqns%add_model('Constant Viscosity')
+                call euler_ani_av_eqns%add_model('Regularized Fluid Primary Fields')
+                call euler_ani_av_eqns%add_model('Regularized Ideal Gas')
                 call euler_ani_av_eqns%add_model('Pressure Gradient')
                 call euler_ani_av_eqns%add_model('Velocity Gradient')
                 call euler_ani_av_eqns%add_model('Velocity Divergence and Curl')
                 call euler_ani_av_eqns%add_model('Critical Sound Speed')
                 call euler_ani_av_eqns%add_model('MNPH Shock Sensor')
-                call euler_ani_av_eqns%add_model('MNPHA Artificial Viscosity')
-
-                !call euler_ani_av_eqns%add_model('MNP Shock Sensor')
-                !call euler_ani_av_eqns%add_model('MNP Artificial Viscosity')
-                !call euler_ani_av_eqns%add_model('Unsmoothed Artificial Viscosity')
-                !call euler_ani_av_eqns%add_model('Vertex Smoothed MNP Artificial Viscosity')
-                !call euler_ani_av_eqns%add_model('Stokes Hypothesis')
-                !call euler_ani_av_eqns%add_model('Reynolds Analogy')
-                !call euler_ani_av_eqns%add_model('Zero Turbulent Model Fields')
-                !call euler_ani_av_eqns%add_model('Zero Reynolds Stress')
-                !call euler_ani_av_eqns%add_model('Shear Stress')
-                !call euler_ani_av_eqns%add_model('Temperature Gradient')
-                !call euler_ani_av_eqns%add_model('Fluid Advection Velocity')
-                !call euler_ani_av_eqns%add_model('Sutherlands Law')
-
+                call euler_ani_av_eqns%add_model('MNPH Artificial Viscosity')
 
                 call euler_ani_av_eqns%add_pseudo_timestep(fluid_pseudo_time)
-
-
-!                call euler_ani_av_eqns%add_operator('Geometric Conservation Volume Operator')
-!                call euler_ani_av_eqns%add_operator('Geometric Conservation Boundary Average Operator')
-!                call euler_ani_av_eqns%add_operator('Geometric Conservation BC Operator')
-
-
-                call euler_ani_av_eqns%add_io_field('MNPH Shock Sensor')
-                !call euler_ani_av_eqns%add_io_field('Artificial Bulk Viscosity')
-                !call euler_ani_av_eqns%add_io_field('Artificial Viscosity')
-                !call euler_ani_av_eqns%add_io_field('Artificial Thermal Conductivity')
-                !call euler_ani_av_eqns%add_io_field('RBF Smoothed Artificial Bulk Viscosity')
-                call euler_ani_av_eqns%add_io_field('Smoothed Anisotropic Artificial Viscosity - 1')
-                call euler_ani_av_eqns%add_io_field('Smoothed Anisotropic Artificial Viscosity - 2')
-                call euler_ani_av_eqns%add_io_field('Smoothed Anisotropic Artificial Viscosity - 3')
-                !call euler_ani_av_eqns%add_io_field('RBF Smoothed Artificial Thermal Conductivity')
 
             case default
                 call chidg_signal_one(FATAL, "build_euler_ani_av: I didn't recognize the &

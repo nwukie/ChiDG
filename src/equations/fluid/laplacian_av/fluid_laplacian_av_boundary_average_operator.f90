@@ -109,8 +109,8 @@ contains
 
 
 
-        av_m  = worker%get_field('Smoothed Artificial Viscosity'    , 'value', 'face interior')
-        av_p  = worker%get_field('Smoothed Artificial Viscosity'    , 'value', 'face exterior')
+        av_m  = worker%get_field('Artificial Viscosity'    , 'value', 'face interior')
+        av_p  = worker%get_field('Artificial Viscosity'    , 'value', 'face exterior')
 
 
         if (any(ieee_is_nan(av_m(:)%x_ad_))) print *, 'smoothed av_m is nan'

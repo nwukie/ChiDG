@@ -1,7 +1,7 @@
 module SD_boundary_operator
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ZERO,ONE,TWO,HALF
+    use mod_constants,              only: ZERO,ONE,TWO,HALF,INTERIOR,CHIMERA
     use type_operator,              only: operator_t
     use type_chidg_worker,          only: chidg_worker_t
     use type_properties,            only: properties_t
@@ -97,6 +97,8 @@ contains
 
         real(rk),   allocatable, dimension(:)   :: r
 
+        integer(ik) :: ChiID, idonor
+
         r = worker%coordinate('1','face interior')
     
 
@@ -119,15 +121,14 @@ contains
         mu_p = worker%get_field('Scalar Diffusion Coefficient', 'value', 'face exterior')
 
 
-        !flux_1_m = -mu_m*grad1_u_m  -  (100._rk*r + 200._rk + 100._rk/r)
         flux_1_m = -mu_m*grad1_u_m
         flux_2_m = -mu_m*grad2_u_m
         flux_3_m = -mu_m*grad3_u_m
 
-        !flux_1_p = -mu_p*grad1_u_p  -  (100._rk*r + 200._rk + 100._rk/r)
         flux_1_p = -mu_p*grad1_u_p
         flux_2_p = -mu_p*grad2_u_p
         flux_3_p = -mu_p*grad3_u_p
+
 
 
         !

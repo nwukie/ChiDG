@@ -1,11 +1,11 @@
 module bc_state_outlet_neumann_LODI_localdg
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, HALF, TWO, FOUR, NFACES, ME
+    use mod_constants,          only: ZERO, ONE, HALF, TWO, FOUR, NFACES, ME, NO_ID
     use mod_fluid,              only: gam, Rgas
 
     use type_mesh,              only: mesh_t
-    use type_face_info,         only: face_info_t
+    use type_element_info,      only: element_info_t, element_info
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -208,7 +208,7 @@ contains
 
         type(AD_D)          :: face_p, face_c, face_density, face_M1, face_M2, face_M3, &
                                p_integral, c_integral, density_integral, M1_integral, M2_integral, M3_integral
-        type(face_info_t)   :: face_info
+        type(element_info_t)    :: coupled_element
 
         type(AD_D), allocatable,    dimension(:)    :: pressure, density, mom1, mom2, mom3, energy, c, M1, M2, M3
         real(rk),   allocatable,    dimension(:)    :: weights, areas, r
@@ -216,7 +216,7 @@ contains
         integer(ik) :: ipatch, iface_bc, idomain_l, ielement_l, iface, ierr, itime, &
                        idensity, imom1, imom2, imom3, ienergy, group_ID, patch_ID, face_ID, &
                        icoupled, idomain_g_coupled, idomain_l_coupled, ielement_g_coupled,  &
-                       ielement_l_coupled, iface_coupled
+                       ielement_l_coupled, iface_coupled, coupled_iface
         real(rk)    :: face_area, total_area
 
 
@@ -250,11 +250,28 @@ contains
             ielement_l_coupled = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled)
             iface_coupled      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(     icoupled)
 
-            face_info%idomain_g  = idomain_g_coupled
-            face_info%idomain_l  = idomain_l_coupled
-            face_info%ielement_g = ielement_g_coupled
-            face_info%ielement_l = ielement_l_coupled
-            face_info%iface      = iface_coupled
+            coupled_element = element_info(idomain_g       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(icoupled),        &
+                                           idomain_l       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(icoupled),        &
+                                           ielement_g      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icoupled),       &
+                                           ielement_l      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled),       &
+                                           iproc           = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(icoupled),             &
+                                           pelem_ID        = NO_ID,                                                                                             &
+                                           eqn_ID          = NO_ID,                                                                                             &
+                                           nfields         = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nfields(icoupled),          &
+                                           ntime           = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ntime(icoupled),            &
+                                           nterms_s        = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(icoupled),         &
+                                           nterms_c        = 0,                                                                                                 &
+                                           dof_start       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(icoupled),        &
+                                           dof_local_start = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_local_start(icoupled),  &
+                                           recv_comm       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(icoupled),        &
+                                           recv_domain     = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(icoupled),      &
+                                           recv_element    = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(icoupled),     &
+                                           recv_dof        = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_dof(icoupled))
+
+            coupled_iface = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(icoupled)
+
+
+
 
 
             ! Get solution
@@ -266,11 +283,11 @@ contains
             itime    = 1
 
             ! Interpolate coupled element solution on face of coupled element
-            density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, idensity, itime, 'value', ME)
-            mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom1,    itime, 'value', ME)
-            mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom2,    itime, 'value', ME)
-            mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom3,    itime, 'value', ME)
-            energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, ienergy,  itime, 'value', ME)
+            density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,coupled_element,worker%function_info,coupled_iface, idensity, itime, 'value', ME)
+            mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,coupled_element,worker%function_info,coupled_iface, imom1,    itime, 'value', ME)
+            mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,coupled_element,worker%function_info,coupled_iface, imom2,    itime, 'value', ME)
+            mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,coupled_element,worker%function_info,coupled_iface, imom3,    itime, 'value', ME)
+            energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,coupled_element,worker%function_info,coupled_iface, ienergy,  itime, 'value', ME)
 
             if (worker%coordinate_system() == 'Cylindrical') then
                 mom2 = mom2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%interp_coords_def(:,1)
@@ -572,23 +589,23 @@ contains
 
         else
 
-            grad1_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 1, worker%itime, 'grad1', ME)
-            grad1_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 2, worker%itime, 'grad1', ME)
-            grad1_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 3, worker%itime, 'grad1', ME)
-            grad1_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 4, worker%itime, 'grad1', ME)
-            grad1_energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 5, worker%itime, 'grad1', ME)
+            grad1_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 1, worker%itime, 'grad1', ME)
+            grad1_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 2, worker%itime, 'grad1', ME)
+            grad1_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 3, worker%itime, 'grad1', ME)
+            grad1_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 4, worker%itime, 'grad1', ME)
+            grad1_energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 5, worker%itime, 'grad1', ME)
 
-            grad2_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 1, worker%itime, 'grad2', ME)
-            grad2_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 2, worker%itime, 'grad2', ME)
-            grad2_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 3, worker%itime, 'grad2', ME)
-            grad2_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 4, worker%itime, 'grad2', ME)
-            grad2_energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 5, worker%itime, 'grad2', ME)
+            grad2_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 1, worker%itime, 'grad2', ME)
+            grad2_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 2, worker%itime, 'grad2', ME)
+            grad2_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 3, worker%itime, 'grad2', ME)
+            grad2_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 4, worker%itime, 'grad2', ME)
+            grad2_energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 5, worker%itime, 'grad2', ME)
 
-            grad3_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 1, worker%itime, 'grad3', ME)
-            grad3_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 2, worker%itime, 'grad3', ME)
-            grad3_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 3, worker%itime, 'grad3', ME)
-            grad3_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 4, worker%itime, 'grad3', ME)
-            grad3_energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 5, worker%itime, 'grad3', ME)
+            grad3_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 1, worker%itime, 'grad3', ME)
+            grad3_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 2, worker%itime, 'grad3', ME)
+            grad3_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 3, worker%itime, 'grad3', ME)
+            grad3_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 4, worker%itime, 'grad3', ME)
+            grad3_energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 5, worker%itime, 'grad3', ME)
 
         end if
 
@@ -699,20 +716,20 @@ contains
 
         else
 
-            grad1_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 1, worker%itime, 'grad1', ME)
-            grad1_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 2, worker%itime, 'grad1', ME)
-            grad1_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 3, worker%itime, 'grad1', ME)
-            grad1_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 4, worker%itime, 'grad1', ME)
+            grad1_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 1, worker%itime, 'grad1', ME)
+            grad1_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 2, worker%itime, 'grad1', ME)
+            grad1_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 3, worker%itime, 'grad1', ME)
+            grad1_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 4, worker%itime, 'grad1', ME)
 
-            grad2_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 1, worker%itime, 'grad2', ME)
-            grad2_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 2, worker%itime, 'grad2', ME)
-            grad2_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 3, worker%itime, 'grad2', ME)
-            grad2_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 4, worker%itime, 'grad2', ME)
+            grad2_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 1, worker%itime, 'grad2', ME)
+            grad2_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 2, worker%itime, 'grad2', ME)
+            grad2_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 3, worker%itime, 'grad2', ME)
+            grad2_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 4, worker%itime, 'grad2', ME)
 
-            grad3_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 1, worker%itime, 'grad3', ME)
-            grad3_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 2, worker%itime, 'grad3', ME)
-            grad3_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 3, worker%itime, 'grad3', ME)
-            grad3_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 4, worker%itime, 'grad3', ME)
+            grad3_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 1, worker%itime, 'grad3', ME)
+            grad3_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 2, worker%itime, 'grad3', ME)
+            grad3_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 3, worker%itime, 'grad3', ME)
+            grad3_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, worker%iface, 4, worker%itime, 'grad3', ME)
 
         end if
 
@@ -776,9 +793,9 @@ contains
             grad2_density = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, 1, worker%itime, 'grad2')
             grad3_density = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, 1, worker%itime, 'grad3')
         else
-            grad1_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 1, worker%itime, 'grad1', ME)
-            grad2_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 1, worker%itime, 'grad2', ME)
-            grad3_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 1, worker%itime, 'grad3', ME)
+            grad1_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface, 1, worker%itime, 'grad1', ME)
+            grad2_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface, 1, worker%itime, 'grad2', ME)
+            grad3_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface, 1, worker%itime, 'grad3', ME)
         end if
 
 

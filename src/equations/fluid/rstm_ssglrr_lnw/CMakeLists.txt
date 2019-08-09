@@ -5,6 +5,7 @@ add_lib_sources(
                 mod_rstm_ssglrrw.f90
                 mod_modify_jacobian_rstm.f90
                 rstm_ssglrrw_source.f90
+                rstm_ssglrrw_blended_source.f90
                 rstm_ssglrrw_advection_boundary_average.f90
                 rstm_ssglrrw_laxfriedrichs.f90
                 rstm_ssglrrw_volume_advection.f90
@@ -16,6 +17,7 @@ add_lib_sources(
                 rstm_ssglrrw_artificial_viscosity_bc_operator.f90
                 rstm_ssglrrw_artificial_viscosity_boundary_average_operator.f90
                 model_rstm_ssglrrw_turbulence_quantities.f90
+                model_rstm_ssglrrw_blended_turbulence_quantities.f90
                 model_rstm_ssglrrw_production.f90
                 model_rstm_ssglrrw_isotropic_dissipation.f90
                 model_rstm_ssglrrw_blended_coefficients.f90

@@ -5,21 +5,23 @@ module mod_linear_solver
     use type_dict,          only: dict_t
 
     use type_fgmres,                only: fgmres_t
+    use type_petsc_linear,          only: petsc_linear_t
     use type_fgmres_cgs_mg_correct, only: fgmres_cgs_mg_correct_t
     implicit none
 
     type(fgmres_t)                  :: FGMRES
+    type(petsc_linear_t)            :: PETSC_LINEAR
     type(fgmres_cgs_mg_correct_t)   :: FGMRES_CGS_MG_CORRECT
 
 contains
 
-    !>  Factory method for creating matrixsolver objects
+    !>  Factory method for creating linear_solver objects
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/17/2016
     !!
-    !!  @param[in]      mstring     Character string used to select the appropriate matrixsolver for allocation
-    !!  @param[inout]   msolver     matrixsolver_t that will be allocated to a concrete type.
+    !!  @param[in]      mstring     Character string used to select the appropriate linear_solver for allocation
+    !!  @param[inout]   msolver     linear_solver_t that will be allocated to a concrete type.
     !!
     !---------------------------------------------------------------------------------------------------------------------
     subroutine create_linear_solver(lstring,lsolver,options)
@@ -29,16 +31,18 @@ contains
 
         integer(ik) :: ierr
 
-
         select case (trim(lstring))
             case ('fgmres','FGMRES')
                 allocate(lsolver, source=FGMRES, stat=ierr)
+
+            case ('petsc','PETSC')
+                allocate(lsolver, source=PETSC_LINEAR, stat=ierr)
 
             case ('fgmres_cgs_mg_correct', 'FGMRES_CGS_MG_CORRECT')
                 allocate(lsolver, source=FGMRES_CGS_MG_CORRECT, stat=ierr)
 
             case default
-                call chidg_signal(FATAL,"create_matrixsolver: matrix solver string did not match any valid type")
+                call chidg_signal_one(FATAL,"create_linear_solver: linear solver string did not match any valid type",trim(lstring))
 
         end select
         if (ierr /= 0) call AllocationError
@@ -49,7 +53,7 @@ contains
 
         
         ! Make sure the solver was allocated
-        if (.not. allocated(lsolver)) call chidg_signal(FATAL,"create_matrixsolver: solver was not allocated. Check that the desired solver was registered and instantiated in the mod_matrixsolver module")
+        if (.not. allocated(lsolver)) call chidg_signal(FATAL,"create_linear_solver: solver was not allocated. Check that the desired solver was registered and instantiated in the mod_linear_solver module")
 
     end subroutine create_linear_solver
     !*********************************************************************************************************************

@@ -1,18 +1,27 @@
 module type_chidg_matrix
 #include <messenger.h>
-    use mod_kinds,              only: rk, ik
-    use mod_constants,          only: NO_ID, ZERO
-    use mod_chidg_mpi,          only: IRANK
-    use type_densematrix,       only: densematrix_t
-    use type_domain_matrix,     only: domain_matrix_t
-    use type_mesh,              only: mesh_t
-    use type_face_info,         only: face_info_t
-    use type_seed,              only: seed_t
-    use type_chidg_vector,      only: chidg_vector_t
+#include "petsc/finclude/petscmat.h"
+    use petscmat,               only: PETSC_DECIDE, MatCreate, MatSetType, MatSetSizes, MatSetUp,       &
+                                      MatSetValues, tMat, ADD_VALUES, MatAssemblyBegin, MatAssemblyEnd, &
+                                      MAT_FINAL_ASSEMBLY, MatZeroEntries, MatSeqAIJSetPreallocation,    &
+                                      MatMPIAIJSetPreallocation, PETSC_NULL_INTEGER, MatSetOption,      &
+                                      MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, MatDestroy,          &
+                                      MatGetSize, MatGetLocalSize
+
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: NO_ID, ZERO
+    use mod_chidg_mpi,              only: IRANK, ChiDG_COMM
+    use mpi_f08,                    only: MPI_AllReduce, MPI_SUM, MPI_INTEGER4, MPI_INTEGER8
+    use type_densematrix,           only: densematrix_t
+    use type_domain_matrix,         only: domain_matrix_t
+    use type_mesh,                  only: mesh_t
+    use type_element_info,          only: element_info_t
+    use type_seed,                  only: seed_t
+    use type_chidg_vector,          only: chidg_vector_t
+    use type_petsc_matrix_wrapper,  only: petsc_matrix_wrapper_t
+    use ieee_arithmetic,            only: ieee_is_nan
     use DNAD_D
     implicit none
-
-
 
 
     !>  ChiDG matrix type. Contains an array of domain_matrix_t types, each corresponding to a 
@@ -28,26 +37,33 @@ module type_chidg_matrix
     !------------------------------------------------------------------------------------------
     type, public :: chidg_matrix_t
 
-        type(domain_matrix_t), allocatable    :: dom(:) ! Array of domain-matrices. One for each domain
+        ! PETSC
+        type(petsc_matrix_wrapper_t),   allocatable :: wrapped_petsc_matrix
 
+        ! ChiDG
+        type(domain_matrix_t), allocatable    :: dom(:) ! Array of domain-matrices. One for each domain
         logical     :: local_initialized = .false.      ! Has the matrix processor-local data been initialized
         logical     :: recv_initialized  = .false.      ! Has matrix been initialized with information about chidg_vector%recv
 
+
+        ! backend dynamic procedures
+        procedure(init_interface),             pointer, pass :: init           => chidg_init
+        procedure(init_recv_interface),        pointer, pass :: init_recv      => chidg_init_recv
+        procedure(store_interface),            pointer, pass :: store          => chidg_store
+        procedure(store_interface),            pointer, pass :: store_chimera  => chidg_store_chimera
+        procedure(store_interface),            pointer, pass :: store_bc       => chidg_store_bc
+        procedure(store_interface),            pointer, pass :: store_hb       => chidg_store_hb
+        procedure(store_element_interface),    pointer, pass :: store_element  => chidg_store_element
+        procedure(scale_diagonal_interface),   pointer, pass :: scale_diagonal => chidg_scale_diagonal
+        procedure(get_diagonal_interface),     pointer, pass :: get_diagonal   => chidg_get_diagonal
+        procedure(clear_interface),            pointer, pass :: clear          => chidg_clear
+        procedure(clear_interface),            pointer, pass :: assemble       => chidg_assemble
+
+
+        ! Stamp for uniqueness
         integer     :: stamp(8) = NO_ID                 ! Stamp from date_and_time that gets updated when store routines are called
 
     contains
-        ! Initializers
-        generic,    public  :: init => initialize
-        procedure,  private :: initialize               ! chidg_matrix initialization
-
-        procedure, public   :: init_recv                ! Initialize with information about chidg_vector%recv for mv multiply
-
-        ! Setters
-        procedure   :: store                            ! Store interior coupling
-        procedure   :: store_chimera                    ! Store chimera coupling
-        procedure   :: store_bc                         ! Store boundary condition coupling
-        procedure   :: store_hb                         ! Store linearization data for coupling across harmonic balance levels 
-        procedure   :: clear                            ! Zero matrix-values
 
         ! Processors
         procedure   :: restrict
@@ -65,22 +81,139 @@ module type_chidg_matrix
 
 
 
-    private
+
+    interface 
+        subroutine init_interface(self,mesh,mtype)
+            import chidg_matrix_t
+            import mesh_t
+            class(chidg_matrix_t),  intent(inout)   :: self
+            type(mesh_t),           intent(in)      :: mesh
+            character(*),           intent(in)      :: mtype
+        end subroutine init_interface
+    end interface
+
+
+    interface 
+        subroutine init_recv_interface(self,x)
+            import chidg_matrix_t
+            import chidg_vector_t
+            class(chidg_matrix_t),  intent(inout)   :: self
+            type(chidg_vector_t),   intent(in)      :: x
+        end subroutine init_recv_interface
+    end interface
+
+
+    interface 
+        subroutine store_interface(self,integral,element_info,seed,ifield,itime)
+            import chidg_matrix_t
+            import AD_D
+            import element_info_t
+            import seed_t
+            import ik
+            class(chidg_matrix_t),  intent(inout)   :: self
+            type(AD_D),             intent(in)      :: integral(:)
+            type(element_info_t),   intent(in)      :: element_info
+            type(seed_t),           intent(in)      :: seed
+            integer(ik),            intent(in)      :: ifield
+            integer(ik),            intent(in)      :: itime
+        end subroutine store_interface
+    end interface
+
+
+    interface 
+        subroutine store_element_interface(self,mat,element_info,seed,itime)
+            import chidg_matrix_t
+            import element_info_t
+            import seed_t
+            import ik, rk
+            class(chidg_matrix_t),  intent(inout)   :: self
+            real(rk),               intent(in)      :: mat(:,:)
+            type(element_info_t),   intent(in)      :: element_info
+            type(seed_t),           intent(in)      :: seed
+            integer(ik),            intent(in)      :: itime
+        end subroutine store_element_interface
+    end interface
+
+
+    interface 
+        subroutine scale_diagonal_interface(self,mat,element_info,ifield,itime)
+            import chidg_matrix_t
+            import element_info_t
+            import ik
+            import rk
+            class(chidg_matrix_t),  intent(inout)   :: self
+            real(rk),               intent(in)      :: mat(:,:)
+            type(element_info_t),   intent(in)      :: element_info
+            integer(ik),            intent(in)      :: ifield
+            integer(ik),            intent(in)      :: itime
+        end subroutine scale_diagonal_interface
+    end interface
+
+
+    interface 
+        subroutine get_diagonal_interface(self,element_info,mat)
+            import chidg_matrix_t
+            import element_info_t
+            import rk
+            class(chidg_matrix_t),  intent(inout)   :: self
+            type(element_info_t),   intent(in)      :: element_info
+            real(rk), allocatable,  intent(inout)   :: mat(:,:)
+        end subroutine get_diagonal_interface
+    end interface
+
+
+
+    interface 
+        subroutine clear_interface(self)
+            import chidg_matrix_t
+            class(chidg_matrix_t),  intent(inout)   :: self
+        end subroutine clear_interface
+    end interface
+
+    interface chidg_matrix
+        module procedure new_chidg_matrix
+    end interface
+
+
 contains
 
 
+    !>
+    !!
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------
+    function new_chidg_matrix(storage) result(mat)
+        character(*),   intent(in)  :: storage
+
+        type(chidg_matrix_t)    :: mat
+
+        select case(storage)
+            case('native')
+                call matrix_assign_pointers_chidg(mat)
+            case('petsc')
+                call matrix_assign_pointers_petsc(mat)
+            case default
+                call chidg_signal_one(FATAL,"new_chidg_matrix: invalid parameter for 'storage'.",trim(storage))
+        end select
+
+    end function new_chidg_matrix
+    !***********************************************************************************
 
 
-    !>  Subroutine for initializing chidg_matrix_t
+
+
+
+
+
+    !>  Subroutine for initializing chidg_matrix_t using chidg native backend storage.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  domains     Array of domain_t instances
-    !!  
-    !!
     !------------------------------------------------------------------------------------------
-    subroutine initialize(self,mesh,mtype)
+    subroutine chidg_init(self,mesh,mtype)
         class(chidg_matrix_t),  intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh
         character(*),           intent(in)      :: mtype
@@ -104,7 +237,7 @@ contains
         ! Set initialization to true
         self%local_initialized = .true.
 
-    end subroutine initialize
+    end subroutine chidg_init
     !******************************************************************************************
 
 
@@ -117,7 +250,7 @@ contains
     !!  @date   7/1/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine init_recv(self,x)
+    subroutine chidg_init_recv(self,x)
         class(chidg_matrix_t),   intent(inout)   :: self
         type(chidg_vector_t),    intent(in)      :: x
 
@@ -444,9 +577,8 @@ contains
         ! Set recv initialization to true
         self%recv_initialized = .true.
 
-    end subroutine init_recv
+    end subroutine chidg_init_recv
     !*******************************************************************************************
-
 
 
 
@@ -462,31 +594,33 @@ contains
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial 
     !!                          derivatives for the linearization matrix.
-    !!  @param[in]  face_info   Information about where the coupling was computed and whom it
+    !!  @param[in]  element_info   Information about where the coupling was computed and whom it
     !!                          was computed with respect to.
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine store(self,integral,face_info,seed,ivar,itime)
-        class(chidg_matrix_t),   intent(inout)   :: self
+    subroutine chidg_store(self,integral,element_info,seed,ifield,itime)
+        class(chidg_matrix_t),  intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
-        type(face_info_t),      intent(in)      :: face_info
+        type(element_info_t),   intent(in)      :: element_info
         type(seed_t),           intent(in)      :: seed
-        integer(ik),            intent(in)      :: ivar 
+        integer(ik),            intent(in)      :: ifield
         integer(ik),            intent(in)      :: itime
 
         integer(ik) :: idomain_l
 
-        idomain_l = face_info%idomain_l
+        idomain_l = element_info%idomain_l
 
         ! Store linearization in associated domain domain_matrix_t
-        call self%dom(idomain_l)%store(integral,face_info,seed,ivar,itime)
+        call self%dom(idomain_l)%store(integral,element_info,seed,ifield,itime)
 
         ! Update stamp
         call date_and_time(values=self%stamp)
 
-    end subroutine store
+    end subroutine chidg_store
     !*******************************************************************************************
+
+
 
 
 
@@ -501,31 +635,31 @@ contains
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial 
     !!                          derivatives for the linearization matrix
-    !!  @param[in]  face        face_info_t containing the indices defining the Chimera face
+    !!  @param[in]  face        element_info_t containing the indices defining the Chimera face
     !!  @param[in]  seed        seed_t containing the indices defining the element against 
     !!                          which the Chimera face was linearized
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !------------------------------------------------------------------------------------------
-    subroutine store_chimera(self,integral,face_info,seed,ivar,itime)
+    subroutine chidg_store_chimera(self,integral,element_info,seed,ifield,itime)
         class(chidg_matrix_t),      intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_info_t),          intent(in)      :: face_info
+        type(element_info_t),       intent(in)      :: element_info
         type(seed_t),               intent(in)      :: seed
-        integer(ik),                intent(in)      :: ivar 
+        integer(ik),                intent(in)      :: ifield 
         integer(ik),                intent(in)      :: itime
 
         integer(ik) :: idomain_l
 
-        idomain_l = face_info%idomain_l
+        idomain_l = element_info%idomain_l
 
         ! Store linearization in associated domain domain_matrix_t
-        call self%dom(idomain_l)%store_chimera(integral,face_info,seed,ivar,itime)
+        call self%dom(idomain_l)%store_chimera(integral,element_info,seed,ifield,itime)
 
         ! Update stamp
         call date_and_time(values=self%stamp)
 
-    end subroutine store_chimera
+    end subroutine chidg_store_chimera
     !******************************************************************************************
 
 
@@ -544,31 +678,31 @@ contains
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial
     !!                          derivatives for the linearization matrix
-    !!  @param[in]  face        face_info_t containing the indices defining the Chimera face
+    !!  @param[in]  face        element_info_t containing the indices defining the Chimera face
     !!  @param[in]  seed        seed_t containing the indices defining the element against 
     !!                          which the Chimera face was linearized
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !------------------------------------------------------------------------------------------
-    subroutine store_bc(self,integral,face_info,seed,ivar,itime)
+    subroutine chidg_store_bc(self,integral,element_info,seed,ifield,itime)
         class(chidg_matrix_t),      intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_info_t),          intent(in)      :: face_info
+        type(element_info_t),       intent(in)      :: element_info
         type(seed_t),               intent(in)      :: seed
-        integer(ik),                intent(in)      :: ivar 
+        integer(ik),                intent(in)      :: ifield 
         integer(ik),                intent(in)      :: itime
 
         integer(ik) :: idomain_l
 
-        idomain_l = face_info%idomain_l
+        idomain_l = element_info%idomain_l
 
         ! Store linearization in associated domain domain_matrix_t
-        call self%dom(idomain_l)%store_bc(integral,face_info,seed,ivar,itime)
+        call self%dom(idomain_l)%store_bc(integral,element_info,seed,ifield,itime)
 
         ! Update stamp
         call date_and_time(values=self%stamp)
 
-    end subroutine store_bc
+    end subroutine chidg_store_bc
     !*******************************************************************************************
 
 
@@ -583,31 +717,141 @@ contains
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial
     !!                          derivatives for the linearization matrix
-    !!  @param[in]  face        face_info_t containing the indices defining the Chimera face
+    !!  @param[in]  face        element_info_t containing the indices defining the Chimera face
     !!  @param[in]  seed        seed_t containing the indices defining the element against 
     !!                          which the Chimera face was linearized
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !------------------------------------------------------------------------------------------
-    subroutine store_hb(self,integral,face_info,seed,ivar,itime)
+    subroutine chidg_store_hb(self,integral,element_info,seed,ifield,itime)
         class(chidg_matrix_t),      intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_info_t),          intent(in)      :: face_info
+        type(element_info_t),       intent(in)      :: element_info
         type(seed_t),               intent(in)      :: seed
-        integer(ik),                intent(in)      :: ivar 
+        integer(ik),                intent(in)      :: ifield
         integer(ik),                intent(in)      :: itime
 
         integer(ik) :: idomain_l
 
-        idomain_l = face_info%idomain_l
+        idomain_l = element_info%idomain_l
 
         ! Store linearization in associated domain domain_matrix_t
-        call self%dom(idomain_l)%store_hb(integral,face_info,seed,ivar,itime)
+        call self%dom(idomain_l)%store_hb(integral,element_info,seed,ifield,itime)
 
         ! Update stamp
         call date_and_time(values=self%stamp)
 
-    end subroutine store_hb
+    end subroutine chidg_store_hb
+    !*******************************************************************************************
+
+
+
+
+    !>  Store block of data for an element at a specific temporal dof (itime), with 
+    !!  respect to another temporal dof (seed%itime).
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/2/2019
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine chidg_store_element(self,mat,element_info,seed,itime)
+        class(chidg_matrix_t),      intent(inout)   :: self
+        real(rk),                   intent(in)      :: mat(:,:)
+        type(element_info_t),       intent(in)      :: element_info
+        type(seed_t),               intent(in)      :: seed
+        integer(ik),                intent(in)      :: itime
+
+        integer(ik) :: idomain_l
+
+        idomain_l = element_info%idomain_l
+
+        ! Store linearization in associated domain domain_matrix_t
+        call self%dom(idomain_l)%store_hb_element(mat,element_info,seed,itime)
+
+        ! Update stamp
+        call date_and_time(values=self%stamp)
+
+    end subroutine chidg_store_element
+    !*******************************************************************************************
+
+
+
+
+
+
+
+    !> Procedure for storing linearization information
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial 
+    !!                          derivatives for the linearization matrix.
+    !!  @param[in]  element_info   Information about where the coupling was computed and whom it
+    !!                          was computed with respect to.
+    !!  @param[in]  ivar        Index of the variable, for which the linearization was computed.
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine chidg_scale_diagonal(self,mat,element_info,ifield,itime)
+        class(chidg_matrix_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: mat(:,:)
+        type(element_info_t),   intent(in)      :: element_info
+        integer(ik),            intent(in)      :: ifield
+        integer(ik),            intent(in)      :: itime
+
+        integer(ik) :: rstart, rend, cstart, cend, imat
+
+        rstart = 1 + (ifield-1) * element_info%nterms_s
+        rend   = (rstart-1) + element_info%nterms_s
+        cstart = rstart                 ! since it is square
+        cend   = rend                   ! since it is square
+
+        ! Add mass matrix divided by dt to the block diagonal
+        imat = self%dom(element_info%idomain_l)%lblks(element_info%ielement_l,itime)%get_diagonal()
+
+        self%dom(element_info%idomain_l)%lblks(element_info%ielement_l,itime)%data_(imat)%mat(rstart:rend,cstart:cend) =    &
+                self%dom(element_info%idomain_l)%lblks(element_info%ielement_l,itime)%data_(imat)%mat(rstart:rend,cstart:cend) + mat
+
+        ! Update stamp
+        call date_and_time(values=self%stamp)
+
+    end subroutine chidg_scale_diagonal
+    !*******************************************************************************************
+
+
+
+    !> Procedure for storing linearization information
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial 
+    !!                          derivatives for the linearization matrix.
+    !!  @param[in]  element_info   Information about where the coupling was computed and whom it
+    !!                          was computed with respect to.
+    !!  @param[in]  ivar        Index of the variable, for which the linearization was computed.
+    !!
+    !!  TODO: Fix for Harmonic Balance
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine chidg_get_diagonal(self,element_info,mat)
+        class(chidg_matrix_t),  intent(inout)   :: self
+        type(element_info_t),   intent(in)      :: element_info
+        real(rk), allocatable,  intent(inout)   :: mat(:,:)
+
+        integer(ik) :: imat, itime
+
+        itime = 1
+
+        ! Find diagonal
+        imat = self%dom(element_info%idomain_l)%lblks(element_info%ielement_l,itime)%get_diagonal()
+
+        ! Access
+        mat = self%dom(element_info%idomain_l)%lblks(element_info%ielement_l,itime)%data_(imat)%mat
+
+    end subroutine chidg_get_diagonal
     !*******************************************************************************************
 
 
@@ -621,21 +865,34 @@ contains
     !!  @date   2/1/2016
     !! 
     !----------------------------------------------------------------------------------
-    subroutine clear(self)
+    subroutine chidg_clear(self)
         class(chidg_matrix_t),   intent(inout)   :: self
 
         integer(ik) :: idom
     
         ! Call domain_matrix_t%clear() on all matrices
-        do idom = 1,size(self%dom)
-           call self%dom(idom)%clear() 
-        end do
+        if (allocated(self%dom)) then
+            do idom = 1,size(self%dom)
+               call self%dom(idom)%clear() 
+            end do
+        end if
     
-    end subroutine clear
+    end subroutine chidg_clear
     !**********************************************************************************
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/1/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine chidg_assemble(self)
+        class(chidg_matrix_t),   intent(inout)   :: self
+
+    end subroutine chidg_assemble
+    !*******************************************************************************************
 
 
 
@@ -675,6 +932,368 @@ contains
 
 
 
+    !>  Subroutine for initializing chidg_matrix_t using PETSc as backend storage container.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/24/2019
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_init(self,mesh,mtype)
+        class(chidg_matrix_t),  intent(inout)   :: self
+        type(mesh_t),           intent(in)      :: mesh
+        character(*),           intent(in)      :: mtype
+
+        integer(ik)     :: ndomains, idom, ielem
+        PetscErrorCode  :: ierr
+        PetscInt        :: nlocal_rows, nlocal_cols, nglobal_rows, nglobal_cols,    &
+                           dof_per_element, nlocal_coupling, nparallel_coupling,    &
+                           aij_nnonzeros_per_row_local, aij_nnonzeros_per_row_parallel
+
+        ! Allocate matrix wrapper
+        allocate(self%wrapped_petsc_matrix, stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        ! Create matrix object
+        call MatCreate(ChiDG_COMM%mpi_val, self%wrapped_petsc_matrix%petsc_matrix, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error creating PETSc matrix.')
+
+
+
+        !
+        ! Set matrix size
+        !
+        !---------------------------------------------
+
+        ! Compute proc-local degress-of-freedom
+        nlocal_rows = 0
+        do idom = 1,mesh%ndomains()
+            do ielem = 1,mesh%domain(idom)%nelements()
+                nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nterms_s * mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%ntime)
+            end do !ielem
+        end do !idom
+
+        ! Compute global degrees-of-freedom via reduction
+        call MPI_AllReduce(nlocal_rows,nglobal_rows,1,MPI_INTEGER4,MPI_SUM,ChiDG_COMM,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error reducing global degrees-of-freedom.')
+        
+
+        nlocal_cols  = nlocal_rows ! local partition is square
+        nglobal_cols = nglobal_rows
+
+
+        call MatSetSizes(self%wrapped_petsc_matrix%petsc_matrix,nlocal_rows,nlocal_cols,nglobal_rows,nglobal_cols,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc matrix sizes.')
+        !---------------------------------------------
+
+
+
+        ! Set matrix type
+!        call MatSetType(self%petsc_matrix, 'aij', ierr)
+        call MatSetType(self%wrapped_petsc_matrix%petsc_matrix, 'baij', ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting PETSc matrix type.')
+
+
+
+        ! Preallocation
+        if (mesh%ndomains() < 1) then
+            dof_per_element = 1
+        else
+            dof_per_element = mesh%domain(1)%elems(1)%nterms_s * mesh%domain(1)%elems(1)%nfields * mesh%domain(1)%elems(1)%ntime
+        end if
+        nlocal_coupling = 7
+        nparallel_coupling = 7
+
+        aij_nnonzeros_per_row_local    = nlocal_coupling    * dof_per_element
+        aij_nnonzeros_per_row_parallel = nparallel_coupling * dof_per_element
+
+
+!        ! WARNING! might need to change preallocation approach for AIJ. currently set for BAIJ
+!        call MatMPIAIJSetPreallocation(self%petsc_matrix,aij_nnonzeros_per_row_local,PETSC_NULL_INTEGER,aij_nnonzeros_per_row_parallel,PETSC_NULL_INTEGER,ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatMPIAIJSetPreallocation.')
+!        call MatSeqAIJSetPreallocation(self%petsc_matrix,aij_nnonzeros_per_row_local,PETSC_NULL_INTEGER,ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqAIJSetPreallocation.')
+
+
+        call MatMPIBAIJSetPreallocation(self%wrapped_petsc_matrix%petsc_matrix,dof_per_element,nlocal_coupling,PETSC_NULL_INTEGER,nparallel_coupling,PETSC_NULL_INTEGER,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatMPIBAIJSetPreallocation.')
+        call MatSeqBAIJSetPreallocation(self%wrapped_petsc_matrix%petsc_matrix,dof_per_element,nlocal_coupling,PETSC_NULL_INTEGER,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqBAIJSetPreallocation.')
+
+
+        call MatSetBlockSize(self%wrapped_petsc_matrix%petsc_matrix, dof_per_element, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSetBlockSize.')
+
+        call MatSetOption(self%wrapped_petsc_matrix%petsc_matrix, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSetOption.')
+
+        call self%clear()
+
+
+        ! Set initialization to true
+        self%local_initialized = .true.
+
+    end subroutine petsc_init
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/1/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_init_recv(self,x)
+        class(chidg_matrix_t),   intent(inout)   :: self
+        type(chidg_vector_t),    intent(in)      :: x
+
+        ! Set recv initialization to true
+        self%recv_initialized = .true.
+
+    end subroutine petsc_init_recv
+    !*******************************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/1/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_assemble(self)
+        class(chidg_matrix_t),   intent(inout)   :: self
+
+        PetscErrorCode :: perr
+
+        call MatAssemblyBegin(self%wrapped_petsc_matrix%petsc_matrix,MAT_FINAL_ASSEMBLY,perr)
+        call MatAssemblyEnd(self%wrapped_petsc_matrix%petsc_matrix,MAT_FINAL_ASSEMBLY,perr)
+
+    end subroutine petsc_assemble
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_store(self,integral,element_info,seed,ifield,itime)
+        class(chidg_matrix_t),  intent(inout)   :: self
+        type(AD_D),             intent(in)      :: integral(:)
+        type(element_info_t),   intent(in)      :: element_info
+        type(seed_t),           intent(in)      :: seed
+        integer(ik),            intent(in)      :: ifield
+        integer(ik),            intent(in)      :: itime
+
+        integer(ik) :: iarray, i
+
+        PetscErrorCode          :: ierr
+        PetscInt                :: nrows, ncols, row_index_start, col_index_start, col_index_stop
+        PetscInt, allocatable   :: col_indices(:)
+        
+        row_index_start = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
+        col_index_start = seed%dof_start  + (seed%itime-1)*(seed%nfields*seed%nterms_s)
+        col_index_stop  = col_index_start + (seed%nfields*seed%nterms_s) - 1
+        col_indices = [(i, i=col_index_start,col_index_stop,1)]
+
+        nrows = 1
+        ncols = size(integral(1)%xp_ad_)
+        do iarray = 1,size(integral)
+
+            if (any(ieee_is_nan(integral(iarray)%xp_ad_))) print*, 'storing NaN! (ifield):', ifield
+
+            ! subtract 1 from indices since petsc is 0-based
+            call MatSetValues(self%wrapped_petsc_matrix%petsc_matrix,nrows,[row_index_start + (iarray-1) - 1],ncols,col_indices-1,integral(iarray)%xp_ad_,ADD_VALUES,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"chidg_matrix%petsc_store: error calling MatSetValues.")
+        end do 
+
+        ! Update stamp
+        call date_and_time(values=self%stamp)
+
+    end subroutine petsc_store
+    !******************************************************************************************
+
+
+
+
+    !>  Store a block of data to element at specific set of temporal dofs (itime) with respect 
+    !!  to specific temporal dofs (seed%itime).
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/2/2019
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_store_element(self,mat,element_info,seed,itime)
+        class(chidg_matrix_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: mat(:,:)
+        type(element_info_t),   intent(in)      :: element_info
+        type(seed_t),           intent(in)      :: seed
+        integer(ik),            intent(in)      :: itime
+
+        integer(ik) :: i
+
+        PetscErrorCode          :: ierr
+        PetscInt                :: irow, nrows, ncols, row_index_start, col_index_start, col_index_stop
+        PetscInt, allocatable   :: col_indices(:)
+
+        
+        !row_index_start = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
+        row_index_start = element_info%dof_start + (itime-1)*(element_info%nfields*element_info%nterms_s)
+        col_index_start = seed%dof_start  + (seed%itime-1)*(seed%nfields*seed%nterms_s)
+        col_index_stop  = col_index_start + (seed%nfields*seed%nterms_s) - 1
+
+
+        ! Compute column indices
+        col_indices = [(i, i=col_index_start,col_index_stop,1)]
+
+        if (any(ieee_is_nan(mat))) print*, 'petsc_store_element: storing NaN!'
+
+        nrows = 1
+        ncols = seed%nfields*seed%nterms_s
+        do irow = 1,size(mat,1)
+            ! subtract 1 from indices since petsc is 0-based
+            call MatSetValues(self%wrapped_petsc_matrix%petsc_matrix,nrows,[row_index_start + (irow-1) - 1],ncols,col_indices-1,mat(irow,:),ADD_VALUES,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"chidg_matrix%petsc_store_element: error calling MatSetValues.")
+        end do 
+
+        ! Update stamp
+        call date_and_time(values=self%stamp)
+
+    end subroutine petsc_store_element
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_scale_diagonal(self,mat,element_info,ifield,itime)
+        class(chidg_matrix_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: mat(:,:)
+        type(element_info_t),   intent(in)      :: element_info
+        integer(ik),            intent(in)      :: ifield
+        integer(ik),            intent(in)      :: itime
+
+        integer(ik) :: iarray, i
+
+        PetscErrorCode          :: ierr
+        PetscInt                :: nrows, ncols, row_index_start, col_index_start
+        PetscInt, allocatable   :: col_indices(:)
+        
+        row_index_start = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
+        col_index_start = row_index_start
+        col_indices = [(i, i=row_index_start,(row_index_start+element_info%nterms_s-1),1)]
+
+        nrows = 1
+        ncols = size(mat,2)
+        do iarray = 1,size(mat,1)
+            ! subtract 1 from indices since petsc is 0-based
+            call MatSetValues(self%wrapped_petsc_matrix%petsc_matrix,nrows,[row_index_start + (iarray-1) - 1],ncols,col_indices-1,mat(iarray,:),ADD_VALUES,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"chidg_matrix%petsc_store_matrix: error calling MatSetValues.")
+        end do 
+
+        ! Update stamp
+        call date_and_time(values=self%stamp)
+
+    end subroutine petsc_scale_diagonal
+    !******************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine petsc_get_diagonal(self,element_info,mat)
+        class(chidg_matrix_t),  intent(inout)   :: self
+        type(element_info_t),   intent(in)      :: element_info
+        real(rk), allocatable,  intent(inout)   :: mat(:,:)
+
+        call chidg_signal(FATAL,'chidg_matrix%get_diagonal: not yet implemented for PETSc')
+
+    end subroutine petsc_get_diagonal
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Set all chidg_matrix matrix-values to zero
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/27/2019
+    !! 
+    !----------------------------------------------------------------------------------
+    subroutine petsc_clear(self)
+        class(chidg_matrix_t),   intent(inout)   :: self
+
+        PetscErrorCode :: perr
+
+        call MatZeroEntries(self%wrapped_petsc_matrix%petsc_matrix,perr)
+        if (perr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_clear: error calling MatZeroEntries.')
+    
+    end subroutine petsc_clear
+    !**********************************************************************************
+
+
+
+
+
+
+
+
 
 
     !>
@@ -689,6 +1308,8 @@ contains
         class(chidg_matrix_t),  intent(in)  :: self
 
         integer(ik)         :: ntime
+
+        if (allocated(self%wrapped_petsc_matrix)) call chidg_signal(FATAL,'chidg_matrix%get_ntime: not yet implemented for petsc storage.')
 
         ! Get ntime from densematrix vector array of the 1st domain
         ntime = size(self%dom(1)%lblks,2)
@@ -879,6 +1500,8 @@ contains
        class(chidg_matrix_t),   intent(in)  :: self
        
        integer(ik)  :: ndomains_
+
+       if (allocated(self%wrapped_petsc_matrix)) call chidg_signal(FATAL,'chidg_matrix%ndomains: not yet implemented for petsc storage.')
        
        ndomains_ = size(self%dom) 
 
@@ -901,7 +1524,10 @@ contains
     subroutine release(self)
         class(chidg_matrix_t),  intent(inout)   :: self
 
-        if (allocated(self%dom)) deallocate(self%dom)
+        PetscErrorCode :: ierr
+
+        if (allocated(self%dom))                  deallocate(self%dom)
+        if (allocated(self%wrapped_petsc_matrix)) deallocate(self%wrapped_petsc_matrix)
 
     end subroutine release
     !**********************************************************************************
@@ -920,8 +1546,62 @@ contains
     subroutine destructor(self)
         type(chidg_matrix_t),    intent(inout)   :: self
 
+        PetscErrorCode :: perr
+
+        if (allocated(self%wrapped_petsc_matrix)) deallocate(self%wrapped_petsc_matrix)
+
     end subroutine destructor
     !*********************************************************************************
+
+
+
+
+
+
+    subroutine matrix_assign_pointers_chidg(mat)
+        type(chidg_matrix_t),   intent(inout)   :: mat
+
+        mat%init           => chidg_init
+        mat%init_recv      => chidg_init_recv
+        mat%store          => chidg_store
+        mat%store_chimera  => chidg_store_chimera
+        mat%store_bc       => chidg_store_bc
+        mat%store_hb       => chidg_store_hb
+        mat%store_element  => chidg_store_element
+        mat%scale_diagonal => chidg_scale_diagonal
+        mat%get_diagonal   => chidg_get_diagonal
+        mat%clear          => chidg_clear
+        mat%assemble       => chidg_assemble
+
+    end subroutine matrix_assign_pointers_chidg
+
+    subroutine matrix_assign_pointers_petsc(mat)
+        type(chidg_matrix_t),   intent(inout)   :: mat
+
+        mat%init           => petsc_init
+        mat%init_recv      => petsc_init_recv
+        mat%store          => petsc_store
+        mat%store_chimera  => petsc_store
+        mat%store_bc       => petsc_store
+        mat%store_hb       => petsc_store
+        mat%store_element  => petsc_store_element
+        mat%scale_diagonal => petsc_scale_diagonal
+        mat%get_diagonal   => petsc_get_diagonal
+        mat%clear          => petsc_clear
+        mat%assemble       => petsc_assemble
+
+    end subroutine matrix_assign_pointers_petsc
+
+
+
+
+
+
+
+
+
+
+
 
 
 

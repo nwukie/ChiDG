@@ -100,21 +100,24 @@ contains
 
         integer(ik) :: p
         real(rk) :: sigma, h(3)
+        real(rk), allocatable :: h_s(:,:)
 
                
 
+        h_s = worker%h_smooth('face interior')
         h = worker%element_size('interior')
         p = worker%solution_order('interior')
         h = h/real(p+1,rk)
+        h_s = h_s/real(p+1,rk)
         sigma = 0.5_rk
 
         mu_neg = worker%get_field('RSTM AV-11'   , 'value', 'boundary')
         grad1 = worker%get_field('Density * Reynolds-11'   , 'grad1', 'boundary')
         grad2 = worker%get_field('Density * Reynolds-11'   , 'grad2', 'boundary')
         grad3 = worker%get_field('Density * Reynolds-11'   , 'grad3', 'boundary')
-        flux_1 = -(h(1)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad1
-        flux_2 = -(h(2)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad2
-        flux_3 = -(h(3)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad3
+        flux_1 = -(h_s(:,1)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad1
+        flux_2 = -(h_s(:,2)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad2
+        flux_3 = -(h_s(:,3)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad3
         
         
         call worker%integrate_boundary_condition('Density * Reynolds-11','Diffusion',flux_1,flux_2,flux_3)
@@ -123,9 +126,9 @@ contains
         grad1 = worker%get_field('Density * Reynolds-22'   , 'grad1', 'boundary')
         grad2 = worker%get_field('Density * Reynolds-22'   , 'grad2', 'boundary')
         grad3 = worker%get_field('Density * Reynolds-22'   , 'grad3', 'boundary')
-        flux_1 = -(h(1)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad1
-        flux_2 = -(h(2)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad2
-        flux_3 = -(h(3)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad3
+        flux_1 = -(h_s(:,1)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad1
+        flux_2 = -(h_s(:,2)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad2
+        flux_3 = -(h_s(:,3)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad3
         
         
         call worker%integrate_boundary_condition('Density * Reynolds-22','Diffusion',flux_1,flux_2,flux_3)
@@ -134,9 +137,9 @@ contains
         grad1 = worker%get_field('Density * Reynolds-33'   , 'grad1', 'boundary')
         grad2 = worker%get_field('Density * Reynolds-33'   , 'grad2', 'boundary')
         grad3 = worker%get_field('Density * Reynolds-33'   , 'grad3', 'boundary')
-        flux_1 = -(h(1)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad1
-        flux_2 = -(h(2)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad2
-        flux_3 = -(h(3)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad3
+        flux_1 = -(h_s(:,1)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad1
+        flux_2 = -(h_s(:,2)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad2
+        flux_3 = -(h_s(:,3)**TWO*rstm_ssglrrw_avc+mu_neg*sigma)*grad3
         
         
         call worker%integrate_boundary_condition('Density * Reynolds-33','Diffusion',flux_1,flux_2,flux_3)
@@ -144,9 +147,9 @@ contains
         grad1 = worker%get_field('Density * Reynolds-12'   , 'grad1', 'boundary')
         grad2 = worker%get_field('Density * Reynolds-12'   , 'grad2', 'boundary')
         grad3 = worker%get_field('Density * Reynolds-12'   , 'grad3', 'boundary')
-        flux_1 = -(h(1)**TWO*rstm_ssglrrw_avc)*grad1
-        flux_2 = -(h(2)**TWO*rstm_ssglrrw_avc)*grad2
-        flux_3 = -(h(3)**TWO*rstm_ssglrrw_avc)*grad3
+        flux_1 = -(h_s(:,1)**TWO*rstm_ssglrrw_avc)*grad1
+        flux_2 = -(h_s(:,2)**TWO*rstm_ssglrrw_avc)*grad2
+        flux_3 = -(h_s(:,3)**TWO*rstm_ssglrrw_avc)*grad3
         
         
         call worker%integrate_boundary_condition('Density * Reynolds-12','Diffusion',flux_1,flux_2,flux_3)
@@ -154,9 +157,9 @@ contains
         grad1 = worker%get_field('Density * Reynolds-13'   , 'grad1', 'boundary')
         grad2 = worker%get_field('Density * Reynolds-13'   , 'grad2', 'boundary')
         grad3 = worker%get_field('Density * Reynolds-13'   , 'grad3', 'boundary')
-        flux_1 = -(h(1)**TWO*rstm_ssglrrw_avc)*grad1
-        flux_2 = -(h(2)**TWO*rstm_ssglrrw_avc)*grad2
-        flux_3 = -(h(3)**TWO*rstm_ssglrrw_avc)*grad3
+        flux_1 = -(h_s(:,1)**TWO*rstm_ssglrrw_avc)*grad1
+        flux_2 = -(h_s(:,2)**TWO*rstm_ssglrrw_avc)*grad2
+        flux_3 = -(h_s(:,3)**TWO*rstm_ssglrrw_avc)*grad3
         
         
         call worker%integrate_boundary_condition('Density * Reynolds-13','Diffusion',flux_1,flux_2,flux_3)
@@ -164,9 +167,9 @@ contains
         grad1 = worker%get_field('Density * Reynolds-23'   , 'grad1', 'boundary')
         grad2 = worker%get_field('Density * Reynolds-23'   , 'grad2', 'boundary')
         grad3 = worker%get_field('Density * Reynolds-23'   , 'grad3', 'boundary')
-        flux_1 = -(h(1)**TWO*rstm_ssglrrw_avc)*grad1
-        flux_2 = -(h(2)**TWO*rstm_ssglrrw_avc)*grad2
-        flux_3 = -(h(3)**TWO*rstm_ssglrrw_avc)*grad3
+        flux_1 = -(h_s(:,1)**TWO*rstm_ssglrrw_avc)*grad1
+        flux_2 = -(h_s(:,2)**TWO*rstm_ssglrrw_avc)*grad2
+        flux_3 = -(h_s(:,3)**TWO*rstm_ssglrrw_avc)*grad3
         
         
         call worker%integrate_boundary_condition('Density * Reynolds-23','Diffusion',flux_1,flux_2,flux_3)

@@ -145,6 +145,7 @@ contains
         sigma_d_w   = F1*SSG_LRRW_sigma_d_w + (ONE-F1)*SSG_LRRW_sigma_d_e
 
         sigma_w = 0.5_rk
+        beta_w  = 0.09_rk
 
         call worker%store_model_field('RSTMSSGLRRW Alpha-w',    'value', alpha_w)
         call worker%store_model_field('RSTMSSGLRRW Beta-w',     'value', beta_w)

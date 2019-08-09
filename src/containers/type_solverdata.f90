@@ -1,10 +1,11 @@
 module type_solverdata
 #include <messenger.h>
     use mod_kinds,                          only: rk,ik
-    use mod_constants,                      only: NFACES, ZERO
+    use mod_constants,                      only: NFACES, ZERO, NO_ID
     use mod_string,                         only: string_t
-    use type_chidg_vector,                  only: chidg_vector_t
-    use type_chidg_matrix,                  only: chidg_matrix_t
+    use mod_io,                             only: backend
+    use type_chidg_vector,                  only: chidg_vector_t, chidg_vector
+    use type_chidg_matrix,                  only: chidg_matrix_t, chidg_matrix
     use type_mesh,                          only: mesh_t
     use type_function_status,               only: function_status_t
     use type_equationset_function_data,     only: equationset_function_data_t
@@ -24,76 +25,46 @@ module type_solverdata
     !------------------------------------------------------------------------------------------
     type, public  :: solverdata_t
 
-        !
         ! Base solver data
-        !
-        type(chidg_vector_t)             :: q               ! Solution vector
-        type(chidg_vector_t)             :: dq              ! Change in solution vector
-        type(chidg_vector_t)             :: rhs             ! Residual of the spatial scheme
-        type(chidg_matrix_t)             :: lhs             ! Linearization of the spatial scheme
+        type(chidg_vector_t)            :: q           ! Solution vector
+        type(chidg_vector_t)            :: dq          ! Change in solution vector
+        type(chidg_vector_t)            :: rhs         ! Residual of the spatial scheme
+        type(chidg_matrix_t)            :: lhs         ! Linearization of the spatial scheme
 
-
-        !
+ 
         ! Container for reading data
-        !
-        type(chidg_vector_t)            :: q_in
+        type(chidg_vector_t)            :: q_in     ! For reading data
+        type(chidg_vector_t)            :: q_out    ! For post-processing
 
         
-        !
-        ! Container for storing data for post processing
-        !
-        type(chidg_vector_t)            :: q_out
-
-
-        !
         ! Auxiliary fields
-        !
         type(string_t),         allocatable :: auxiliary_field_name(:)
         type(chidg_vector_t),   allocatable :: auxiliary_field(:)
 
-        !
         ! Time information
-        !
-        !real(rk)                        :: t               ! Global time
-        real(rk),   allocatable         :: dt(:,:)         ! Element-local time-step, (ndomains,maxelems)
+        real(rk),       allocatable :: dt(:,:)         ! Element-local time-step, (ndomains,maxelems)
 
 
-        !
         ! Mesh size information
-        !
-        real(rk),       allocatable :: mesh_size_elem(:,:), mesh_size_vertex(:,:),      &
-                                       min_mesh_size_elem(:), min_mesh_size_vertex(:),  &
-                                       avg_mesh_size_vertex(:), sum_mesh_size_vertex(:)
+        real(rk),       allocatable :: mesh_size_elem(:,:), mesh_size_vertex(:,:),       &
+                                       min_mesh_size_elem(:), min_mesh_size_vertex(:),   &
+                                       avg_mesh_size_vertex(:), sum_mesh_size_vertex(:), &
+                                       avg_mesh_h_vertex(:,:), sum_mesh_h_vertex(:,:),   &
+                                       area_weighted_h(:,:)
         integer(ik),    allocatable :: num_elements_touching_vertex(:)
 
-        !
+
         ! RBF-related information
-        !
         integer(ik),    allocatable :: nelems_per_domain(:)
-        real(ik),       allocatable :: rbf_center(:,:), rbf_radius(:,:), &
-                                       rbf_artificial_bulk_viscosity(:), &
-                                       rbf_artificial_shear_viscosity(:), &
-                                       rbf_artificial_thermal_conductivity(:)
+        real(rk),       allocatable :: rbf_center(:,:), rbf_radius(:,:)
 
-
-        !
         ! Vertex-based smoothing information
-        !
         integer(ik),    allocatable :: nnodes_per_domain(:)
-        real(ik),       allocatable :: vertex_artificial_bulk_viscosity(:), &
-                                       vertex_artificial_shear_viscosity(:), &
-                                       vertex_artificial_thermal_conductivity(:)
-
 
         ! Global nodes array - used for octree operation
-        real(rk), allocatable :: global_nodes(:,:)
+        real(rk),       allocatable :: global_nodes(:,:)
 
-
-
-
-        !
         ! Function registration
-        !
         type(function_status_t)         :: function_status ! Status of function residuals and linearizations
 
 
@@ -105,9 +76,10 @@ module type_solverdata
         generic, public     :: init => init_base
         procedure, private  :: init_base
 
-        procedure           :: add_auxiliary_field
 
         procedure           :: nauxiliary_fields
+        procedure           :: add_auxiliary_field
+        procedure           :: new_auxiliary_field
         procedure           :: get_auxiliary_field_index
         procedure           :: get_auxiliary_field_name
 
@@ -154,10 +126,18 @@ contains
         type(mesh_t),                       intent(inout)   :: mesh
         type(equationset_function_data_t),  intent(in)      :: function_data(:)
         
-
-        integer(ik) :: ierr, ndom, maxelems, idom
+        integer(ik) :: ierr, ndom, maxelems, idom, iaux, aux_ID
         logical     :: increase_maxelems = .false.
 
+
+        ! Create vector/matrix containers
+        self%q     = chidg_vector(trim(backend))
+        self%dq    = chidg_vector(trim(backend))
+        self%rhs   = chidg_vector(trim(backend))
+        self%q_in  = chidg_vector(trim(backend))
+        self%q_out = chidg_vector(trim(backend))
+
+        self%lhs   = chidg_matrix(trim(backend))
 
         ! Initialize vectors
         call self%q%init(    mesh,mesh%ntime_)
@@ -166,52 +146,39 @@ contains
         call self%q_in%init( mesh,mesh%ntime_)
         call self%q_out%init(mesh,mesh%ntime_)
 
-
         ! Initialize matrix and parallel recv data
         call self%lhs%init(mesh,'full')
         call self%lhs%init_recv(self%rhs)
 
+        ! By default, create 5 auxiliary field vectors. Each initialized with 'empty' field string.
+        do iaux = 1,5
+            aux_ID = self%new_auxiliary_field()
+            call self%auxiliary_field(aux_ID)%init(mesh,mesh%ntime_)
+        end do
 
-
-
-    
-        !
         ! Find maximum number of elements in any domain
-        !
         ndom = mesh%ndomains()
         maxelems = 0
         do idom = 1,ndom
-
             increase_maxelems = ( mesh%domain(idom)%nelem > maxelems )
-
             if (increase_maxelems) then
                 maxelems = mesh%domain(idom)%nelem
             end if
-
         end do
 
 
-
-        !
         ! Allocate timestep storage
-        !
         if (allocated(self%dt)) deallocate(self%dt)
         allocate(self%dt(ndom,maxelems),stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-
-        !
         ! Initialize storage on flux and linearization registration
-        !
         call self%function_status%init( mesh, function_data)
 
-        
-
-        !
         ! Confirm solver initialization
-        !
         self%solverInitialized = .true.
+
 
     end subroutine init_base
     !******************************************************************************************
@@ -243,67 +210,96 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_auxiliary_field(self,fieldname,auxiliary_vector)
+    function add_auxiliary_field(self,fieldname,auxiliary_vector) result(aux_ID)
         class(solverdata_t),    intent(inout)           :: self
         character(*),           intent(in)              :: fieldname
         type(chidg_vector_t),   intent(in), optional    :: auxiliary_vector
 
-        integer(ik) :: naux_vectors, ierr
+        integer(ik) :: aux_ID
+
+        ! Try and find 'empty' auxiliary vector
+        aux_ID = self%get_auxiliary_field_index('empty')
+        if (aux_ID == NO_ID) aux_ID = self%new_auxiliary_field()
+
+        ! Set field name
+        self%auxiliary_field_name(aux_ID) = string_t(trim(fieldname))
+
+        ! Store incoming vector if present
+        if (present(auxiliary_vector)) self%auxiliary_field(aux_ID) = auxiliary_vector
+
+    end function add_auxiliary_field
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Allocate storage for a new auxiliary vector. Return index of new vector 
+    !!  in self%auxiliary_vectors(:)
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/24/2019
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    function new_auxiliary_field(self) result(aux_ID)
+        class(solverdata_t),    intent(inout)   :: self
+
+        integer(ik) :: naux_vectors, ierr, aux_ID, iaux
 
         type(string_t),         allocatable :: temp_names(:)
         type(chidg_vector_t),   allocatable :: temp_vectors(:)
 
 
-        !
-        ! Resize array storage
-        !
+        ! Get new size for self%auxiliary_field(:)
         if (allocated(self%auxiliary_field)) then
             naux_vectors = size(self%auxiliary_field) + 1
         else
             naux_vectors = 1
         end if
+        ! New auxiliary ID is last entry be default.
+        aux_ID = naux_vectors
 
-        
+
+        ! Allocate temp storage for new vectors and names 
         allocate(temp_names(naux_vectors), &
                  temp_vectors(naux_vectors), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
+        do iaux = 1,size(temp_vectors)
+            temp_vectors(iaux) = chidg_vector(trim(backend))
+        end do
 
-        !
+
         ! Copy previously added auxiliary fields to new array
-        !
         if (naux_vectors > 1) then
             temp_names(1:size(self%auxiliary_field_name)) = self%auxiliary_field_name(1:size(self%auxiliary_field_name))
-            temp_vectors(1:size(self%auxiliary_field))    = self%auxiliary_field(1:size(self%auxiliary_field))
+
+            ! TODO: Not working correctly with petsc, maybe due to elemental assignment not defined?
+            !temp_vectors(1:size(self%auxiliary_field))    = self%auxiliary_field(1:size(self%auxiliary_field))
+            ! Fix:
+            do iaux = 1,size(self%auxiliary_field)
+                temp_vectors(iaux) = self%auxiliary_field(iaux)
+            end do
         end if
 
 
-
-        !
-        ! Set field name
-        !
-        temp_names(naux_vectors) = string_t(trim(fieldname))
+        ! Set field name: default = 'empty'
+        temp_names(aux_ID) = string_t('empty')
+        temp_vectors(aux_ID) = chidg_vector(trim(backend))
 
 
-
-        !
         ! Move resized temp allocation back to solverdata_t container.
-        !
         call move_alloc(temp_names,self%auxiliary_field_name)
         call move_alloc(temp_vectors,self%auxiliary_field)
 
 
-        !
-        ! Store incoming vector if present
-        !
-        if (present(auxiliary_vector)) then
-            self%auxiliary_field(naux_vectors) = auxiliary_vector
-        end if
-
-    end subroutine add_auxiliary_field
-    !*****************************************************************************************
-
+    end function new_auxiliary_field
+    !******************************************************************************************
 
 
 
@@ -330,24 +326,17 @@ contains
 
         integer(ik)                 :: field_index, ifield
         
-
-        !
         ! Loop through names to try and find field
-        !
         if (allocated(self%auxiliary_field_name)) then
-
-            field_index = 0
+            field_index = NO_ID
             do ifield = 1,size(self%auxiliary_field_name)
                 if (self%auxiliary_field_name(ifield)%get() == trim(fieldname)) then
                     field_index = ifield
                     exit
                 end if
             end do
-
         else
-
-            field_index = 0
-
+            field_index = NO_ID
         end if
 
 
@@ -421,6 +410,9 @@ contains
 
 
 
+
+
+
     !>
     !!
     !! @author  Eric M. Wolf
@@ -428,100 +420,85 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine set_nelems_per_domain(self,nelems_per_domain)
-        class(solverdata_t),    intent(inout)           :: self
-        integer(ik),           intent(in)              :: nelems_per_domain(:)
+        class(solverdata_t),    intent(inout)   :: self
+        integer(ik),            intent(in)      :: nelems_per_domain(:)
 
-        integer(ik)     :: nelems
-
-        if (allocated(self%nelems_per_domain)) deallocate(self%nelems_per_domain)
+        integer(ik) :: nelements_g, ierr
 
         self%nelems_per_domain = nelems_per_domain
-        nelems = sum(nelems_per_domain)
-
-        if (allocated(self%rbf_center)) deallocate(self%rbf_center)
-        if (allocated(self%rbf_radius)) deallocate(self%rbf_radius)
-
-
-        allocate(self%rbf_center(nelems, 3))
-        allocate(self%rbf_radius(nelems, 3))
-
-        if (allocated(self%rbf_artificial_bulk_viscosity)) deallocate(self%rbf_artificial_bulk_viscosity)
-        if (allocated(self%rbf_artificial_shear_viscosity)) deallocate(self%rbf_artificial_shear_viscosity)
-        if (allocated(self%rbf_artificial_thermal_conductivity)) deallocate(self%rbf_artificial_thermal_conductivity)
-
-
-        allocate(self%rbf_artificial_bulk_viscosity(nelems))
-        allocate(self%rbf_artificial_shear_viscosity(nelems))
-        allocate(self%rbf_artificial_thermal_conductivity(nelems))
-
+        nelements_g = sum(nelems_per_domain)
         
-
-        if (allocated(self%mesh_size_elem)) deallocate(self%mesh_size_elem)
-        allocate(self%mesh_size_elem(nelems, 3))
-        self%mesh_size_elem = ZERO
-
+        if (allocated(self%rbf_center))         deallocate(self%rbf_center)
+        if (allocated(self%rbf_radius))         deallocate(self%rbf_radius)
+        if (allocated(self%area_weighted_h))    deallocate(self%area_weighted_h)
+        if (allocated(self%mesh_size_elem))     deallocate(self%mesh_size_elem)
         if (allocated(self%min_mesh_size_elem)) deallocate(self%min_mesh_size_elem)
-        allocate(self%min_mesh_size_elem(nelems))
+        allocate(self%area_weighted_h(nelements_g, 3), &
+                 self%mesh_size_elem(nelements_g, 3),  &
+                 self%min_mesh_size_elem(nelements_g), &
+                 self%rbf_center(nelements_g, 3),      &
+                 self%rbf_radius(nelements_g, 3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        self%rbf_center         = ZERO
+        self%rbf_radius         = ZERO
+        self%area_weighted_h    = ZERO
+        self%mesh_size_elem     = ZERO
         self%min_mesh_size_elem = ZERO
 
     end subroutine set_nelems_per_domain
     !*****************************************************************************************
 
+
+
+
+
     !>
-    !! 
     !!
     !! @author  Eric M. Wolf
     !! @date    07/26/2018 
     !!
     !--------------------------------------------------------------------------------
     subroutine set_nnodes_per_domain(self,nnodes_per_domain)
-        class(solverdata_t),    intent(inout)           :: self
-        integer(ik),           intent(in)              :: nnodes_per_domain(:)
+        class(solverdata_t),    intent(inout)   :: self
+        integer(ik),            intent(in)      :: nnodes_per_domain(:)
 
-        integer(ik)     :: nnodes
-
-        if (allocated(self%nnodes_per_domain)) deallocate(self%nnodes_per_domain)
+        integer(ik) :: nnodes, ierr
 
         self%nnodes_per_domain = nnodes_per_domain
         nnodes = sum(nnodes_per_domain)
 
-
-        if (allocated(self%vertex_artificial_bulk_viscosity)) deallocate(self%vertex_artificial_bulk_viscosity)
-        if (allocated(self%vertex_artificial_shear_viscosity)) deallocate(self%vertex_artificial_shear_viscosity)
-        if (allocated(self%vertex_artificial_thermal_conductivity)) deallocate(self%vertex_artificial_thermal_conductivity)
-
-
-        allocate(self%vertex_artificial_bulk_viscosity(nnodes))
-        allocate(self%vertex_artificial_shear_viscosity(nnodes))
-        allocate(self%vertex_artificial_thermal_conductivity(nnodes))
-
-        self%vertex_artificial_bulk_viscosity = ZERO
-        self%vertex_artificial_shear_viscosity = ZERO
-        self%vertex_artificial_thermal_conductivity = ZERO
-
-        if (allocated(self%mesh_size_vertex)) deallocate(self%mesh_size_vertex)
-        allocate(self%mesh_size_vertex(nnodes, 3))
-        self%mesh_size_vertex = ZERO
-
-        if (allocated(self%min_mesh_size_vertex)) deallocate(self%min_mesh_size_vertex)
-        allocate(self%min_mesh_size_vertex(nnodes))
-        self%min_mesh_size_vertex = ZERO
-
-        if (allocated(self%avg_mesh_size_vertex)) deallocate(self%avg_mesh_size_vertex)
-        allocate(self%avg_mesh_size_vertex(nnodes))
-        self%avg_mesh_size_vertex = ZERO
-
-
-        if (allocated(self%sum_mesh_size_vertex)) deallocate(self%sum_mesh_size_vertex)
-        allocate(self%sum_mesh_size_vertex(nnodes))
-        self%sum_mesh_size_vertex = ZERO
-
+        if (allocated(self%mesh_size_vertex))             deallocate(self%mesh_size_vertex)
+        if (allocated(self%min_mesh_size_vertex))         deallocate(self%min_mesh_size_vertex)
+        if (allocated(self%avg_mesh_size_vertex))         deallocate(self%avg_mesh_size_vertex)
+        if (allocated(self%sum_mesh_size_vertex))         deallocate(self%sum_mesh_size_vertex)
+        if (allocated(self%avg_mesh_h_vertex))            deallocate(self%avg_mesh_h_vertex)
+        if (allocated(self%sum_mesh_h_vertex))            deallocate(self%sum_mesh_h_vertex)
         if (allocated(self%num_elements_touching_vertex)) deallocate(self%num_elements_touching_vertex)
-        allocate(self%num_elements_touching_vertex(nnodes))
-        self%num_elements_touching_vertex = 0_ik 
+        allocate(self%mesh_size_vertex(nnodes, 3),  &
+                 self%min_mesh_size_vertex(nnodes), &
+                 self%avg_mesh_size_vertex(nnodes), &
+                 self%sum_mesh_size_vertex(nnodes), &
+                 self%avg_mesh_h_vertex(nnodes,3),  &
+                 self%sum_mesh_h_vertex(nnodes,3),  &
+                 self%num_elements_touching_vertex(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        self%mesh_size_vertex     = ZERO
+        self%min_mesh_size_vertex = ZERO
+        self%avg_mesh_size_vertex = ZERO
+        self%sum_mesh_size_vertex = ZERO
+        self%avg_mesh_h_vertex    = ZERO
+        self%sum_mesh_h_vertex    = ZERO
+        self%num_elements_touching_vertex = 0
 
     end subroutine set_nnodes_per_domain
     !*****************************************************************************************
+
+
+
+
+
 
     !>
     !! 
@@ -531,54 +508,15 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine set_global_nodes(self,global_nodes)
-        class(solverdata_t),    intent(inout)           :: self
-        real(rk),           intent(in)              :: global_nodes(:,:)
+        class(solverdata_t),    intent(inout)   :: self
+        real(rk),               intent(in)      :: global_nodes(:,:)
 
-        if (allocated(self%global_nodes)) deallocate(self%global_nodes)
         self%global_nodes = global_nodes
 
     end subroutine set_global_nodes
     !*****************************************************************************************
 
 
-
-
-    !>  Given the index of a node in the global node list, determine its
-    !!  (global) domain index (idomain_g) and its domain node index (to access dom(idomain_l)%nodes(inode)).
-    !! 
-    !!
-    !! @author  Eric M. Wolf
-    !! @date    08/31/2018 
-    !!
-    !--------------------------------------------------------------------------------
-    subroutine get_global_node_domain(self, global_node_index, idomain_g, inode) 
-        class(solverdata_t),   intent(inout)   :: self
-        integer(ik),               intent(in)      :: global_node_index
-        integer(ik), intent(inout) :: idomain_g, inode
-
-        integer(ik) :: idom, node_count, node_count_old
-        logical :: searching
-
-        searching = .true.
-
-        node_count = 0
-        node_count_old = 0
-        do idom = 1, size(self%nnodes_per_domain)
-            node_count = node_count + self%nnodes_per_domain(idom)
-            if ((global_node_index <= node_count) .and. (searching)) then
-                idomain_g = idom
-                inode = global_node_index - node_count_old
-                searching = .false.
-            end if
-            node_count_old = node_count
-            
-        end do
-        
-        if (searching) print *, 'get global node domain - domain not found'
-
-
-    end subroutine get_global_node_domain
-    !*****************************************************************************************
 
 
 
@@ -593,17 +531,25 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine release(self)
-       class(solverdata_t), intent(inout)   :: self 
+        class(solverdata_t), intent(inout)   :: self 
+
+        integer(ik) :: iaux
 
         ! Release chidg_vector data
         call self%q%release()
         call self%dq%release()
         call self%q_in%release()
+        call self%q_out%release()
         call self%rhs%release()
 
         ! Release chidg_matrix data
         call self%lhs%release()
 
+        ! Release auxiliary_field vectors
+        do iaux = 1,self%nauxiliary_fields()
+            call self%auxiliary_field(iaux)%release()
+        end do
+        if (allocated(self%auxiliary_field)) deallocate(self%auxiliary_field)
 
     end subroutine release
     !****************************************************************************************

@@ -43,6 +43,7 @@ module mod_bc
 
     ! Fluid boundary conditions
     use bc_state_wall,                                  only: wall_t
+    use bc_state_stationary_adiabatic_wall,             only: stationary_adiabatic_wall_t
     use bc_state_moving_wall,                           only: moving_wall_t
     use bc_state_inlet_total,                           only: inlet_total_t
     use bc_state_inlet_characteristic,                  only: inlet_characteristic_t
@@ -58,8 +59,6 @@ module mod_bc
     !use bc_state_outlet_LODI_pressure,                  only: outlet_LODI_pressure_t
     !use bc_state_outlet_LODI_z_pressure,                only: outlet_LODI_z_pressure_t
     use bc_state_outlet_steady_1dchar,              only: outlet_steady_1dchar_t
-    use bc_state_outlet_3dgiles,                    only: outlet_3dgiles_t
-    use bc_state_outlet_3dgiles_innerproduct,       only: outlet_3dgiles_innerproduct_t
     use bc_state_outlet_giles_quasi3d_steady,       only: outlet_giles_quasi3d_steady_t
     use bc_state_outlet_giles_quasi3d_unsteady_HB,  only: outlet_giles_quasi3d_unsteady_HB_t
     use bc_state_inlet_giles_quasi3d_unsteady_HB,   only: inlet_giles_quasi3d_unsteady_HB_t
@@ -157,6 +156,7 @@ contains
 
 
         type(wall_t)                            :: WALL
+        type(stationary_adiabatic_wall_t)       :: STATIONARY_ADIABATIC_WALL
         type(moving_wall_t)                     :: MOVING_WALL
         type(inlet_total_t)                     :: INLET_TOTAL
         type(inlet_characteristic_t)            :: INLET_CHARACTERISTIC
@@ -172,8 +172,6 @@ contains
         !type(outlet_LODI_pressure_t)            :: OUTLET_LODI_PRESSURE
         !type(outlet_LODI_z_pressure_t)          :: OUTLET_LODI_Z_PRESSURE
         type(outlet_steady_1dchar_t)            :: OUTLET_STEADY_1DCHAR
-        type(outlet_3dgiles_t)                  :: OUTLET_3DGILES
-        type(outlet_3dgiles_innerproduct_t)     :: OUTLET_3DGILES_INNERPRODUCT
         type(outlet_giles_quasi3d_steady_t)     :: OUTLET_GILES_QUASI3D_STEADY
         type(outlet_giles_quasi3d_unsteady_HB_t):: OUTLET_GILES_QUASI3D_UNSTEADY_HB
         type(inlet_giles_quasi3d_unsteady_HB_t) :: INLET_GILES_QUASI3D_UNSTEADY_HB
@@ -243,6 +241,7 @@ contains
 
 
             call registered_bcs%push_back(WALL)
+            call registered_bcs%push_back(STATIONARY_ADIABATIC_WALL)
             call registered_bcs%push_back(MOVING_WALL)
             call registered_bcs%push_back(INLET_TOTAL)
             call registered_bcs%push_back(INLET_CHARACTERISTIC)
@@ -255,8 +254,6 @@ contains
             call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_GLOBALDG)
             call registered_bcs%push_back(OUTLET_NEUMANN_LODI_LOCALDG)
             call registered_bcs%push_back(OUTLET_STEADY_1DCHAR)
-            call registered_bcs%push_back(OUTLET_3DGILES)
-            call registered_bcs%push_back(OUTLET_3DGILES_INNERPRODUCT)
             call registered_bcs%push_back(OUTLET_GILES_QUASI3D_STEADY)
             call registered_bcs%push_back(OUTLET_GILES_QUASI3D_UNSTEADY_HB)
             call registered_bcs%push_back(INLET_GILES_QUASI3D_UNSTEADY_HB)

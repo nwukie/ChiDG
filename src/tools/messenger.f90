@@ -2,7 +2,7 @@ module messenger
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: IO_DESTINATION
     use mod_version,    only: get_git_hash
-    use mod_chidg_mpi,  only: IRANK, GLOBAL_MASTER, ChiDG_COMM
+    use mod_chidg_mpi,  only: IRANK, NRANK, GLOBAL_MASTER, ChiDG_COMM
     implicit none
 
 
@@ -30,23 +30,30 @@ contains
     !!  @date   2/2/2016
     !!
     !!-----------------------------------------------------------------------------------------
-    subroutine log_init()
+    subroutine log_init(header)
+        logical, optional :: header
 
         logical         :: file_opened = .false.
+        logical         :: print_header
         character(8)    :: date
         character(10)   :: time
-        integer         :: ierr
+        integer         :: ierr, iproc
 
         ! Open file
-        inquire(file='chidg.log', opened=file_opened)
-        if (.not. file_opened ) then
-            open(newunit=log_unit, file='chidg.log', form='formatted', access='sequential', iostat=ierr)
-            if (ierr /= 0) then
-                print*, '************** WARNING ****************'
-                print*, 'log_init: error opening log file.', ' iostat = ', ierr
-                print*, '***************************************'
+        do iproc = 0,NRANK
+            if (iproc == IRANK) then
+                inquire(file='chidg.log', opened=file_opened)
+                if (.not. file_opened ) then
+                    open(newunit=log_unit, file='chidg.log', form='formatted', access='sequential', iostat=ierr)
+                    if (ierr /= 0) then
+                        print*, '************** WARNING ****************'
+                        print*, 'log_init: error opening log file.', ' iostat = ', ierr
+                        print*, '***************************************'
+                    end if
+                end if
             end if
-        end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
 
 
         ! Confirm log initialized
@@ -56,15 +63,20 @@ contains
         !
         ! Write log header
         !
-        call date_and_time(date,time)
+        print_header = .true.
+        if (present(header)) print_header = header
 
-        call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
-        call write_line(' ', io_proc=GLOBAL_MASTER)
-        call write_line('Date:      ', date(:4)//" "//date(5:6)//" "//date(7:8), ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_line('Time:      ', time(:2)//":"//time(3:4)//":"//time(5:6), ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_line('Git commit: ', get_git_hash(), io_proc=GLOBAL_MASTER)
-        call write_line(' ', io_proc=GLOBAL_MASTER)
-        call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
+        if (print_header) then
+            call date_and_time(date,time)
+
+            call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
+            call write_line(' ', io_proc=GLOBAL_MASTER)
+            call write_line('Date:      ', date(:4)//" "//date(5:6)//" "//date(7:8), ltrim=.false., io_proc=GLOBAL_MASTER)
+            call write_line('Time:      ', time(:2)//":"//time(3:4)//":"//time(5:6), ltrim=.false., io_proc=GLOBAL_MASTER)
+            call write_line('Git commit: ', get_git_hash(), io_proc=GLOBAL_MASTER)
+            call write_line(' ', io_proc=GLOBAL_MASTER)
+            call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
+        end if
 
 
 
@@ -86,19 +98,30 @@ contains
 
         logical :: file_opened = .false.
         logical :: file_exists = .false.
-        integer :: ierr
+        integer :: ierr, iproc
 
         !
         ! Close file
         !
-        inquire(log_unit, exist=file_exists, opened=file_opened, iostat=ierr)
-        !if (ierr /= 0) then
-        !    print*, "************** WARNING ****************"
-        !    print*, "Error inquiring about log 'chidg.log'. ", " ierr: ", ierr, " File exists: ", file_exists, " File opened: ", file_opened
-        !    print*, "***************************************"
-        !end if
 
-        if (file_opened) close(log_unit)
+        do iproc = 0,NRANK
+            if (iproc == IRANK) then
+
+                inquire(log_unit, exist=file_exists, opened=file_opened, iostat=ierr)
+                !if (ierr /= 0) then
+                !    print*, "************** WARNING ****************"
+                !    print*, "Error inquiring about log 'chidg.log'. ", " ierr: ", ierr, " File exists: ", file_exists, " File opened: ", file_opened
+                !    print*, "***************************************"
+                !end if
+
+                if (file_opened) then
+                    close(log_unit)
+                    log_initialized = .false.
+                end if
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
 
     end subroutine log_finalize
     !******************************************************************************************
@@ -729,7 +752,6 @@ contains
         !
         write_handle = log_unit
         if (present(handle)) write_handle = handle
-
 
 
         !

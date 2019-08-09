@@ -45,6 +45,7 @@ module type_linear_solver
     contains
     
         procedure   :: init
+        procedure   :: tear_down
         procedure   :: set
 
         procedure(solve_interface), deferred :: solve
@@ -155,7 +156,7 @@ contains
         type(chidg_vector_t),    intent(inout)  :: x
         type(chidg_vector_t),    intent(in)     :: b
 
-        type(chidg_vector_t) :: r
+        type(chidg_vector_t) :: r, tmp
 
         r = x
         call r%clear()
@@ -201,12 +202,26 @@ contains
         r = self%residual(A,x,b)
 
         ! Compute norm
-        err = r%norm()
+        !err = r%norm()
+        err = r%norm(ChiDG_COMM)
 
     end function error
     !*************************************************************************************************
 
 
 
+
+    !>  Tear down activities.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/25/2019
+    !!
+    !-------------------------------------------------------------------------------------------------
+    subroutine tear_down(self)
+        class(linear_solver_t),  intent(inout)  :: self
+
+
+    end subroutine tear_down
+    !*************************************************************************************************
 
 end module type_linear_solver

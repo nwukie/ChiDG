@@ -235,30 +235,20 @@ contains
         type(AD_D), dimension(:),   allocatable :: &
             u, grad1_u, grad2_u, grad3_u, sumsqr, mu
 
-        !
         ! Interpolate solution to quadrature nodes
-        !
         u       = worker%get_field('u', 'value')
-        !grad1_u = worker%get_field('u', 'grad1',override_lift=.true.)
-        !grad2_u = worker%get_field('u', 'grad2',override_lift=.true.)
-        !grad3_u = worker%get_field('u', 'grad3',override_lift=.true.)
         grad1_u = worker%get_field('u', 'grad1')
         grad2_u = worker%get_field('u', 'grad2')
         grad3_u = worker%get_field('u', 'grad3')
 
 
-        !
         ! Square components of gradient and sum
-        !
         sumsqr = grad1_u*grad1_u  +  grad2_u*grad2_u  +  grad3_u*grad3_u
 
         
-        !
         ! Compute p-Laplace diffusion coefficient
-        !
-        ! mu = (grad1(u)**2 + grad2(u)**2 + grad3(u)**2)**((p-2)/2)
-        !
-        !
+        !   mu = (grad1(u)**2 + grad2(u)**2 + grad3(u)**2)**((p-2)/2)
+        !-----------------------------------------------------------
         if (abs(p-2._rk) > 1.e-8_rk) then
             mu = sumsqr**((p-TWO)/TWO)
         else
@@ -266,11 +256,7 @@ contains
             mu = ONE
         end if
 
-
-
-
         call worker%store_model_field('Scalar Diffusion Coefficient','value',mu)
-
 
     end subroutine compute_model
     !***************************************************************************************
@@ -330,19 +316,12 @@ contains
         type(AD_D), allocatable, dimension(:)   :: source
         real(rk),   allocatable, dimension(:)   :: x, y
 
-
-        !
         ! Interpolate solution to quadrature nodes to initialize derivatives
-        !
         source = worker%get_field('u','value','element')
         source = ONE
 
-
-        !
         ! Integrate volume flux
-        !
         call worker%integrate_volume_source('u',source)
-
 
     end subroutine compute_source
     !*******************************************************************************************
@@ -408,28 +387,20 @@ contains
         type(wall_distance_source_t)    :: wall_distance_source
         
 
-
-        !
         ! Register p-Poisson model and wall distance source term
-        !
         call model_factory%register(p_laplace)
         call operator_factory%register(wall_distance_source)
 
 
-        !
         ! Set equationset name.
-        !
         call wall_distance_eqn%set_name("Wall Distance : p-Poisson")
 
 
-        !
         ! Add spatial operators
-        !
         select case (trim(blueprint))
 
             case('default')
                 ! Add the operators for the standard scalar diffusion equation:
-                !
                 !   div(mu*grad(u)) = 0
                 !
                 call wall_distance_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
@@ -453,11 +424,6 @@ contains
 
     end function build
     !*****************************************************************************************
-
-
-
-
-
 
 
 
@@ -497,13 +463,6 @@ contains
 
     end function get_p_poisson_parameter
     !*****************************************************************************************
-
-
-
-
-
-
-
 
 
 

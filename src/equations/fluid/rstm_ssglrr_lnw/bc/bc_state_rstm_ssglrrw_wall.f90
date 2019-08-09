@@ -99,7 +99,12 @@ contains
             du_ddensity,   dv_ddensity,   dw_ddensity,      &
             du_dmom1,      dv_dmom2,      dw_dmom3,         &
             invdensity
+<<<<<<< HEAD
         real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3
+=======
+        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, distance_field
+        real(rk),   allocatable, dimension(:,:) :: h_sm
+>>>>>>> dev_tecio
         real(rk) :: h(3), distance, alpha_p, y_plus
         integer(ik) :: ii, nnodes, order
 
@@ -234,6 +239,11 @@ contains
         h = worker%element_size('interior')
         distance = minval(abs(h))
 
+<<<<<<< HEAD
+=======
+        h_sm = worker%h_smooth('boundary')
+        distance_field =  h_sm(:,1)*unorm_1 + h_sm(:,2)*unorm_2 + h_sm(:,3)*unorm_3
+>>>>>>> dev_tecio
 
         !
         ! Store boundary condition state - Dirichlet Zero
@@ -250,13 +260,21 @@ contains
         density_omega_m = density_m
 
 
+<<<<<<< HEAD
         density_omega_m = density_m*log(6.0_rk*tau_wall/(mu_l*SSG_LRRW_beta_w*(alpha_p*y_plus)**TWO+1.0e-15_rk))
+=======
+        density_omega_m = density_m*log(6.0_rk*tau_wall/(mu_l*SSG_LRRW_beta_w*(alpha_p*y_plus)**TWO+1.0e-11_rk))
+>>>>>>> dev_tecio
 
         ! 
         ! Set a lower bound
         !
         density_omega_lb = density_m
+<<<<<<< HEAD
         density_omega_lb = density_m*log(6.0_rk*mu_l/(density_m*SSG_LRRW_beta_w*(alpha_p*distance)**TWO+1.0e-15_rk))
+=======
+        density_omega_lb = density_m*log(6.0_rk*mu_l/(density_m*SSG_LRRW_beta_w*(alpha_p*distance_field)**TWO+1.0e-11_rk))
+>>>>>>> dev_tecio
 
         !density_omega_m = density_omega_lb
         nnodes = size(density_omega_m)

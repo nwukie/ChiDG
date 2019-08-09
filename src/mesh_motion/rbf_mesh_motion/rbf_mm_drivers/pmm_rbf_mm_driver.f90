@@ -31,39 +31,54 @@ module pmm_rbf_mm_driver
 
 contains
 
+
+    !>
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------
     subroutine init(self)
         class(rbf_mm_driver_pmm),       intent(inout) :: self
         
         call self%set_name('pmm')
 
     end subroutine init
+    !**************************************************************
 
 
+
+    !>
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------
     function compute_disp(self,time,node) result(val)
-        class(rbf_mm_driver_pmm),     intent(inout) :: self
-        real(rk),                     intent(in)    :: time
-        real(rk),                       intent(in)  :: node(3)
-
+        class(rbf_mm_driver_pmm),   intent(inout)   :: self
+        real(rk),                   intent(in)      :: time
+        real(rk),                   intent(in)      :: node(3)
         real(rk)                                    :: val(3)
-
 
         val = self%pmmf%compute_pos(time,node) - node
-             
 
     end function compute_disp 
+    !**************************************************************
 
-    function compute_vel(self, time, node) result(val)
-        class(rbf_mm_driver_pmm),     intent(inout) :: self
-        real(rk),                     intent(in)    :: time
-        real(rk),                       intent(in)  :: node(3)
 
+    !>
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------
+    function compute_vel(self,time,node) result(val)
+        class(rbf_mm_driver_pmm),   intent(inout)   :: self
+        real(rk),                   intent(in)      :: time
+        real(rk),                   intent(in)      :: node(3)
         real(rk)                                    :: val(3)
-
 
         val = self%pmmf%compute_vel(time,node) 
              
-
     end function compute_vel
+    !**************************************************************
 
     
     !>
@@ -73,8 +88,8 @@ contains
     !!  @date 4/7/2017
     !--------------------------------------------------------------------------------
     subroutine set_pmmf_name(self, pmmfstring)
-        class(rbf_mm_driver_pmm),        intent(inout)   :: self
-        character(*),                           intent(in)      :: pmmfstring
+        class(rbf_mm_driver_pmm),   intent(inout)   :: self
+        character(*),               intent(in)      :: pmmfstring
 
         self%pmmf_name = pmmfstring
 

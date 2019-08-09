@@ -1,7 +1,7 @@
 module type_element
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,NEDGES,XI_MIN,XI_MAX,ETA_MIN, &
+    use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN, &
                                       ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO,THIRD, &
                                       DIR_1, DIR_2, DIR_3, DIR_THETA, XI_DIR,   &
                                       ETA_DIR, ZETA_DIR, TWO_DIM, THREE_DIM,    &
@@ -12,7 +12,6 @@ module type_element
     use mod_polynomial,         only: polynomial_val, dpolynomial_val
     use mod_inv,                only: inv, inv_3x3
     use mod_determinant,        only: det_3x3
-    !use mod_io,                 only: gq_rule
 
 
     use type_point,                 only: point_t
@@ -63,19 +62,22 @@ module type_element
         integer(ik)                 :: iproc                ! Processor the element is associated with.
 
         ! Element data
-        integer(ik)                 :: element_data(8)      ! [element_type, spacedim, coordinate_system, neqns, nterms_s, nterms_c, ntime, interpolation_level]
+        integer(ik)                 :: element_data(9)      ! [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level, dof_start]
         integer(ik)                 :: element_type         ! 1=linear, 2=quadratic, 3=cubic, 4=quartic, etc.
         integer(ik)                 :: spacedim             ! Number of spatial dimensions for the element.
         integer(ik)                 :: coordinate_system    ! CARTESIAN, CYLINDRICAL. parameters from mod_constants.
         integer(ik)                 :: eqn_ID = NO_ID       ! Equation set identifier the element is associated with.
-        integer(ik)                 :: neqns                ! Number of equations being solved.
+        integer(ik)                 :: nfields              ! Number of equations being solved.
         integer(ik)                 :: nterms_s             ! Number of terms in solution expansion.  
         integer(ik)                 :: nterms_c             ! Number of terms in coordinate expansion. 
         integer(ik)                 :: ntime                ! Number of time levels in solution.
+        integer(ik)                 :: dof_start            ! Starting DOF index in ChiDG-global index
+        integer(ik)                 :: dof_local_start      ! Starting DOF index in ChiDG-local index
         integer(ik)                 :: interpolation_level  ! 1=lowest, 2-> are higher.
-        integer(ik)                 :: recv_comm    = NO_ID ! chidg_vector access if element is initialized on another processor
-        integer(ik)                 :: recv_domain  = NO_ID ! chidg_vector access if element is initialized on another processor
-        integer(ik)                 :: recv_element = NO_ID ! chidg_vector access if element is initialized on another processor
+        integer(ik)                 :: recv_comm    = NO_ID ! chidg_vector access if element is initialized on another processor.
+        integer(ik)                 :: recv_domain  = NO_ID ! chidg_vector access if element is initialized on another processor.
+        integer(ik)                 :: recv_element = NO_ID ! chidg_vector access if element is initialized on another processor.
+        integer(ik)                 :: recv_dof     = NO_ID ! Starting DOF index in local petsc vector for parallel storage.
 
 
         ! Connectivty and linear transformation martrix for 
@@ -103,7 +105,6 @@ module type_element
         real(rk),       allocatable :: interp_coords_def(:,:)   ! Deformed coordinates at element interpolation nodes
         real(rk),       allocatable :: interp_coords_vel(:,:)   ! Coordinate velocities at element interpolation nodes
         real(rk),       allocatable :: metric(:,:,:)            ! inverted jacobian matrix for each volume node (mat_i,mat_j,volume_pt)
-        !real(rk),       allocatable :: edge_metric(:,:,:,:)     ! inverted jacobian matrix for each edge node (mat_i,mat_j,edge_pt)
         real(rk),       allocatable :: jinv(:)                  ! Differential volume ratio: Undeformed Volume/Reference Volume
         real(rk),       allocatable :: jinv_def(:)              ! Differential volume ratio: Deformed Volume/Reference Volume
 
@@ -129,9 +130,6 @@ module type_element
         real(rk),       allocatable :: grad2_trans(:,:)     ! transpose grad2
         real(rk),       allocatable :: grad3_trans(:,:)     ! transpose grad3
 
-        !real(rk),       allocatable :: edge_grad1(:,:,:)
-        !real(rk),       allocatable :: edge_grad2(:,:,:)
-        !real(rk),       allocatable :: edge_grad3(:,:,:)
 
         ! Element-local mass, inverse mass matrices
         real(rk),       allocatable :: mass(:,:)        
@@ -140,8 +138,16 @@ module type_element
         ! Element volume, approx. size of bounding box
         real(rk)                    :: vol
         real(rk)                    :: vol_ale
-        real(rk)                    :: h(3), centroid(3)
+        real(rk)                    :: h(3), centroid(3), bb_centroid(3)
+        real(rk)                    :: area_weighted_h(3)
+
         real(rk),       allocatable :: dtau(:)              ! a pseudo-timestep for each equation. Used in the nonlinear solver.
+
+        ! Smoothed h-field
+        real(rk),       allocatable :: h_smooth(:,:)        ! (ngq,3)
+        real(rk),       allocatable :: size_smooth(:)       ! (ngq)
+
+
 
         ! Reference element and interpolators
         type(reference_element_t),  pointer :: basis_s => null()  ! Pointer to solution basis and interpolator
@@ -149,7 +155,7 @@ module type_element
 
         ! Logical tests
         logical :: geom_initialized = .false.
-        logical :: numInitialized   = .false.
+        logical :: sol_initialized  = .false.
 
         ! Tree box indicator
         integer(ik), allocatable    :: node_box_ID(:)
@@ -183,10 +189,6 @@ module type_element
         procedure, private  :: interpolate_coords_ale
         procedure, private  :: interpolate_metrics_ale
 
-        ! Edge procedures
-        !procedure, private  :: interpolate_metrics_edge
-        !procedure, private  :: interpolate_gradients_edge
-
         ! Compute discrete value for a given xi,eta,zeta.
         procedure, public   :: x                      
         procedure, public   :: y                      
@@ -205,10 +207,11 @@ module type_element
 
         ! Get connected face
         procedure, public   :: get_face_from_corners
-        procedure           :: register_rbf
 
-
-
+        ! RBF Registration
+        procedure           :: init_rbf_address_book
+        procedure, public   :: register_rbf
+        procedure, public   :: get_rbf_indices
 
         final               :: destructor
 
@@ -309,6 +312,7 @@ contains
             nodes_l(ipt,:) = nodes(inode,:)
         end do !ipt
 
+
         !
         ! Accumulate vertex indices
         !
@@ -383,6 +387,11 @@ contains
         self%h(2) = ywidth
         self%h(3) = zwidth
 
+        self%bb_centroid(1) = 0.5_rk*(xmin+xmax)
+        self%bb_centroid(2) = 0.5_rk*(ymin+ymax)
+        self%bb_centroid(3) = 0.5_rk*(zmin+zmax)
+
+
 
 
         !
@@ -418,6 +427,10 @@ contains
         call self%set_displacements_velocities(dnodes,vnodes)
 
 
+        ! Initialize RBF
+        call self%init_rbf_address_book(1)
+
+
     end subroutine init_geom
     !***********************************************************************************
 
@@ -435,29 +448,33 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  nterms_s    Number of terms in the modal representation of the solution
-    !!  @param[in]  neqns       Number of equations contained in the element solution
+    !!  @param[in]  nfields     Number of equations contained in the element solution
     !!
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/12/2016
     !!
     !!
     !----------------------------------------------------------------------------------
-    subroutine init_sol(self,interpolation,level,nterms_s,nfields,ntime)
-        class(element_t),   intent(inout) :: self
-        character(*),       intent(in)    :: interpolation
-        integer(ik),        intent(in)    :: level
-        integer(ik),        intent(in)    :: nterms_s
-        integer(ik),        intent(in)    :: nfields
-        integer(ik),        intent(in)    :: ntime
+    subroutine init_sol(self,interpolation,level,nterms_s,nfields,ntime,dof_start,dof_local_start)
+        class(element_t),   intent(inout)   :: self
+        character(*),       intent(in)      :: interpolation
+        integer(ik),        intent(in)      :: level
+        integer(ik),        intent(in)      :: nterms_s
+        integer(ik),        intent(in)      :: nfields
+        integer(ik),        intent(in)      :: ntime
+        integer(ik),        intent(in)      :: dof_start
+        integer(ik),        intent(in)      :: dof_local_start
 
         integer(ik) :: ierr
-        integer(ik) :: nnodes, nnodes_edge
+        integer(ik) :: nnodes
         integer(ik) :: ref_ID_s, ref_ID_c
         
 
-        self%nterms_s    = nterms_s     ! number of terms in solution expansion
-        self%neqns       = nfields      ! number of equations being solved
-        self%ntime       = ntime        ! number of time steps in solution
+        self%nterms_s        = nterms_s     ! number of terms in solution expansion
+        self%nfields         = nfields      ! number of equations being solved
+        self%ntime           = ntime        ! number of time steps in solution
+        self%dof_start       = dof_start
+        self%dof_local_start = dof_local_start
 
 
         !
@@ -490,7 +507,6 @@ contains
             deallocate( self%jinv,                      &
                         self%jinv_def,                  &
                         self%metric,                    &
-                        !self%edge_metric,               &
                         self%interp_coords,             &
                         self%interp_coords_def,         &
                         self%grad1,                     &
@@ -499,9 +515,6 @@ contains
                         self%grad1_trans,               &
                         self%grad2_trans,               &
                         self%grad3_trans,               &
-                        !self%edge_grad1,                &
-                        !self%edge_grad2,                &
-                        !self%edge_grad3,                &
                         self%mass,                      &
                         self%invmass,                   &
                         self%interp_coords_vel,         &
@@ -511,12 +524,13 @@ contains
                         self%ale_g_grad2,               &
                         self%ale_g_grad3,               &
                         self%ale_g_modes,               &
+                        self%h_smooth,                  &
+                        self%size_smooth,               &
                         self%dtau                       &
                         )
             
 
         nnodes = ref_elems(ref_ID_s)%nnodes_elem()
-        nnodes_edge = ref_elems(ref_ID_s)%nnodes_edge()
         allocate(self%jinv(nnodes),                         &
                  self%jinv_def(nnodes),                     &
                  self%grad1(nnodes,nterms_s),               &
@@ -525,22 +539,20 @@ contains
                  self%grad1_trans(nterms_s,nnodes),         &
                  self%grad2_trans(nterms_s,nnodes),         &
                  self%grad3_trans(nterms_s,nnodes),         &
-                 !self%edge_grad1(nnodes_edge,nterms_s,NEDGES),   &
-                 !self%edge_grad2(nnodes_edge,nterms_s,NEDGES),   &
-                 !self%edge_grad3(nnodes_edge,nterms_s,NEDGES),   &
                  self%mass(nterms_s,nterms_s),              &
                  self%invmass(nterms_s,nterms_s),           &
                  self%interp_coords(nnodes,3),              & 
                  self%interp_coords_def(nnodes,3),          &
                  self%interp_coords_vel(nnodes,3),          &
                  self%metric(3,3,nnodes),                   &
-                 !self%edge_metric(3,3,nnodes_edge,NEDGES),  &
                  self%ale_Dinv(3,3,nnodes),                 &
                  self%ale_g(nnodes),                        &
                  self%ale_g_grad1(nnodes),                  &
                  self%ale_g_grad2(nnodes),                  &
                  self%ale_g_grad3(nnodes),                  &
                  self%ale_g_modes(nterms_s),                &
+                 self%h_smooth(nnodes,3),                   &
+                 self%size_smooth(nnodes),                  &
                  self%dtau(nfields), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -552,23 +564,22 @@ contains
         call self%update_interpolations()
         call self%update_interpolations_ale()
 
-        !
-        ! Confirm element numerics were initialized
-        !
-        self%numInitialized = .true.    
-
 
         !
         ! Store element_data(4-8)
         !
-        self%element_data(4) = self%neqns
+        self%element_data(4) = self%nfields
         self%element_data(5) = self%nterms_s
         self%element_data(6) = self%nterms_c
         self%element_data(7) = self%ntime
         self%element_data(8) = level
+        self%element_data(9) = self%dof_start
 
 
-
+        !
+        ! Confirm element numerics were initialized
+        !
+        self%sol_initialized = .true.    
 
     end subroutine init_sol
     !**********************************************************************************
@@ -625,7 +636,6 @@ contains
         ! Compute interpolation metrics
         !
         call self%interpolate_metrics()
-        !call self%interpolate_metrics_edge()
 
         !
         ! Call to compute mass matrix
@@ -636,7 +646,6 @@ contains
         ! Call to compute matrices of gradients at each interpolation node
         !
         call self%interpolate_gradients()
-        !call self%interpolate_gradients_edge()
 
 
     end subroutine update_interpolations
@@ -762,94 +771,6 @@ contains
 
 
 
-!    !> Compute edge metric and jacobian terms
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   12/6/2017
-!    !!
-!    !! TODO: Generalized 2D physical coordinates. Currently assumes x-y
-!    !!
-!    !------------------------------------------------------------------------------------
-!    subroutine interpolate_metrics_edge(self)
-!        class(element_t),    intent(inout)   :: self
-!
-!        integer(ik)                 :: inode, iedge, nnodes_edge, ierr
-!        character(:),   allocatable :: coordinate_system, user_msg
-!
-!        real(rk),   dimension(:),       allocatable :: scaling_row2
-!        real(rk),   dimension(:,:),     allocatable :: val, ddxi, ddeta, ddzeta
-!        real(rk),   dimension(:,:,:),   allocatable :: jacobian
-!
-!        nnodes_edge  = self%basis_c%nnodes_edge()
-!
-!        ! Element jacobian matrix
-!        allocate(jacobian(3,3,nnodes_edge), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!        
-!        ! Coordinate system scaling
-!        allocate(scaling_row2(nnodes_edge), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!        do iedge = 1,NEDGES
-!
-!            val     = self%basis_c%interpolator_edge('Value',  iedge)
-!            ddxi    = self%basis_c%interpolator_edge('ddxi',   iedge)
-!            ddeta   = self%basis_c%interpolator_edge('ddeta',  iedge)
-!            ddzeta  = self%basis_c%interpolator_edge('ddzeta', iedge)
-!
-!            !
-!            ! Compute coordinate jacobian matrix at interpolation nodes
-!            !
-!            jacobian(1,1,:) = matmul(ddxi,   self%coords%getvar(1,itime = 1))
-!            jacobian(1,2,:) = matmul(ddeta,  self%coords%getvar(1,itime = 1))
-!            jacobian(1,3,:) = matmul(ddzeta, self%coords%getvar(1,itime = 1))
-!
-!            jacobian(2,1,:) = matmul(ddxi,   self%coords%getvar(2,itime = 1))
-!            jacobian(2,2,:) = matmul(ddeta,  self%coords%getvar(2,itime = 1))
-!            jacobian(2,3,:) = matmul(ddzeta, self%coords%getvar(2,itime = 1))
-!
-!            jacobian(3,1,:) = matmul(ddxi,   self%coords%getvar(3,itime = 1))
-!            jacobian(3,2,:) = matmul(ddeta,  self%coords%getvar(3,itime = 1))
-!            jacobian(3,3,:) = matmul(ddzeta, self%coords%getvar(3,itime = 1))
-!
-!
-!            !
-!            ! Add coordinate system scaling to jacobian matrix
-!            !
-!            select case (self%coordinate_system)
-!                case (CARTESIAN)
-!                    scaling_row2 = ONE
-!                case (CYLINDRICAL)
-!                    ! TODO: probably wrong number of nodes here for edges!!!!!
-!                    scaling_row2 = self%interp_coords(:,1)
-!                case default
-!                    user_msg = "element%interpolate_metrics_edge: Invalid coordinate system."
-!                    call chidg_signal(FATAL,user_msg)
-!            end select
-!
-!
-!
-!            !
-!            ! Apply coorindate system scaling
-!            !
-!            jacobian(2,1,:) = jacobian(2,1,:)*scaling_row2
-!            jacobian(2,2,:) = jacobian(2,2,:)*scaling_row2
-!            jacobian(2,3,:) = jacobian(2,3,:)*scaling_row2
-!
-!
-!            !
-!            ! Invert jacobian matrix at each interpolation node
-!            !
-!            do inode = 1,nnodes_edge
-!                self%edge_metric(:,:,inode,iedge) = inv_3x3(jacobian(:,:,inode))
-!            end do
-!
-!        end do !iedge
-!
-!
-!    end subroutine interpolate_metrics_edge
-!    !*************************************************************************************
-
 
 
 
@@ -911,67 +832,6 @@ contains
 
     end subroutine interpolate_gradients
     !******************************************************************************************
-
-
-
-!    !>  Compute matrices containing gradients of basis/test function
-!    !!  at each quadrature node.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   2/1/2016
-!    !!
-!    !!
-!    !------------------------------------------------------------------------------------------
-!    subroutine interpolate_gradients_edge(self)
-!        class(element_t),   intent(inout)   :: self
-!
-!        character(:),   allocatable :: user_msg
-!        integer(ik)                 :: iterm, inode, iedge, nnodes_edge
-!        real(rk), allocatable, dimension(:,:)   :: ddxi, ddeta, ddzeta
-!
-!        nnodes_edge = self%basis_s%nnodes_edge()
-!
-!        do iedge = 1,NEDGES
-!
-!            ddxi   = self%basis_s%interpolator_edge('ddxi',  iedge)
-!            ddeta  = self%basis_s%interpolator_edge('ddeta', iedge)
-!            ddzeta = self%basis_s%interpolator_edge('ddzeta',iedge)
-!
-!            do iterm = 1,self%nterms_s
-!                do inode = 1,nnodes_edge
-!                    self%edge_grad1(inode,iterm,iedge) = self%edge_metric(1,1,inode,iedge) * ddxi(inode,iterm)  + &
-!                                                         self%edge_metric(2,1,inode,iedge) * ddeta(inode,iterm) + &
-!                                                         self%edge_metric(3,1,inode,iedge) * ddzeta(inode,iterm)
-!
-!                    self%edge_grad2(inode,iterm,iedge) = self%edge_metric(1,2,inode,iedge) * ddxi(inode,iterm)  + &
-!                                                         self%edge_metric(2,2,inode,iedge) * ddeta(inode,iterm) + &
-!                                                         self%edge_metric(3,2,inode,iedge) * ddzeta(inode,iterm)
-!
-!                    self%edge_grad3(inode,iterm,iedge) = self%edge_metric(1,3,inode,iedge) * ddxi(inode,iterm)  + &
-!                                                         self%edge_metric(2,3,inode,iedge) * ddeta(inode,iterm) + &
-!                                                         self%edge_metric(3,3,inode,iedge) * ddzeta(inode,iterm)
-!                end do
-!            end do
-!
-!        end do !iedge
-!
-!        !
-!        ! Check for acceptable element
-!        !
-!        if (any(ieee_is_nan(self%edge_grad1)) .or. &
-!            any(ieee_is_nan(self%edge_grad2)) .or. &
-!            any(ieee_is_nan(self%edge_grad3)) ) then
-!            user_msg = "element%interpolate_gradients_edge: Element failed to produce valid &
-!                        gradient information. Element quality is likely not reasonable."
-!            call chidg_signal(FATAL,user_msg)
-!        end if
-!
-!
-!    end subroutine interpolate_gradients_edge
-!    !******************************************************************************************
-
-
-
 
 
 
@@ -1554,7 +1414,6 @@ contains
             polyvals(iterm)  = polynomial_val(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
         end do
 
-
         ! Evaluate x from dot product of modes and polynomial values
         yval = dot_product(self%coords%getvar(2,itime = 1),polyvals)
 
@@ -2070,12 +1929,15 @@ contains
     !!  @result     coord_comp  Coordinate in the element-local coordinate system[xi,eta,zeta]
     !!
     !-----------------------------------------------------------------------------------------
-    function computational_point(self,coord) result(coord_comp)
-        class(element_t),   intent(in)  :: self
-        real(rk),           intent(in)  :: coord(3)
+    function computational_point(self,coord,tol,rtol) result(coord_comp)
+        class(element_t),   intent(in)           :: self
+        real(rk),           intent(in)           :: coord(3)
+        real(rk),           intent(in), optional :: tol
+        real(rk),           intent(in), optional :: rtol
 
         integer(ik) :: inewton
-        real(rk)    :: coord_comp(3), coord_phys(3), minv(3,3), R(3), dcoord(3), res, tol
+        real(rk)    :: coord_comp(3), coord_phys(3), minv(3,3), R(3), dcoord(3), res, res0, user_tol, user_rtol
+        logical     :: absolute_convergence, relative_convergence
 
         !
         ! Newton iteration to find the donor local coordinates
@@ -2083,8 +1945,17 @@ contains
         !tol = 1000000._rk*RKTOL
         !tol = 100000._rk*RKTOL
         !tol = 100._rk*RKTOL
-        tol = 1000._rk*RKTOL
+
+
+        user_tol = 1000._rk*RKTOL
+        if (present(tol)) user_tol = tol
+
+        user_rtol = 1.e-12_rk
+        if (present(rtol)) user_rtol = rtol
+
         coord_comp = ZERO
+        absolute_convergence = .false.
+        relative_convergence = .false.
         do inewton = 1,20
 
 
@@ -2097,18 +1968,22 @@ contains
             ! Assemble residual vector
             R = -(coord_phys - coord)
 
+            ! Set initial residual
+            if (inewton == 1) res0 = norm2(R)
+
             ! Solve linear system for Newton update
             dcoord = matmul(minv,R)
 
             ! Apply Newton update
             coord_comp = coord_comp + dcoord
 
-            ! Exit if converged
+            ! Measure residual
             res = norm2(R)
-            if ( res < tol ) then
-                exit
-            end if
 
+            !if ( res < user_tol ) exit
+            absolute_convergence  = (res < user_tol)
+            relative_convergence  = (res/res0 < user_rtol)
+            if ( absolute_convergence .or. relative_convergence ) exit
 
             !
             ! Limit computational coordinates, in case they go out of bounds.
@@ -2172,8 +2047,8 @@ contains
         !
         ! Compute inverse cell mapping jacobian
         !
-        jinv = ONE/det_3x3(metric)
-        jinv_def   = ONE/det_3x3(metric_ale)
+        jinv     = ONE/det_3x3(metric)
+        jinv_def = ONE/det_3x3(metric_ale)
 
 
         !
@@ -2289,28 +2164,22 @@ contains
         !   We want to find their element-local connectivity indices:
         !       corner_position = [1, 2, 5, 6]
         !   
-        !
         do cindex = 1,size(corner_indices)
             do eindex = 1,size(self%connectivity)
 
-
                 node_matches = (corner_indices(cindex) == self%connectivity(eindex))
-
                 if (node_matches) then
                     corner_position(cindex) = eindex
                     exit
                 end if
-
 
             end do
         end do
 
 
 
-        !
         ! Test corner positions against known face configurations 
         ! to determine face index:
-        !
         do iface_test = 1,NFACES
 
             face_indices = face_corners(iface_test,:,self%element_type)
@@ -2341,6 +2210,31 @@ contains
     !******************************************************************************************
 
 
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/20/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init_rbf_address_book(self, n_rbf_sets)
+        class(element_t),       intent(inout)   :: self
+        integer(ik),            intent(in)      :: n_rbf_sets
+
+        integer(ik) :: ierr
+
+        allocate(self%rbf_address_book%rbf_addresses(n_rbf_sets), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+    end subroutine init_rbf_address_book 
+    !********************************************************************************
+
+
+
+
     !>
     !! 
     !!
@@ -2358,6 +2252,24 @@ contains
     !********************************************************************************
 
 
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/20/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_rbf_indices(self, rbf_set_ID) result(rbf_indices)
+        class(element_t),       intent(inout)   :: self
+        integer(ik),            intent(in)      :: rbf_set_ID
+
+        integer(ik), allocatable                :: rbf_indices(:)
+
+        rbf_indices = self%rbf_address_book%rbf_addresses(rbf_set_ID)%registered_rbf_indices%data()
+
+    end function get_rbf_indices
+    !********************************************************************************
 
 
 

@@ -8,7 +8,7 @@
 module mod_io
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: ZERO
+    use mod_constants,  only: ZERO, NFACES
     use type_dict,      only: dict_t
     implicit none
 
@@ -23,6 +23,8 @@ module mod_io
     ! Space
     character(len=100),     save    :: basis            = 'legendre'
     integer(ik),            save    :: solution_order   = 1
+    real(rk),               save    :: face_lift_stab   = real(NFACES,rk)   ! Default is NFACES, but for 2D this should be 4 instead of 6
+    real(rk),               save    :: elem_lift_stab   = real(1,rk)        ! Default is 1
 
     ! Quadrature
     integer(ik),            save    :: gq_rule          = 2          ! 1: Collocation, 2: Over-integration
@@ -33,6 +35,10 @@ module mod_io
     integer(ik),            save    :: time_steps       = 100
     integer(ik),            save    :: ntime_instances  = 1         !TODO: probably we should ask for the entire time of the analysis rather than dt and how many steps
     real(rk),               save    :: frequencies(100) = ZERO
+
+    ! Infrastructure
+    character(len=100),     save    :: backend          = 'native'
+
    
     ! Nonlinear solver parameters
     !   ntol         : absolute convergence tolerance
@@ -62,8 +68,8 @@ module mod_io
     real(rk),               save    :: cfl_down          = 0.2_rk
     logical,                save    :: smooth            = .false.
     character(len=100),     save    :: smoother          = 'jacobi'
-    integer(ik),            save    :: nsmooth           = 10
-    real(rk),               save    :: smooth_relax      = 0.5
+    integer(ik),            save    :: nsmooth           = 3
+    real(rk),               save    :: smooth_relax      = 1.0
     type(dict_t),           save    :: noptions
     
     ! Linear solver parameters
@@ -105,8 +111,10 @@ module mod_io
     !-------------------------------------------------------------------
     logical,                save    :: initial_write    = .false.
     logical,                save    :: final_write      = .true.
+    logical,                save    :: tecio_write      = .false.
     integer(ik),            save    :: nwrite           = 100
     integer(ik),            save    :: verbosity        = 2
+    character(len=100),     save    :: report           = 'none'
      
 
     ! Initial fields
@@ -130,7 +138,9 @@ module mod_io
                                         solutionfile_out
 
     namelist /space/                    basis,              &
-                                        solution_order
+                                        solution_order,     &
+                                        face_lift_stab,     &
+                                        elem_lift_stab
 
     namelist /quadrature/               gq_rule
 
@@ -140,6 +150,8 @@ module mod_io
                                         time_steps,         &
                                         ntime_instances,    &
                                         frequencies
+
+    namelist /infrastructure/           backend
 
 
     namelist /nonlinear_solve/          nonlinear_solver,   &
@@ -177,7 +189,9 @@ module mod_io
     namelist /io/                       nwrite,             &
                                         initial_write,      &
                                         final_write,        &
-                                        verbosity
+                                        tecio_write,        &
+                                        verbosity,          &
+                                        report
 
     namelist /initial/                  initial_fields
 
@@ -254,29 +268,13 @@ contains
 
         ! Check that input file exists
         inquire(file='chidg.nml', exist=file_exists)
-        if (.not. file_exists) call chidg_signal(FATAL, "read_input: 'chidg.nml' input file was not found")
+        if (.not. file_exists) then
+            print*, "read_input: 'chidg.nml' input file was not found."
+            call chidg_abort()
+        end if
 
 
         ! Read namelist input for parameter initialization
-!        open(newunit=file_unit,form='formatted',file="chidg.nml")
-!        read(file_unit,nml=files,           iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'files' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=space,           iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'space' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=quadrature,      iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'quadrature' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=time,            iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'time' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=nonlinear_solve, iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'nonlinear_solve' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=linear_solve,    iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'linear_solve' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=io,              iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'io' namelist from 'chidg.nml'.")
-!        read(file_unit,nml=initial,         iostat=msg)
-!        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'initial' namelist from 'chidg.nml'.")
-!        close(file_unit)
-
         open(newunit=file_unit,form='formatted',file="chidg.nml")
         read(file_unit,nml=files,           iostat=msg)
         if (msg/=0) call handle_namelist_error(file_unit,msg)
@@ -285,6 +283,8 @@ contains
         read(file_unit,nml=quadrature,      iostat=msg)
         if (msg/=0) call handle_namelist_error(file_unit,msg)
         read(file_unit,nml=time,            iostat=msg)
+        if (msg/=0) call handle_namelist_error(file_unit,msg)
+        read(file_unit,nml=infrastructure,  iostat=msg)
         if (msg/=0) call handle_namelist_error(file_unit,msg)
         read(file_unit,nml=nonlinear_solve, iostat=msg)
         if (msg/=0) call handle_namelist_error(file_unit,msg)
@@ -300,6 +300,16 @@ contains
         if (namelist_read_error) call chidg_abort()
 
 
+        ! Must use PETSC storage if using petsc nonlinear/linear solvers
+        if (trim(nonlinear_solver) == 'petsc' .or. trim(linear_solver) == 'petsc') then
+            print*, "!----------------------------------------------------------------------!"
+            print*, ""
+            print*, "Input parameter 'nonlinear_solver' or 'linear_solver' were specifiec as 'petsc' so changing 'backend' storage parameter to 'petsc'."
+            print*, ""
+            print*, "!----------------------------------------------------------------------!"
+            call sleep(4)
+            backend = 'petsc'
+        end if
 
 
 
@@ -388,6 +398,7 @@ contains
         write(unit=file_unit, nml=space)
         write(unit=file_unit, nml=quadrature)
         write(unit=file_unit, nml=time)
+        write(unit=file_unit, nml=infrastructure)
         write(unit=file_unit, nml=nonlinear_solve)
         write(unit=file_unit, nml=linear_solve)
         write(unit=file_unit, nml=io)

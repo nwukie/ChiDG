@@ -36,6 +36,7 @@ module mod_operators
     use euler_volume_operator,                      only: euler_volume_operator_t
     use euler_boundary_average_operator,            only: euler_boundary_average_operator_t
     use euler_roe_operator,                         only: euler_roe_operator_t
+    use euler_roe_regularized_operator,             only: euler_roe_regularized_operator_t
     use euler_bc_operator,                          only: euler_bc_operator_t
     use euler_volume_cylindrical_source,            only: euler_volume_cylindrical_source_t
     !use euler_laxfriedrichs_operator,               only: euler_laxfriedrichs_operator_t
@@ -87,6 +88,7 @@ module mod_operators
 
     !! RSTM SSG-LRR-w operators
     use rstm_ssglrrw_source,                        only: rstm_ssglrrw_source_operator_t
+    use rstm_ssglrrw_blended_source,                only: rstm_ssglrrw_blended_source_operator_t
     use rstm_ssglrrw_advection_boundary_average,    only: rstm_ssglrrw_advection_boundary_average_operator_t
     use rstm_ssglrrw_laxfriedrichs,                 only: rstm_ssglrrw_laxfriedrichs_operator_t
     use rstm_ssglrrw_volume_advection,              only: rstm_ssglrrw_volume_advection_operator_t
@@ -269,6 +271,7 @@ contains
         type(euler_volume_operator_t)                       :: euler_volume_operator
         type(euler_boundary_average_operator_t)             :: euler_average_operator
         type(euler_roe_operator_t)                          :: euler_roe_operator
+        type(euler_roe_regularized_operator_t)              :: euler_roe_regularized_operator
         type(euler_bc_operator_t)                           :: euler_bc_operator
         type(euler_volume_cylindrical_source_t)             :: euler_volume_cylindrical_source
         !type(euler_laxfriedrichs_operator_t)                :: euler_laxfriedrichs_operator
@@ -321,6 +324,7 @@ contains
 
         !! Reynolds-Stress 
         type(rstm_ssglrrw_source_operator_t)                        :: rstm_ssglrrw_source_operator
+        type(rstm_ssglrrw_blended_source_operator_t)                        :: rstm_ssglrrw_blended_source_operator
         type(rstm_ssglrrw_advection_boundary_average_operator_t)    :: rstm_ssglrrw_advection_boundary_average_operator
         type(rstm_ssglrrw_laxfriedrichs_operator_t)                 :: rstm_ssglrrw_laxfriedrichs_operator
         type(rstm_ssglrrw_volume_advection_operator_t)              :: rstm_ssglrrw_volume_advection_operator
@@ -404,6 +408,7 @@ contains
             call operator_factory%register(euler_volume_operator)
             call operator_factory%register(euler_average_operator)
             call operator_factory%register(euler_roe_operator)
+            call operator_factory%register(euler_roe_regularized_operator)
             call operator_factory%register(euler_bc_operator)
             call operator_factory%register(euler_volume_cylindrical_source)
             !call operator_factory%register(euler_laxfriedrichs_operator)
@@ -454,6 +459,7 @@ contains
 
             !! Reynolds-Stress
             call operator_factory%register(rstm_ssglrrw_source_operator)
+            call operator_factory%register(rstm_ssglrrw_blended_source_operator)
             call operator_factory%register(rstm_ssglrrw_advection_boundary_average_operator)
             call operator_factory%register(rstm_ssglrrw_laxfriedrichs_operator)
             call operator_factory%register(rstm_ssglrrw_volume_advection_operator)

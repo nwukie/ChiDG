@@ -52,11 +52,13 @@ contains
         class(time_integrator_steady_t),    intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
 
+!        data%sdata%q = data%sdata%q_in
+
         associate( q => data%sdata%q, q_in => data%sdata%q_in)
-
             q = q_in
-
+            call q%assemble()
         end associate
+
 
     end subroutine initialize_state
     !*******************************************************************************
@@ -157,14 +159,11 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
 
 
-        !
-        ! Set q_out: for steady runs no time_specific modifications are necessary
-        !
-        call data%sdata%q_out%init(data%mesh,data%time_manager%ntime)
-        call data%sdata%q_out%set_ntime(data%time_manager%ntime)
-        call data%sdata%q_out%clear()
+        associate( q_out => data%sdata%q_out, q_in => data%sdata%q_in)
 
-        data%sdata%q_out = data%sdata%q_in
+        q_out = q_in
+
+        end associate
 
 
     end subroutine process_data_for_output

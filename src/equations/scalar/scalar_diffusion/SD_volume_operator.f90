@@ -89,7 +89,6 @@ contains
         grad3_u = worker%get_field('u', 'grad3', 'element')
 
 
-
         !
         ! Compute scalar coefficient
         ! 
@@ -99,7 +98,6 @@ contains
         !
         ! Compute volume flux at quadrature nodes
         !
-        !flux_1 = -mu*grad1_u  -  (100._rk*r + 200._rk + 100._rk/r)
         flux_1 = -mu*grad1_u
         flux_2 = -mu*grad2_u
         flux_3 = -mu*grad3_u

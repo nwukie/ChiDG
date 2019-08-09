@@ -31,7 +31,7 @@ subroutine test_reference_element__nodes_r1()
     call ref_elem%init_element(element_type = 1)
 
     @assertEqual(ref_elem%element_type, 1)
-    @assertEqual(ref_elem%nodes_r(:,1), [-ONE,  ONE, -ONE, ONE, -ONE,  ONE, -ONE, ONE],   1.e-8_rk)
+    @assertEqual(ref_elem%nodes_r(:,1), [-ONE,  ONE,  ONE,-ONE, -ONE,  ONE,  ONE,-ONE],   1.e-8_rk)
     @assertEqual(ref_elem%nodes_r(:,2), [-ONE, -ONE,  ONE, ONE, -ONE, -ONE,  ONE, ONE],   1.e-8_rk)
     @assertEqual(ref_elem%nodes_r(:,3), [-ONE, -ONE, -ONE,-ONE,  ONE,  ONE,  ONE, ONE],   1.e-8_rk)
 
@@ -75,21 +75,21 @@ subroutine test_reference_element__nodes_r2()
 
     @assertEqual(ref_elem%element_type, 2)
 
-    ref_nodes = [-ONE, ZERO,  ONE, -ONE, ZERO,  ONE, -ONE, ZERO, ONE, &
-                 -ONE, ZERO,  ONE, -ONE, ZERO,  ONE, -ONE, ZERO, ONE, &
-                 -ONE, ZERO,  ONE, -ONE, ZERO,  ONE, -ONE, ZERO, ONE]
+    ref_nodes = [-ONE, ONE, ONE, -ONE, -ONE,  ONE, ONE, -ONE,   &
+                 ZERO, ONE, ZERO, -ONE, -ONE, ONE, ONE, -ONE,   &
+                 ZERO, ONE, ZERO, -ONE, ZERO, ZERO, ONE, ZERO, -ONE, ZERO, ZERO]
     @assertEqual(ref_elem%nodes_r(:,1), ref_nodes, 1.e-8_rk)
 
 
-    ref_nodes = [-ONE, -ONE, -ONE, ZERO, ZERO, ZERO,  ONE,  ONE, ONE, & 
-                 -ONE, -ONE, -ONE, ZERO, ZERO, ZERO,  ONE,  ONE, ONE, &
-                 -ONE, -ONE, -ONE, ZERO, ZERO, ZERO,  ONE,  ONE, ONE]
+    ref_nodes = [-ONE, -ONE, ONE, ONE, -ONE, -ONE, ONE, ONE,    &
+                 -ONE, ZERO, ONE, ZERO, -ONE, -ONE, ONE, ONE,   &
+                 -ONE, ZERO, ONE, ZERO, ZERO, -ONE, ZERO, ONE, ZERO, ZERO, ZERO]
     @assertEqual(ref_elem%nodes_r(:,2), ref_nodes, 1.e-8_rk)
 
 
-    ref_nodes = [-ONE, -ONE, -ONE, -ONE, -ONE, -ONE, -ONE, -ONE, -ONE, & 
-                 ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
-                  ONE,  ONE,  ONE,  ONE,  ONE,  ONE,  ONE,  ONE,  ONE]
+    ref_nodes = [-ONE, -ONE, -ONE, -ONE,  ONE,  ONE,  ONE,  ONE,    & 
+                 -ONE, -ONE, -ONE, -ONE, ZERO, ZERO, ZERO, ZERO,    &
+                 ONE, ONE, ONE, ONE, -ONE, ZERO, ZERO, ZERO, ZERO, ONE, ZERO]
     @assertEqual(ref_elem%nodes_r(:,3), ref_nodes, 1.e-8_rk)
 
 end subroutine test_reference_element__nodes_r2

@@ -2327,6 +2327,29 @@ CONTAINS
     END FUNCTION SIN_RAMP_D_D
 
 
+    !-----------------------------------------
+    ! SIN of dual numbers
+    ! SIN<u,up>=<SIN(u),up COS(u)>
+    !----------------------------------------
+    ELEMENTAL FUNCTION SIN_RAMP_DDD_D(u,xs,xe) RESULT(res)
+         TYPE (AD_D), INTENT(IN)::u, xs, xe
+         TYPE (AD_D)::res, theta
+         !REAL (DBL_AD):: tmp
+         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(theta%xp_ad_(size(u%xp_ad_)))
+
+
+         IF (u%x_ad_ < xs%x_ad_) THEN
+            res = 0.0d0
+         ELSEIF ((xs%x_ad_ .le. u%x_ad_) .AND. (u%x_ad_ .le. xe%x_ad_)) THEN
+            theta = (PI/2.0d0)*(2.0d0*u - (xs+xe))/(xe-xs)
+            res = 0.5d0*xe*(SIN_D_D(theta) + 1.0d0)
+         ELSE
+            res = xe
+         END IF
+
+    END FUNCTION SIN_RAMP_DDD_D
+
 
 
 

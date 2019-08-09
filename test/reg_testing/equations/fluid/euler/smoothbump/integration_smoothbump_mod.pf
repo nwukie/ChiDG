@@ -61,8 +61,8 @@ module integration_smoothbump_mod
     ! a different number of procs.
     !
     ! Procs: 1, 2, 4, 5, 8
-    type(rvector_t) :: nonlinear_convergence(5,2,4) ! nprocs, ngrids, norders
-    real(rk)        :: error(5,2,4) = ZERO          ! nprocs, ngrids, norders
+    type(rvector_t) :: nonlinear_convergence(5,2,4,2) ! nprocs, ngrids, norders, (native,petsc)
+    real(rk)        :: error(5,2,4,2) = ZERO          ! nprocs, ngrids, norders, (native,petsc)
     logical         :: run_setup = .true.
 
 
@@ -79,10 +79,11 @@ module integration_smoothbump_mod
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
 
-        integer(ik)     :: nelem_xi
-        integer(ik)     :: nelem_eta
-        character(100)  :: gridfile
-        integer(ik)     :: P
+        integer(ik)                 :: nelem_xi
+        integer(ik)                 :: nelem_eta
+        integer(ik)                 :: order
+        character(:),   allocatable :: gridfile
+        character(:),   allocatable :: backend
 
     contains
         procedure   :: toString
@@ -101,13 +102,12 @@ module integration_smoothbump_mod
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: smoothbump
 
-        integer(ik)     :: nelem_xi
-        integer(ik)     :: nelem_eta
-        character(100)  :: gridfile
-        integer(ik)     :: P
-
-        type(chidg_t)   :: chidg
-        type(mpi_comm)  :: ChiDG_COMM
+        integer(ik)                 :: nelem_xi
+        integer(ik)                 :: nelem_eta
+        integer(ik)                 :: order
+        character(:),   allocatable :: gridfile
+        character(:),   allocatable :: backend
+        type(mpi_comm)              :: ChiDG_COMM
 
     contains
         procedure   :: setUp
@@ -115,6 +115,7 @@ module integration_smoothbump_mod
     end type smoothbump
     !*******************************************************************************
 
+    type(chidg_t)   :: chidg
 
 contains
 
@@ -126,10 +127,11 @@ contains
         type(case_grid_order),  intent(in)          :: test_parameter
         type(smoothbump)    :: test
 
-        test%nelem_xi    = test_parameter%nelem_xi
-        test%nelem_eta   = test_parameter%nelem_eta
-        test%gridfile    = test_parameter%gridfile
-        test%P           = test_parameter%P
+        test%nelem_xi  = test_parameter%nelem_xi
+        test%nelem_eta = test_parameter%nelem_eta
+        test%order     = test_parameter%order
+        test%gridfile  = test_parameter%gridfile
+        test%backend   = test_parameter%backend
 
     end function newTest
     !******************************************************************************
@@ -143,38 +145,68 @@ contains
     
         integer(ik),        allocatable :: nelem_xi(:)
         integer(ik),        allocatable :: nelem_eta(:)
+        integer(ik),        allocatable :: orders(:)
         type(string_t),     allocatable :: files(:)
-        integer(ik),        allocatable :: P(:)
-        integer(ik) :: icase
+        type(string_t),     allocatable :: backend(:)
+        integer(ik)                     :: ncases, icase, imesh, iorder, ibackend
 
-        nelem_xi  = [24, 24, 24, 24, &
-                     48, 48, 48, 48]
-
-        nelem_eta = [12, 12, 12, 12, &
-                     24, 24, 24, 24]
-
-        files = [string_t('smoothbump_24x12x2.h5'), &
-                 string_t('smoothbump_24x12x2.h5'), &
-                 string_t('smoothbump_24x12x2.h5'), &
-                 string_t('smoothbump_24x12x2.h5'), &
-                 string_t('smoothbump_48x24x2.h5'), &
-                 string_t('smoothbump_48x24x2.h5'), &
-                 string_t('smoothbump_48x24x2.h5'), &
-                 string_t('smoothbump_48x24x2.h5')  &
-                 ]
-
-        P = [0, 1, 2, 3, &
-             0, 1, 2, 3]
-
+        nelem_xi  = [24, 48]
+        nelem_eta = [12, 24]
+        files     = [string_t('24x12x2'), string_t('48x24x2')]
+        orders    = [0,1,2,3]
+        backend   = [string_t("native"), string_t("petsc")  ]
 
         !Initialize the test case container with the parameter
-        allocate(params(size(files)))
-        do icase = 1,size(files)
-            params(icase)%nelem_xi    = nelem_xi(icase)
-            params(icase)%nelem_eta   = nelem_eta(icase)
-            params(icase)%gridfile    = files(icase)%str
-            params(icase)%P           = P(icase)
+        ncases = size(nelem_xi)*size(orders)*size(backend)
+        if (allocated(params)) deallocate(params)
+        allocate(params(ncases))
+
+        icase = 1
+        do imesh = 1,size(nelem_xi)
+            do iorder = 1,size(orders)
+                do ibackend = 1,size(backend)
+
+                    params(icase)%nelem_xi  = nelem_xi(imesh)
+                    params(icase)%nelem_eta = nelem_eta(imesh)
+                    params(icase)%gridfile  = files(imesh)%str
+                    params(icase)%backend   = backend(ibackend)%str
+                    params(icase)%order     = orders(iorder)
+                    icase = icase + 1
+
+                end do
+            end do
         end do
+
+
+!
+!        nelem_xi  = [24, 24, 24, 24, &
+!                     48, 48, 48, 48]
+!
+!        nelem_eta = [12, 12, 12, 12, &
+!                     24, 24, 24, 24]
+!
+!        files = [string_t('smoothbump_24x12x2.h5'), &
+!                 string_t('smoothbump_24x12x2.h5'), &
+!                 string_t('smoothbump_24x12x2.h5'), &
+!                 string_t('smoothbump_24x12x2.h5'), &
+!                 string_t('smoothbump_48x24x2.h5'), &
+!                 string_t('smoothbump_48x24x2.h5'), &
+!                 string_t('smoothbump_48x24x2.h5'), &
+!                 string_t('smoothbump_48x24x2.h5')  &
+!                 ]
+!
+!        P = [0, 1, 2, 3, &
+!             0, 1, 2, 3]
+!
+!
+!        !Initialize the test case container with the parameter
+!        allocate(params(size(files)))
+!        do icase = 1,size(files)
+!            params(icase)%nelem_xi    = nelem_xi(icase)
+!            params(icase)%nelem_eta   = nelem_eta(icase)
+!            params(icase)%gridfile    = files(icase)%str
+!            params(icase)%P           = P(icase)
+!        end do
 
     end function getParameters
     !*******************************************************************************************
@@ -191,7 +223,7 @@ contains
 
         character(len=200) :: buffer
 
-        write(buffer,"( '(nelem_xi, nelem_eta, P)=','(', I2,',', I2,',', I2, ')' )") this%nelem_xi, this%nelem_eta, this%P
+        write(buffer,"( '(nelem_xi, nelem_eta, order, backend)=','(', I2,',', I2,',', I2,',',A5, ')' )") this%nelem_xi, this%nelem_eta, this%order, this%backend
         string = trim(buffer)
 
     end function toString
@@ -221,16 +253,18 @@ contains
         logical                         :: exists
         integer(ik)                     :: ierr
 
+
         ! Get MPI communicator information from pFUnit
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+        IRANK              = this%getProcessRank()
+        NRANK              = this%getNumProcessesRequested()
+        ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
         
         if (run_setup) then
 
             ! Initialize ChiDG environment
-            call this%chidg%start_up('mpi',this%ChiDG_COMM)
-            call this%chidg%start_up('core')
+            call chidg%start_up('mpi',ChiDG_COMM)
+            call chidg%start_up('core')
 
             !------------------------------------------------------------------------------
             !
@@ -241,16 +275,19 @@ contains
             !------------------------------------------------------------------------------
             basis            = 'legendre'
             gq_rule          = 3
+            backend          = trim(this%backend)
             time_integrator  = 'steady'
             nonlinear_solver = 'newton'
             linear_solver    = 'fgmres'
             preconditioner   = 'RASILU0'
             IO_DESTINATION   = 'file'
 
-            call this%chidg%data%time_manager%init()
+            call chidg%data%time_manager%init()
+
 
             ! Set linear solver options to pass during initialization
-            call loptions%set('tol',1.e-9_rk)
+            call loptions%set('tol', 1.e-12_rk)
+            call loptions%set('rtol',1.e-16_rk)
             call loptions%set('inner_fgmres',.true.)
 
             ! Set nonlinear solver options
@@ -263,12 +300,10 @@ contains
 
 
 
-
             ! Create mesh, only for P==0 since we don't want to destroy the lower-order
             ! solutions once they are written because they are used to initialize the higher-order 
             ! problems.
-            if ( IRANK==GLOBAL_MASTER .and. this%P==0 ) then
-            !if ( IRANK==GLOBAL_MASTER ) then
+            if ( IRANK==GLOBAL_MASTER .and. this%order==0 ) then
                 bc_state_groups(1)%name = 'Inlet'
                 bc_state_groups(2)%name = 'Outlet'
                 bc_state_groups(3)%name = 'Walls'
@@ -296,7 +331,7 @@ contains
                                     string_t('Walls') ]
 
 
-                call create_mesh_file('Smooth Bump',this%gridfile,equation_sets=[string_t('Euler')], &
+                call create_mesh_file('Smooth Bump',this%gridfile//'_'//trim(this%backend)//'.h5',equation_sets=[string_t('Euler')], &
                                                                   group_names     = group_names,     &
                                                                   bc_state_groups = bc_state_groups, &
                                                                   nelem_xi        = this%nelem_xi,   &
@@ -304,34 +339,37 @@ contains
                                                                   nelem_zeta      = 1)
             end if
 
+
             ! Set ChiDG components
-            call this%chidg%set('Solution Order',   integer_input=this%P+1)
-            call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-            call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-            call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-            call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+            call chidg%set('Solution Order',   integer_input=this%order+1)
+            call chidg%set('Time Integrator',  algorithm=time_integrator)
+            call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+            call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+            call chidg%set('Preconditioner',   algorithm=preconditioner)
 
             ! Read grid
-            call this%chidg%read_mesh(this%gridfile)
+            call chidg%read_mesh(this%gridfile//'_'//trim(this%backend)//'.h5')
+
 
             ! Initialize solution
-            if (this%P == 0) then
+            if (this%order == 0) then
                 call create_function(fcn,'constant')
                 call fcn%set_option('val',1.13262_rk)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+                call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
                 call fcn%set_option('val',190.339029_rk)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
+                call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,2)
                 call fcn%set_option('val',ZERO)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
+                call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,3)
                 call fcn%set_option('val',ZERO)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
+                call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,4)
                 call fcn%set_option('val',248493.425_rk)
-                call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
+                call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,5)
             else
-                call this%chidg%read_fields(this%gridfile)
+                call chidg%read_fields(this%gridfile//'_'//trim(this%backend)//'.h5')
             end if
 
         end if !run_setup
+
 
     end subroutine setUp
     !*******************************************************************************************
@@ -349,15 +387,16 @@ contains
         if (run_setup) then
 
             ! Close ChiDG
-            call this%chidg%shut_down('core')
+            call chidg%shut_down('core')
+            call chidg%shut_down('mpi')
 
             if (IRANK == GLOBAL_MASTER) then
                 !call delete_file(this%gridfile)
 
-                inquire(file=this%gridfile, exist=exists)
+                inquire(file=this%gridfile//'_'//trim(this%backend)//'.h5', exist=exists)
                 if (exists) then
-                    if (this%P == 3) then
-                        call delete_file(this%gridfile)
+                    if (this%order == 3) then
+                        call delete_file(this%gridfile//'_'//trim(this%backend)//'.h5')
                     end if
                 end if
             end if
@@ -381,49 +420,41 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     @Test(npes=[1,2,4,5,8])
-    !@Test(npes=[8])
-    subroutine run_calculations(self)
-        class(smoothbump),  intent(inout)   :: self
+    subroutine run_calculations(this)
+        class(smoothbump),  intent(inout)   :: this
 
         real(rk)    :: computed_error
-        integer(ik) :: npes_index, grid_index, order_index
+        integer(ik) :: npes_index, grid_index, order_index, backend_index
 
 
         npes_index  = get_npes_index(NRANK)
-        grid_index  = get_grid_index(self%gridfile)
-        order_index = get_order_index(self%P)
+        grid_index  = get_grid_index(this%gridfile)
+        order_index = get_order_index(this%order)
+        backend_index = get_backend_index(this%backend)
+
 
         ! Run ChiDG simulation
-        call self%chidg%run(write_initial=.false., write_final=.false.)
+        call chidg%run(write_initial=.false., write_final=.false.)
 
-        call self%chidg%write_mesh(self%gridfile)
-        call self%chidg%write_fields(self%gridfile)
+
+        call chidg%write_mesh(this%gridfile//'_'//trim(this%backend)//'.h5')
+        call chidg%write_fields(this%gridfile//'_'//trim(this%backend)//'.h5')
 
 
         ! Store the nonlinear convergence of the calculation
-        nonlinear_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%residual_norm
-
-
-!        ! Store the number of nonlinear iterations that the solution converged in. 
-!        ! Problem is linear so it should converge in 1 Newton Step. Really, just the 
-!        ! solution of 1 linear system of equations.
-!        if (self%gridtype == 'singleblock') then
-!            nsteps_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations
-!        elseif (self%gridtype == 'chimera') then
-!            nsteps_convergence_chimera(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations
-!        end if
-
+        nonlinear_convergence(npes_index,grid_index,order_index,backend_index) = chidg%nonlinear_solver%residual_norm
 
 
         ! Compute entropy error
-        error(npes_index,grid_index,order_index) = compute_entropy_error(self%chidg%data)
+        error(npes_index,grid_index,order_index,backend_index) = compute_entropy_error(chidg%data)
 
 
         ! Check if all information has been accumulated, if so, don't initialize anymore 
         ! or try to open files because they might not exist.
-        if (abs(error(size(error,1),size(error,2),size(error,3)) - ZERO) > 1.e-8_rk) then
+        if (abs(error(size(error,1),size(error,2),size(error,3),size(error,4)) - ZERO) > 1.e-8_rk) then
             run_setup = .false.
         end if
+
 
     end subroutine run_calculations
     !*****************************************************************************************
@@ -438,35 +469,37 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     @Test(npes=[1])
-    subroutine test_entropy_error_rate_new(self)
-        class(smoothbump),  intent(inout)   :: self
+    subroutine test_entropy_error_rate(this)
+        class(smoothbump),  intent(inout)   :: this 
 
-        integer(ik) :: inpes, igrid, iorder
+        integer(ik) :: inpes, igrid, iorder, ibackend
         real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate
 
         do inpes = 1,5
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 2,4
+                    do ibackend = 1,2
 
-                    error_previous = error(inpes,igrid-1,iorder)
-                    error_current  = error(inpes,igrid  ,iorder)
+                        error_previous = error(inpes,igrid-1,iorder,ibackend)
+                        error_current  = error(inpes,igrid  ,iorder,ibackend)
 
-                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
-                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
+                        mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
+                        mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
 
-                    ! Compute convergence rate of spatial operators. log10(error change)/log10(mesh spacing change)
-                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-                
-                    ! For this problem and specified grid resolutions, the convergence rates are 
-                    ! a little higher than expected so we want to observe between iorder and iorder+1
-                    @assertGreaterThan(convergence_rate, real(iorder,rk)-0.1)
-                    @assertLessThan(convergence_rate, real(iorder,rk)+1.)
+                        ! Compute convergence rate of spatial operators. log10(error change)/log10(mesh spacing change)
+                        convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+                    
+                        ! For this problem and specified grid resolutions, the convergence rates are 
+                        ! a little higher than expected so we want to observe between iorder and iorder+1
+                        @assertGreaterThan(convergence_rate, real(iorder,rk)-0.1)
+                        @assertLessThan(convergence_rate, real(iorder,rk)+1.)
 
+                    end do
                 end do
             end do
         end do
 
-    end subroutine test_entropy_error_rate_new
+    end subroutine test_entropy_error_rate
     !*****************************************************************************************
 
 
@@ -496,21 +529,23 @@ contains
     subroutine test_nonlinear_convergence(self)
         class(smoothbump),  intent(inout)   :: self
 
-        integer(ik)             :: inpes, igrid, iorder
+        integer(ik)             :: inpes, igrid, iorder, ibackend
         real(rk), allocatable   :: reference_convergence(:), test_convergence(:)
 
         do inpes = 1,5
             do igrid = 1,2
                 do iorder = 1,4
+                    do ibackend = 1,2
 
-                    ! Get the serial convergence for this (igrid,iorder)
-                    reference_convergence = nonlinear_convergence(1,igrid,iorder)%data()
+                        ! Get the serial convergence for this (igrid,iorder)
+                        reference_convergence = nonlinear_convergence(1,igrid,iorder,ibackend)%data()
 
-                    ! Test that the current convergence for the processor count matches the serial convergence
-                    test_convergence = nonlinear_convergence(inpes,igrid,iorder)%data()
+                        ! Test that the current convergence for the processor count matches the serial convergence
+                        test_convergence = nonlinear_convergence(inpes,igrid,iorder,ibackend)%data()
 
-                    @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
+                        @assertEqual(reference_convergence, test_convergence, 1.e-3_rk)
 
+                    end do
                 end do
             end do
         end do
@@ -603,9 +638,9 @@ contains
         integer(ik)         :: igrid
 
         select case (trim(grid))
-            case('smoothbump_24x12x2.h5')
+            case('24x12x2')
                 igrid = 1 
-            case('smoothbump_48x24x2.h5')
+            case('48x24x2')
                 igrid = 2 
         end select
 
@@ -634,6 +669,25 @@ contains
     end function get_order_index
     !******************************************************************************
 
+
+    ! Utility for returning the index associated with a certain number of procs
+    !------------------------------------------------------------------------------
+    function get_backend_index(backend) result(ibackend)
+        character(*),   intent(in)  :: backend
+
+        integer(ik) :: ibackend
+
+        select case (trim(backend))
+            case('native')
+                ibackend = 1
+            case('petsc')
+                ibackend = 2
+            case default
+                call chidg_signal_one(FATAL,'Invalid backend.', trim(backend))
+        end select
+
+    end function get_backend_index
+    !******************************************************************************
 
 
 

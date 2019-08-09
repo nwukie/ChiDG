@@ -201,7 +201,8 @@ contains
         allocate(dummy(size(destruction)))
         dummy = ZERO
         !destruction_neg = beta_k*sst_omega_infty*density_k*sin_ramp(-invdensity*density_k,0.0_rk*dummy,10.0_rk*sst_k_infty + 0.0_rk*dummy)/sst_omega_infty
-        destruction_neg = beta_k*sst_omega_infty*density_k*sin_ramp(-invdensity*density_k,0.0_rk,10.0_rk*sst_k_infty)/sst_omega_infty
+        !destruction_neg = beta_k*sst_omega_infty*density_k*sin_ramp(-invdensity*density_k,0.0_rk,10.0_rk*sst_k_infty)/sst_omega_infty
+        destruction_neg = beta_k*sst_omega_infty*density_k*sin_ramp(-invdensity*density_k,0.0_rk,10.0_rk*sst_k_infty)
         !destruction_neg = ZERO
 
         ! Limit production term

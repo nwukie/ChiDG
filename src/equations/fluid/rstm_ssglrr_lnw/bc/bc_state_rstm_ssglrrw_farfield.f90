@@ -168,7 +168,9 @@ contains
         density_omega_ff = density_bc*log(rstm_ssglrrw_omega_infty)
         !density_omega_ff = 1.0e-6_rk*1.1765047303964247_rk*347.27942639897344_rk**TWO/1.634303551710997e-05_rk
         density_omega_bc = density_omega_m
-        density_omega_bc = density_omega_ff
+
+
+
         do ii = 1, size(inflow) 
             if (inflow(ii)) then
                 density_omega_bc(ii) = density_omega_ff(ii)
@@ -207,7 +209,7 @@ contains
 
 
         density_reynolds_bc = density_reynolds_m
-        density_reynolds_bc = density_reynolds_ff
+        !density_reynolds_bc = density_reynolds_ff
     !    where(inflow)
     !        density_reynolds_bc = density_reynolds_ff
     !    end where
@@ -241,7 +243,7 @@ contains
         if (allocated(density_reynolds_m)) deallocate(density_reynolds_m)
         density_reynolds_m  = worker%get_field('Density * Reynolds-22', 'value', 'face interior')
         density_reynolds_bc = density_reynolds_m
-        density_reynolds_bc = density_reynolds_ff
+        !density_reynolds_bc = density_reynolds_ff
     !    where(inflow)
     !        density_reynolds_bc = density_reynolds_ff
     !    end where
@@ -275,7 +277,7 @@ contains
         if (allocated(density_reynolds_m)) deallocate(density_reynolds_m)
         density_reynolds_m  = worker%get_field('Density * Reynolds-33', 'value', 'face interior')
         density_reynolds_bc = density_reynolds_m
-        density_reynolds_bc = density_reynolds_ff
+        !density_reynolds_bc = density_reynolds_ff
     !    where(inflow)
     !        density_reynolds_bc = density_reynolds_ff
     !    end where

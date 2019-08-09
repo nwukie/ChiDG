@@ -99,10 +99,12 @@ contains
             anisotropy_product_sum, anisotropy_strain_rate_product_sum,   &
             rotation_rate_12, rotation_rate_13, rotation_rate_23
 
+        real(rk) :: myeps
         !
         ! Interpolate solution to quadrature nodes
         !
         
+        myeps = 1.0e-11_rk
         density = worker%get_field('Density',    'value')
 
         ! Get blended coefficients
@@ -172,7 +174,7 @@ contains
         pressure_strain_11 = -(c1*density*epsilon_t + HALF*c1_star*production_trace)*anisotropy_11 + &
             c2*density*epsilon_t*(anisotropy_11*anisotropy_11 + anisotropy_12*anisotropy_12 + anisotropy_13*anisotropy_13 - & 
             (ONE/THREE)*anisotropy_product_sum) + &
-            (c3-c3_star*sqrt(anisotropy_product_sum))*density*k_t*(strain_rate_11 -(ONE/THREE)*strain_rate_trace)+ &
+            (c3-c3_star*sqrt(anisotropy_product_sum + myeps))*density*k_t*(strain_rate_11 -(ONE/THREE)*strain_rate_trace)+ &
             c4*density*k_t*(anisotropy_11*strain_rate_11 + anisotropy_12*strain_rate_12 + anisotropy_13*strain_rate_13 + &
                             anisotropy_11*strain_rate_11 + anisotropy_12*strain_rate_12 + anisotropy_13*strain_rate_13 - &
                             (TWO/THREE)*anisotropy_strain_rate_product_sum) +&
@@ -182,7 +184,7 @@ contains
         pressure_strain_22 = -(c1*density*epsilon_t + HALF*c1_star*production_trace)*anisotropy_22 + &
             c2*density*epsilon_t*(anisotropy_12*anisotropy_12 + anisotropy_22*anisotropy_22 + anisotropy_23*anisotropy_23 - & 
             (ONE/THREE)*anisotropy_product_sum) + &
-            (c3-c3_star*sqrt(anisotropy_product_sum))*density*k_t*(strain_rate_22 -(ONE/THREE)*strain_rate_trace) + &
+            (c3-c3_star*sqrt(anisotropy_product_sum + myeps))*density*k_t*(strain_rate_22 -(ONE/THREE)*strain_rate_trace) + &
             c4*density*k_t*(anisotropy_12*strain_rate_12 + anisotropy_22*strain_rate_22 + anisotropy_23*strain_rate_23 + &
                             anisotropy_12*strain_rate_12 + anisotropy_22*strain_rate_22 + anisotropy_23*strain_rate_23 - &
                             (TWO/THREE)*anisotropy_strain_rate_product_sum) +&
@@ -192,7 +194,7 @@ contains
         pressure_strain_33 = -(c1*density*epsilon_t + HALF*c1_star*production_trace)*anisotropy_33 + &
             c2*density*epsilon_t*(anisotropy_13*anisotropy_13 + anisotropy_23*anisotropy_23 + anisotropy_33*anisotropy_33 - & 
             (ONE/THREE)*anisotropy_product_sum) + &
-            (c3-c3_star*sqrt(anisotropy_product_sum))*density*k_t*(strain_rate_33 -(ONE/THREE)*strain_rate_trace) + &
+            (c3-c3_star*sqrt(anisotropy_product_sum + myeps))*density*k_t*(strain_rate_33 -(ONE/THREE)*strain_rate_trace) + &
             c4*density*k_t*(anisotropy_13*strain_rate_13 + anisotropy_23*strain_rate_23 + anisotropy_33*strain_rate_33 + &
                             anisotropy_13*strain_rate_13 + anisotropy_23*strain_rate_23 + anisotropy_33*strain_rate_33 - &
                             (TWO/THREE)*anisotropy_strain_rate_product_sum) +&
@@ -202,7 +204,7 @@ contains
         pressure_strain_12 = -(c1*density*epsilon_t + HALF*c1_star*production_trace)*anisotropy_12 + &
             c2*density*epsilon_t*(anisotropy_11*anisotropy_12 + anisotropy_12*anisotropy_22 + anisotropy_13*anisotropy_23  & 
             ) + &
-            (c3-c3_star*sqrt(anisotropy_product_sum))*density*k_t*strain_rate_12 + &
+            (c3-c3_star*sqrt(anisotropy_product_sum + myeps))*density*k_t*strain_rate_12 + &
             c4*density*k_t*(anisotropy_11*strain_rate_12 + anisotropy_12*strain_rate_22 + anisotropy_13*strain_rate_23 + &
                             anisotropy_12*strain_rate_11 + anisotropy_22*strain_rate_12 + anisotropy_23*strain_rate_13  &
                             ) +&
@@ -212,7 +214,7 @@ contains
         pressure_strain_13 = -(c1*density*epsilon_t + HALF*c1_star*production_trace)*anisotropy_13 + &
             c2*density*epsilon_t*(anisotropy_11*anisotropy_13 + anisotropy_12*anisotropy_23 + anisotropy_13*anisotropy_33  & 
             ) + &
-            (c3-c3_star*sqrt(anisotropy_product_sum))*density*k_t*strain_rate_13 + &
+            (c3-c3_star*sqrt(anisotropy_product_sum + myeps))*density*k_t*strain_rate_13 + &
             c4*density*k_t*(anisotropy_11*strain_rate_13 + anisotropy_12*strain_rate_23 + anisotropy_13*strain_rate_33 + &
                             anisotropy_13*strain_rate_11 + anisotropy_23*strain_rate_12 + anisotropy_33*strain_rate_13  &
                             ) +&
@@ -222,7 +224,7 @@ contains
         pressure_strain_23 = -(c1*density*epsilon_t + HALF*c1_star*production_trace)*anisotropy_23 + &
             c2*density*epsilon_t*(anisotropy_12*anisotropy_13 + anisotropy_22*anisotropy_23 + anisotropy_23*anisotropy_33  & 
             ) + &
-            (c3-c3_star*sqrt(anisotropy_product_sum))*density*k_t*strain_rate_23 + &
+            (c3-c3_star*sqrt(anisotropy_product_sum + myeps))*density*k_t*strain_rate_23 + &
             c4*density*k_t*(anisotropy_12*strain_rate_13 + anisotropy_22*strain_rate_23 + anisotropy_23*strain_rate_33 + &
                             anisotropy_13*strain_rate_12 + anisotropy_23*strain_rate_22 + anisotropy_33*strain_rate_23  &
                             ) +&

@@ -1,7 +1,7 @@
 module fluid_viscous_bc_operator
 #include <messenger.h>
     use mod_kinds,          only: ik, rk
-    use mod_constants,      only: HALF, ONE, TWO
+    use mod_constants,      only: ZERO, HALF, ONE, TWO
     use type_operator,      only: operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -101,6 +101,8 @@ contains
             flux_1, flux_2, flux_3
 
         real(rk),   allocatable, dimension(:)   ::  r
+
+        integer(ik) :: idomain_l, ielement_l, iface, group_ID
 
 
         !

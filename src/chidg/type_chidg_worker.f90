@@ -29,9 +29,11 @@
 module type_chidg_worker
 #include <messenger.h>
     use mod_kinds,              only: ik, rk
+    use mod_io,                 only: face_lift_stab, elem_lift_stab
     use mod_constants,          only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA,  &
                                       ONE, THIRD, TWO, NOT_A_FACE, BOUNDARY,    &
-                                      CARTESIAN, CYLINDRICAL, INTERIOR, HALF
+                                      CARTESIAN, CYLINDRICAL, INTERIOR, HALF,   &
+                                      FOUR, NO_ID
 
     use mod_inv,                only: inv
     use mod_interpolate,        only: interpolate_element_autodiff, interpolate_general_autodiff
@@ -73,6 +75,7 @@ module type_chidg_worker
         !type(properties_t),     pointer :: prop(:)
         type(properties_t), allocatable :: prop(:)
 
+
         type(element_info_t)        :: element_info
         type(function_info_t)       :: function_info
         integer(ik)                 :: iface
@@ -95,8 +98,13 @@ module type_chidg_worker
         procedure   :: interpolate_field
         procedure   :: interpolate_field_general
         procedure   :: get_field
+        procedure   :: check_field_exists
         procedure   :: store_bc_state
         procedure   :: store_model_field
+
+        procedure   :: get_octree_rbf_indices
+        procedure   :: get_ndepend_simple
+
 
         ! BEGIN DEPRECATED
         procedure, private   :: get_primary_field_general
@@ -134,10 +142,13 @@ module type_chidg_worker
         procedure   :: quadrature_weights
         procedure   :: inverse_jacobian
         procedure   :: face_area
+        procedure   :: volume
+        procedure   :: centroid
         procedure   :: coordinate_system
         procedure   :: face_type
         procedure   :: time
         procedure   :: nnodes1d
+        procedure   :: h_smooth
 
         procedure   :: get_area_ratio
         procedure   :: get_grid_velocity_element
@@ -146,6 +157,10 @@ module type_chidg_worker
         procedure   :: get_inv_jacobian_grid_face
         procedure   :: get_det_jacobian_grid_element
         procedure   :: get_det_jacobian_grid_face
+
+        ! Shock sensor procedures
+        procedure   :: get_pressure_jump_indicator
+        procedure   :: get_pressure_jump_shock_sensor
 
         ! Integration procedures
         procedure   :: integrate_boundary_average
@@ -187,7 +202,7 @@ contains
     !---------------------------------------------------------------------------------
     subroutine init(self,mesh,prop,solverdata,time_manager,cache)
         class(chidg_worker_t),  intent(inout)       :: self
-        type(mesh_t),       intent(in), target  :: mesh
+        type(mesh_t),           intent(in), target  :: mesh
         type(properties_t),     intent(in), target  :: prop(:)
         type(solverdata_t),     intent(in), target  :: solverdata
         type(time_manager_t),   intent(in), target  :: time_manager
@@ -575,11 +590,9 @@ contains
             if (cache_type == 'value') then
                 idomain_l = self%element_info%idomain_l
                 ielement_l = self%element_info%ielement_l
-                !eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
                 eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
                 ifield    = self%prop(eqn_ID)%get_primary_field_index(field)
 
-                !var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, Pmin, Pmax)
                 var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, mode_min=Pmin, mode_max=Pmax)
 
             else if ( (cache_type == 'gradient') .or. &
@@ -662,7 +675,6 @@ contains
         !
         ! Get access index in solution vector for field being interpolated
         !
-        !eqn_ID = self%mesh%domain(self%element_info%idomain_l)%eqn_ID
         eqn_ID = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%eqn_ID
         ifield = self%prop(eqn_ID)%get_primary_field_index(trim(field))
 
@@ -729,7 +741,24 @@ contains
 
 
 
+    
 
+    !>  Check if a field exists in the cache.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   5/9/2019
+    !!
+    !--------------------------------------------------------------------------------------
+    function check_field_exists(self,field) result(exists)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+
+        logical :: exists
+
+        exists = self%cache%check_field_exists(field,'element')
+
+    end function check_field_exists
+    !***************************************************************************************
 
 
 
@@ -758,7 +787,9 @@ contains
         type(AD_D),     allocatable :: var_gq(:), tmp_gq(:)
         character(:),   allocatable :: cache_component, cache_type, lift_source, lift_nodes, user_msg, interp_source
         integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface_loop, iface_use, iface_select, i
-        real(rk)                    :: stabilization
+        real(rk)                    :: stabilization, face_area, centroid_m(3), centroid_p(3), centroid_distance(3),    &
+                                       volume_m, volume_p, centroid_normal_distance, average_normals(3)
+        real(rk),       allocatable :: unit_normal_1(:), unit_normal_2(:), unit_normal_3(:)
         logical                     :: lift
 
 
@@ -780,6 +811,42 @@ contains
         if (present(iface)) iface_use = iface
 
 
+!        !
+!        ! Compute adaptive face lift stabilization: NOTE not verified or determined to be stable.
+!        !
+!        face_area = self%face_area()
+!        volume_m   = self%volume('interior')
+!        volume_p   = self%volume('exterior')
+!        centroid_m = self%centroid('interior')
+!        centroid_p = self%centroid('exterior')
+!        centroid_distance = abs(centroid_p - centroid_m)
+!        unit_normal_1 = self%unit_normal(1)
+!        unit_normal_2 = self%unit_normal(2)
+!        unit_normal_3 = self%unit_normal(3)
+!
+!        ! Compute average face normal
+!        average_normals(1) = abs(sum(unit_normal_1)/size(unit_normal_1))
+!        average_normals(2) = abs(sum(unit_normal_2)/size(unit_normal_2))
+!        average_normals(3) = abs(sum(unit_normal_3)/size(unit_normal_3))
+!
+!        ! Project centroid distance onto face normal vector
+!        centroid_normal_distance = abs(centroid_distance(1)*average_normals(1) + centroid_distance(2)*average_normals(2) + centroid_distance(3)*average_normals(3))
+!        print*, 'centroid m: ', centroid_m
+!        print*, 'centroid p: ', centroid_p
+!        print*, 'normal: ', average_normals
+!        print*, 'centroid normal: ', centroid_normal_distance
+!
+!        ! Compute adaptive face stabilization
+!        face_lift_stab = (FOUR/(face_area*centroid_normal_distance))*(volume_m * volume_p)/(volume_m + volume_p)
+!
+!        print*, 'pre comp: ', face_area, volume_m, volume_p, centroid_distance
+!        if (self%face_type() == BOUNDARY .and. (trim(interp_source) == 'face interior' .or. trim(interp_source) == 'face exterior')) print*, 'face stab: ', face_lift_stab, self%iface, trim(interp_source)
+!        print*, 'face stab: ', face_lift_stab, self%iface, trim(interp_source)
+!
+!        if (face_lift_stab > 4.5) print*, 'face_lift_stab: ', face_lift_stab
+!        if (face_lift_stab < 1.0) print*, 'face_lift_stab: ', face_lift_stab
+!
+!        if (face_lift_stab < 1.0_rk) face_lift_stab = 1.0_rk
 
 
 
@@ -793,40 +860,51 @@ contains
                 lift_nodes      = 'lift face'
                 lift_face_min   = iface_use
                 lift_face_max   = iface_use
-                stabilization   = real(NFACES,rk)
+                stabilization   = face_lift_stab
             !case('face exterior','boundary')
             !    cache_component = 'face exterior'
             !    lift_source     = 'face exterior'
             !    lift_nodes      = 'lift face'
             !    lift_face_min   = iface_use
             !    lift_face_max   = iface_use
-            !    stabilization   = real(NFACES,rk)
+            !    stabilization   = real(lift_stab,rk)
             case('boundary')
                 cache_component = 'face exterior'
-                lift_source     = 'face interior'
+                !lift_source     = 'face interior'
+                lift_source     = 'face exterior'
                 lift_nodes      = 'lift face'
                 lift_face_min   = iface_use
                 lift_face_max   = iface_use
-                stabilization   = real(NFACES,rk)
+                stabilization   = face_lift_stab
             case('face exterior')
                 cache_component = 'face exterior'
                 lift_source     = 'face exterior'
                 lift_nodes      = 'lift face'
                 lift_face_min   = iface_use
                 lift_face_max   = iface_use
-                stabilization   = real(NFACES,rk)
+                stabilization   = face_lift_stab
             case('element')
                 cache_component = 'element'
                 lift_source     = 'face interior'
                 lift_nodes      = 'lift element'
                 lift_face_min   = 1
                 lift_face_max   = NFACES
-                stabilization   = ONE
+                !stabilization   = ONE
+                stabilization   = elem_lift_stab
             case default
                 user_msg = "chidg_worker%get_field: Invalid value for interpolation source. &
                             Try 'face interior', 'face exterior', 'boundary', or 'element'"
                 call chidg_signal_three(FATAL,user_msg,trim(field),trim(interp_type),trim(interp_source))
         end select
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1278,10 +1356,6 @@ contains
 
 
 
-
-
-
-
     !>  Store a primary field being defined from a boundary condition state function
     !!  to the 'face exterior' cache component.
     !!
@@ -1333,7 +1407,6 @@ contains
             call self%cache%set_data(field,'face exterior',cache_data,'gradient',idirection,self%function_info%seed,self%iface)
 
         end if
-
 
 
     end subroutine store_bc_state
@@ -1491,7 +1564,7 @@ contains
         ielement_l = self%element_info%ielement_l
         eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%element_info,self%function_info,self%iface,ifield,self%itime,integrand)
 
 
     end subroutine integrate_boundary_average
@@ -1538,7 +1611,7 @@ contains
         ielement_l = self%element_info%ielement_l
         eqn_ID     = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         ifield     = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,upwind)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%element_info,self%function_info,self%iface,ifield,self%itime,upwind)
 
 
     end subroutine integrate_boundary_upwind
@@ -1599,7 +1672,7 @@ contains
         ielement_l = self%element_info%ielement_l
         eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%element_info,self%function_info,self%iface,ifield,self%itime,integrand)
 
 
     end subroutine integrate_boundary_condition
@@ -2222,13 +2295,35 @@ contains
 
 
 
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/01/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function h_smooth(self,user_source) result(h_s)
+        class(chidg_worker_t),  intent(in)              :: self
+        character(*),           intent(in), optional    :: user_source
 
+        character(:),   allocatable                 :: user_msg, source
+        real(rk),       allocatable, dimension(:,:) :: h_s
 
+        ! Select source
+        source = self%interpolation_source
+        if ( present(user_source) ) source = user_source
 
+        ! Retrieve smoothed h-field
+        if ( (source == 'boundary') .or. (source == 'face interior') .or. (source == 'face exterior') ) then
+            h_s = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%h_smooth
+        else if ( (source == 'volume') .or. (source == 'element') ) then
+            h_s = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%h_smooth
+        else
+            user_msg = "chidg_worker%h_smooth: Invalid source for returning smooth h field. Options are 'boundary' and 'volume'."
+            call chidg_signal_one(FATAL,user_msg,source)
+        end if
 
-
-
-
+    end function h_smooth 
+    !**************************************************************************************
 
 
 
@@ -2297,6 +2392,124 @@ contains
     !**************************************************************************************
 
 
+    !>  Return the volume of the interior/exterior element.
+    !!
+    !!  NOTE: this returns the volume of the reference physical element, not the deformed
+    !!  ALE volume.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   06/30/2019
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function volume(self,source) result(volume_)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: source
+
+        integer(ik) :: idomain_l, ielement_l, pelem_ID
+        real(rk)    :: volume_
+
+        if (trim(source) == 'interior') then
+            volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
+
+        else if (trim(source) == 'exterior') then
+
+            ! Interior face, find neighbor and account for local or parallel storage
+            if (self%face_type() == INTERIOR) then
+                idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
+                ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
+                pelem_ID   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_pelem_ID
+                if (pelem_ID == NO_ID) then
+                    volume_ = self%mesh%domain(idomain_l)%elems(ielement_l)%vol
+                else
+                    volume_ = self%mesh%parallel_element(pelem_ID)%vol
+                end if
+
+            ! Boundary face, assume ficticious exterior element of equal volume
+            else if (self%face_type() == BOUNDARY) then
+                volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
+
+            ! Overset face, assume ficticious exterior element of equal volume
+            else if (self%face_type() == CHIMERA) then
+                volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
+
+            end if
+
+
+
+        else
+            call chidg_signal(FATAL,"chidg_worker%volume: invalid source parameter. Valid inputs are ['interior', 'exterior']")
+        end if
+
+    end function volume
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Return the centroid of the interior/exterior element.
+    !!
+    !!  NOTE: this returns the centroid of the reference physical element, not the deformed
+    !!  ALE centroid.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   06/30/2019
+    !!
+    !--------------------------------------------------------------------------------------
+    function centroid(self,source) result(centroid_)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: source
+
+        integer(ik) :: idomain_l, ielement_l, pelem_ID
+        real(rk)    :: centroid_(3), face_centroid(3), interior_centroid(3), delta(3)
+
+        if (trim(source) == 'interior') then
+             centroid_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
+
+        else if (trim(source) == 'exterior') then
+
+            ! Interior face, find neighbor and account for local or parallel storage
+            if (self%face_type() == INTERIOR) then
+                idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
+                ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
+                pelem_ID   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_pelem_ID
+                if (pelem_ID == NO_ID) then
+                    centroid_ = self%mesh%domain(idomain_l)%elems(ielement_l)%centroid
+                else
+                    centroid_ = self%mesh%parallel_element(pelem_ID)%centroid
+                end if
+
+            ! Boundary face, assume ficticious exterior element and assume centroid at equal 
+            ! distance to face opposite interior element
+            else if (self%face_type() == BOUNDARY) then
+                face_centroid = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%centroid
+                interior_centroid = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
+                delta = face_centroid - interior_centroid
+                centroid_ = interior_centroid + TWO*delta
+
+            ! Overset face, assume ficticious exterior element and assume centroid at equal 
+            ! distance to face opposite interior element
+            else if (self%face_type() == CHIMERA) then
+                face_centroid = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%centroid
+                interior_centroid = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
+                delta = face_centroid - interior_centroid
+                centroid_ = interior_centroid + TWO*delta
+
+            end if
+
+
+
+        else
+            call chidg_signal(FATAL,"chidg_worker%centroid: invalid source parameter. Valid inputs are ['interior', 'exterior']")
+        end if
+
+    end function centroid 
+    !**************************************************************************************
+
 
 
 
@@ -2321,7 +2534,6 @@ contains
 
     end function face_area
     !**************************************************************************************
-
 
 
 
@@ -2430,6 +2642,70 @@ contains
     end function nnodes1d
     !*************************************************************************************
 
+
+
+
+
+
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/20/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_octree_rbf_indices(self, rbf_set_ID) result(rbf_index_list)
+        class(chidg_worker_t),  intent(inout)   :: self
+        integer(ik),            intent(in)      :: rbf_set_ID
+
+        integer(ik) :: idomain_l, ielement_l
+        integer(ik), allocatable, dimension(:) :: rbf_index_list
+
+        idomain_l  = self%element_info%idomain_l 
+        ielement_l = self%element_info%ielement_l 
+
+        rbf_index_list = self%mesh%domain(idomain_l)%elems(ielement_l)%get_rbf_indices(rbf_set_ID)
+
+    end function get_octree_rbf_indices
+    !********************************************************************************
+
+
+
+    !> This function adapts and simplifies get_ndepend_exterior from type_cache_handler, 
+    !! which asks for extra arguments we might not have access to.
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/14/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_ndepend_simple(self, iface) result(ndepend)
+        class(chidg_worker_t),  intent(in)   :: self 
+        integer(ik),            intent(in)   :: iface
+
+        integer(ik) :: ndepend, idomain_l, ielement_l,  &
+                       ChiID, group_ID, patch_ID, face_ID
+
+        idomain_l  = self%element_info%idomain_l 
+        ielement_l = self%element_info%ielement_l 
+
+        ! Compute the number of exterior element dependencies for face exterior state
+        if ( self%face_type() == INTERIOR ) then
+            ndepend = 1
+            
+        else if ( self%face_type() == CHIMERA ) then
+            ChiID   = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
+            ndepend = self%mesh%domain(idomain_l)%chimera%recv(ChiID)%ndonors()
+
+        else if ( self%face_type() == BOUNDARY ) then
+            group_ID = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
+            patch_ID = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
+            face_ID  = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
+            ndepend  = self%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
+
+        end if
+
+    end function get_ndepend_simple
+    !****************************************************************************************
 
 
 
@@ -3288,6 +3564,120 @@ contains
 
     end function post_process_boundary_diffusive_flux_ale
     !************************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    04/16/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_pressure_jump_indicator(self) result(val_gq)
+        class(chidg_worker_t),      intent(inout)  :: self
+
+        type(AD_D), allocatable :: val_gq(:)
+        type(AD_D), allocatable :: nodal_ones(:), pressure_p(:), pressure_m(:), jump(:), avg(:)
+        type(AD_D)              :: face_val
+
+        real(rk),   allocatable :: jinv(:), weight(:)
+
+        integer(ik)     :: iface, order, iface_old
+        real(rk)        :: phi_min, phi_max
+
+        nodal_ones = self%get_field('Density', 'value', 'element')
+        nodal_ones = ONE
+        val_gq = ZERO*nodal_ones     
+
+        iface_old = self%iface
+
+        ! Loop over faces
+        do iface = 1, NFACES
+            call self%set_face(iface)
+        ! Get face internal/external pressure values
+            pressure_m = self%get_field('Pressure','value','face interior')
+            pressure_p = self%get_field('Pressure','value','face exterior')
+
+            jump = (pressure_p-pressure_m)
+            avg  = HALF*(pressure_p+pressure_m)
+
+            ! Integrate over face
+            jinv   = self%inverse_jacobian('face')
+            weight = self%quadrature_weights('face')
+            face_val = sum(jinv*weight*abs(jump/avg))/sum(jinv*weight) 
+
+            ! Add to sum
+            val_gq = val_gq + face_val*nodal_ones   
+
+        end do !iface
+
+        ! Reset original face index
+        call self%set_face(iface_old)
+
+    end function get_pressure_jump_indicator
+    !********************************************************************************
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    04/16/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_pressure_jump_shock_sensor(self) result(sensor)
+        class(chidg_worker_t),      intent(inout)  :: self
+
+        type(AD_D), allocatable :: sensor(:)
+        type(AD_D), allocatable :: jump_indicator(:), logval(:)
+
+        integer(ik) :: order
+        real(rk)    :: phi_min, phi_max
+
+        jump_indicator = self%get_pressure_jump_indicator()
+
+        logval = log10(jump_indicator)
+
+        order = self%solution_order('interior')
+        phi_min = -2.0_rk - log10(real(order+1, rk))
+        phi_max = phi_min + 1.0_rk
+
+        sensor = sin_ramp(logval, phi_min, phi_max)
+
+    end function get_pressure_jump_shock_sensor
+    !********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

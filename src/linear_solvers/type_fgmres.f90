@@ -1,10 +1,13 @@
 module type_fgmres
 #include <messenger.h>
+#include "petsc/finclude/petscvec.h"
+    use petscvec,               only: VecAXPY, VecMDOT, VecMAXPY, VecDot, VecGetLocalVectorRead, VecRestoreLocalVectorRead, VecDuplicate, VecSet, VecDestroy
+
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
     use mod_inv,                only: inv
-    use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
-    use mod_io,                 only: verbosity
+    use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, NRANK
+    use mod_io,                 only: verbosity, backend
     use mpi_f08
 
     use type_timer,             only: timer_t
@@ -41,10 +44,15 @@ module type_fgmres
         real(rk),               allocatable, dimension(:,:) :: h
 
         type(timer_t)   :: timer_mv, timer_dot, timer_norm, timer_precon
+
+        type(fgmres_t), pointer :: fgmres => null()
+
     contains
         procedure   :: solve
         procedure   :: allocate_krylov_storage
         procedure   :: print_report
+        procedure   :: tear_down
+        final       :: destroy_fgmres
     end type fgmres_t
     !*********************************************************************************************
 
@@ -84,19 +92,18 @@ contains
         logical     :: converged_absolute, converged_relative, converged_nmax, reorthogonalize
         real(rk),   allocatable :: y_dim(:)
 
-        type(fgmres_t) :: fgmres
 
         ! Inner fgmres iteration parameters
         if (self%inner_fgmres) then
-            fgmres%nkrylov           = self%inner_nkrylov
-            fgmres%tol               = self%inner_tol
-            fgmres%rtol              = self%inner_rtol
-            fgmres%nmax              = self%inner_nmax
-            fgmres%silence           = self%inner_silence
-            fgmres%orthogonalization = self%inner_orthogonalization
-            fgmres%inner_fgmres      = .false.
+            if (.not. associated(self%fgmres)) allocate(self%fgmres)
+            self%fgmres%nkrylov           = self%inner_nkrylov
+            self%fgmres%tol               = self%inner_tol
+            self%fgmres%rtol              = self%inner_rtol
+            self%fgmres%nmax              = self%inner_nmax
+            self%fgmres%silence           = self%inner_silence
+            self%fgmres%orthogonalization = self%inner_orthogonalization
+            self%fgmres%inner_fgmres      = .false.
         end if
-
 
 
         ! Reset/Start timers
@@ -109,7 +116,7 @@ contains
 
         ! Update preconditioner
         if (present(solver_controller)) then
-            if (solver_controller%update_preconditioner(A,M)) call M%update(A,b)
+            if (solver_controller%update_preconditioner(A,M,ChiDG_COMM)) call M%update(A,b)
         else
             call M%update(A,b)
         end if
@@ -168,11 +175,10 @@ contains
                 z(j) = M%apply(A,v(j))
 
 
-
                 ! Inner fgmres correction
                 if (self%inner_fgmres) then
                     zr = v(j) - chidg_mv(A,z(j))
-                    call fgmres%solve(A,deltaz,zr,M,solver_controller)
+                    call self%fgmres%solve(A,deltaz,zr,M,solver_controller)
                     z(j) = z(j) + deltaz
                 end if
                 call self%timer_precon%stop()
@@ -194,7 +200,6 @@ contains
                 end if
                 call self%timer_dot%stop()
                 ! End Orthogonalize once.
-
 
 
                 ! Selective Reorthogonalization
@@ -270,7 +275,6 @@ contains
                 converged_absolute = (res < self%tol)
                 converged_relative = (res/r0norm_initial < self%rtol)
                 converged_nmax     = ( self%niter >= self%nmax ) .and. (self%nmax > 0)
-                !if (self%nmax < 0) converged_nmax = .false.
                 
                 ! Convergence check
                 if ( converged_absolute .or. converged_relative .or. converged_nmax ) exit
@@ -298,10 +302,10 @@ contains
 
         end do ! while
 
-
         call self%print_report(A,x,b)
 
         end associate
+
 
     end subroutine solve
     !************************************************************************************************************
@@ -331,21 +335,63 @@ contains
         real(rk),               intent(inout)   :: h(:,:)
         real(rk),               intent(inout)   :: htmp(:)
 
-        integer(ik) :: i, ierr
-        real(rk)    :: dot_tmp(j)
+        integer(ik)    :: i, ierr, iproc
+        real(rk)       :: dot_tmp(j)
+        PetscErrorCode :: perr
 
-        do i = 1,j
-            dot_tmp(i) = dot(w,v(i))
-        end do
+        Vec :: v_tmp(j)
 
-        ! Reduce local dot-product values across processors, distribute result back to all
-        call MPI_AllReduce(dot_tmp,htmp,j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 
+        if (allocated(w%wrapped_petsc_vector)) then
+
+            ! Copy petsc vectors to contiguous array
+            do i = 1,j
+                call VecDuplicate(v(i)%wrapped_petsc_vector%petsc_vector,v_tmp(i),perr)
+                if (perr /= 0) call chidg_signal(FATAL,'fgmres%classical_gram_schmidt: error in VecDuplicate.')
+                call VecCopy(v(i)%wrapped_petsc_vector%petsc_vector,v_tmp(i),perr)
+                if (perr /= 0) call chidg_signal(FATAL,'fgmres%classical_gram_schmidt: error in VecCopy.')
+            end do
+
+            call VecMDot(w%wrapped_petsc_vector%petsc_vector, j, v_tmp, dot_tmp, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMDot.')
+
+            ! Add to h
+            h(1:j,j) = h(1:j,j) + dot_tmp(1:j)
+
+            ! Subtract from w
+            dot_tmp = -dot_tmp
+            call VecMAXPY(w%wrapped_petsc_vector%petsc_vector, j, dot_tmp, v_tmp, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'classical_gram_schmidt: error calling VecMAXPY.')
+
+            ! Destroy copies
+            do i = 1,j
+                call VecDestroy(v_tmp(i),perr)
+                if (perr /= 0) call chidg_signal(FATAL,'fgmres%classical_gram_schmidt: error in VecDestroy.')
+            end do
+
+
+
+
+        else
+
+            do i = 1,j
+                dot_tmp(i) = dot(w,v(i))
+            end do
+
+            ! Reduce local dot-product values across processors, distribute result back to all
+            call MPI_AllReduce(dot_tmp,htmp,j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+
+            ! Relocated to end
+            !h(1:j,j) = h(1:j,j) + htmp(1:j)
+
+            do i = 1,j
+                w = w - htmp(i)*v(i)
+            end do
+
+        end if
+
+        ! Update h
         h(1:j,j) = h(1:j,j) + htmp(1:j)
-
-        do i = 1,j
-            w = w - htmp(i)*v(i)
-        end do
 
     end subroutine classical_gram_schmidt
     !****************************************************************************************
@@ -375,12 +421,21 @@ contains
         real(rk),               intent(inout)   :: h(:,:)
         real(rk),               intent(inout)   :: htmp(:)
 
-        integer(ik) :: i
+        integer(ik)     :: i
+        PetscErrorCode  :: perr
 
-        do i = 1,j
-            htmp(i) = dot(w,v(i),ChiDG_COMM)
-            w = w - htmp(i)*v(i)
-        end do
+        if (allocated(w%wrapped_petsc_vector)) then
+            do i = 1,j
+                htmp(i) = dot(w,v(i),ChiDG_COMM)
+                call VecAXPY(w%wrapped_petsc_vector%petsc_vector,-htmp(i),v(i)%wrapped_petsc_vector%petsc_vector,perr)
+            end do
+
+        else 
+            do i = 1,j
+                htmp(i) = dot(w,v(i),ChiDG_COMM)
+                w = w - htmp(i)*v(i)
+            end do
+        end if
 
         h(1:j,j) = h(1:j,j) + htmp(1:j)
 
@@ -400,7 +455,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine allocate_krylov_storage(self,b)
-        class(fgmres_t),  intent(inout)   :: self
+        class(fgmres_t),        intent(inout)   :: self
         type(chidg_vector_t),   intent(in)      :: b
 
         logical     :: allocate_vectors
@@ -409,6 +464,8 @@ contains
         ! Check if krylov storage needs allocated or reallocated 
         if (allocated(self%v)) then
             if ( size(self%v) /= (self%nkrylov+1) ) then
+                call self%v%release()
+                call self%z%release()
                 deallocate(self%v,self%z,self%p,self%y,self%c,self%s,self%htmp,self%h)
                 allocate_vectors = .true.
             end if
@@ -436,7 +493,6 @@ contains
             end do
         end if
 
-
     end subroutine allocate_krylov_storage
     !****************************************************************************************
 
@@ -454,7 +510,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine print_report(self,A,x,b)
-        class(fgmres_t),    intent(inout)   :: self
+        class(fgmres_t),        intent(inout)   :: self
         type(chidg_matrix_t),   intent(inout)   :: A
         type(chidg_vector_t),   intent(inout)   :: x
         type(chidg_vector_t),   intent(in)      :: b
@@ -469,7 +525,6 @@ contains
 
         call write_line('   Preconditioner time: ',           self%timer_precon%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         call write_line('       Precon time per iteration: ', self%timer_precon%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
-
 
         call write_line('   MV time: ',                   self%timer_mv%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
         call write_line('       MV time per iteration: ', self%timer_mv%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<5))
@@ -490,10 +545,71 @@ contains
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    recursive subroutine tear_down(self)
+        class(fgmres_t),    intent(inout)   :: self
+
+        integer(ik) :: iv, iz
+
+        call self%r%release()
+        call self%r0%release()
+        call self%w%release()
+        call self%x0%release()
+        call self%zr%release()
+        call self%deltaz%release()
+
+        if (allocated(self%v)) then
+            do iv = 1,size(self%v)
+                call self%v(iv)%release()
+            end do
+        end if
+        if (allocated(self%z)) then
+            do iz = 1,size(self%z)
+                call self%z(iz)%release()
+            end do
+        end if
+
+        if (associated(self%fgmres)) then
+            call self%fgmres%tear_down()
+            deallocate(self%fgmres)
+            self%fgmres => null()
+        end if
+
+    end subroutine tear_down
+    !*******************************************************************************************
 
 
 
 
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    recursive subroutine destroy_fgmres(self)
+        type(fgmres_t),    intent(inout)   :: self
+
+        call self%tear_down()
+
+    end subroutine destroy_fgmres
+    !*******************************************************************************************
+
+
+    
 
 
 

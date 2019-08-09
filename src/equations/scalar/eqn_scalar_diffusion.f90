@@ -126,7 +126,8 @@ contains
 
         ! Initialize derivatives
         k = u
-        k = -1.0_rk
+        !k = -1.0_rk
+        k = 0.1_rk
 
         call worker%store_model_field('Scalar Diffusion Coefficient','value',k)
 

@@ -94,9 +94,9 @@ contains
         density_reynolds_23 = worker%get_field('Density * Reynolds-23',    'value')
 
 
-        mu_neg_11 = -density_reynolds_11*sin_ramp(-invdensity*density_reynolds_11, 0.0_rk, 10.0_rk*rstm_ssglrrw_k_infty)/rstm_ssglrrw_omega_infty
-        mu_neg_22 = -density_reynolds_22*sin_ramp(-invdensity*density_reynolds_22, 0.0_rk, 10.0_rk*rstm_ssglrrw_k_infty)/rstm_ssglrrw_omega_infty
-        mu_neg_33 = -density_reynolds_33*sin_ramp(-invdensity*density_reynolds_33, 0.0_rk, 10.0_rk*rstm_ssglrrw_k_infty)/rstm_ssglrrw_omega_infty
+        mu_neg_11 = -ZERO*density_reynolds_11*sin_ramp(-invdensity*density_reynolds_11, 0.0_rk, rstm_ssglrrw_R_infty)/rstm_ssglrrw_omega_infty
+        mu_neg_22 = -ZERO*density_reynolds_22*sin_ramp(-invdensity*density_reynolds_22, 0.0_rk, rstm_ssglrrw_R_infty)/rstm_ssglrrw_omega_infty
+        mu_neg_33 = -ZERO*density_reynolds_33*sin_ramp(-invdensity*density_reynolds_33, 0.0_rk, rstm_ssglrrw_R_infty)/rstm_ssglrrw_omega_infty
 
         call worker%store_model_field('RSTM AV-11','value',mu_neg_11) 
         call worker%store_model_field('RSTM AV-22','value',mu_neg_22) 

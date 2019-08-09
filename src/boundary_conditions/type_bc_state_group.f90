@@ -7,7 +7,8 @@ module type_bc_state_group
     use type_mesh,              only: mesh_t
 
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
-    use mpi_f08,                only: mpi_comm, MPI_LOGICAL, MPI_Comm_split, MPI_Allgather, MPI_UNDEFINED
+    use mpi_f08,                only: mpi_comm, MPI_LOGICAL, MPI_Comm_split, MPI_Allgather, &
+                                      MPI_UNDEFINED, MPI_INTEGER4, MPI_SUM
     implicit none
 
 
@@ -40,6 +41,8 @@ module type_bc_state_group
 
         type(mpi_comm)                          :: bc_COMM          ! MPI communicator for bc procs
         integer(ik)                             :: bc_ID = NO_ID    ! bc state group identifier
+        integer(ik),                allocatable :: bc_procs(:)      ! List of participating ChiDG_COMM procs
+        integer(ik)                             :: nfaces_g
 
     contains
 
@@ -371,7 +374,8 @@ contains
         type(mesh_t),               intent(in)      :: mesh
 
         logical                     :: irank_has_geometry, ranks_have_geometry(NRANK)
-        integer(ik)                 :: ierr, color, group_ID
+        integer(ik)                 :: ierr, color, group_ID, bc_NRANK, bc_IRANK
+        integer(ik),    allocatable :: procs(:), procs_reduced(:)
         character(:),   allocatable :: user_msg
 
 
@@ -395,7 +399,7 @@ contains
         !
         ! Send this single information to all and receive back ordered information from all
         !
-        call MPI_Allgather(irank_has_geometry,1,MPI_LOGICAL,ranks_have_geometry,1,MPI_LOGICAL,ChiDG_COMM,ierr)
+        call MPI_AllGather(irank_has_geometry,1,MPI_LOGICAL,ranks_have_geometry,1,MPI_LOGICAL,ChiDG_COMM,ierr)
         user_msg = "bc%init_bc_comm: Error in collective MPI_Allgather for determining which &
                     MPI ranks contain portions of a boundary condition bc_patch."
         if (ierr /= 0) call chidg_signal(FATAL,user_msg)
@@ -420,6 +424,35 @@ contains
                     trying to create a communicator for exchanging boundary condition data &
                     between processors."
         if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+
+
+
+
+
+        ! Initialize bc_procs, nfaces_g
+        if (irank_has_geometry) then
+
+            call MPI_Comm_Size(self%bc_COMM,bc_NRANK,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'bc_state_group%init_comm: error computing bc_NRANK.')
+            call MPI_Comm_Rank(self%bc_COMM,bc_IRANK,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'bc_state_group%init_comm: error computing bc_IRANK.')
+
+            ! Size buffers for accumulating ChiDG_COMM ranks in bc_COMM
+            if (allocated(procs))         deallocate(procs)
+            if (allocated(procs_reduced)) deallocate(procs_reduced)
+            allocate(procs(bc_NRANK), procs_reduced(bc_NRANK), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            ! Register current ChiDG_COMM proc
+            procs = 0
+            procs(bc_IRANK+1) = IRANK
+
+            call MPI_AllReduce(procs,procs_reduced,bc_NRANK,MPI_INTEGER4,MPI_SUM,self%bc_COMM,ierr) 
+            if (ierr /= 0) call chidg_signal(FATAL,'bc_state_group%init_comm: error computing MPI_AllReduce for bc_procs.')
+            self%bc_procs = procs_reduced
+
+            self%nfaces_g = mesh%bc_patch_group(group_ID)%get_nfaces_global(self%bc_COMM)
+        end if
 
 
     end subroutine init_comm

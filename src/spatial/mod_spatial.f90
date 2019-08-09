@@ -7,17 +7,16 @@ module mod_spatial
     use mpi_f08,                only: MPI_Barrier
     use DNAD_D
 
-
-
-
     use type_chidg_data,        only: chidg_data_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_chidg_cache,       only: chidg_cache_t
     use type_cache_handler,     only: cache_handler_t
-    use type_element_info,      only: element_info_t
+    use type_element_info,      only: element_info_t, element_info
     use type_timer,             only: timer_t
     implicit none
 
+    type(chidg_cache_t)         :: cache
+    type(cache_handler_t)       :: cache_handler
 
 contains
 
@@ -50,8 +49,6 @@ contains
 
         type(element_info_t)        :: elem_info
         type(chidg_worker_t)        :: worker
-        type(chidg_cache_t)         :: cache
-        type(cache_handler_t)       :: cache_handler
 
 
         ! Initialize Chidg Worker references
@@ -74,9 +71,7 @@ contains
 
         ! Communicate solution vector
         call comm_timer%start()
-        call data%sdata%q%comm_send()
-        call data%sdata%q%comm_recv()
-        call data%sdata%q%comm_wait()
+        call data%sdata%q%assemble()
         call comm_timer%stop()
 
 
@@ -107,11 +102,8 @@ contains
                 eqn_ID = worker%mesh%domain(idom)%elems(ielem)%eqn_ID
                 associate ( domain => data%mesh%domain(idom), eqnset => data%eqnset(eqn_ID) )
 
-
-                elem_info%idomain_g  = domain%elems(ielem)%idomain_g
-                elem_info%idomain_l  = domain%elems(ielem)%idomain_l
-                elem_info%ielement_g = domain%elems(ielem)%ielement_g
-                elem_info%ielement_l = domain%elems(ielem)%ielement_l
+                ! Set local element
+                elem_info = worker%mesh%get_element_info(idom,ielem)
                 call worker%set_element(elem_info)
 
 
@@ -136,6 +128,7 @@ contains
                     call eqnset%compute_bc_operators(worker,data%bc_state_group, differentiate)
 
                 end do  ! faces loop
+
                 
                 ! Compute contributions from volume integrals
                 call eqnset%compute_volume_advective_operators(worker, differentiate)
@@ -161,6 +154,8 @@ contains
         end do  ! idom
 
 
+        call data%sdata%rhs%assemble()
+        if (differentiate) call data%sdata%lhs%assemble()
 
 
         ! Synchronize
@@ -169,10 +164,14 @@ contains
 
 
         ! Timing IO
-        call write_line('- total time: ',    total_timer%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('- comm time: ',     comm_timer%elapsed(),     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('- cache time: ',    cache_timer%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        call write_line('- function time: ', function_timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('- total time: ',    total_timer%elapsed(),                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('- comm time: ',     comm_timer%elapsed(),                   delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('- cache time: ',    cache_timer%elapsed(),                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- resize time: ',   cache_handler%timer_resize%elapsed(),  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- primary time: ',  cache_handler%timer_primary%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- model time: ',    cache_handler%timer_model%elapsed(),   delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- gradient time: ', cache_handler%timer_lift%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('- function time: ', function_timer%elapsed(),               delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
         if (present(timing)) then
             timing = total_timer%elapsed()

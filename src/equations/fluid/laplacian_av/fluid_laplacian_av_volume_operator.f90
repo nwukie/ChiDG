@@ -95,7 +95,7 @@ contains
         !   Second Coefficient of Viscosity
         !   Thermal Conductivity
         !
-        av = worker%get_field('Smoothed Artificial Viscosity', 'value', 'element')
+        av = worker%get_field('Artificial Viscosity', 'value', 'element')
 
 
         if (any(ieee_is_nan(av(:)%x_ad_))) print *, 'smoothed av is nan'

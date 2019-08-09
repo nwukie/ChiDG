@@ -65,8 +65,8 @@ contains
         call self%add_primary_field('Density * Reynolds-23')
         call self%add_primary_field('Energy')
 
-        call self%add_auxiliary_field('Wall Distance : p-Poisson')
-        call self%add_model('Wall Distance : p-Poisson Normalization')
+        !call self%add_auxiliary_field('Wall Distance : p-Poisson')
+        !call self%add_model('Wall Distance : p-Poisson Normalization')
     end subroutine init
     !********************************************************************************
 
@@ -86,7 +86,7 @@ contains
 
         type(AD_D), allocatable, dimension(:) ::                            &
             density, density_omega, production_trace, omega, k_t,           &
-            alpha_w, beta_w, sigma_d_w, omega_source_term,                                     &
+            alpha_w, beta_w, sigma_d_w, omega_grad_sq,                                     &
             production_11, production_22, production_33,                    &
             production_12, production_13, production_23,                    &
             pressure_strain_11, pressure_strain_22, pressure_strain_33,                    &
@@ -98,12 +98,12 @@ contains
 
         real(rk)    :: const, epsilon_vorticity, eps
 
-        ! Omega source = production_trace_term - omega_squared_term + omega_source_term
+        ! Omega source = production_trace_term - omega_squared_term + omega_grad_sq
 
         density_omega       = worker%get_field('Density * Omega',           'value', 'element')
         production_trace    = worker%get_field('Production-Trace',          'value', 'element')
         omega               = worker%get_field('Omega',                     'value', 'element')
-        omega_source_term   = worker%get_field('Omega Gradient Squared',                     'value', 'element')
+        omega_grad_sq   = worker%get_field('Omega Gradient Squared',                     'value', 'element')
         k_t                 = worker%get_field('Turbulence Kinetic Energy', 'value', 'element')
         alpha_w             = worker%get_field('RSTMSSGLRRW Alpha-w',       'value', 'element')
         beta_w              = worker%get_field('RSTMSSGLRRW Beta-w',        'value', 'element')
@@ -154,8 +154,9 @@ contains
         !========================================================================
         !                       Omega Source Term
         !========================================================================
-        !source = HALF*alpha_w*omega*production_trace/k_t - beta_w*density_omega*omega+sigma_d_w*omega_source_term
-        source = HALF*(5.0_rk/9.0_rk)*production_trace/(k_t+1.0e-16) -(3.0_rk/40.0_rk)*density*exp(omega) + (mu_l+0.5_rk*mu_t)*omega_source_term + ssrc_omega
+        !source = HALF*alpha_w*omega*production_trace/k_t - beta_w*density_omega*omega+sigma_d_w*omega_grad_sq
+        !source = HALF*(5.0_rk/9.0_rk)*production_trace/(k_t+1.0e-11) -(3.0_rk/40.0_rk)*density*exp(omega) + (mu_l+0.5_rk*mu_t)*omega_grad_sq + ssrc_omega
+        source = HALF*alpha_w*production_trace/(k_t+1.0e-11) -beta_w*density*exp(omega) + (mu_l+0.5_rk*mu_t)*omega_grad_sq + ssrc_omega
         !source = ZERO
 
         call worker%integrate_volume_source('Density * Omega',source)

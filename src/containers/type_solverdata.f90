@@ -46,31 +46,23 @@ module type_solverdata
 
 
         ! Mesh size information
-        real(rk),       allocatable :: mesh_size_elem(:,:), mesh_size_vertex(:,:),      &
-                                       min_mesh_size_elem(:), min_mesh_size_vertex(:),  &
-                                       avg_mesh_size_vertex(:), sum_mesh_size_vertex(:)
+        real(rk),       allocatable :: mesh_size_elem(:,:), mesh_size_vertex(:,:),       &
+                                       min_mesh_size_elem(:), min_mesh_size_vertex(:),   &
+                                       avg_mesh_size_vertex(:), sum_mesh_size_vertex(:), &
+                                       avg_mesh_h_vertex(:,:), sum_mesh_h_vertex(:,:),   &
+                                       area_weighted_h(:,:)
         integer(ik),    allocatable :: num_elements_touching_vertex(:)
 
 
         ! RBF-related information
         integer(ik),    allocatable :: nelems_per_domain(:)
-        real(rk),       allocatable :: rbf_center(:,:), rbf_radius(:,:), &
-                                       rbf_artificial_bulk_viscosity(:), &
-                                       rbf_artificial_shear_viscosity(:), &
-                                       rbf_artificial_thermal_conductivity(:)
-
+        real(rk),       allocatable :: rbf_center(:,:), rbf_radius(:,:)
 
         ! Vertex-based smoothing information
         integer(ik),    allocatable :: nnodes_per_domain(:)
-        real(rk),       allocatable :: vertex_artificial_bulk_viscosity(:), &
-                                       vertex_artificial_shear_viscosity(:), &
-                                       vertex_artificial_thermal_conductivity(:)
-
 
         ! Global nodes array - used for octree operation
         real(rk),       allocatable :: global_nodes(:,:)
-
-
 
         ! Function registration
         type(function_status_t)         :: function_status ! Status of function residuals and linearizations
@@ -418,6 +410,9 @@ contains
 
 
 
+
+
+
     !>
     !!
     !! @author  Eric M. Wolf
@@ -425,104 +420,85 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine set_nelems_per_domain(self,nelems_per_domain)
-        class(solverdata_t),    intent(inout)           :: self
-        integer(ik),           intent(in)              :: nelems_per_domain(:)
+        class(solverdata_t),    intent(inout)   :: self
+        integer(ik),            intent(in)      :: nelems_per_domain(:)
 
-        integer(ik) :: nelems, ierr
-
-        if (allocated(self%nelems_per_domain)) deallocate(self%nelems_per_domain)
+        integer(ik) :: nelements_g, ierr
 
         self%nelems_per_domain = nelems_per_domain
-        nelems = sum(nelems_per_domain)
-
-        if (allocated(self%rbf_center)) deallocate(self%rbf_center)
-        if (allocated(self%rbf_radius)) deallocate(self%rbf_radius)
-
-
-        allocate(self%rbf_center(nelems, 3), &
-                 self%rbf_radius(nelems, 3), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        if (allocated(self%rbf_artificial_bulk_viscosity))       deallocate(self%rbf_artificial_bulk_viscosity)
-        if (allocated(self%rbf_artificial_shear_viscosity))      deallocate(self%rbf_artificial_shear_viscosity)
-        if (allocated(self%rbf_artificial_thermal_conductivity)) deallocate(self%rbf_artificial_thermal_conductivity)
-
-
-        allocate(self%rbf_artificial_bulk_viscosity(nelems),    &
-                 self%rbf_artificial_shear_viscosity(nelems),   &
-                 self%rbf_artificial_thermal_conductivity(nelems), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
+        nelements_g = sum(nelems_per_domain)
         
-
-        if (allocated(self%mesh_size_elem)) deallocate(self%mesh_size_elem)
-        allocate(self%mesh_size_elem(nelems, 3), stat=ierr)
-        if (ierr /= 0) call AllocationError
-        self%mesh_size_elem = ZERO
-
+        if (allocated(self%rbf_center))         deallocate(self%rbf_center)
+        if (allocated(self%rbf_radius))         deallocate(self%rbf_radius)
+        if (allocated(self%area_weighted_h))    deallocate(self%area_weighted_h)
+        if (allocated(self%mesh_size_elem))     deallocate(self%mesh_size_elem)
         if (allocated(self%min_mesh_size_elem)) deallocate(self%min_mesh_size_elem)
-        allocate(self%min_mesh_size_elem(nelems), stat=ierr)
+        allocate(self%area_weighted_h(nelements_g, 3), &
+                 self%mesh_size_elem(nelements_g, 3),  &
+                 self%min_mesh_size_elem(nelements_g), &
+                 self%rbf_center(nelements_g, 3),      &
+                 self%rbf_radius(nelements_g, 3), stat=ierr)
         if (ierr /= 0) call AllocationError
+
+        self%rbf_center         = ZERO
+        self%rbf_radius         = ZERO
+        self%area_weighted_h    = ZERO
+        self%mesh_size_elem     = ZERO
         self%min_mesh_size_elem = ZERO
 
     end subroutine set_nelems_per_domain
     !*****************************************************************************************
 
+
+
+
+
     !>
-    !! 
     !!
     !! @author  Eric M. Wolf
     !! @date    07/26/2018 
     !!
     !--------------------------------------------------------------------------------
     subroutine set_nnodes_per_domain(self,nnodes_per_domain)
-        class(solverdata_t),    intent(inout)           :: self
-        integer(ik),           intent(in)              :: nnodes_per_domain(:)
+        class(solverdata_t),    intent(inout)   :: self
+        integer(ik),            intent(in)      :: nnodes_per_domain(:)
 
-        integer(ik)     :: nnodes
-
-        if (allocated(self%nnodes_per_domain)) deallocate(self%nnodes_per_domain)
+        integer(ik) :: nnodes, ierr
 
         self%nnodes_per_domain = nnodes_per_domain
         nnodes = sum(nnodes_per_domain)
 
-
-        if (allocated(self%vertex_artificial_bulk_viscosity)) deallocate(self%vertex_artificial_bulk_viscosity)
-        if (allocated(self%vertex_artificial_shear_viscosity)) deallocate(self%vertex_artificial_shear_viscosity)
-        if (allocated(self%vertex_artificial_thermal_conductivity)) deallocate(self%vertex_artificial_thermal_conductivity)
-
-
-        allocate(self%vertex_artificial_bulk_viscosity(nnodes))
-        allocate(self%vertex_artificial_shear_viscosity(nnodes))
-        allocate(self%vertex_artificial_thermal_conductivity(nnodes))
-
-        self%vertex_artificial_bulk_viscosity = ZERO
-        self%vertex_artificial_shear_viscosity = ZERO
-        self%vertex_artificial_thermal_conductivity = ZERO
-
-        if (allocated(self%mesh_size_vertex)) deallocate(self%mesh_size_vertex)
-        allocate(self%mesh_size_vertex(nnodes, 3))
-        self%mesh_size_vertex = ZERO
-
-        if (allocated(self%min_mesh_size_vertex)) deallocate(self%min_mesh_size_vertex)
-        allocate(self%min_mesh_size_vertex(nnodes))
-        self%min_mesh_size_vertex = ZERO
-
-        if (allocated(self%avg_mesh_size_vertex)) deallocate(self%avg_mesh_size_vertex)
-        allocate(self%avg_mesh_size_vertex(nnodes))
-        self%avg_mesh_size_vertex = ZERO
-
-
-        if (allocated(self%sum_mesh_size_vertex)) deallocate(self%sum_mesh_size_vertex)
-        allocate(self%sum_mesh_size_vertex(nnodes))
-        self%sum_mesh_size_vertex = ZERO
-
+        if (allocated(self%mesh_size_vertex))             deallocate(self%mesh_size_vertex)
+        if (allocated(self%min_mesh_size_vertex))         deallocate(self%min_mesh_size_vertex)
+        if (allocated(self%avg_mesh_size_vertex))         deallocate(self%avg_mesh_size_vertex)
+        if (allocated(self%sum_mesh_size_vertex))         deallocate(self%sum_mesh_size_vertex)
+        if (allocated(self%avg_mesh_h_vertex))            deallocate(self%avg_mesh_h_vertex)
+        if (allocated(self%sum_mesh_h_vertex))            deallocate(self%sum_mesh_h_vertex)
         if (allocated(self%num_elements_touching_vertex)) deallocate(self%num_elements_touching_vertex)
-        allocate(self%num_elements_touching_vertex(nnodes))
-        self%num_elements_touching_vertex = 0_ik 
+        allocate(self%mesh_size_vertex(nnodes, 3),  &
+                 self%min_mesh_size_vertex(nnodes), &
+                 self%avg_mesh_size_vertex(nnodes), &
+                 self%sum_mesh_size_vertex(nnodes), &
+                 self%avg_mesh_h_vertex(nnodes,3),  &
+                 self%sum_mesh_h_vertex(nnodes,3),  &
+                 self%num_elements_touching_vertex(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        self%mesh_size_vertex     = ZERO
+        self%min_mesh_size_vertex = ZERO
+        self%avg_mesh_size_vertex = ZERO
+        self%sum_mesh_size_vertex = ZERO
+        self%avg_mesh_h_vertex    = ZERO
+        self%sum_mesh_h_vertex    = ZERO
+        self%num_elements_touching_vertex = 0
 
     end subroutine set_nnodes_per_domain
     !*****************************************************************************************
+
+
+
+
+
 
     !>
     !! 
@@ -532,54 +508,15 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine set_global_nodes(self,global_nodes)
-        class(solverdata_t),    intent(inout)           :: self
-        real(rk),           intent(in)              :: global_nodes(:,:)
+        class(solverdata_t),    intent(inout)   :: self
+        real(rk),               intent(in)      :: global_nodes(:,:)
 
-        if (allocated(self%global_nodes)) deallocate(self%global_nodes)
         self%global_nodes = global_nodes
 
     end subroutine set_global_nodes
     !*****************************************************************************************
 
 
-
-
-    !>  Given the index of a node in the global node list, determine its
-    !!  (global) domain index (idomain_g) and its domain node index (to access dom(idomain_l)%nodes(inode)).
-    !! 
-    !!
-    !! @author  Eric M. Wolf
-    !! @date    08/31/2018 
-    !!
-    !--------------------------------------------------------------------------------
-    subroutine get_global_node_domain(self, global_node_index, idomain_g, inode) 
-        class(solverdata_t),   intent(inout)   :: self
-        integer(ik),               intent(in)      :: global_node_index
-        integer(ik), intent(inout) :: idomain_g, inode
-
-        integer(ik) :: idom, node_count, node_count_old
-        logical :: searching
-
-        searching = .true.
-
-        node_count = 0
-        node_count_old = 0
-        do idom = 1, size(self%nnodes_per_domain)
-            node_count = node_count + self%nnodes_per_domain(idom)
-            if ((global_node_index <= node_count) .and. (searching)) then
-                idomain_g = idom
-                inode = global_node_index - node_count_old
-                searching = .false.
-            end if
-            node_count_old = node_count
-            
-        end do
-        
-        if (searching) print *, 'get global node domain - domain not found'
-
-
-    end subroutine get_global_node_domain
-    !*****************************************************************************************
 
 
 

@@ -2,7 +2,7 @@ module type_chidg_data
 #include <messenger.h>
     use mod_kinds,                      only: rk,ik
     use mod_constants,                  only: NO_ID, NO_MM_ASSIGNED, ZERO, NO_ELEMENT, &
-                                              MAX_ELEMENTS_PER_NODE
+                                              MAX_ELEMENTS_PER_NODE, NFACES, TWO, THIRD
     use mod_chidg_mpi,                  only: IRANK, NRANK
     use type_domain_connectivity,       only: domain_connectivity_t
     use type_boundary_connectivity,     only: boundary_connectivity_t
@@ -25,10 +25,15 @@ module type_chidg_data
     ! Factory methods
     use mod_equations,                  only: equation_set_factory
 
+    ! Vertex-based interpolation for h-smoothing
+    use mod_interpolate,                only: interpolate_from_vertices
+
     !Mesh motion
     use type_mesh_motion,               only: mesh_motion_t
     use type_mesh_motion_wrapper,       only: mesh_motion_wrapper_t
     use type_mesh_motion_group,         only: mesh_motion_group_t
+    use type_radial_basis_function
+    use mod_radial_basis_function
     implicit none
 
 
@@ -96,10 +101,13 @@ module type_chidg_data
         procedure   :: construct_rbf_arrays
         procedure   :: node_index_u_to_g
         procedure   :: domain_index_global_to_local
-        procedure   :: node_touch_elements 
         procedure   :: register_rbf_with_elements
-        procedure   :: record_mesh_size
+        procedure   :: find_who_rbfs_touch
 
+        ! Artificial Viscosity
+        procedure   :: compute_area_weighted_h
+        procedure   :: record_mesh_size
+        procedure   :: perform_h_smoothing 
 
         ! Release allocated memory
         procedure   :: release
@@ -943,6 +951,32 @@ contains
 
 
 
+    !>
+    !! 
+    !! @author  Eric M. Wolf
+    !! @date    03/05/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine compute_area_weighted_h(self)
+        class(chidg_data_t),    intent(inout) :: self
+
+        integer(ik) :: idom
+
+        do idom = 1, self%mesh%ndomains()
+           call self%mesh%domain(idom)%compute_area_weighted_h() 
+        end do
+
+    end subroutine compute_area_weighted_h 
+    !********************************************************************************
+
+
+
+
+
+
+
+
+
 
     !>
     !!
@@ -955,7 +989,6 @@ contains
 
         integer(ik)     :: idom, ielem, rbf_index, idir
 
-
         self%sdata%rbf_center = ZERO
         self%sdata%rbf_radius = ZERO
         do idom = 1, self%mesh%ndomains()
@@ -965,18 +998,15 @@ contains
                             self%mesh%domain(idom)%elems(ielem)%ielement_g
 
                 do idir = 1,3
-                    self%sdata%rbf_center(rbf_index,idir) = self%mesh%domain(idom)%elems(ielem)%centroid(idir)
+                    self%sdata%rbf_center(rbf_index,idir) = self%mesh%domain(idom)%elems(ielem)%bb_centroid(idir)
                     self%sdata%rbf_radius(rbf_index,idir) = self%mesh%domain(idom)%elems(ielem)%h(idir)
                 end do
 
             end do
         end do
 
-
     end subroutine construct_rbf_arrays
     !***************************************************************************************
-
-
 
 
 
@@ -990,23 +1020,23 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine node_index_u_to_g(self, inode_u, idomain_g, inode_g) 
-        class(chidg_data_t),    intent(in)  :: self
-        integer(ik),              intent(in)  :: inode_u
-        integer(ik),              intent(inout)  :: idomain_g, inode_g
+        class(chidg_data_t),    intent(in)      :: self
+        integer(ik),            intent(in)      :: inode_u
+        integer(ik),            intent(inout)   :: idomain_g
+        integer(ik),            intent(inout)   :: inode_g
 
+        integer(ik) :: nnodes_old, nnodes, idom, ndomains_g
 
-        integer(ik) :: nnodes_old, nnodes, idom, ndoms
+        ndomains_g = size(self%sdata%nnodes_per_domain)
 
-        ndoms = self%mesh%ndomains()
         nnodes_old = 0
         nnodes = 0
-        do idom = 1, ndoms
+        do idom = 1,ndomains_g
             nnodes = nnodes_old + self%sdata%nnodes_per_domain(idom)
 
             if ((nnodes_old<inode_u) .and. (inode_u<=nnodes)) then
                 ! Node located in the present domain
                 idomain_g = idom
-
                 inode_g = inode_u - nnodes_old
                 exit
 
@@ -1015,77 +1045,67 @@ contains
 
         end do
 
-
-
     end subroutine node_index_u_to_g
     !****************************************************************************************
 
 
 
 
-
     !>
     !!
     !! @author  Eric M. Wolf
     !! @date    09/13/2018 
     !!
     !--------------------------------------------------------------------------------
-    function domain_index_global_to_local(self, idomain_g) result(idomain_l)
-        class(chidg_data_t),        intent(in)      :: self
-        integer(ik),                intent(in)      :: idomain_g
+    subroutine domain_index_global_to_local(self,idomain_g,idomain_l,domain_found) 
+        class(chidg_data_t),    intent(in)      :: self
+        integer(ik),            intent(in)      :: idomain_g
+        integer(ik),            intent(inout)   :: idomain_l
+        logical,                intent(inout)   :: domain_found
 
-        integer(ik)                                 :: idomain_l
-
-        integer(ik) :: idom, ndoms
-        logical     :: domain_found
+        integer(ik) :: idom, ndomains
 
         domain_found = .false.
-        ndoms = self%mesh%ndomains()
+        ndomains = self%mesh%ndomains()
         idomain_l = -1
 
-        do idom = 1, ndoms
+        do idom = 1,ndomains
             if (idomain_g == self%mesh%domain(idom)%idomain_g) then
                 idomain_l = idom
                 domain_found = .true.
                 exit
             end if
-
         end do
 
-    end function domain_index_global_to_local
+    end subroutine domain_index_global_to_local
     !********************************************************************************
 
 
 
 
+
     !>
-    !! 
     !!
     !! @author  Eric M. Wolf
-    !! @date    09/13/2018 
+    !! @date    03/20/2019 
     !!
     !--------------------------------------------------------------------------------
-    subroutine node_touch_elements(self, inode_u)
-        class(chidg_data_t),        intent(inout)   :: self
-        integer(ik),                intent(in)      :: inode_u
+    subroutine find_who_rbfs_touch(self)
+        class(chidg_data_t),    intent(inout) :: self
 
-        integer(ik) :: idomain_g, inode_g, idomain_l, nelems, ielem, test_elem
-        
-        call self%node_index_u_to_g(inode_u, idomain_g, inode_g) 
+        integer(ik) :: irbf, nrbf
+        real(rk)    :: center(3), radius(3), alpha(3)
 
-        idomain_l = self%domain_index_global_to_local(idomain_g)
-
-        nelems = 0
-        do ielem = 1, MAX_ELEMENTS_PER_NODE
-            test_elem = self%mesh%domain(idomain_l)%nodes_elems(inode_g, ielem)
-
-            if (test_elem /= NO_ELEMENT) then
-                nelems = nelems + 1
-            end if
-
+        ! Loop over the element-centered RBFs and register them with each element
+        alpha = TWO
+        nrbf = size(self%sdata%rbf_center(:,1))
+        do irbf = 1,nrbf
+            center = self%sdata%rbf_center(irbf,:)
+            radius = alpha*self%sdata%rbf_radius(irbf,:)
+            call self%register_rbf_with_elements(center, radius, irbf, 1)
         end do
-    
-    end subroutine node_touch_elements 
+
+    end subroutine find_who_rbfs_touch
     !********************************************************************************
 
 
@@ -1105,6 +1125,7 @@ contains
         integer(ik),                        intent(in)      :: rbf_ID, rbf_set_ID
 
         integer(ik)     :: inode, inode_u, idomain_g, inode_g, idomain_l, ielem, nelems, test_elem
+        logical         :: domain_found
         type(ivector_t) :: hit_list
 
         ! Perform radius neighbor search
@@ -1112,26 +1133,35 @@ contains
 
         do inode = 1, hit_list%size()
             inode_u = hit_list%at(inode)
+            ! The inode_u index corresponds to the node's index in the global_nodes array,
+            ! which contains all nodes in the entire mesh.
+            ! The subroutine node_index_u_to_g gets the corresponding idomain_g and inode_g index.
             call self%node_index_u_to_g(inode_u, idomain_g, inode_g) 
 
-            idomain_l = self%domain_index_global_to_local(idomain_g)
+            ! The global domain idomain_g may or may not exist on the local processor.
+            ! If it does, we get the idomain_l index.
+            call self%domain_index_global_to_local(idomain_g, idomain_l, domain_found)
 
-            nelems = 0
-            do ielem = 1, MAX_ELEMENTS_PER_NODE
-                test_elem = self%mesh%domain(idomain_l)%nodes_elems(inode_g, ielem)
+            if (domain_found) then
+                nelems = 0
+                ! Loop over all of the elements containing this node (up to MAX_ELEMENTS_PER_NODE=8 elements).
+                ! There may be none, if this node is off-processor.
+                do ielem = 1, MAX_ELEMENTS_PER_NODE
+                    test_elem = self%mesh%domain(idomain_l)%nodes_elems(inode_g, ielem)
 
-                if (test_elem /= NO_ELEMENT) then
-                    call self%mesh%domain(idomain_l)%elems(test_elem)%register_rbf(rbf_set_ID, rbf_ID)
-                end if
+                    ! If inode_g is off-processor, then nodes_elems array should contain only NO_ELEMENT
+                    ! Otherwise, it will contain at least one valid ielement_l index.
+                    if (test_elem /= NO_ELEMENT) then
+                        call self%mesh%domain(idomain_l)%elems(test_elem)%register_rbf(rbf_set_ID, rbf_ID)
+                    end if
 
-            end do
+                end do
+            end if
 
         end do
-    
 
     end subroutine register_rbf_with_elements
     !********************************************************************************
-
 
 
 
@@ -1145,31 +1175,40 @@ contains
     subroutine record_mesh_size(self)
         class(chidg_data_t),    intent(inout)   :: self
 
-        integer(ik) :: idomain, ielem, idomain_g, idomain_l, ielement_g, ielement_l, ii, inode_loc, inode_global, idir
+        integer(ik) :: idomain, ielem, idomain_g, idomain_l, ielement_g, &
+                       ielement_l, ii, inode_loc, inode_global, idir
         real(rk)    :: h_loc(3)
 
-
-        self%sdata%mesh_size_elem = ZERO
-        self%sdata%mesh_size_vertex = ZERO
+        self%sdata%mesh_size_elem       = ZERO
+        self%sdata%mesh_size_vertex     = ZERO
         self%sdata%min_mesh_size_vertex = ZERO
         self%sdata%avg_mesh_size_vertex = ZERO
         self%sdata%sum_mesh_size_vertex = ZERO
         self%sdata%num_elements_touching_vertex = 0
+
         do idomain = 1,self%mesh%ndomains()
             do ielem = 1, self%mesh%domain(idomain)%nelem
+
                 idomain_g  = self%mesh%domain(idomain)%elems(ielem)%idomain_g
                 idomain_l  = self%mesh%domain(idomain)%elems(ielem)%idomain_l
                 ielement_g = self%mesh%domain(idomain)%elems(ielem)%ielement_g
                 ielement_l = self%mesh%domain(idomain)%elems(ielem)%ielement_l
                 ii = sum(self%sdata%nelems_per_domain(1:idomain_g-1))+ielement_g
+                
+                ! OPTION 1: Get element h from bounding box
                 h_loc = self%mesh%domain(idomain)%elems(ielem)%h
 
+                ! OPTION 2: Get element h from area weighted h
+                !h_loc = self%mesh%domain(idomain)%elems(ielem)%area_weighted_h
+
                 ! Record the present elements mesh size
-                self%sdata%mesh_size_elem(ii, :) = h_loc
+                self%sdata%mesh_size_elem(ii, :)  = h_loc
                 self%sdata%min_mesh_size_elem(ii) = minval(h_loc)
+                self%sdata%area_weighted_h(ii,:)  = self%mesh%domain(idomain)%elems(ielem)%area_weighted_h
 
                 ! Loop over the nodes belonging to the element and overwrite if the new value is larger than the previous value
                 do inode_loc = 1, size(self%mesh%domain(idomain)%elems(ielem)%connectivity)
+
                     ! Get the nodes index
                     inode_global = sum(self%sdata%nnodes_per_domain(1:idomain_g-1))+self%mesh%domain(idomain)%elems(ielem)%connectivity(inode_loc)
                     if (inode_global > sum(self%sdata%nnodes_per_domain)) print *, 'av node out of bounds'
@@ -1179,19 +1218,271 @@ contains
                         if (self%sdata%mesh_size_vertex(inode_global, idir) < h_loc(idir)) self%sdata%mesh_size_vertex(inode_global, idir) = h_loc(idir) 
                         if (self%sdata%min_mesh_size_vertex(inode_global) < h_loc(idir)) self%sdata%min_mesh_size_vertex(inode_global) = h_loc(idir) 
                     end do
-                    self%sdata%sum_mesh_size_vertex(inode_global) = self%sdata%sum_mesh_size_vertex(inode_global) + minval(h_loc)
+
+                    ! Record nodal information
+                    ! NOTE: this statement fills only a small portion of the allocated arrays since
+                    ! they are representative of the global problem. Later, via MPI Reductions, their 
+                    ! data will be synchronized across all participating ranks (See type_chidg%read_mesh).
+                    self%sdata%sum_mesh_size_vertex(inode_global)         = self%sdata%sum_mesh_size_vertex(inode_global) + (h_loc(1)*h_loc(2)*h_loc(3))**(THIRD)
+                    self%sdata%sum_mesh_h_vertex(inode_global,:)          = self%sdata%sum_mesh_h_vertex(inode_global,:) + h_loc 
                     self%sdata%num_elements_touching_vertex(inode_global) = self%sdata%num_elements_touching_vertex(inode_global) + 1
 
+                end do !inode_loc
 
-                end do
-
-
-            end do
-        end do
-
+            end do !ielem
+        end do !idomain
 
     end subroutine record_mesh_size
     !***************************************************************************************
+
+
+
+
+
+    !> This subroutine creates a continous h-field, used to generate a smooth(er) artificial viscosity.
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/01/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine perform_h_smoothing(self)
+        class(chidg_data_t),        intent(inout) :: self
+
+        real(rk)        :: h_loc(3), vert_vals_h(8,3), vert_vals_size(8)
+        integer(ik)     :: idomain, ielement, ii, ivertex, inode, inode_g, iface, idomain_g, idomain_l, ielement_g, ielement_l, &
+                           nnodes_elem, nnodes_face, idir, ierr
+
+        real(rk),   allocatable :: h_field_elem(:,:), h_field_face(:,:), size_field_elem(:), size_field_face(:), nodes_elem(:,:), nodes_face(:,:)
+        real(rk),   allocatable :: normalizer_elem(:), normalizer_face(:), node1(:), node2(:), node3(:)
+        real(rk)                :: alpha(3), h_field_coeff(3), size_field_coeff, center(3), radius(3), evalnode(3)
+
+        integer(ik), allocatable    :: rbf_index_list(:)
+        integer(ik)                 :: irbf, nrbf
+        class(radial_basis_function_t), allocatable  :: rbf
+
+        integer                     :: unit, msg
+        logical                     :: file_exists
+        character(len=100)          :: rbf_type, smoothing_method
+
+        namelist /h_smoothing/ smoothing_method 
+        namelist /rbf_av/      rbf_type
+
+        alpha = TWO
+
+        ! Look in models.nml to get alpha (RBF radius expansion factors)
+        inquire(file='artificial_viscosity.nml', exist=file_exists)
+        if (file_exists) then
+            open(newunit=unit,form='formatted',file='artificial_viscosity.nml')
+            read(unit,nml=rbf_av,iostat=msg)
+            if (msg /= 0) print *, 'rbf_av NOT read, msg = ', msg
+            if (msg /= 0) rbf_type = 'wc2_rbf'
+            close(unit)
+        else
+            rbf_type     = 'wc2_rbf'
+        end if       
+
+
+        if (file_exists) then
+            open(newunit=unit,form='formatted',file='artificial_viscosity.nml')
+            read(unit,nml=h_smoothing,iostat=msg)
+            if (msg /= 0) print *, 'h_smoothing NOT read, msg = ', msg
+            if (msg /= 0) smoothing_method = 'rbf'
+            close(unit)
+        else
+            smoothing_method = 'rbf'
+        end if       
+
+
+
+        select case (trim(smoothing_method))
+            ! Vertex-based interpolation
+            case ('vbi')
+                do idomain = 1,self%mesh%ndomains()
+                    do ielement = 1, self%mesh%domain(idomain)%nelements()
+
+                        idomain_g  = self%mesh%domain(idomain)%elems(ielement)%idomain_g
+                        idomain_l  = self%mesh%domain(idomain)%elems(ielement)%idomain_l
+                        ielement_g = self%mesh%domain(idomain)%elems(ielement)%ielement_g
+                        ielement_l = self%mesh%domain(idomain)%elems(ielement)%ielement_l
+
+                        ! Collect vertex h values
+                        do ivertex = 1, 8
+                            inode_g = sum(self%sdata%nnodes_per_domain(1:idomain_g-1)) + self%mesh%domain(idomain)%elems(ielement)%vertex_indices(ivertex)
+
+                            vert_vals_size(ivertex) = self%sdata%avg_mesh_size_vertex(inode_g)
+                            do idir = 1, 3
+                                vert_vals_h(ivertex,idir) = self%sdata%avg_mesh_h_vertex(inode_g,idir)
+                            end do
+                        end do
+
+                        ! Interpolate to volume quadrature nodes
+                        nodes_elem = self%mesh%domain(idomain)%elems(ielement)%basis_s%nodes_elem_
+                        nnodes_elem = size(nodes_elem(:,1))
+
+                        if (allocated(size_field_elem)) deallocate(size_field_elem)
+                        if (allocated(h_field_elem))    deallocate(h_field_elem)
+                        allocate(size_field_elem(nnodes_elem), &
+                                 h_field_elem(nnodes_elem,3), stat=ierr)
+                        if (ierr /= 0) call AllocationError
+
+                        do inode = 1,nnodes_elem 
+                            size_field_elem(inode) = interpolate_from_vertices(vert_vals_size, nodes_elem(inode,:))
+                            do idir=1,3
+                                h_field_elem(inode, idir) = interpolate_from_vertices(vert_vals_h(:,idir), nodes_elem(inode,:))
+                            end do
+                        end do
+                        self%mesh%domain(idomain)%elems(ielement)%h_smooth    = h_field_elem
+                        self%mesh%domain(idomain)%elems(ielement)%size_smooth = size_field_elem
+
+                        ! Interpolate to face quadrature nodes
+                        do iface = 1, NFACES
+                            nodes_face = self%mesh%domain(idomain)%elems(ielement)%basis_s%nodes_face_(:,:, iface)
+                            nnodes_face = size(nodes_face(:,1))
+                            if (allocated(size_field_face)) deallocate(size_field_face)
+                            if (allocated(h_field_face))    deallocate(h_field_face)
+                            allocate(size_field_face(nnodes_face), &
+                                     h_field_face(nnodes_face, 3), stat=ierr)
+                            if (ierr /= 0) call AllocationError
+                            do inode = 1, nnodes_face 
+                                size_field_face(inode) = interpolate_from_vertices(vert_vals_size, nodes_face(inode,:))
+                                do idir = 1,3
+                                    h_field_face(inode, idir) = interpolate_from_vertices(vert_vals_h(:,idir), nodes_face(inode,:))
+                                end do
+                            end do
+                            self%mesh%domain(idomain)%faces(ielement, iface)%h_smooth = h_field_face
+                            self%mesh%domain(idomain)%faces(ielement, iface)%size_smooth = size_field_face
+
+                        end do !iface
+
+                    end do !ielement
+                end do !idomain
+
+            ! Smoothing via Radial Basis Function Interpolation
+            case ('rbf')
+
+                call create_radial_basis_function(rbf,trim(rbf_type))
+                do idomain = 1,self%mesh%ndomains()
+                    do ielement = 1, self%mesh%domain(idomain)%nelements()
+
+                        idomain_g  = self%mesh%domain(idomain)%elems(ielement)%idomain_g
+                        idomain_l  = self%mesh%domain(idomain)%elems(ielement)%idomain_l
+                        ielement_g = self%mesh%domain(idomain)%elems(ielement)%ielement_g
+                        ielement_l = self%mesh%domain(idomain)%elems(ielement)%ielement_l
+
+                        if (allocated(rbf_index_list)) deallocate(rbf_index_list)
+                        rbf_index_list = self%mesh%domain(idomain)%elems(ielement)%get_rbf_indices(1)
+                        nrbf = size(rbf_index_list)
+                        
+                        if (nrbf==0) print *, 'no rbfs found for h smoothing'
+
+                        node1 = self%mesh%domain(idomain_l)%elems(ielement_l)%interp_coords_def(:,1)
+                        node2 = self%mesh%domain(idomain_l)%elems(ielement_l)%interp_coords_def(:,2)
+                        node3 = self%mesh%domain(idomain_l)%elems(ielement_l)%interp_coords_def(:,3)
+
+                        nodes_elem = self%mesh%domain(idomain)%elems(ielement)%basis_s%nodes_elem_
+                        nnodes_elem = size(nodes_elem(:,1))
+
+                        if (allocated(size_field_elem)) deallocate(size_field_elem)
+                        if (allocated(h_field_elem))    deallocate(h_field_elem)
+                        if (allocated(normalizer_elem)) deallocate(normalizer_elem)
+
+                        allocate(size_field_elem(nnodes_elem), &
+                                 h_field_elem(nnodes_elem,3),  &
+                                 normalizer_elem(nnodes_elem), stat=ierr)
+                        if (ierr /= 0) call AllocationError
+                        
+                        size_field_elem = ZERO
+                        h_field_elem    = ZERO
+                        normalizer_elem = ZERO
+
+
+                        do irbf = 1, nrbf
+
+                            ii     = rbf_index_list(irbf)
+                            center = self%sdata%rbf_center(ii,:)
+                            radius = alpha*self%sdata%rbf_radius(ii,:)
+
+                            h_field_coeff       = self%sdata%rbf_radius(ii,:)
+                            !h_field_coeff       = self%sdata%area_weighted_h(ii,:)
+                            size_field_coeff    = sum(h_field_coeff)/3.0_rk
+        
+                            do inode = 1,nnodes_elem 
+                                evalnode = [node1(inode), node2(inode), node3(inode)]
+                                                           
+                                normalizer_elem(inode)  = normalizer_elem(inode)    + rbf%compute(evalnode, center, radius)
+                                size_field_elem(inode)  = size_field_elem(inode)    + size_field_coeff*rbf%compute(evalnode, center, radius)        
+                                h_field_elem(inode,:)   = h_field_elem(inode,:)     + h_field_coeff*rbf%compute(evalnode, center, radius)        
+                            end do
+                        end do
+
+                        do idir = 1,3
+                            self%mesh%domain(idomain)%elems(ielement)%h_smooth(:,idir) = h_field_elem(:,idir)/normalizer_elem
+                        end do
+                        self%mesh%domain(idomain)%elems(ielement)%size_smooth = size_field_elem/normalizer_elem
+
+                        ! Interpolate to face quadrature nodes
+                        do iface = 1, NFACES
+
+                            nodes_face = self%mesh%domain(idomain)%elems(ielement)%basis_s%nodes_face_(:,:, iface)
+                            nnodes_face = size(nodes_face(:,1))
+                            if (allocated(size_field_face)) deallocate(size_field_face)
+                            if (allocated(h_field_face))    deallocate(h_field_face)
+                            if (allocated(normalizer_face)) deallocate(normalizer_face)
+                            allocate(size_field_face(nnodes_face), &
+                                     h_field_face(nnodes_face, 3), &
+                                     normalizer_face(nnodes_face), stat=ierr)
+                            if (ierr /= 0) call AllocationError
+
+                            node1 = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1)
+                            node2 = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2)
+                            node3 = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3)
+
+                            size_field_face = ZERO
+                            h_field_face    = ZERO
+                            normalizer_face = ZERO
+
+                            do irbf = 1,nrbf
+                                ii     = rbf_index_list(irbf)
+                                center = self%sdata%rbf_center(ii,:)
+                                radius = alpha*self%sdata%rbf_radius(ii,:)
+
+                                h_field_coeff    = self%sdata%rbf_radius(ii,:)
+                                size_field_coeff = sum(h_field_coeff)/3.0_rk
+
+                                do inode = 1,nnodes_face
+                                    evalnode = [node1(inode), node2(inode), node3(inode)]
+                             
+                                    normalizer_face(inode) = normalizer_face(inode) + rbf%compute(evalnode, center, radius)
+                                    size_field_face(inode) = size_field_face(inode) + size_field_coeff*rbf%compute(evalnode, center, radius)        
+                                    h_field_face(inode,:)  = h_field_face(inode,:)  + h_field_coeff*rbf%compute(evalnode, center, radius)        
+                                end do
+                            end do
+
+                            do idir = 1,3
+                                self%mesh%domain(idomain)%faces(ielement,iface)%h_smooth(:,idir) = h_field_face(:,idir)/normalizer_face
+                            end do
+                            self%mesh%domain(idomain)%faces(ielement, iface)%size_smooth = size_field_face/normalizer_face
+                        end do ! iface
+
+                    end do ! ielem
+                end do ! idomain
+
+            case default
+                call chidg_signal(FATAL,'chidg_data%perform_h_smoothing: invalid parameter for h-smoothing interpolation.')
+        end select
+
+    end subroutine perform_h_smoothing 
+    !********************************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 

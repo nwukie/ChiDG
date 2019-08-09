@@ -22,6 +22,7 @@ add_lib_sources(
                 eqn_rans.f90
                 eqn_rans_sst.f90
                 eqn_rans_rstm.f90
+                eqn_rans_blend_rstm.f90
                 eqn_rans_cv.f90
                 mod_fluid.f90
                 mod_force.f90
@@ -30,8 +31,11 @@ add_lib_sources(
                 model_ideal_gas.f90
                 model_ideal_gas_sst.f90
                 model_ideal_gas_rstm.f90
+                model_ideal_gas_regularized.f90
                 model_shear_stress.f90
                 model_reynolds_shear_stress.f90
+                model_blended_reynolds_shear_stress.f90
+                model_selfblended_reynolds_shear_stress.f90
                 model_temperature_gradient.f90
                 model_pressure_gradient.f90
                 model_sutherlands_law.f90
@@ -40,12 +44,14 @@ add_lib_sources(
                 model_reynolds_analogy.f90
                 model_zero_turbulent_model_fields.f90
                 model_zero_reynolds_stress.f90
+                model_entropy.f90
+                model_mach_number.f90
                 model_vorticity.f90
                 model_vorticity_magnitude.f90
                 model_fluid_wave_speed.f90
+                model_fluid_primary_fields_regularized.f90
                 model_velocity_div_curl.f90
                 model_velocity_gradient.f90
-                model_velocity_gradients.f90
                 model_critical_sound_speed.f90
                 model_strain_rate.f90
                 model_rotation_rate.f90

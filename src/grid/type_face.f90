@@ -140,6 +140,10 @@ module type_face
         real(rk),   allocatable :: differential_areas(:)
         real(rk),   allocatable :: ale_area_ratio(:)
 
+        ! Smoothed h-field
+        real(rk),   allocatable :: h_smooth(:,:)        ! (ngq, 3)
+        real(rk),   allocatable :: size_smooth(:)       ! (ngq)
+
 
         ! Arbitrary Lagrangian Eulerian data
         !   : This defines a mapping from some deformed element back to the original
@@ -176,6 +180,8 @@ module type_face
         procedure, private  :: interpolate_metrics       
         procedure, private  :: interpolate_normals       
         procedure, private  :: interpolate_gradients     
+
+        procedure           :: compute_projected_areas
 
         
         ! Deformed element/ALE procedures
@@ -337,7 +343,9 @@ contains
                        self%neighbor_interp_coords_vel,  &
                        self%grad1,                  &
                        self%grad2,                  &
-                       self%grad3                   &
+                       self%grad3,                  &
+                       self%h_smooth,               &
+                       self%size_smooth             &
                        ) 
 
 
@@ -367,6 +375,8 @@ contains
                  self%grad1(nnodes,self%nterms_s),      &
                  self%grad2(nnodes,self%nterms_s),      &
                  self%grad3(nnodes,self%nterms_s),      &
+                 self%h_smooth(nnodes,3),               &
+                 self%size_smooth(nnodes),              &
                  stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -1167,6 +1177,41 @@ contains
 
     end subroutine interpolate_metrics_ale
     !*****************************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/05/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function compute_projected_areas(self) result(integral)
+        class(face_t), intent(in) :: self
+
+        real(rk)    :: integral(3)
+        integer(ik) :: idir
+
+        do idir = 1,3
+            integral(idir) = sum(abs(self%norm(:,idir))*self%basis_s%weights_face(self%iface))
+        end do
+
+    end function compute_projected_areas
+    !********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

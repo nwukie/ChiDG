@@ -95,9 +95,12 @@ contains
 
         integer(ik) :: p
         real(rk) :: avc, h(3)
+        real(rk), allocatable :: h_s(:,:)
 
         mu_neg = worker%get_field('SST Artificial Viscosity k-neg'   , 'value', 'boundary')
         sigma_k = worker%get_field('SST sigma_k'   , 'value', 'boundary')
+        
+        h_s = worker%h_smooth()
         
         
         h = worker%element_size('interior')
@@ -105,13 +108,14 @@ contains
         h = h/real(p+1,rk)
 
         
+        h_s = h_s/real(p+1,rk)
 
         grad1 = worker%get_field('Density * k'   , 'grad1', 'boundary')
         grad2 = worker%get_field('Density * k'   , 'grad2', 'boundary')
         grad3 = worker%get_field('Density * k'   , 'grad3', 'boundary')
-        flux_1 = -(h(1)**TWO*sst_avc-mu_neg*sigma_k)*grad1
-        flux_2 = -(h(2)**TWO*sst_avc-mu_neg*sigma_k)*grad2
-        flux_3 = -(h(3)**TWO*sst_avc-mu_neg*sigma_k)*grad3
+        flux_1 = -(h_s(:,1)**TWO*sst_avc+mu_neg*sigma_k)*grad1
+        flux_2 = -(h_s(:,2)**TWO*sst_avc+mu_neg*sigma_k)*grad2
+        flux_3 = -(h_s(:,3)**TWO*sst_avc+mu_neg*sigma_k)*grad3
         
         
 

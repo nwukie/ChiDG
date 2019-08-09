@@ -1,7 +1,7 @@
 module rstm_ssglrrw_laxfriedrichs
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO,ONE,TWO,HALF
+    use mod_constants,          only: ZERO,ONE,TWO,THREE,HALF
     use mod_fluid,              only: omega, gam, Rgas
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -84,6 +84,7 @@ contains
             density_reynolds_12_m, density_reynolds_13_m, density_reynolds_23_m, &
             density_reynolds_11_p, density_reynolds_22_p, density_reynolds_33_p, &
             density_reynolds_12_p, density_reynolds_13_p, density_reynolds_23_p, &
+            k_m, k_p,                                   &
             invdensity_m, invdensity_p,                 &
             u_m, v_m, w_m, T_m, un_m, c_m, wavespeed_m, &
             u_p, v_p, w_p, T_p, un_p, c_p, wavespeed_p, &
@@ -140,6 +141,9 @@ contains
             mom2_p = mom2_p / r
         end if
 
+
+        k_m = worker%get_field('Turbulence Kinetic Energy', 'value', 'face interior')
+        k_p = worker%get_field('Turbulence Kinetic Energy', 'value', 'face exterior')
         
         !
         ! Get fluid advection velocity
@@ -176,8 +180,8 @@ contains
 
         T_m = worker%get_field('Temperature','value','face interior')
         T_p = worker%get_field('Temperature','value','face exterior')
-        c_m = sqrt(gam * Rgas * T_m)
-        c_p = sqrt(gam * Rgas * T_p)
+        c_m = sqrt(gam * Rgas * T_m + (TWO/THREE)*1.4_rk*k_m)
+        c_p = sqrt(gam * Rgas * T_p + (TWO/THREE)*1.4_rk*k_p)
 
         wavespeed_m = abs(un_m) + c_m  + abs(grid_vel_n)
         wavespeed_p = abs(un_p) + c_p  + abs(grid_vel_n)

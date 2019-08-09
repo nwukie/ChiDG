@@ -95,9 +95,9 @@ contains
         !   Second Coefficient of Viscosity
         !   Thermal Conductivity
         !
-        av1 = worker%get_field('Smoothed Anisotropic Artificial Viscosity - 1', 'value', 'element')
-        av2 = worker%get_field('Smoothed Anisotropic Artificial Viscosity - 2', 'value', 'element')
-        av3 = worker%get_field('Smoothed Anisotropic Artificial Viscosity - 3', 'value', 'element')
+        av1 = worker%get_field('Artificial Viscosity - 1', 'value', 'element')
+        av2 = worker%get_field('Artificial Viscosity - 2', 'value', 'element')
+        av3 = worker%get_field('Artificial Viscosity - 3', 'value', 'element')
 
 
         

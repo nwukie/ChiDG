@@ -50,6 +50,8 @@ module type_mesh
         ! Tree data
         real(rk), allocatable               :: global_nodes(:,:)
         type(octree_t)                      :: octree
+        integer(ik),    allocatable         :: nelems_per_domain(:)
+
 
         ! Interpolation node set ('Uniform', 'Quadrature')
         character(:),           allocatable :: interpolation
@@ -78,6 +80,10 @@ module type_mesh
 
         ! Octree
         procedure           :: set_global_nodes
+        procedure           :: set_nelems_per_domain
+        procedure           :: rbf_index_to_element_info
+        procedure           :: global_to_local_indices
+
 
         ! Resouce management
         procedure           :: release
@@ -633,6 +639,117 @@ contains
 
     end subroutine set_global_nodes
     !*****************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    07/13/2018 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine set_nelems_per_domain(self,nelems_per_domain)
+        class(mesh_t),    intent(inout)                 :: self
+        integer(ik),           intent(in)              :: nelems_per_domain(:)
+
+        integer(ik)     :: nelems
+
+        if (allocated(self%nelems_per_domain)) deallocate(self%nelems_per_domain)
+
+        self%nelems_per_domain = nelems_per_domain
+    end subroutine set_nelems_per_domain
+    !*****************************************************************************************
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/21/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine rbf_index_to_element_info(self, irbf, idomain_g, ielement_g) 
+        class(mesh_t),  intent(in)      :: self
+        integer(ik),    intent(in)      :: irbf
+        integer(ik),    intent(inout)   :: idomain_g
+        integer(ik),    intent(inout)   :: ielement_g
+
+
+        integer(ik) :: idom, nelem_old, nelem_new
+        logical     :: is_located
+
+        nelem_old = 0
+        nelem_new = 0
+        is_located = .false.
+        do idom = 1, size(self%nelems_per_domain)
+            if (.not. is_located) then
+                nelem_new = sum(self%nelems_per_domain(1:idom))
+
+                if ((nelem_old < irbf) .and. (irbf <= nelem_new)) then
+                    idomain_g = idom
+                    ielement_g = irbf-nelem_old
+                    is_located = .true.
+                end if
+                nelem_old = nelem_new
+            end if
+        end do
+
+    end subroutine rbf_index_to_element_info
+    !********************************************************************************
+
+
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/21/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine global_to_local_indices(self, idomain_g, ielement_g, is_local, idomain_l, ielement_l)
+        class(mesh_t),          intent(in)      :: self
+        integer(ik),            intent(in)      :: idomain_g
+        integer(ik),            intent(in)      :: ielement_g
+        logical,                intent(inout)   :: is_local
+        integer(ik),            intent(inout)   :: idomain_l
+        integer(ik),            intent(inout)   :: ielement_l
+
+        integer(ik) :: idom, ielem
+        
+
+        ! Assign invalid indices in case the element is not found
+        idomain_l   = -1
+        ielement_l  = -1
+
+        is_local    = .false.
+
+        ! Loop over local domains
+        dom_loop: do idom = 1, self%ndomains()
+            ! If global domain index matches, the current local domain is a candidate
+            ! BUT, the element might be off-processor, or somehow corresponding
+            ! to a different local domain index associated with the same global domain index
+            if (self%domain(idom)%idomain_g==idomain_g) then
+                ! Loop over elements
+                do ielem = 1, self%domain(idom)%nelements()
+                    ! If the global element index matches, we have found the element
+                    if (self%domain(idom)%elems(ielem)%ielement_g==ielement_g) then
+                        is_local = .true.
+                        ielement_l = ielem
+                        idomain_l = idom
+                        exit dom_loop
+                    end if
+                end do
+            end if
+        end do dom_loop
+
+    end subroutine global_to_local_indices
+    !********************************************************************************
+
+
+
 
 
 

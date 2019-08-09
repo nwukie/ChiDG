@@ -138,8 +138,16 @@ module type_element
         ! Element volume, approx. size of bounding box
         real(rk)                    :: vol
         real(rk)                    :: vol_ale
-        real(rk)                    :: h(3), centroid(3)
+        real(rk)                    :: h(3), centroid(3), bb_centroid(3)
+        real(rk)                    :: area_weighted_h(3)
+
         real(rk),       allocatable :: dtau(:)              ! a pseudo-timestep for each equation. Used in the nonlinear solver.
+
+        ! Smoothed h-field
+        real(rk),       allocatable :: h_smooth(:,:)        ! (ngq,3)
+        real(rk),       allocatable :: size_smooth(:)       ! (ngq)
+
+
 
         ! Reference element and interpolators
         type(reference_element_t),  pointer :: basis_s => null()  ! Pointer to solution basis and interpolator
@@ -199,10 +207,11 @@ module type_element
 
         ! Get connected face
         procedure, public   :: get_face_from_corners
-        procedure           :: register_rbf
 
-
-
+        ! RBF Registration
+        procedure           :: init_rbf_address_book
+        procedure, public   :: register_rbf
+        procedure, public   :: get_rbf_indices
 
         final               :: destructor
 
@@ -378,6 +387,11 @@ contains
         self%h(2) = ywidth
         self%h(3) = zwidth
 
+        self%bb_centroid(1) = 0.5_rk*(xmin+xmax)
+        self%bb_centroid(2) = 0.5_rk*(ymin+ymax)
+        self%bb_centroid(3) = 0.5_rk*(zmin+zmax)
+
+
 
 
         !
@@ -411,6 +425,10 @@ contains
         dnodes = ZERO
         vnodes = ZERO
         call self%set_displacements_velocities(dnodes,vnodes)
+
+
+        ! Initialize RBF
+        call self%init_rbf_address_book(1)
 
 
     end subroutine init_geom
@@ -506,6 +524,8 @@ contains
                         self%ale_g_grad2,               &
                         self%ale_g_grad3,               &
                         self%ale_g_modes,               &
+                        self%h_smooth,                  &
+                        self%size_smooth,               &
                         self%dtau                       &
                         )
             
@@ -531,6 +551,8 @@ contains
                  self%ale_g_grad2(nnodes),                  &
                  self%ale_g_grad3(nnodes),                  &
                  self%ale_g_modes(nterms_s),                &
+                 self%h_smooth(nnodes,3),                   &
+                 self%size_smooth(nnodes),                  &
                  self%dtau(nfields), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -2188,6 +2210,31 @@ contains
     !******************************************************************************************
 
 
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/20/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init_rbf_address_book(self, n_rbf_sets)
+        class(element_t),       intent(inout)   :: self
+        integer(ik),            intent(in)      :: n_rbf_sets
+
+        integer(ik) :: ierr
+
+        allocate(self%rbf_address_book%rbf_addresses(n_rbf_sets), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+    end subroutine init_rbf_address_book 
+    !********************************************************************************
+
+
+
+
     !>
     !! 
     !!
@@ -2205,6 +2252,24 @@ contains
     !********************************************************************************
 
 
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/20/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_rbf_indices(self, rbf_set_ID) result(rbf_indices)
+        class(element_t),       intent(inout)   :: self
+        integer(ik),            intent(in)      :: rbf_set_ID
+
+        integer(ik), allocatable                :: rbf_indices(:)
+
+        rbf_indices = self%rbf_address_book%rbf_addresses(rbf_set_ID)%registered_rbf_indices%data()
+
+    end function get_rbf_indices
+    !********************************************************************************
 
 
 

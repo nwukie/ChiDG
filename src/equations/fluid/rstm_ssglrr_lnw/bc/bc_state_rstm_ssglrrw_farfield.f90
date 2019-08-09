@@ -144,6 +144,7 @@ contains
 
         ! Get farfield turbulent kinetic energy 
         k_t_ff  = (THREE/TWO)*(SSG_LRRW_tu_infty)**TWO*u_infty_sq
+        k_t_ff = rstm_ssglrrw_k_infty
 
         density_reynolds_ff = (TWO/THREE)*density_bc*k_t_ff
         !density_reynolds_ff = 6.0e-9_rk*347.27942639897344_rk**TWO
@@ -163,10 +164,13 @@ contains
         ! Omega
         ! Compute FF values
         density_omega_ff = density_omega_m
-        density_omega_ff = density_bc*log(density_bc*k_t_ff/mu_t_ff)
+        !density_omega_ff = density_bc*log(density_bc*k_t_ff/mu_t_ff)
+        density_omega_ff = density_bc*log(rstm_ssglrrw_omega_infty)
         !density_omega_ff = 1.0e-6_rk*1.1765047303964247_rk*347.27942639897344_rk**TWO/1.634303551710997e-05_rk
         density_omega_bc = density_omega_m
-        density_omega_bc = density_omega_ff
+
+
+
         do ii = 1, size(inflow) 
             if (inflow(ii)) then
                 density_omega_bc(ii) = density_omega_ff(ii)
@@ -205,7 +209,7 @@ contains
 
 
         density_reynolds_bc = density_reynolds_m
-        density_reynolds_bc = density_reynolds_ff
+        !density_reynolds_bc = density_reynolds_ff
     !    where(inflow)
     !        density_reynolds_bc = density_reynolds_ff
     !    end where
@@ -239,7 +243,7 @@ contains
         if (allocated(density_reynolds_m)) deallocate(density_reynolds_m)
         density_reynolds_m  = worker%get_field('Density * Reynolds-22', 'value', 'face interior')
         density_reynolds_bc = density_reynolds_m
-        density_reynolds_bc = density_reynolds_ff
+        !density_reynolds_bc = density_reynolds_ff
     !    where(inflow)
     !        density_reynolds_bc = density_reynolds_ff
     !    end where
@@ -273,7 +277,7 @@ contains
         if (allocated(density_reynolds_m)) deallocate(density_reynolds_m)
         density_reynolds_m  = worker%get_field('Density * Reynolds-33', 'value', 'face interior')
         density_reynolds_bc = density_reynolds_m
-        density_reynolds_bc = density_reynolds_ff
+        !density_reynolds_bc = density_reynolds_ff
     !    where(inflow)
     !        density_reynolds_bc = density_reynolds_ff
     !    end where
@@ -306,7 +310,7 @@ contains
         ! Compute FF values
         if (allocated(density_reynolds_m)) deallocate(density_reynolds_m)
         density_reynolds_m  = worker%get_field('Density * Reynolds-12', 'value', 'face interior')
-        density_reynolds_bc = ZERO*density_reynolds_m
+        density_reynolds_bc = density_reynolds_m
     !    where(inflow)
     !        density_reynolds_bc = ZERO*density_reynolds_ff
     !    end where
@@ -339,7 +343,7 @@ contains
         ! Compute FF values
         if (allocated(density_reynolds_m)) deallocate(density_reynolds_m)
         density_reynolds_m  = worker%get_field('Density * Reynolds-13', 'value', 'face interior')
-        density_reynolds_bc = ZERO*density_reynolds_m
+        density_reynolds_bc = density_reynolds_m
     !    where(inflow)
     !        density_reynolds_bc = ZERO*density_reynolds_ff
     !    end where
@@ -372,7 +376,7 @@ contains
         ! Compute FF values
         if (allocated(density_reynolds_m)) deallocate(density_reynolds_m)
         density_reynolds_m  = worker%get_field('Density * Reynolds-23', 'value', 'face interior')
-        density_reynolds_bc = ZERO*density_reynolds_m
+        density_reynolds_bc = density_reynolds_m
     !    where(inflow)
     !        density_reynolds_bc = ZERO*density_reynolds_ff
     !    end where

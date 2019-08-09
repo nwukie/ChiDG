@@ -102,6 +102,10 @@ module type_chidg_worker
         procedure   :: store_bc_state
         procedure   :: store_model_field
 
+        procedure   :: get_octree_rbf_indices
+        procedure   :: get_ndepend_simple
+
+
         ! BEGIN DEPRECATED
         procedure, private   :: get_primary_field_general
         procedure, private   :: get_primary_field_face
@@ -144,6 +148,7 @@ module type_chidg_worker
         procedure   :: face_type
         procedure   :: time
         procedure   :: nnodes1d
+        procedure   :: h_smooth
 
         procedure   :: get_area_ratio
         procedure   :: get_grid_velocity_element
@@ -152,6 +157,10 @@ module type_chidg_worker
         procedure   :: get_inv_jacobian_grid_face
         procedure   :: get_det_jacobian_grid_element
         procedure   :: get_det_jacobian_grid_face
+
+        ! Shock sensor procedures
+        procedure   :: get_pressure_jump_indicator
+        procedure   :: get_pressure_jump_shock_sensor
 
         ! Integration procedures
         procedure   :: integrate_boundary_average
@@ -2286,13 +2295,35 @@ contains
 
 
 
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/01/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function h_smooth(self,user_source) result(h_s)
+        class(chidg_worker_t),  intent(in)              :: self
+        character(*),           intent(in), optional    :: user_source
 
+        character(:),   allocatable                 :: user_msg, source
+        real(rk),       allocatable, dimension(:,:) :: h_s
 
+        ! Select source
+        source = self%interpolation_source
+        if ( present(user_source) ) source = user_source
 
+        ! Retrieve smoothed h-field
+        if ( (source == 'boundary') .or. (source == 'face interior') .or. (source == 'face exterior') ) then
+            h_s = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%h_smooth
+        else if ( (source == 'volume') .or. (source == 'element') ) then
+            h_s = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%h_smooth
+        else
+            user_msg = "chidg_worker%h_smooth: Invalid source for returning smooth h field. Options are 'boundary' and 'volume'."
+            call chidg_signal_one(FATAL,user_msg,source)
+        end if
 
-
-
-
+    end function h_smooth 
+    !**************************************************************************************
 
 
 
@@ -2611,6 +2642,70 @@ contains
     end function nnodes1d
     !*************************************************************************************
 
+
+
+
+
+
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/20/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_octree_rbf_indices(self, rbf_set_ID) result(rbf_index_list)
+        class(chidg_worker_t),  intent(inout)   :: self
+        integer(ik),            intent(in)      :: rbf_set_ID
+
+        integer(ik) :: idomain_l, ielement_l
+        integer(ik), allocatable, dimension(:) :: rbf_index_list
+
+        idomain_l  = self%element_info%idomain_l 
+        ielement_l = self%element_info%ielement_l 
+
+        rbf_index_list = self%mesh%domain(idomain_l)%elems(ielement_l)%get_rbf_indices(rbf_set_ID)
+
+    end function get_octree_rbf_indices
+    !********************************************************************************
+
+
+
+    !> This function adapts and simplifies get_ndepend_exterior from type_cache_handler, 
+    !! which asks for extra arguments we might not have access to.
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/14/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_ndepend_simple(self, iface) result(ndepend)
+        class(chidg_worker_t),  intent(in)   :: self 
+        integer(ik),            intent(in)   :: iface
+
+        integer(ik) :: ndepend, idomain_l, ielement_l,  &
+                       ChiID, group_ID, patch_ID, face_ID
+
+        idomain_l  = self%element_info%idomain_l 
+        ielement_l = self%element_info%ielement_l 
+
+        ! Compute the number of exterior element dependencies for face exterior state
+        if ( self%face_type() == INTERIOR ) then
+            ndepend = 1
+            
+        else if ( self%face_type() == CHIMERA ) then
+            ChiID   = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
+            ndepend = self%mesh%domain(idomain_l)%chimera%recv(ChiID)%ndonors()
+
+        else if ( self%face_type() == BOUNDARY ) then
+            group_ID = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
+            patch_ID = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
+            face_ID  = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
+            ndepend  = self%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
+
+        end if
+
+    end function get_ndepend_simple
+    !****************************************************************************************
 
 
 
@@ -3469,6 +3564,120 @@ contains
 
     end function post_process_boundary_diffusive_flux_ale
     !************************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    04/16/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_pressure_jump_indicator(self) result(val_gq)
+        class(chidg_worker_t),      intent(inout)  :: self
+
+        type(AD_D), allocatable :: val_gq(:)
+        type(AD_D), allocatable :: nodal_ones(:), pressure_p(:), pressure_m(:), jump(:), avg(:)
+        type(AD_D)              :: face_val
+
+        real(rk),   allocatable :: jinv(:), weight(:)
+
+        integer(ik)     :: iface, order, iface_old
+        real(rk)        :: phi_min, phi_max
+
+        nodal_ones = self%get_field('Density', 'value', 'element')
+        nodal_ones = ONE
+        val_gq = ZERO*nodal_ones     
+
+        iface_old = self%iface
+
+        ! Loop over faces
+        do iface = 1, NFACES
+            call self%set_face(iface)
+        ! Get face internal/external pressure values
+            pressure_m = self%get_field('Pressure','value','face interior')
+            pressure_p = self%get_field('Pressure','value','face exterior')
+
+            jump = (pressure_p-pressure_m)
+            avg  = HALF*(pressure_p+pressure_m)
+
+            ! Integrate over face
+            jinv   = self%inverse_jacobian('face')
+            weight = self%quadrature_weights('face')
+            face_val = sum(jinv*weight*abs(jump/avg))/sum(jinv*weight) 
+
+            ! Add to sum
+            val_gq = val_gq + face_val*nodal_ones   
+
+        end do !iface
+
+        ! Reset original face index
+        call self%set_face(iface_old)
+
+    end function get_pressure_jump_indicator
+    !********************************************************************************
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    04/16/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_pressure_jump_shock_sensor(self) result(sensor)
+        class(chidg_worker_t),      intent(inout)  :: self
+
+        type(AD_D), allocatable :: sensor(:)
+        type(AD_D), allocatable :: jump_indicator(:), logval(:)
+
+        integer(ik) :: order
+        real(rk)    :: phi_min, phi_max
+
+        jump_indicator = self%get_pressure_jump_indicator()
+
+        logval = log10(jump_indicator)
+
+        order = self%solution_order('interior')
+        phi_min = -2.0_rk - log10(real(order+1, rk))
+        phi_max = phi_min + 1.0_rk
+
+        sensor = sin_ramp(logval, phi_min, phi_max)
+
+    end function get_pressure_jump_shock_sensor
+    !********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

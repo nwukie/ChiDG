@@ -53,11 +53,17 @@ module mod_rstm_ssglrrw
     real(rk), parameter :: SSG_LRRW_alpha_e         = 0.44_rk
     real(rk), parameter :: SSG_LRRW_alpha_w         = 0.5556_rk
     real(rk), parameter :: SSG_LRRW_beta_e          = 0.0828_rk
-    real(rk), parameter :: SSG_LRRW_beta_w          = 0.075_rk
+    real(rk), parameter :: SSG_LRRW_beta_w          = 0.075_rk !Note: =0.09_rk in 1988 Wilcox k-w
     real(rk), parameter :: SSG_LRRW_sigma_e         = 0.856_rk
     real(rk), parameter :: SSG_LRRW_sigma_w         = 0.5_rk
     real(rk), parameter :: SSG_LRRW_sigma_d_e       = 1.712_rk
     real(rk), parameter :: SSG_LRRW_sigma_d_w       = 0.0_rk
+
+    real(rk), parameter :: rstm_ssglrrw_avc        = 75.0_rk
+
+    real(rk), parameter :: rstm_ssglrrw_k_infty        = 4.761e-3_rk!1.0e-3_rk
+    real(rk), parameter :: rstm_ssglrrw_R_infty        = (2.0_rk/3.0_rk)*rstm_ssglrrw_k_infty
+    real(rk), parameter :: rstm_ssglrrw_omega_infty        = 345.0_rk!8538.1_rk!345.0_rk
 
     !
     ! Boundary condition constants

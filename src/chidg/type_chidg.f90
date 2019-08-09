@@ -197,6 +197,7 @@ contains
                     call register_bcs()
                     call register_equation_builders()
                     call register_time_integrators()
+                    call register_radial_basis_functions()
                     call initialize_grid()
                     self%envInitialized = .true.
 
@@ -625,8 +626,10 @@ contains
         call self%init('all',interpolation,level)
 
 
+        ! Mesh size fields + smoothing
+        call self%data%compute_area_weighted_h()
         call self%record_mesh_size()
-
+        call self%data%perform_h_smoothing()
 
         call write_line('Done reading mesh.', io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
@@ -796,8 +799,10 @@ contains
 
 
         !!!-------------------------  REVISIT  --------------------------------!!!
+        call self%data%mesh%set_nelems_per_domain(nelems_per_domain)
         call self%data%mesh%set_global_nodes(self%data%sdata%global_nodes)
-        call self%data%mesh%octree%init(32, 0.0_rk, (/1, 1, 1/), .true.)
+
+        call self%data%mesh%octree%init(8, 0.0_rk, (/1, 1, 1/), .true.)
         call write_line("   building octree...", ltrim=.false., io_proc=GLOBAL_MASTER)
         call self%data%mesh%octree%build_octree_depth_first(self%data%mesh%global_nodes)
         call write_line("   building octree - completed...", ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -810,15 +815,19 @@ contains
                  rbf_radius_recv(nelems,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
-!        rbf_center_recv = ZERO
-!        rbf_radius_recv = ZERO
+        call write_line("   communicating RBF arrays...", ltrim=.false., io_proc=GLOBAL_MASTER)
         rbf_center_sendv = self%data%sdata%rbf_center
         rbf_radius_sendv = self%data%sdata%rbf_radius
-        call MPI_Allreduce(rbf_center_sendv, rbf_center_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
-        call MPI_Allreduce(rbf_radius_sendv, rbf_radius_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
+        call MPI_AllReduce(rbf_center_sendv, rbf_center_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
+        call MPI_AllReduce(rbf_radius_sendv, rbf_radius_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
         self%data%sdata%rbf_center = rbf_center_recv
         self%data%sdata%rbf_radius = rbf_radius_recv
+        call write_line("   communicating RBF arrays - completed...", ltrim=.false., io_proc=GLOBAL_MASTER)
+
+        call write_line("   finding RBF connectivities...", ltrim=.false., io_proc=GLOBAL_MASTER)
+        call self%data%find_who_rbfs_touch() 
+        call write_line("   finding RBF connectivities - done...", ltrim=.false., io_proc=GLOBAL_MASTER)
+
         !!!-------------------------  REVISIT  --------------------------------!!!
 
 
@@ -1595,7 +1604,6 @@ contains
 
 
 
-
     !>
     !! 
     !!
@@ -1638,6 +1646,13 @@ contains
 
         self%data%sdata%mesh_size_vertex = recv
 
+        recv = ZERO
+        sendv = self%data%sdata%sum_mesh_h_vertex
+        call MPI_Allreduce(sendv, recv, 3*nnodes, MPI_REAL8, MPI_MAX,ChiDG_COMM, ierr)
+
+        self%data%sdata%sum_mesh_h_vertex = recv
+
+
         if (allocated(sendv_r)) deallocate(sendv_r)
         if (allocated(recv_r)) deallocate(recv_r)
         allocate(sendv_r(nnodes))
@@ -1669,12 +1684,14 @@ contains
         do inode = 1, size(recv_i)
             if (self%data%sdata%num_elements_touching_vertex(inode) /= 0) then
                 self%data%sdata%avg_mesh_size_vertex(inode) = self%data%sdata%sum_mesh_size_vertex(inode)/real(self%data%sdata%num_elements_touching_vertex(inode), rk)
+                self%data%sdata%avg_mesh_h_vertex(inode,:) = self%data%sdata%sum_mesh_h_vertex(inode,:)/real(self%data%sdata%num_elements_touching_vertex(inode), rk)
             end if
 
         end do
 
     end subroutine record_mesh_size 
     !********************************************************************************
+
 
 
 

@@ -1841,12 +1841,12 @@ contains
         ! 1: (-1,-1,-1), 2: (-1,-1,1), 3: (-1,1,-1), 4: (-1,1,1), 5: (1,-1,-1), 6: (1, -1, 1), 7: (1,1,-1), 8: (1,1,1)
         val =   vert_vals(1)*(1.0_rk-node(1))*(1.0_rk-node(2))*(1.0_rk-node(3))/8.0_rk + &
                 vert_vals(2)*(1.0_rk-node(1))*(1.0_rk-node(2))*(node(3)+1.0_rk)/8.0_rk + &
-                vert_vals(3)*(1.0_rk-node(1))*(node(2)+1.0_rk)*(1.0_rk-node(3))/8.0_rk + &
-                vert_vals(4)*(1.0_rk-node(1))*(node(2)+1.0_rk)*(node(3)+1.0_rk)/8.0_rk + &
+                vert_vals(3)*(1.0_rk-node(1))*(node(2)+1.0_rk)*(node(3)+1.0_rk)/8.0_rk + &
+                vert_vals(4)*(1.0_rk-node(1))*(node(2)+1.0_rk)*(1.0_rk-node(3))/8.0_rk + &
                 vert_vals(5)*(node(1)+1.0_rk)*(1.0_rk-node(2))*(1.0_rk-node(3))/8.0_rk + &
                 vert_vals(6)*(node(1)+1.0_rk)*(1.0_rk-node(2))*(node(3)+1.0_rk)/8.0_rk + &
-                vert_vals(7)*(node(1)+1.0_rk)*(node(2)+1.0_rk)*(1.0_rk-node(3))/8.0_rk + &
-                vert_vals(8)*(node(1)+1.0_rk)*(node(2)+1.0_rk)*(node(3)+1.0_rk)/8.0_rk 
+                vert_vals(7)*(node(1)+1.0_rk)*(node(2)+1.0_rk)*(node(3)+1.0_rk)/8.0_rk + &
+                vert_vals(8)*(node(1)+1.0_rk)*(node(2)+1.0_rk)*(1.0_rk-node(3))/8.0_rk
 
 
 

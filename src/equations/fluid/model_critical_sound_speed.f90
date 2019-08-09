@@ -1,7 +1,7 @@
 module model_critical_sound_speed
 #include <messenger.h>
     use mod_kinds,          only: rk
-    use mod_constants,      only: HALF, ONE, TWO, PI, RKTOL
+    use mod_constants,      only: ZERO, HALF, ONE, TWO, PI, RKTOL
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use mod_fluid
@@ -90,17 +90,14 @@ contains
         mom3    = worker%get_field('Momentum-3', 'value')
 
         vel_mag = ZERO*density
-        vel_mag = (mom1**TWO+mom2**TWO+mom3**TWO)/(density**TWO  + 1.0e-14_rk)
+        vel_mag = (mom1**TWO+mom2**TWO+mom3**TWO)/density**TWO 
         t = worker%get_field('Temperature', 'value') 
         t_stag = t + vel_mag/(TWO*cp)
 
         call worker%store_model_field('Stagnation Temperature', 'value', t_stag)
 
-
-        ! The reference describes "sound speed at critical temperature"
-        ! Critical temperature of air is given as a constant T_star = 132.63 K.
-        ! But in the reference T_star is said to have spatial variation?
-        c_star = sqrt(gam*Rgas*(TWO/(gam+ONE))*(abs(t_stag)+1.0e-14_rk))
+        c_star = ZERO*density
+        c_star = sqrt(gam*Rgas*(TWO/(gam+ONE))*((t_stag)))
 
         call worker%store_model_field('Critical Sound Speed', 'value', c_star)
 

@@ -107,7 +107,7 @@ contains
             r = worker%coordinate('1','boundary')
         end if
 
-        av = worker%get_field('Smoothed Artificial Viscosity', 'value', 'boundary')
+        av = worker%get_field('Artificial Viscosity', 'value', 'boundary')
 
         !=================================================
         ! Mass flux

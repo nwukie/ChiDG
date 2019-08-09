@@ -91,10 +91,11 @@ contains
 
 
 
-                call rans_rstm_eqns%add_model('Ideal Gas RSTM')
-                !call rans_rstm_eqns%add_model('Ideal Gas')
-                !call rans_rstm_eqns%add_model('Constant Viscosity')
-                call rans_rstm_eqns%add_model('Sutherlands Law')
+                !call rans_rstm_eqns%add_model('Ideal Gas RSTM')
+                !call rans_rstm_eqns%add_model('Primary Fluid Fields')
+                call rans_rstm_eqns%add_model('Ideal Gas')
+                call rans_rstm_eqns%add_model('Constant Viscosity')
+                !call rans_rstm_eqns%add_model('Sutherlands Law')
                 call rans_rstm_eqns%add_model('Stokes Hypothesis')
                 call rans_rstm_eqns%add_model('Reynolds Analogy')
                 !call rans_rstm_eqns%add_model('Zero Reynolds Stress')
@@ -103,15 +104,19 @@ contains
                 call rans_rstm_eqns%add_model('Velocity Gradient')
                 call rans_rstm_eqns%add_model('Strain Rate')
                 call rans_rstm_eqns%add_model('Rotation Rate')
-                call rans_rstm_eqns%add_model('Wall Distance : p-Poisson Normalization')
+                !call rans_rstm_eqns%add_model('Wall Distance : p-Poisson Normalization')
+                !call rans_rstm_eqns%add_model('h Smooth')
                 !call rans_rstm_eqns%add_model('Zero Turbulent Model Fields')
                 
                 
+                call rans_rstm_eqns%add_model('RSTMSSGLRRW Realizable Reynolds Stress')
+                call rans_rstm_eqns%add_model('RSTMSSGLRRW LRR Coefficients')
                 call rans_rstm_eqns%add_model('RSTMSSGLRRW Turbulence Quantities')
-                call rans_rstm_eqns%add_model('RSTMSSGLRRW Blended Coefficients')
                 call rans_rstm_eqns%add_model('RSTMSSGLRRW Production')
                 call rans_rstm_eqns%add_model('RSTMSSGLRRW Isotropic Dissipation')
                 call rans_rstm_eqns%add_model('RSTMSSGLRRW Pressure-Strain Correlation')
+                call rans_rstm_eqns%add_model('RSTMSSGLRRW Realizability Source')
+                call rans_rstm_eqns%add_model('RSTMSSGLRRW Artificial Viscosity')
 
                 ! Add RSTM diffusion model
                 ! 'RSTMSSGLRRW Generalized Diffusion' is the standard model
@@ -119,14 +124,14 @@ contains
                 !call rans_rstm_eqns%add_model('RSTMSSGLRRW Generalized Diffusion')
                 call rans_rstm_eqns%add_model('RSTMSSGLRRW Simple Diffusion')
 
-                call rans_rstm_eqns%add_operator('Spalart-Allmaras Source Operator')
-                call rans_rstm_eqns%add_operator('Spalart-Allmaras Advection Boundary Average Operator')
-                call rans_rstm_eqns%add_operator('Spalart-Allmaras LaxFriedrichs Operator')
-                call rans_rstm_eqns%add_operator('Spalart-Allmaras Volume Advection Operator')
-                call rans_rstm_eqns%add_operator('Spalart-Allmaras BC Advection Operator')
-                call rans_rstm_eqns%add_operator('Spalart-Allmaras Boundary Diffusion Operator')
-                call rans_rstm_eqns%add_operator('Spalart-Allmaras Volume Diffusion Operator')
-                call rans_rstm_eqns%add_operator('Spalart-Allmaras BC Diffusion Operator')
+                !call rans_rstm_eqns%add_operator('Spalart-Allmaras Source Operator')
+                !call rans_rstm_eqns%add_operator('Spalart-Allmaras Advection Boundary Average Operator')
+                !call rans_rstm_eqns%add_operator('Spalart-Allmaras LaxFriedrichs Operator')
+                !call rans_rstm_eqns%add_operator('Spalart-Allmaras Volume Advection Operator')
+                !call rans_rstm_eqns%add_operator('Spalart-Allmaras BC Advection Operator')
+                !call rans_rstm_eqns%add_operator('Spalart-Allmaras Boundary Diffusion Operator')
+                !call rans_rstm_eqns%add_operator('Spalart-Allmaras Volume Diffusion Operator')
+                !call rans_rstm_eqns%add_operator('Spalart-Allmaras BC Diffusion Operator')
 
 
 
@@ -139,17 +144,24 @@ contains
                 call rans_rstm_eqns%add_operator('RSTMSSGLRRW Boundary Diffusion Operator')
                 call rans_rstm_eqns%add_operator('RSTMSSGLRRW Volume Diffusion Operator')
                 call rans_rstm_eqns%add_operator('RSTMSSGLRRW BC Diffusion Operator')
+                call rans_rstm_eqns%add_operator('RSTMSSGLRRW Artificial Viscosity Volume Operator')
+                call rans_rstm_eqns%add_operator('RSTMSSGLRRW Artificial Viscosity BC Operator')
+                call rans_rstm_eqns%add_operator('RSTMSSGLRRW Artificial Viscosity Boundary Average Operator')
+
 
                 
                 
 
                 ! Add shear stress after turbulence viscosity models from SA so they are computed first
                 call rans_rstm_eqns%add_model('Reynolds Shear Stress')
+                !call rans_rstm_eqns%add_model('Self Blended Reynolds Shear Stress')
                 call rans_rstm_eqns%add_model('Temperature Gradient')
 
 
                 call rans_rstm_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
+                !call rans_rstm_eqns%add_io_field('Smoothed h Field - 2')
+                call rans_rstm_eqns%add_io_field('Turbulent Viscosity')
 
             case default
                 call chidg_signal_one(FATAL, "build_rans_rstm: I didn't recognize the &

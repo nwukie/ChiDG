@@ -126,6 +126,7 @@ contains
             rot_12, rot_13, rot_23, str_11, str_22, str_33, str_12, str_13, str_23, chi_omega, f_beta, beta, divu, otemp1, otemp2
 
         real(rk), allocatable :: det_r(:)
+        real(rk), allocatable :: dummy(:)
         integer(ik) :: ii 
 
 
@@ -200,68 +201,68 @@ contains
         str_33 = str_33 - (TWO/THREE)*div_vel
 
 
-        a_12 = str_11+str_22
-        a_13 = str_11+str_33
-        a_23 = str_22+str_33
-        !print *, 'a_12'
-        !print *, a_12(:)%x_ad_
-        !print *, 'a_13'
-        !print *, a_13(:)%x_ad_
-        !print *, 'a_23'
-        !print *, a_23(:)%x_ad_
+        !a_12 = str_11+str_22
+        !a_13 = str_11+str_33
+        !a_23 = str_22+str_33
+        !!print *, 'a_12'
+        !!print *, a_12(:)%x_ad_
+        !!print *, 'a_13'
+        !!print *, a_13(:)%x_ad_
+        !!print *, 'a_23'
+        !!print *, a_23(:)%x_ad_
 
 
-        b_12 = str_11*str_22-str_12**TWO
-        b_13 = str_11*str_33-str_13**TWO
-        b_23 = str_22*str_33-str_23**TWO
-        !print *, 'b_12'
-        !print *, b_12(:)%x_ad_
-        !print *, 'b_13'
-        !print *, b_13(:)%x_ad_
-        !print *, 'b_23'
-        !print *, b_23(:)%x_ad_
+        !b_12 = str_11*str_22-str_12**TWO
+        !b_13 = str_11*str_33-str_13**TWO
+        !b_23 = str_22*str_33-str_23**TWO
+        !!print *, 'b_12'
+        !!print *, b_12(:)%x_ad_
+        !!print *, 'b_13'
+        !!print *, b_13(:)%x_ad_
+        !!print *, 'b_23'
+        !!print *, b_23(:)%x_ad_
 
-        w_12 = a_12
-        w_13 = a_13
-        w_23 = a_23
+        !w_12 = a_12
+        !w_13 = a_13
+        !w_23 = a_23
 
-        w_12 = 1.5_rk*(0.5_rk*a_12+MY_SQRT(abs((0.5_rk*a_12)**TWO-b_12) + 1.0e-14_rk ))
-        w_13 = 1.5_rk*(0.5_rk*a_13+MY_SQRT(abs((0.5_rk*a_13)**TWO-b_13) + 1.0e-14_rk ))
-        w_23 = 1.5_rk*(0.5_rk*a_23+MY_SQRT(abs((0.5_rk*a_23)**TWO-b_23) + 1.0e-14_rk ))
-        do ii=1,size(w_12)
-            w_12(ii)%xp_ad_(:) = ZERO
-            w_13(ii)%xp_ad_(:) = ZERO
-            w_23(ii)%xp_ad_(:) = ZERO
-        end do
+        !w_12 = 1.5_rk*(0.5_rk*a_12+MY_SQRT(abs((0.5_rk*a_12)**TWO-b_12) + 1.0e-14_rk ))
+        !w_13 = 1.5_rk*(0.5_rk*a_13+MY_SQRT(abs((0.5_rk*a_13)**TWO-b_13) + 1.0e-14_rk ))
+        !w_23 = 1.5_rk*(0.5_rk*a_23+MY_SQRT(abs((0.5_rk*a_23)**TWO-b_23) + 1.0e-14_rk ))
+        !do ii=1,size(w_12)
+        !    w_12(ii)%xp_ad_(:) = ZERO
+        !    w_13(ii)%xp_ad_(:) = ZERO
+        !    w_23(ii)%xp_ad_(:) = ZERO
+        !end do
 
-        !print *, 'w_12'
-        !print *, w_12(:)%x_ad_
-        !print *, 'w_13'
-        !print *, w_13(:)%x_ad_
-        !print *, 'w_23'
-        !print *, w_23(:)%x_ad_
+        !!print *, 'w_12'
+        !!print *, w_12(:)%x_ad_
+        !!print *, 'w_13'
+        !!print *, w_13(:)%x_ad_
+        !!print *, 'w_23'
+        !!print *, w_23(:)%x_ad_
 
-        temp = ZERO*density
-        temp = max(w_12, w_13)
-        
-        omega_lb = ZERO*density
-        omega_lb = max(temp,w_23)
-        !print *, 'omega_lb'
-        !print *, omega_lb(:)%x_ad_
+        !temp = ZERO*density
+        !temp = max(w_12, w_13)
+        !
+        !omega_lb = ZERO*density
+        !omega_lb = max(temp,w_23)
+        !!print *, 'omega_lb'
+        !!print *, omega_lb(:)%x_ad_
 
 
-        omega_mod = omega
-        !omega_mod = log(max(exp(omega), omega_lb))
-        otemp1 = omega
-        otemp2 = omega
-        otemp1 = exp(omega)
-        otemp2 = max(otemp1, omega_lb)
-        !print *, 'otemp2'
-        !print *, otemp2(:)%x_ad_
-        omega_mod = log(otemp2)
-        !omega_mod(:)%xp_ad_(:) = omega(:)%xp_ad_(:)
-        !print *, 'omega mod'
-        !print *, omega_mod(:)%x_ad_
+        !omega_mod = omega
+        !!omega_mod = log(max(exp(omega), omega_lb))
+        !otemp1 = omega
+        !otemp2 = omega
+        !otemp1 = exp(omega)
+        !otemp2 = max(otemp1, omega_lb)
+        !!print *, 'otemp2'
+        !!print *, otemp2(:)%x_ad_
+        !omega_mod = log(otemp2)
+        !!omega_mod(:)%xp_ad_(:) = omega(:)%xp_ad_(:)
+        !!print *, 'omega mod'
+        !!print *, omega_mod(:)%x_ad_
         omega_mod = omega
 
         call worker%store_model_field('Omega', 'value', omega_mod)
@@ -274,73 +275,74 @@ contains
 
 
         k = worker%get_field('k',    'value')
-        if (worker%interpolation_source == 'boundary') then
-            distance            = worker%get_field('Wall Distance',             'value', 'face interior') 
-        else if (worker%interpolation_source == 'face exterior') then
-            distance            = worker%get_field('Wall Distance',             'value', 'face interior') 
-        else
-            distance            = worker%get_field('Wall Distance',             'value') 
-        end if
-
-
-        
-
-        ! The SST turbulence model modifies the formula for the turbulent viscosity.
-
-        ! Compute blending factor
-!        temp1 = TWO*sqrt(k + 1.0e-16_rk)/(0.09_rk*exp(omega_mod)*abs(distance)+1.0e-16_rk)
-!        temp2 = 500.0_rk*mu_l/(density*exp(omega_mod)*abs(distance)**TWO+1.0e-16_rk)
+!        if (worker%interpolation_source == 'boundary') then
+!            distance            = worker%get_field('Wall Distance',             'value', 'face interior') 
+!        else if (worker%interpolation_source == 'face exterior') then
+!            distance            = worker%get_field('Wall Distance',             'value', 'face interior') 
+!        else
+!            distance            = worker%get_field('Wall Distance',             'value') 
+!        end if
 !
-!        print *, 'F2 max argument 1'
-!        print *, temp1(:)%x_ad_
-!        print *, 'F2 max argument 2'
-!        print *, temp2(:)%x_ad_
-
-        temp1 = MY_SQRT(k) 
-        !do ii=1,size(temp1)
-        !    temp1(ii)%xp_ad_(:) = ZERO
-        !end do
-        arg2 = max(&
-                    TWO*temp1/(0.09_rk*exp(omega_mod)*abs(distance)+1.0e-14_rk), 500.0_rk*mu_l/(density*exp(omega_mod)*abs(distance)**TWO+1.0e-14_rk)&
-        )
-        ! For stable computation of tanh(x) for x>=0, use the identity
-        !   tanh(x)=(1-exp(-2*x))/(1+exp(-2*x))
-        F2 = arg2
-        arg2 = F2**TWO
-        temp1 = F2
-        temp1 = ONE-exp(-TWO*arg2)
-        temp2 = temp1
-        temp2 = exp(-TWO*arg2)+ONE
-        F2 = temp1/temp2
-        !do ii=1,size(temp1)
-        !   F2(ii)%xp_ad_(:) = ZERO
-        !end do
-        !F2 = tanh(arg2(:)%x_ad_**TWO)
-        !print *, 'F2'
-        !print *, F2(:)%x_ad_
-       
-        rot_12 = worker%get_field('Rotation Rate-12', 'value')
-        rot_13 = worker%get_field('Rotation Rate-13', 'value')
-        rot_23 = worker%get_field('Rotation Rate-23', 'value')
-
-        cap_omega = omega
-        cap_omega = TWO*MY_SQRT(rot_12**TWO+rot_13**TWO+rot_23**TWO)
-        !do ii = 1, size(cap_omega)
-        !    cap_omega(ii)%xp_ad_(:) = ZERO
-        !end do
-
-
-        temp1 = 0.31_rk*exp(omega_mod)
-        temp2 = F2*cap_omega
-        !print *, 'mu t max argument 1'
-        !print *, temp1(:)%x_ad_
-        !print *, 'mu t max argument 2'
-        !print *, temp2(:)%x_ad_
-
-
-        temp = smax(temp1,temp2)
-        !temp = max(temp1,temp2)
+!
+!        
+!
+!        ! The SST turbulence model modifies the formula for the turbulent viscosity.
+!
+!        ! Compute blending factor
+!!        temp1 = TWO*sqrt(k + 1.0e-16_rk)/(0.09_rk*exp(omega_mod)*abs(distance)+1.0e-16_rk)
+!!        temp2 = 500.0_rk*mu_l/(density*exp(omega_mod)*abs(distance)**TWO+1.0e-16_rk)
+!!
+!!        print *, 'F2 max argument 1'
+!!        print *, temp1(:)%x_ad_
+!!        print *, 'F2 max argument 2'
+!!        print *, temp2(:)%x_ad_
+!
+!        temp1 = MY_SQRT(k) 
+!        !do ii=1,size(temp1)
+!        !    temp1(ii)%xp_ad_(:) = ZERO
+!        !end do
+!        arg2 = max(&
+!                    TWO*temp1/(0.09_rk*exp(omega_mod)*abs(distance)+1.0e-14_rk), 500.0_rk*mu_l/(density*exp(omega_mod)*abs(distance)**TWO+1.0e-14_rk)&
+!        )
+!        ! For stable computation of tanh(x) for x>=0, use the identity
+!        !   tanh(x)=(1-exp(-2*x))/(1+exp(-2*x))
+!        F2 = arg2
+!        arg2 = F2**TWO
+!        temp1 = F2
+!        temp1 = ONE-exp(-TWO*arg2)
+!        temp2 = temp1
+!        temp2 = exp(-TWO*arg2)+ONE
+!        F2 = temp1/temp2
+!        !do ii=1,size(temp1)
+!        !   F2(ii)%xp_ad_(:) = ZERO
+!        !end do
+!        !F2 = tanh(arg2(:)%x_ad_**TWO)
+!        !print *, 'F2'
+!        !print *, F2(:)%x_ad_
+!       
+!        rot_12 = worker%get_field('Rotation Rate-12', 'value')
+!        rot_13 = worker%get_field('Rotation Rate-13', 'value')
+!        rot_23 = worker%get_field('Rotation Rate-23', 'value')
+!
+!        cap_omega = omega
+!        cap_omega = TWO*MY_SQRT(rot_12**TWO+rot_13**TWO+rot_23**TWO)
+!        !do ii = 1, size(cap_omega)
+!        !    cap_omega(ii)%xp_ad_(:) = ZERO
+!        !end do
+!
+!
+!        temp1 = 0.31_rk*exp(omega_mod)
+!        temp2 = F2*cap_omega
+!        !print *, 'mu t max argument 1'
+!        !print *, temp1(:)%x_ad_
+!        !print *, 'mu t max argument 2'
+!        !print *, temp2(:)%x_ad_
+!
+!
+!        temp = smax(temp1,temp2)
+!        !temp = max(temp1,temp2)
         ! NOTE: we should compute the omega production term in an algebraically simplified form to prevent division by small quantities
+        temp = 0.31_rk*exp(omega_mod)
         call worker%store_model_field('SST Omega Production Simplified Factor',                       'value', temp/0.31_rk   )
 
         !mu_t = 0.31_rk*density*k/(temp)    ! Modified SST formula for mu_t
@@ -357,8 +359,14 @@ contains
         call worker%store_model_field('Turbulent Thermal Conductivity',            'value', kap_t    )
 
         density_k = worker%get_field('Density * k',    'value')
+
+        ! Non-physical negative values of k are used to generate additional artificial viscosity
+        allocate(dummy(size(density_k)))
+        dummy = ZERO
         mu_neg = density_k
-        mu_neg = density_k*sin_ramp(-invdensity*density_k, 0.0_rk, 10.0_rk*sst_k_infty)/sst_omega_infty
+        !mu_neg = -density_k*sin_ramp(-invdensity*density_k, 0.0_rk*dummy, 10.0_rk*sst_k_infty+0.0_rk*dummy)/sst_omega_infty
+        mu_neg = -density_k*sin_ramp(-invdensity*density_k, 0.0_rk, 10.0_rk*sst_k_infty)/sst_omega_infty
+        !mu_neg = ZERO
         call worker%store_model_field('SST Artificial Viscosity k-neg',                       'value', mu_neg   )
 
     end subroutine compute

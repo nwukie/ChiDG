@@ -82,7 +82,7 @@ contains
                 call rans_sst_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
 
                 call rans_sst_eqns%add_model('SST Turbulence Kinetic Energy')
-                call rans_sst_eqns%add_model('Ideal Gas SST')
+                call rans_sst_eqns%add_model('Ideal Gas')
                 call rans_sst_eqns%add_model('Constant Viscosity')
                 !call rans_sst_eqns%add_model('Sutherlands Law')
                 call rans_sst_eqns%add_model('Wall Distance : p-Poisson Normalization')

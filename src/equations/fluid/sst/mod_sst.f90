@@ -66,7 +66,7 @@ module mod_sst
     !real(rk), parameter :: SSG_LRRW_f_mu_infty  = 0.009_rk
     real(rk), parameter :: sst_f_mu_infty  = 0.1_rk
 
-    real(rk), parameter :: sst_k_infty    = 1.0e-6_rk 
-    real(rk), parameter :: sst_omega_infty    = 5.0e6_rk*sst_f_mu_infty*sst_k_infty
+    real(rk), parameter :: sst_k_infty    = 4.824e-3_rk 
+    real(rk), parameter :: sst_omega_infty    = 5.8e7_rk*sst_f_mu_infty*sst_k_infty
 end module mod_sst
 

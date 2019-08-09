@@ -20,6 +20,8 @@ module bc_state_sst_farfield
     !!
     !--------------------------------------------------------------------------------
     type, public, extends(bc_state_t) :: sst_farfield_t
+        real(rk)    :: k_infty      = 1.0e-3_rk
+        real(rk)    :: omega_infty  = 345.0_rk
 
     contains
 
@@ -45,7 +47,13 @@ contains
     !--------------------------------------------------------------------------------
     subroutine init(self)
         class(sst_farfield_t),   intent(inout) :: self
-        
+        real(rk)            :: k_infty, omega_infty
+        integer             :: unit, msg
+        logical             :: file_exists
+
+        namelist /k_omega/   k_infty, omega_infty 
+
+
         !
         ! Set operator name
         !
@@ -57,6 +65,19 @@ contains
         call self%bcproperties%add('Freestream Flow Speed', 'Required')
         call self%set_fcn_option('Freestream Density', 'val', 1.17_rk)
         call self%set_fcn_option('Freestream Flow Speed', 'val', 100._rk)
+        ! Check if input from 'models.nml' is available.
+        !   1: if available, read and set self%k_infty/omega_infty
+        !   2: if not available, do nothing and retain default values
+        !
+        inquire(file='models.nml', exist=file_exists)
+        if (file_exists) then
+            open(newunit=unit,form='formatted',file='models.nml')
+            read(unit,nml=k_omega,iostat=msg)
+            if (msg == 0) self%k_infty = k_infty 
+            if (msg == 0) self%omega_infty = omega_infty 
+            close(unit)
+        end if
+
 
     end subroutine init
     !********************************************************************************
@@ -157,7 +178,8 @@ contains
 
         density_k_ff = density_m
         !density_k_ff = density*k_t_ff
-        density_k_ff = density*sst_k_infty
+        !density_k_ff = density*sst_k_infty
+        density_k_ff = density*self%k_infty
         !print *, 'density k ff'
         !print *, density_k_ff(:)%x_ad_
         !density_k_ff = 6.0e-9_rk*347.27942639897344_rk**TWO
@@ -178,7 +200,8 @@ contains
         ! Compute FF values
         density_omega_ff = density_omega_m
         !density_omega_ff = density*log(density*k_t_ff/mu_t_ff)
-        density_omega_ff = density*log(sst_omega_infty)
+        !density_omega_ff = density*log(sst_omega_infty)
+        density_omega_ff = density*log(self%omega_infty)
         density_omega_bc = density_omega_m
         do ii = 1, size(inflow) 
             if (inflow(ii)) then

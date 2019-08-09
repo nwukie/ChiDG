@@ -5,7 +5,7 @@ module type_domain
                                           ORPHAN, INTERIOR, BOUNDARY, CHIMERA, TWO_DIM, &
                                           THREE_DIM, NO_NEIGHBOR_FOUND, NEIGHBOR_FOUND, &
                                           NO_PROC, NFACES, ZERO, NO_MM_ASSIGNED,        &
-                                          MAX_ELEMENTS_PER_NODE, NO_ELEMENT, NO_ID
+                                          MAX_ELEMENTS_PER_NODE, NO_ELEMENT, NO_ID, TWO
     use mod_grid,                   only: FACE_CORNERS, NFACE_CORNERS
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use mpi_f08
@@ -104,6 +104,8 @@ module type_domain
         procedure, private  :: init_elems_sol           ! Loop through elements init data depending on the solution order
         procedure, private  :: init_faces_geom          ! Loop through faces init geometry
         procedure, private  :: init_faces_sol           ! Loop through faces init data depending on the solution order
+
+        procedure           :: compute_area_weighted_h  ! Compute an area weighted version of h for each element in the domain
 
         procedure           :: init_comm_local          ! For faces, find proc-local neighbors, initialize face neighbor indices 
         procedure           :: init_comm_global         ! For faces, find neighbors across procs, initialize face neighbor indices
@@ -599,27 +601,19 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!
-    !!
-    !!
     !------------------------------------------------------------------------------------------
     subroutine init_faces_sol(self)
         class(domain_t), intent(inout)  :: self
 
         integer(ik) :: ielem, iface
 
-        !
         ! Loop through elements, faces and call initialization that depends on 
         ! the solution basis.
-        !
         do ielem = 1,self%nelem
             do iface = 1,NFACES
-
                 call self%faces(ielem,iface)%init_sol(self%elems(ielem))
-
             end do ! iface
         end do ! ielem
-
 
     end subroutine init_faces_sol
     !******************************************************************************************
@@ -628,7 +622,41 @@ contains
 
 
 
+    !> Compute area weighted version of h. Adapted from:
+    !! Schoenawa, Stefan, and Ralf Hartmann. 
+    !! "Discontinuous Galerkin discretization of the Reynolds-averaged Navier–Stokes equations with the shear-stress transport model." 
+    !! Journal of Computational Physics 262 (2014): 194-216.
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/05/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine compute_area_weighted_h(self)
+        class(domain_t), intent(inout)  :: self
 
+        integer(ik) :: ielem, iface
+
+        real(rk) :: vol, normal_integral(3), svec(3), awhvec(3)
+        !
+        ! Loop through elements, faces and call initialization that depends on 
+        ! the solution basis.
+        !
+        do ielem = 1,self%nelem
+            vol = self%elems(ielem)%vol
+            normal_integral = ZERO
+            do iface = 1,NFACES
+                normal_integral = normal_integral + self%faces(ielem,iface)%compute_projected_areas()
+            end do ! iface
+
+            svec = TWO*vol/normal_integral
+            awhvec = svec*sqrt(vol/(svec(1)*svec(2)*svec(3)))
+
+            self%elems(ielem)%area_weighted_h = awhvec
+        end do ! ielem
+
+
+    end subroutine compute_area_weighted_h 
+    !******************************************************************************************
 
 
 

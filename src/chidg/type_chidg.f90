@@ -1393,16 +1393,18 @@ contains
     !!  @date   2/7/2017
     !!
     !------------------------------------------------------------------------------------------
-    subroutine run(self, write_initial, write_final, write_tecio)
+    subroutine run(self, write_initial, write_final, write_tecio, write_report)
         class(chidg_t), intent(inout)           :: self
         logical,        intent(in), optional    :: write_initial
         logical,        intent(in), optional    :: write_final
         logical,        intent(in), optional    :: write_tecio
+        logical,        intent(in), optional    :: write_report
 
         character(100)              :: filename
         character(:),   allocatable :: prefix, tecio_file_prefix
         integer(ik)                 :: istep, nsteps, wcount, iread, ierr, myunit
-        logical                     :: option_write_initial, option_write_final, option_write_tecio, exists
+        logical                     :: option_write_initial, option_write_final, &
+                                       option_write_tecio, option_write_report, exists
         real(rk)                    :: force(3), work
 
         class(chidg_t), pointer :: chidg
@@ -1429,9 +1431,11 @@ contains
         option_write_initial = .false.
         option_write_final   = .true.
         option_write_tecio   = .false.
+        option_write_report  = .false.
         if (present(write_initial)) option_write_initial = write_initial
         if (present(write_final))   option_write_final   = write_final
         if (present(write_tecio))   option_write_tecio   = write_tecio
+        if (present(write_report))  option_write_report  = write_report
 
 
         ! Write initial solution
@@ -1464,7 +1468,7 @@ contains
 
 
             ! Report to file: report from mod_io
-            call self%reporter(report)
+            if (option_write_report) call self%reporter(report)
 
             
             ! Call time integrator to take a step. 
@@ -1474,7 +1478,8 @@ contains
                                            self%preconditioner)
 
 
-            if (istep == nsteps) then
+            ! Report at final time
+            if ( (option_write_report) .and. (istep == nsteps) ) then
                 call self%reporter(report)
             end if
 

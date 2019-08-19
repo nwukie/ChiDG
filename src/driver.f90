@@ -107,7 +107,7 @@ program driver
 
         ! Run ChiDG simulation
         call chidg%reporter('before')
-        call chidg%run(write_initial=initial_write, write_final=final_write, write_tecio=tecio_write)
+        call chidg%run(write_initial=initial_write, write_final=final_write, write_tecio=tecio_write, write_report=.true.)
         call chidg%reporter('after')
 
 

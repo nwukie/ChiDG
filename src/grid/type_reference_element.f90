@@ -1,11 +1,12 @@
 module type_reference_element
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: NFACES, NEDGES, ZERO, ONE, XI_DIR, ETA_DIR, ZETA_DIR
+    use mod_constants,      only: NFACES, NEDGES, ZERO, ONE, HALF, TWO, THREE, XI_DIR, ETA_DIR, ZETA_DIR
     use mod_gauss_legendre, only: quadrature_nodes, quadrature_weights
     use mod_nodes_uniform,  only: uniform_nodes, uniform_weights
     use mod_polynomial,     only: polynomial_val, dpolynomial_val, ddpolynomial_val
     use mod_inv,            only: inv
+    use mod_gridspace,      only: linspace
     use ieee_arithmetic,    only: ieee_is_nan
     implicit none
 
@@ -181,6 +182,55 @@ contains
 
 
 
+!    !>  Initialize the reference element.
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   6/29/2017
+!    !!
+!    !-------------------------------------------------------------------
+!    subroutine init_element(self,element_type)
+!        class(reference_element_t), intent(inout)   :: self
+!        integer(ik),                intent(in)      :: element_type
+!
+!        real(rk),   allocatable :: temp(:,:)
+!        integer(ik)             :: nnodes, iterm, inode, ierr
+!
+!        !
+!        ! Set element type, initialize reference nodes.
+!        !
+!        self%element_type = element_type
+!        self%nodes_r      = uniform_nodes(element_type,dim=3)
+!
+!
+!
+!        !
+!        ! Compute nodes-to-modes projection matrix
+!        !
+!        !
+!        ! Compute the values of each mapping term at each mesh point
+!        !
+!        nnodes = self%nnodes_r()
+!        if (allocated(temp)) deallocate(temp)
+!        allocate(temp(nnodes,nnodes), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!        do iterm = 1,nnodes
+!            do inode = 1,nnodes
+!                temp(inode,iterm) = polynomial_val(3,nnodes,iterm,[self%nodes_r(inode,1),self%nodes_r(inode,2),self%nodes_r(inode,3)])
+!            end do
+!        end do
+!        ! Invert matrix so that it can multiply a vector of
+!        ! element points to compute the mode amplitudes of the x,y mappings
+!        self%nodes_to_modes = inv(temp)
+!
+!
+!        self%element_initialized = .true.
+!
+!
+!    end subroutine init_element
+!    !*******************************************************************
+
+
     !>  Initialize the reference element.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -198,8 +248,7 @@ contains
         ! Set element type, initialize reference nodes.
         !
         self%element_type = element_type
-        self%nodes_r      = uniform_nodes(element_type,dim=3)
-
+        self%nodes_r      = get_reference_nodes(element_type,dim=3)
 
 
         !
@@ -218,9 +267,15 @@ contains
                 temp(inode,iterm) = polynomial_val(3,nnodes,iterm,[self%nodes_r(inode,1),self%nodes_r(inode,2),self%nodes_r(inode,3)])
             end do
         end do
+
+
         ! Invert matrix so that it can multiply a vector of
         ! element points to compute the mode amplitudes of the x,y mappings
         self%nodes_to_modes = inv(temp)
+
+!        !
+!        ! Iterative refinement?
+!        !
 
 
         self%element_initialized = .true.
@@ -228,6 +283,11 @@ contains
 
     end subroutine init_element
     !*******************************************************************
+
+
+
+
+
 
 
 
@@ -1105,6 +1165,884 @@ contains
 
     end function nterms_i
     !*******************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   6/28/2017
+    !!
+    !-------------------------------------------------------------------------------
+    function get_reference_nodes(level, dim) result(nodes)
+        integer(ik),    intent(in)  :: level
+        integer(ik),    intent(in)  :: dim
+
+        ! Level for quadrature nodes corresponds to the number of nodes
+        ! in the 1D tensor construction of the node set.
+        integer(ik)                 :: inode, inode_inner, nnodes, ierr, &
+                                       nnodes1d, nedge_vertices, nedge_interiors, nface_interiors, &
+                                       nelement_interiors, node_start, node_end, line_begin, line_end
+        real(rk),       allocatable :: nodes(:,:), line_space(:)
+        integer(ik),    allocatable :: nodes_1daccess(:,:), interior_forward(:), interior_reverse(:)
+        logical                     :: duplicate_node
+
+
+        if (dim /= 3) call chidg_signal_one(FATAL,'uniform_nodes: only dim=3 is valid.',dim)
+
+
+        nnodes1d = level+1
+        !line_space = linspace(-ONE,ONE,nnodes1d)
+        select case (nnodes1d)
+            case (2)
+                line_space = [-ONE,ONE]
+            case (3)
+                line_space = [-ONE,ZERO,ONE]
+            case (4)
+                line_space = [-ONE,-ONE/THREE,ONE/THREE,ONE]
+            case (5)
+                line_space = [-ONE,-HALF,ZERO,HALF,ONE]
+            case default
+                call chidg_signal(FATAL,'type_reference_element%get_reference_nodes: unimplemented reference element.')
+        end select
+
+        !
+        ! Uniform distribution starts with two nodes at end points.
+        ! Therefore, minimum level(1) is two points(level+1)
+        !
+        nnodes1d = level + 1
+        nnodes = nnodes1d*nnodes1d*nnodes1d
+        allocate(nodes(nnodes,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        ! Get tensor product access indices
+        nodes_1daccess = get_reference_element_1daccess(level)
+
+        ! Check dimensions are correct
+        if (size(nodes_1daccess,1) /= size(nodes,1)) call chidg_signal(FATAL,'uniform_weights: inconsistent node dimensions.')
+
+        ! Assemble nodes
+        do inode = 1,size(nodes,1)
+            nodes(inode,1) = line_space(nodes_1daccess(inode,1))
+            nodes(inode,2) = line_space(nodes_1daccess(inode,2))
+            nodes(inode,3) = line_space(nodes_1daccess(inode,3))
+        end do !inode
+
+
+        ! Check to make sure there are no duplicate nodes
+        do inode = 1,size(nodes,1)
+
+            duplicate_node = .false.
+            do inode_inner = 1,size(nodes,1)
+                if ( (inode /= inode_inner) .and. &
+                     (nodes(inode,1) == nodes(inode_inner,1)) .and. &
+                     (nodes(inode,2) == nodes(inode_inner,2)) .and. &
+                     (nodes(inode,3) == nodes(inode_inner,3)) &
+                    ) then
+                    duplicate_node = .true. 
+                end if
+            end do !inode_inner
+
+            if (duplicate_node) call chidg_signal(FATAL,'uniform_nodes: found duplicate node. Must be error in node set convention.')
+
+        end do !inode
+
+
+
+
+    end function get_reference_nodes
+    !***********************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   8/1/2019
+    !!
+    !----------------------------------------------------------------------------------
+    function get_reference_element_1daccess(order) result(nodes_1daccess)
+        integer(ik),    intent(in)  :: order
+
+        integer(ik)                 :: nedge_vertices, nedge_interiors, nface_interiors, nelement_interiors, &
+                                       line_begin, line_end, node_start, node_end, nnodes, nnodes1d, ierr, inode, inode_inner
+        integer(ik),    allocatable :: nodes_1daccess(:,:), interior_forward(:), interior_reverse(:)
+        logical :: duplicate_node
+
+
+        nnodes1d = order+1
+        nnodes = nnodes1d*nnodes1d*nnodes1d
+        allocate(nodes_1daccess(nnodes,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Fill edge, face, interior nodes
+        !
+        select case (order)
+            ! Linear (HEXA_8)
+            case(1)
+                nedge_vertices     = 2
+                nedge_interiors    = 0
+                nface_interiors    = 0
+                nelement_interiors = 0
+                line_begin = 1
+                line_end  = nedge_interiors+nedge_vertices
+                !interior_forward = []
+                !interior_reverse = []
+
+
+                ! Hex vertices are same for all orders
+                nodes_1daccess(1,1) = line_begin
+                nodes_1daccess(1,2) = line_begin
+                nodes_1daccess(1,3) = line_begin
+
+                nodes_1daccess(2,1) = line_end
+                nodes_1daccess(2,2) = line_begin
+                nodes_1daccess(2,3) = line_begin
+
+                nodes_1daccess(3,1) = line_end
+                nodes_1daccess(3,2) = line_end
+                nodes_1daccess(3,3) = line_begin
+
+                nodes_1daccess(4,1) = line_begin
+                nodes_1daccess(4,2) = line_end
+                nodes_1daccess(4,3) = line_begin
+
+                nodes_1daccess(5,1) = line_begin
+                nodes_1daccess(5,2) = line_begin
+                nodes_1daccess(5,3) = line_end
+
+                nodes_1daccess(6,1) = line_end
+                nodes_1daccess(6,2) = line_begin
+                nodes_1daccess(6,3) = line_end
+
+                nodes_1daccess(7,1) = line_end
+                nodes_1daccess(7,2) = line_end
+                nodes_1daccess(7,3) = line_end
+
+                nodes_1daccess(8,1) = line_begin
+                nodes_1daccess(8,2) = line_end
+                nodes_1daccess(8,3) = line_end
+
+
+
+
+            ! Quadratic (HEXA_27)
+            case(2)
+                nedge_vertices     = 2
+                nedge_interiors    = 1
+                nface_interiors    = 1
+                nelement_interiors = 1
+                line_begin = 1
+                line_end  = nedge_interiors+nedge_vertices
+                interior_forward = [2]
+                interior_reverse = [2]
+
+
+
+
+                ! Hex vertices are same for all orders
+                nodes_1daccess(1,1) = line_begin
+                nodes_1daccess(1,2) = line_begin
+                nodes_1daccess(1,3) = line_begin
+
+                nodes_1daccess(2,1) = line_end
+                nodes_1daccess(2,2) = line_begin
+                nodes_1daccess(2,3) = line_begin
+
+                nodes_1daccess(3,1) = line_end
+                nodes_1daccess(3,2) = line_end
+                nodes_1daccess(3,3) = line_begin
+
+                nodes_1daccess(4,1) = line_begin
+                nodes_1daccess(4,2) = line_end
+                nodes_1daccess(4,3) = line_begin
+
+                nodes_1daccess(5,1) = line_begin
+                nodes_1daccess(5,2) = line_begin
+                nodes_1daccess(5,3) = line_end
+
+                nodes_1daccess(6,1) = line_end
+                nodes_1daccess(6,2) = line_begin
+                nodes_1daccess(6,3) = line_end
+
+                nodes_1daccess(7,1) = line_end
+                nodes_1daccess(7,2) = line_end
+                nodes_1daccess(7,3) = line_end
+
+                nodes_1daccess(8,1) = line_begin
+                nodes_1daccess(8,2) = line_end
+                nodes_1daccess(8,3) = line_end
+
+
+
+
+
+
+
+
+
+
+
+                ! Edge interiors
+
+                !* Edge 1
+                node_start = 9
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = interior_forward
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Edge 2
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = interior_forward
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Edge 3
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = interior_reverse
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Edge 4
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = interior_reverse
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Edge 5
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = interior_forward
+
+                !* Edge 6
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = interior_forward
+
+                !* Edge 7
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = interior_forward
+
+                !* Edge 8
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = interior_forward
+
+                !* Edge 9
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = interior_forward
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+                !* Edge 10
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = interior_forward
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+                !* Edge 11
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = interior_reverse
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+                !* Edge 12
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = interior_reverse
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+
+
+                ! Face interiors
+
+                ! Face 1
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end,1) = 2
+                nodes_1daccess(node_start:node_end,2) = 2
+                nodes_1daccess(node_start:node_end,3) = line_begin
+
+                ! Face 2
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end,1) = 2
+                nodes_1daccess(node_start:node_end,2) = line_begin
+                nodes_1daccess(node_start:node_end,3) = 2
+
+                ! Face 3
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end,1) = line_end
+                nodes_1daccess(node_start:node_end,2) = 2
+                nodes_1daccess(node_start:node_end,3) = 2
+
+                ! Face 4
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end,1) = 2
+                nodes_1daccess(node_start:node_end,2) = line_end
+                nodes_1daccess(node_start:node_end,3) = 2
+
+                ! Face 5
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end,1) = line_begin
+                nodes_1daccess(node_start:node_end,2) = 2
+                nodes_1daccess(node_start:node_end,3) = 2
+
+                ! Face 6
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end,1) = 2
+                nodes_1daccess(node_start:node_end,2) = 2
+                nodes_1daccess(node_start:node_end,3) = line_end
+
+                !* Interior
+                node_start = node_end+1
+                node_end   = node_start+nelement_interiors-1
+                nodes_1daccess(node_start:node_end,1) = 2
+                nodes_1daccess(node_start:node_end,2) = 2
+                nodes_1daccess(node_start:node_end,3) = 2
+
+
+
+            ! Cubic (HEXA_64)
+            case(3)
+
+                nedge_vertices     = 2
+                nedge_interiors    = 2
+                nface_interiors    = 4
+                nelement_interiors = 8
+                line_begin = 1
+                line_end  = nedge_interiors+nedge_vertices
+                interior_forward = [2,3]
+                interior_reverse = [3,2]
+
+
+
+                ! Hex vertices are same for all orders
+                nodes_1daccess(1,1) = line_begin
+                nodes_1daccess(1,2) = line_begin
+                nodes_1daccess(1,3) = line_begin
+
+                nodes_1daccess(2,1) = line_end
+                nodes_1daccess(2,2) = line_begin
+                nodes_1daccess(2,3) = line_begin
+
+                nodes_1daccess(3,1) = line_end
+                nodes_1daccess(3,2) = line_end
+                nodes_1daccess(3,3) = line_begin
+
+                nodes_1daccess(4,1) = line_begin
+                nodes_1daccess(4,2) = line_end
+                nodes_1daccess(4,3) = line_begin
+
+                nodes_1daccess(5,1) = line_begin
+                nodes_1daccess(5,2) = line_begin
+                nodes_1daccess(5,3) = line_end
+
+                nodes_1daccess(6,1) = line_end
+                nodes_1daccess(6,2) = line_begin
+                nodes_1daccess(6,3) = line_end
+
+                nodes_1daccess(7,1) = line_end
+                nodes_1daccess(7,2) = line_end
+                nodes_1daccess(7,3) = line_end
+
+                nodes_1daccess(8,1) = line_begin
+                nodes_1daccess(8,2) = line_end
+                nodes_1daccess(8,3) = line_end
+
+
+
+
+
+
+
+
+
+                ! Edge interiors
+                !* Edge 1
+                node_start = 9
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = interior_forward
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Edge 2
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = interior_forward
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Edge 3
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = interior_reverse
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Edge 4
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = interior_reverse
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Edge 5
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = interior_forward
+
+                !* Edge 6
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = interior_forward
+
+                !* Edge 7
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = interior_forward
+
+                !* Edge 8
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = interior_forward
+
+                !* Edge 9
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = interior_forward
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+                !* Edge 10
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = interior_forward
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+                !* Edge 11
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = interior_reverse
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+                !* Edge 12
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = interior_reverse
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+
+
+                !* Face 1
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = [2, 3, 3, 2]
+                nodes_1daccess(node_start:node_end, 2) = [2, 2, 3, 3]
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Face 2
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = [2, 3, 3, 2]
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = [2, 2, 3, 3]
+
+                !* Face 3
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = [2, 3, 3, 2]
+                nodes_1daccess(node_start:node_end, 3) = [2, 2, 3, 3]
+
+                !* Face 4
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = [3, 2, 2, 3]
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = [2, 2, 3, 3]
+
+                !* Face 5
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = [3, 2, 2, 3]
+                nodes_1daccess(node_start:node_end, 3) = [2, 2, 3, 3]
+
+                !* Face 6
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = [2, 3, 3, 2]
+                nodes_1daccess(node_start:node_end, 2) = [2, 2, 3, 3]
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+                !* Interior
+                node_start = node_end+1
+                node_end   = node_start+nelement_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = [2, 3, 3, 2, 2, 3, 3, 2]
+                nodes_1daccess(node_start:node_end, 2) = [2, 2, 3, 3, 2, 2, 3, 3]
+                nodes_1daccess(node_start:node_end, 3) = [2, 2, 2, 2, 3, 3, 3, 3]
+
+
+
+            ! Quartic (HEXA_125)
+            case(4)
+
+                nedge_vertices     = 2
+                nedge_interiors    = 3
+                nface_interiors    = 9
+                nelement_interiors = 27
+                line_begin = 1
+                line_end  = nedge_interiors+nedge_vertices
+                interior_forward = [2,3,4]
+                interior_reverse = [4,3,2]
+
+
+
+                ! Hex vertices are same for all orders
+                nodes_1daccess(1,1) = line_begin
+                nodes_1daccess(1,2) = line_begin
+                nodes_1daccess(1,3) = line_begin
+
+                nodes_1daccess(2,1) = line_end
+                nodes_1daccess(2,2) = line_begin
+                nodes_1daccess(2,3) = line_begin
+
+                nodes_1daccess(3,1) = line_end
+                nodes_1daccess(3,2) = line_end
+                nodes_1daccess(3,3) = line_begin
+
+                nodes_1daccess(4,1) = line_begin
+                nodes_1daccess(4,2) = line_end
+                nodes_1daccess(4,3) = line_begin
+
+                nodes_1daccess(5,1) = line_begin
+                nodes_1daccess(5,2) = line_begin
+                nodes_1daccess(5,3) = line_end
+
+                nodes_1daccess(6,1) = line_end
+                nodes_1daccess(6,2) = line_begin
+                nodes_1daccess(6,3) = line_end
+
+                nodes_1daccess(7,1) = line_end
+                nodes_1daccess(7,2) = line_end
+                nodes_1daccess(7,3) = line_end
+
+                nodes_1daccess(8,1) = line_begin
+                nodes_1daccess(8,2) = line_end
+                nodes_1daccess(8,3) = line_end
+
+
+
+
+
+
+
+
+
+
+
+                ! Edge interiors
+                !* Edge 1
+                node_start = 9
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = interior_forward
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Edge 2
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = interior_forward
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Edge 3
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = interior_reverse
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Edge 4
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = interior_reverse
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+                !* Edge 5
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = interior_forward
+
+                !* Edge 6
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = interior_forward
+
+                !* Edge 7
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = interior_forward
+
+                !* Edge 8
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = interior_forward
+
+                !* Edge 9
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = interior_forward
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+                !* Edge 10
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = interior_forward
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+                !* Edge 11
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = interior_reverse
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+                !* Edge 12
+                node_start = node_end+1
+                node_end   = node_start+nedge_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = interior_reverse
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+
+
+                !* Face 1
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = [2, 3, 4, 4, 4, &
+                                                          3, 2, 2, 3]
+                nodes_1daccess(node_start:node_end, 2) = [2, 2, 2, 3, 4, &
+                                                          4, 4, 3, 3]
+                nodes_1daccess(node_start:node_end, 3) = line_begin
+
+
+                !* Face 2
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = [2, 3, 4, 4, 4, &
+                                                          3, 2, 2, 3]
+                nodes_1daccess(node_start:node_end, 2) = line_begin
+                nodes_1daccess(node_start:node_end, 3) = [2, 2, 2, 3, 4, &
+                                                          4, 4, 3, 3]
+
+                !* Face 3
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_end
+                nodes_1daccess(node_start:node_end, 2) = [2, 3, 4, 4, 4, &
+                                                          3, 2, 2, 3]
+                nodes_1daccess(node_start:node_end, 3) = [2, 2, 2, 3, 4, &
+                                                          4, 4, 3, 3]
+
+                !* Face 4
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = [4, 3, 2, 2, 2, &
+                                                          3, 4, 4, 3]
+                nodes_1daccess(node_start:node_end, 2) = line_end
+                nodes_1daccess(node_start:node_end, 3) = [2, 2, 2, 3, 4, &
+                                                          4, 4, 3, 3]
+
+                !* Face 5
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = line_begin
+                nodes_1daccess(node_start:node_end, 2) = [4, 3, 2, 2, 2, &
+                                                          3, 4, 4, 3]
+                nodes_1daccess(node_start:node_end, 3) = [2, 2, 2, 3, 4, &
+                                                          4, 4, 3, 3]
+
+                !* Face 6
+                node_start = node_end+1
+                node_end   = node_start+nface_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = [2, 3, 4, 4, 4, &
+                                                          3, 2, 2, 3]
+                nodes_1daccess(node_start:node_end, 2) = [2, 2, 2, 3, 4, &
+                                                          4, 4, 3, 3]
+                nodes_1daccess(node_start:node_end, 3) = line_end
+
+                !* Interior
+                node_start = node_end+1
+                node_end   = node_start+nelement_interiors-1
+                nodes_1daccess(node_start:node_end, 1) = [2, 3, 4, 4, 4, &
+                                                          3, 2, 2, 3,    &
+                                                          2, 3, 4, 4, 4, &
+                                                          3, 2, 2, 3,    &
+                                                          2, 3, 4, 4, 4, &
+                                                          3, 2, 2, 3]
+                nodes_1daccess(node_start:node_end, 2) = [2, 2, 2, 3, 4, &
+                                                          4, 4, 3, 3,    &
+                                                          2, 2, 2, 3, 4, &
+                                                          4, 4, 3, 3,    &
+                                                          2, 2, 2, 3, 4, &
+                                                          4, 4, 3, 3]
+                nodes_1daccess(node_start:node_end, 3) = [2, 2, 2, &
+                                                          2, 2, 2, & 
+                                                          2, 2, 2, & 
+                                                          3, 3, 3, & 
+                                                          3, 3, 3, & 
+                                                          3, 3, 3, & 
+                                                          4, 4, 4, & 
+                                                          4, 4, 4, & 
+                                                          4, 4, 4]
+
+
+
+
+            case default
+                call chidg_signal_one(FATAL,"uniform_nodes: invalid value for 'level'", order)
+
+        end select
+
+
+        ! Check access indices are all unique
+        do inode = 1,size(nodes_1daccess,1)
+            duplicate_node = .false.
+            do inode_inner = 1,size(nodes_1daccess,1)
+                if ( (inode /= inode_inner) .and. &
+                     (nodes_1daccess(inode,1) == nodes_1daccess(inode_inner,1)) .and. &
+                     (nodes_1daccess(inode,2) == nodes_1daccess(inode_inner,2)) .and. &
+                     (nodes_1daccess(inode,3) == nodes_1daccess(inode_inner,3)) ) then
+                     duplicate_node = .true.
+                end if 
+            end do
+            if (duplicate_node) call chidg_signal(FATAL,'get_reference_element_1daccess: duplicate node detected.')
+        end do
+
+
+
+    end function get_reference_element_1daccess
+    !**********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 end module type_reference_element

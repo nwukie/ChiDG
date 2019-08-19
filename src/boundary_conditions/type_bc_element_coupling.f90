@@ -34,14 +34,18 @@ module type_bc_element_coupling
         procedure   :: ielement_l
         procedure   :: iface
 
-        procedure   :: neqns
+        procedure   :: nfields
+        procedure   :: ntime
         procedure   :: nterms_s
+        procedure   :: dof_start
+        procedure   :: dof_local_start
 
         procedure   :: proc
 
         procedure   :: recv_comm
         procedure   :: recv_domain
         procedure   :: recv_element
+        procedure   :: recv_dof
 
     end type bc_element_coupling_t
     !********************************************************************
@@ -170,13 +174,14 @@ contains
     !!
     !!
     !----------------------------------------------------------------------
-    subroutine set_coupled_element_recv(self,idomain_g,ielement_g,recv_comm,recv_domain,recv_element)
+    subroutine set_coupled_element_recv(self,idomain_g,ielement_g,recv_comm,recv_domain,recv_element,recv_dof)
         class(bc_element_coupling_t),   intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g
         integer(ik),                    intent(in)      :: ielement_g
         integer(ik),                    intent(in)      :: recv_comm
         integer(ik),                    intent(in)      :: recv_domain
         integer(ik),                    intent(in)      :: recv_element
+        integer(ik),                    intent(in)      :: recv_dof
 
         integer(ik) :: elem_ID
 
@@ -185,7 +190,7 @@ contains
         !
         elem_ID = self%find_coupled_element(idomain_g,ielement_g)
 
-        call self%data(elem_ID)%set_recv(recv_comm,recv_domain,recv_element)
+        call self%data(elem_ID)%set_recv(recv_comm,recv_domain,recv_element,recv_dof)
 
     end subroutine set_coupled_element_recv
     !**********************************************************************
@@ -205,12 +210,15 @@ contains
     !!
     !!
     !----------------------------------------------------------------------
-    subroutine set_coupled_element_data(self,idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+    subroutine set_coupled_element_data(self,idomain_g,ielement_g,nfields,ntime,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
         class(bc_element_coupling_t),   intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g
         integer(ik),                    intent(in)      :: ielement_g
-        integer(ik),                    intent(in)      :: neqns
+        integer(ik),                    intent(in)      :: nfields
+        integer(ik),                    intent(in)      :: ntime
         integer(ik),                    intent(in)      :: nterms_s
+        integer(ik),                    intent(in)      :: dof_start
+        integer(ik),                    intent(in)      :: dof_local_start
         real(rk),                       intent(in)      :: total_area
         real(rk),                       intent(in)      :: areas(:)
         type(point_t),                  intent(in)      :: quad_pts(:)
@@ -222,7 +230,7 @@ contains
         !
         elem_ID = self%find_coupled_element(idomain_g,ielement_g)
 
-        call self%data(elem_ID)%set_data(neqns,nterms_s,total_area,areas,quad_pts)
+        call self%data(elem_ID)%set_data(nfields,ntime,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
 
     end subroutine set_coupled_element_data
     !**********************************************************************
@@ -379,20 +387,36 @@ contains
     !!  @date   4/17/2017
     !!
     !-----------------------------------------------------------------------
-    function neqns(self,elem_ID) result(neqns_)
+    function nfields(self,elem_ID) result(nfields_)
         class(bc_element_coupling_t),   intent(in)  :: self
         integer(ik),                    intent(in)  :: elem_ID
 
-        integer(ik) :: neqns_
+        integer(ik) :: nfields_
 
-        neqns_ = self%data(elem_ID)%neqns
+        nfields_ = self%data(elem_ID)%nfields
 
-    end function neqns
+    end function nfields
     !************************************************************************
 
 
 
 
+    !>  Return the number of time dofs on the coupled element.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   6/30/2019
+    !!
+    !-----------------------------------------------------------------------
+    function ntime(self,elem_ID) result(ntime_)  
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: ntime_  
+
+        ntime_ = self%data(elem_ID)%ntime
+
+    end function ntime
+    !************************************************************************
 
 
 
@@ -415,6 +439,43 @@ contains
 
 
 
+
+    !>  Return the starting DOF index in the ChiDG-global index.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/27/2019
+    !!
+    !-----------------------------------------------------------------------
+    function dof_start(self,elem_ID) result(dof_start_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: dof_start_
+
+        dof_start_ = self%data(elem_ID)%dof_start
+
+    end function dof_start
+    !************************************************************************
+
+
+
+
+    !>  Return the starting DOF index in the ChiDG-global index.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/27/2019
+    !!
+    !-----------------------------------------------------------------------
+    function dof_local_start(self,elem_ID) result(dof_local_start_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: dof_local_start_
+
+        dof_local_start_ = self%data(elem_ID)%dof_local_start
+
+    end function dof_local_start
+    !************************************************************************
 
 
 
@@ -505,6 +566,25 @@ contains
     !************************************************************************
 
 
+
+    !>  Return the identifier recv_dof for the coupled element.
+    !!
+    !!  NOTE: recv_dof is for PETSC storage containers.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   6/30/2019
+    !!
+    !-----------------------------------------------------------------------
+    function recv_dof(self,elem_ID) result(recv_dof_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: recv_dof_
+
+        recv_dof_ = self%data(elem_ID)%recv_dof
+
+    end function recv_dof
+    !************************************************************************
 
 
 

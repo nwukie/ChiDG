@@ -309,6 +309,12 @@
         MODULE PROCEDURE SIN_RAMP_D_D ! obtain sine ramping of a dual number, ELEMENTAL
    END INTERFACE
 
+   PUBLIC SIN_RAMP2
+   INTERFACE SIN_RAMP2
+        MODULE PROCEDURE SIN_RAMP_DDD_D ! obtain sine ramping of a dual number, ELEMENTAL
+   END INTERFACE
+
+
    PUBLIC SIN  
    INTERFACE SIN
         MODULE PROCEDURE SIN_D_D ! obtain sine of a dual number, ELEMENTAL

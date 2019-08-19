@@ -44,7 +44,7 @@ module integration_1D_nonlinear_diffusion_mod
     use mod_bc,                 only: create_bc
     use mod_string,             only: string_t
     use type_bc_state,          only: bc_state_t
-    use type_bc_state_group,          only: bc_state_group_t
+    use type_bc_state_group,    only: bc_state_group_t
     use type_chidg,             only: chidg_t
     use type_chidg_data,        only: chidg_data_t
     use type_function,          only: function_t
@@ -83,8 +83,8 @@ module integration_1D_nonlinear_diffusion_mod
     !
     ! Procs: 1, 2, 3, 5, 8
     !
-    real(rk)    :: error(5,2,3)         ! nprocs, ngrids, norders
-    real(rk)    :: error_chimera(5,2,3) ! nprocs, ngrids, norders
+    real(rk)    :: error(5,2,3,2)         ! nprocs, ngrids, norders, (native,petsc)
+    real(rk)    :: error_chimera(5,2,3,2) ! nprocs, ngrids, norders, (native,petsc)
 
 
     public  :: nonlinear_diffusion_1D
@@ -148,12 +148,11 @@ module integration_1D_nonlinear_diffusion_mod
     !-------------------------------------------------------------------------------
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
-
         integer(ik)                 :: nelem_xi
+        integer(ik)                 :: order
         character(:),   allocatable :: gridtype
         character(:),   allocatable :: gridfile
-        integer(ik)                 :: order
-        
+        character(:),   allocatable :: backend
     contains
         procedure   :: toString
     end type case_grid_order
@@ -174,13 +173,13 @@ module integration_1D_nonlinear_diffusion_mod
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: nonlinear_diffusion_1D
 
+        type(chidg_t)               :: chidg
+
         integer(ik)                 :: nelem_xi
+        integer(ik)                 :: order
         character(:),   allocatable :: gridtype
         character(:),   allocatable :: gridfile
-        integer(ik)                 :: order
-
-        type(chidg_t)   :: chidg
-        type(mpi_comm)  :: ChiDG_COMM
+        character(:),   allocatable :: backend
 
     contains
         procedure   :: setUp
@@ -306,12 +305,14 @@ contains
     !----------------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
         type(case_grid_order),  intent(in)          :: test_parameter
+
         type(nonlinear_diffusion_1D)    :: test
 
         test%nelem_xi = test_parameter%nelem_xi
         test%gridtype = test_parameter%gridtype
         test%gridfile = test_parameter%gridfile
         test%order    = test_parameter%order
+        test%backend  = test_parameter%backend
 
     end function newTest
     !****************************************************************************************
@@ -325,60 +326,96 @@ contains
         type(case_grid_order), allocatable :: params(:)
     
         integer(ik),        allocatable :: nelem_xi(:)
-        type(string_t),     allocatable :: files(:), gridtype(:)
+        type(string_t),     allocatable :: gridtype(:)
+        type(string_t),     allocatable :: backend(:)
         integer(ik),        allocatable :: orders(:)
-        integer(ik) :: icase
+        integer(ik) :: icase, ncases, imesh, igrid, iorder, ibackend
 
-        nelem_xi = [120, 120, 120, &
-                    240, 240, 240, &
-                    120, 120, 120, &
-                    240, 240, 240 ]
-
-
-        gridtype = [string_t('singleblock'), &
-                    string_t('singleblock'), &
-                    string_t('singleblock'), &
-                    string_t('singleblock'), &
-                    string_t('singleblock'), &
-                    string_t('singleblock'), &
-                    string_t('chimera'),     &
-                    string_t('chimera'),     &
-                    string_t('chimera'),     &
-                    string_t('chimera'),     &
-                    string_t('chimera'),     &
-                    string_t('chimera')      &
-                    ]
-
-
-        files = [ string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
-                  string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
-                  string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
-                  string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
-                  string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
-                  string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
-                  string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
-                  string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
-                  string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
-                  string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5'), &
-                  string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5'), &
-                  string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5')  &
-                  ]
-
-
-        orders = [ 2, 3, 4, &
-                   2, 3, 4, &
-                   2, 3, 4, &
-                   2, 3, 4 ]
+        nelem_xi = [120, 240]
+        orders   = [2, 3, 4]
+        gridtype = [ string_t("single"), string_t("overset") ]
+        backend  = [ string_t("native"), string_t("petsc")   ]
 
 
         !Initialize the test case container with the parameter
-        allocate(params(size(files)))
-        do icase = 1,size(files)
-            params(icase)%nelem_xi = nelem_xi(icase)
-            params(icase)%gridtype = gridtype(icase)%str
-            params(icase)%gridfile = files(icase)%str
-            params(icase)%order    = orders(icase)
+        ncases = size(nelem_xi)*size(gridtype)*size(orders)*size(backend)
+        if (allocated(params)) deallocate(params)
+        allocate(params(ncases))
+
+        icase = 1
+        do imesh = 1,size(nelem_xi)
+            do igrid = 1,size(gridtype)
+                do iorder = 1,size(orders)
+                    do ibackend = 1,size(backend)
+
+                        params(icase)%nelem_xi = nelem_xi(imesh)
+                        params(icase)%order    = orders(iorder)
+                        params(icase)%gridtype = gridtype(igrid)%str
+                        params(icase)%gridfile = 'grid.h5'
+                        params(icase)%backend  = backend(ibackend)%str
+                        icase = icase + 1
+
+                    end do
+                end do
+            end do
         end do
+
+
+
+
+
+
+
+!        nelem_xi = [120, 120, 120, &
+!                    240, 240, 240, &
+!                    120, 120, 120, &
+!                    240, 240, 240 ]
+!
+!
+!        gridtype = [string_t('singleblock'), &
+!                    string_t('singleblock'), &
+!                    string_t('singleblock'), &
+!                    string_t('singleblock'), &
+!                    string_t('singleblock'), &
+!                    string_t('singleblock'), &
+!                    string_t('chimera'),     &
+!                    string_t('chimera'),     &
+!                    string_t('chimera'),     &
+!                    string_t('chimera'),     &
+!                    string_t('chimera'),     &
+!                    string_t('chimera')      &
+!                    ]
+!
+!
+!        files = [ string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
+!                  string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
+!                  string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
+!                  string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
+!                  string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
+!                  string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
+!                  string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
+!                  string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
+!                  string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
+!                  string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5'), &
+!                  string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5'), &
+!                  string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5')  &
+!                  ]
+!
+!
+!        orders = [ 2, 3, 4, &
+!                   2, 3, 4, &
+!                   2, 3, 4, &
+!                   2, 3, 4 ]
+!
+!
+!        !Initialize the test case container with the parameter
+!        allocate(params(size(files)))
+!        do icase = 1,size(files)
+!            params(icase)%nelem_xi = nelem_xi(icase)
+!            params(icase)%gridtype = gridtype(icase)%str
+!            params(icase)%gridfile = files(icase)%str
+!            params(icase)%order    = orders(icase)
+!        end do
 
     end function getParameters
     !****************************************************************************************
@@ -395,7 +432,9 @@ contains
 
         character(200) :: buffer
 
-        write(buffer,'( "(nelem_xi, gridtype, order)=","(", I3,",", A10,",", I1, ")" )') this%nelem_xi, this%gridtype, this%order
+        write(buffer,'( "(nelem, gridtype, order, backend)=","(", I3,",", A6,",", I1,",", A5, ")" )') this%nelem_xi, this%gridtype, this%order, this%backend
+        !write(buffer,'( "(nelem, gridtype, order, backend)=","(", I2,",", A6,",", I1,",", A5, ")" )') this%nelem_xi, this%gridtype, this%order, this%backend
+
         string = trim(buffer)
 
     end function toString
@@ -430,29 +469,15 @@ contains
         type(testing_1D_nonlinear_diffusion_model_t)    :: diffusion_coefficient_model
 
         ! Get MPI communicator information from pFUnit
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+        IRANK              = this%getProcessRank()
+        NRANK              = this%getNumProcessesRequested()
+        ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
         ! Initialize ChiDG environment
         IO_DESTINATION   = 'file'
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('mpi',ChiDG_COMM)
         call this%chidg%start_up('core')
-
-
-        !-------------------------------------------------------------------------------
-        !          Initialize and register the diffusion coefficient model
-        !-------------------------------------------------------------------------------
-        call diffusion_coefficient_model%init()
-        call model_factory%register(diffusion_coefficient_model)
-
-
-        !-------------------------------------------------------------------------------
-        !                 Initialize and register equation set builder
-        !-------------------------------------------------------------------------------
-        call builder_test_nonlinear_diffusion%init()
-        call equation_set_factory%register(builder_test_nonlinear_diffusion%build('default'))
 
 
         !------------------------------------------------------------------------------
@@ -464,6 +489,7 @@ contains
         !------------------------------------------------------------------------------
         basis            = 'legendre'
         gq_rule          = 2
+        backend          = trim(this%backend)
         time_integrator  = 'steady'
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres'
@@ -482,6 +508,22 @@ contains
         !------------------------------------------------------------------------------
 
 
+
+
+
+
+        !-------------------------------------------------------------------------------
+        !          Initialize and register the diffusion coefficient model
+        !-------------------------------------------------------------------------------
+        call diffusion_coefficient_model%init()
+        call model_factory%register(diffusion_coefficient_model)
+
+
+        !-------------------------------------------------------------------------------
+        !                 Initialize and register equation set builder
+        !-------------------------------------------------------------------------------
+        call builder_test_nonlinear_diffusion%init()
+        call equation_set_factory%register(builder_test_nonlinear_diffusion%build('default'))
 
 
 
@@ -506,7 +548,7 @@ contains
             call bc_state_groups(3)%add_bc_state(bc_state)
 
 
-            if (this%gridtype == 'singleblock') then
+            if (this%gridtype == 'single') then
 
                 group_names(1,:) = [string_t("Left Boundary")  , &
                                     string_t("Right Boundary") , &
@@ -526,7 +568,7 @@ contains
                                                  nelem_zeta      = 1,                                           &
                                                  clusterx        = -1)
 
-            else if (this%gridtype == 'chimera') then
+            else if (this%gridtype == 'overset') then
 
 
                 group_names(1,:) = [string_t("Left Boundary")  , &
@@ -558,7 +600,7 @@ contains
 
 
         end if
-        call MPI_Barrier(this%ChiDG_COMM,ierr)
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
 
         ! Set ChiDG components
@@ -598,6 +640,7 @@ contains
 
         ! Close ChiDG
         call this%chidg%shut_down('core')
+        call this%chidg%shut_down('mpi')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -621,27 +664,28 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     @Test(npes=[1,2,3,5,8])
-    subroutine run_calculations(self)
-        class(nonlinear_diffusion_1D),  intent(inout)   :: self
+    subroutine run_calculations(this)
+        class(nonlinear_diffusion_1D),  intent(inout)   :: this
 
         real(rk)    :: computed_error
-        integer(ik) :: npes_index, grid_index, order_index
+        integer(ik) :: npes_index, grid_index, order_index, backend_index
 
-        npes_index  = get_npes_index(NRANK)
-        grid_index  = get_grid_index(self%nelem_xi)
-        order_index = get_order_index(self%order)
+        npes_index    = get_npes_index(NRANK)
+        grid_index    = get_grid_index(this%nelem_xi)
+        order_index   = get_order_index(this%order)
+        backend_index = get_backend_index(this%backend)
 
         ! Run ChiDG simulation
-        call self%chidg%run(write_initial=.false., write_final=.false.)
+        call this%chidg%run(write_initial=.false., write_final=.false.)
 
         ! Compute error
-        computed_error = compute_1D_nonlinear_diffusion_error(self%chidg%data,self%ChiDG_COMM)
+        computed_error = compute_1D_nonlinear_diffusion_error(this%chidg%data,ChiDG_COMM)
 
         ! Store the computed error for the current case
-        if (self%gridtype == 'singleblock') then
-            error(        npes_index,grid_index,order_index) = computed_error
-        else if (self%gridtype == 'chimera') then
-            error_chimera(npes_index,grid_index,order_index) = computed_error
+        if (this%gridtype == 'single') then
+            error(        npes_index,grid_index,order_index,backend_index) = computed_error
+        else if (this%gridtype == 'overset') then
+            error_chimera(npes_index,grid_index,order_index,backend_index) = computed_error
         end if
 
     end subroutine run_calculations
@@ -660,28 +704,31 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     @Test(npes=[1])
-    subroutine test_err_conform(self)
-        class(nonlinear_diffusion_1D),  intent(inout)   :: self
+    subroutine test_err_conform(this)
+        class(nonlinear_diffusion_1D),  intent(inout)   :: this
 
-        integer(ik) :: inpes, igrid, iorder
-        real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
+        integer(ik) :: inpes, igrid, iorder, ibackend
+        real(rk)    :: error_previous, error_current, mesh_parameter_previous, &
+                       mesh_parameter_current, convergence_rate, tol
 
         tol = 0.1_rk
 
         do inpes = 1,5
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,3
+                    do ibackend = 1,2
 
-                    error_previous = error(inpes,igrid-1,iorder)
-                    error_current  = error(inpes,igrid  ,iorder)
+                        error_previous = error(inpes,igrid-1,iorder,ibackend)
+                        error_current  = error(inpes,igrid  ,iorder,ibackend)
 
-                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
-                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
+                        mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
+                        mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
 
-                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                        ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                        convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+                        @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
 
+                    end do
                 end do
             end do
         end do
@@ -702,28 +749,31 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     @Test(npes=[1])
-    subroutine test_err_chimera(self)
-        class(nonlinear_diffusion_1D),  intent(inout)   :: self
+    subroutine test_err_chimera(this)
+        class(nonlinear_diffusion_1D),  intent(inout)   :: this 
 
-        integer(ik) :: inpes, igrid, iorder
-        real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
+        integer(ik) :: inpes, igrid, iorder, ibackend
+        real(rk)    :: error_previous, error_current, mesh_parameter_previous, &
+                       mesh_parameter_current, convergence_rate, tol
 
         tol = 0.1_rk
 
         do inpes = 1,5
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,3
+                    do ibackend = 1,2
 
-                    error_previous = error_chimera(inpes,igrid-1,iorder)
-                    error_current  = error_chimera(inpes,igrid  ,iorder)
+                        error_previous = error_chimera(inpes,igrid-1,iorder,ibackend)
+                        error_current  = error_chimera(inpes,igrid  ,iorder,ibackend)
 
-                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
-                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
+                        mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
+                        mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
 
-                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                        ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                        convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+                        @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
 
+                    end do
                 end do
             end do
         end do
@@ -917,6 +967,24 @@ contains
     !****************************************************************************************
 
 
+    ! Utility for returning the index associated with a certain number of procs
+    !------------------------------------------------------------------------------
+    function get_backend_index(backend) result(ibackend)
+        character(*),   intent(in)  :: backend
+
+        integer(ik) :: ibackend
+
+        select case (trim(backend))
+            case('native')
+                ibackend = 1
+            case('petsc')
+                ibackend = 2
+            case default
+                call chidg_signal_one(FATAL,'Invalid backend.', trim(backend))
+        end select
+
+    end function get_backend_index
+    !******************************************************************************
 
 
 

@@ -172,11 +172,11 @@ contains
         ! Get previously computed viscosities
         !
         mu_l    = worker%get_field('Laminar Viscosity',   'value')
-        mu_t    = worker%get_field('Turbulent Viscosity', 'value')
+        !mu_t    = worker%get_field('Turbulent Viscosity', 'value')
         !mu_a    = worker%get_field('Smoothed Artificial Shear Viscosity', 'value')
 
         lamda_l = worker%get_field('Second Coefficient of Laminar Viscosity',   'value')
-        lamda_t = worker%get_field('Second Coefficient of Turbulent Viscosity', 'value')
+        !lamda_t = worker%get_field('Second Coefficient of Turbulent Viscosity', 'value')
         !lamda_a = worker%get_field('Smoothed Artificial Bulk Viscosity', 'value')
 
         reynolds_11 = worker%get_field('Reynolds-11',   'value')
@@ -217,8 +217,8 @@ contains
         !mu    = mu_l    + mu_t + mu_a
         !lamda = lamda_l + lamda_t + lamda_a
 
-        mu    = mu_l    + mu_t 
-        lamda = lamda_l + lamda_t 
+        mu    = mu_l    !+ mu_t 
+        lamda = lamda_l !+ lamda_t 
 
 
         !
@@ -281,13 +281,13 @@ contains
             !
             ! Compute shear stress components
             !
-            shear_11 = TWO*mu*grad1_u  +  lamda*(div_velocity)  +   blend*reynolds_11
-            shear_22 = TWO*mu*grad2_v  +  lamda*(div_velocity)  +   blend*reynolds_22
-            shear_33 = TWO*mu*grad3_w  +  lamda*(div_velocity)  +   blend*reynolds_33
+            shear_11 = TWO*mu*grad1_u  +  lamda*(div_velocity)  -   density*reynolds_11
+            shear_22 = TWO*mu*grad2_v  +  lamda*(div_velocity)  -   density*reynolds_22
+            shear_33 = TWO*mu*grad3_w  +  lamda*(div_velocity)  -   density*reynolds_33
 
-            shear_12 = mu*(grad2_u + grad1_v)   +   blend*reynolds_12
-            shear_13 = mu*(grad3_u + grad1_w)   +   blend*reynolds_13
-            shear_23 = mu*(grad2_w + grad3_v)   +   blend*reynolds_23
+            shear_12 = mu*(grad2_u + grad1_v)   -   density*reynolds_12
+            shear_13 = mu*(grad3_u + grad1_w)   -   density*reynolds_13
+            shear_23 = mu*(grad2_w + grad3_v)   -   density*reynolds_23
 
 
 

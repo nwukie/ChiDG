@@ -20,12 +20,14 @@
 subroutine test_solverdata__auxiliary_fields_one()
     use pfunit_mod
 
+    use mod_kinds,          only: ik
     use type_solverdata,    only: solverdata_t
     use type_chidg_vector,  only: chidg_vector_t
 
 
     type(solverdata_t)      :: sdata
     type(chidg_vector_t)    :: aux_vector_one
+    integer(ik)             :: aux_ID
 
 
     ! Test number of fields BEFORE
@@ -33,7 +35,7 @@ subroutine test_solverdata__auxiliary_fields_one()
 
 
     ! THIS IS BEING TESTED
-    call sdata%add_auxiliary_field('aux one', aux_vector_one)
+    aux_ID = sdata%add_auxiliary_field('aux one', aux_vector_one)
 
 
     ! Test fields AFTER
@@ -49,12 +51,14 @@ end subroutine test_solverdata__auxiliary_fields_one
 subroutine test_solverdata__auxiliary_fields_two()
     use pfunit_mod
 
+    use mod_kinds,          only: ik
     use type_solverdata,    only: solverdata_t
     use type_chidg_vector,  only: chidg_vector_t
 
 
     type(solverdata_t)      :: sdata
     type(chidg_vector_t)    :: aux_vector_one, aux_vector_two
+    integer(ik)             :: aux_ID
 
 
     ! Test number of fields BEFORE
@@ -62,8 +66,8 @@ subroutine test_solverdata__auxiliary_fields_two()
 
 
     ! THIS IS BEING TESTED
-    call sdata%add_auxiliary_field('aux one', aux_vector_one)
-    call sdata%add_auxiliary_field('aux two', aux_vector_two)
+    aux_ID = sdata%add_auxiliary_field('aux one', aux_vector_one)
+    aux_ID = sdata%add_auxiliary_field('aux two', aux_vector_two)
 
 
     ! Test fields AFTER

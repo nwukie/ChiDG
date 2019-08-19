@@ -15,7 +15,7 @@ module type_harmonic_balance
     use type_rvector,                   only: rvector_t
     use mod_HB_matrices,                only: calc_pseudo_spectral_operator
     use type_seed,                      only: seed_t
-    use type_face_info
+    use type_element_info,              only: element_info_t, element_info
     use type_chidg_vector
     use DNAD_D
 
@@ -130,17 +130,18 @@ contains
         logical,                              intent(in)                  :: differentiate
         real(rk),                             intent(inout), optional     :: timing
 
-        integer(ik)             :: itime_outer, itime_inner, idom, ielem, ivar, eqn_ID, ierr, ntime, nfields, &
-                                   irow_start, irow_end, icol_start, icol_end, nterms_s
+        integer(ik)             :: itime_outer, itime_inner, idom, ielem, ifield, ierr, ntime, &
+                                   irow_start, irow_end, icol_start, icol_end
         real(rk),   allocatable :: temp_1(:), temp_2(:), D(:,:), temp_mat(:,:), hb_mat(:,:)
         type(chidg_vector_t)    :: rhs_tmp
         type(seed_t)            :: seed
-        type(face_info_t)       :: face
+        type(element_info_t)    :: elem_info
 
         
         associate ( rhs => data%sdata%rhs, lhs => data%sdata%lhs, q => data%sdata%q )
         call rhs%clear()
         if (differentiate) call lhs%clear()
+
 
         ! Set local variables equal to the values set in time_manager
         ntime = size(data%time_manager%times)
@@ -160,63 +161,53 @@ contains
                 if (ierr /= 0) call AllocationError
 
                 do ielem = 1,data%mesh%domain(idom)%nelem
-                    eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
-                    nterms_s = data%mesh%domain(idom)%elems(ielem)%nterms_s
-                    nfields = data%eqnset(eqn_ID)%prop%nprimary_fields()
+                    elem_info = data%mesh%get_element_info(idom,ielem)
+
                     do itime_inner = 1,ntime
 
                         ! LHS HB contribution for each variable
                         temp_mat = D(itime_outer,itime_inner)*data%mesh%domain(idom)%elems(ielem)%mass
                         if (allocated(hb_mat)) deallocate(hb_mat)
-                        allocate(hb_mat(nterms_s*nfields,nterms_s*nfields), stat=ierr)
+                        allocate(hb_mat(elem_info%nterms_s*elem_info%nfields,elem_info%nterms_s*elem_info%nfields), stat=ierr)
                         if (ierr /= 0) call AllocationError
-                        hb_mat(:,:) = ZERO
+                        hb_mat = ZERO
 
                         ! Accumulate variable contributions
-                        do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
+                        do ifield = 1,data%eqnset(elem_info%eqn_ID)%prop%nprimary_fields()
 
                             ! Temporary variables for computing the temporal rhs contributions
                             temp_1 = D(itime_outer,itime_inner)*matmul(data%mesh%domain(idom)%elems(ielem)%mass, &
-                                                            q%dom(idom)%vecs(ielem)%getvar(ivar,itime_inner))
+                                                            q%get_field(elem_info,ifield,itime_inner))
 
-                            temp_2 = rhs%dom(idom)%vecs(ielem)%getvar(ivar,itime_outer) + temp_1
 
-                            ! Store the temporal contributions in the rhs
-                            call rhs%dom(idom)%vecs(ielem)%setvar(ivar,itime_outer,temp_2)
+                            call rhs%add_field(temp_1,elem_info,ifield,itime_outer)
 
                             ! Accumulate hb contribution for the variable
-                            irow_start = 1 + (ivar-1)*nterms_s
-                            irow_end   = irow_start + (nterms_s-1)
-                            icol_start = 1 + (ivar-1)*nterms_s
-                            icol_end   = icol_start + (nterms_s-1)
+                            irow_start = 1 + (ifield-1)*elem_info%nterms_s
+                            irow_end   = irow_start + (elem_info%nterms_s-1)
+                            icol_start = 1 + (ifield-1)*elem_info%nterms_s
+                            icol_end   = icol_start + (elem_info%nterms_s-1)
                             hb_mat(irow_start:irow_end,icol_start:icol_end) = temp_mat
 
-                        end do  ! ivar
+                        end do  ! ifield
 
-
-                        ! LHS contribution
-                        face = face_info(data%mesh%domain(idom)%elems(ielem)%idomain_g,  &
-                                         data%mesh%domain(idom)%elems(ielem)%idomain_l,  &
-                                         data%mesh%domain(idom)%elems(ielem)%ielement_g, &
-                                         data%mesh%domain(idom)%elems(ielem)%ielement_l, &
-                                         NO_FACE)
-
-
-                        call seed%init(data%mesh%domain(idom)%elems(ielem)%idomain_g,  &
-                                       data%mesh%domain(idom)%elems(ielem)%idomain_l,  &
-                                       data%mesh%domain(idom)%elems(ielem)%ielement_g, &
-                                       data%mesh%domain(idom)%elems(ielem)%ielement_l, &
-                                       data%mesh%domain(idom)%elems(ielem)%neqns,      &
-                                       data%mesh%domain(idom)%elems(ielem)%nterms_s,   &
-                                       IRANK,                                          &
-                                       itime_inner,                                    &
-                                       NO_ID,                                          &
-                                       NO_ID,                                          &
+                        ! LHS Contribution
+                        call seed%init(elem_info%idomain_g,  &
+                                       elem_info%idomain_l,  &
+                                       elem_info%ielement_g, &
+                                       elem_info%ielement_l, &
+                                       elem_info%nfields,    &
+                                       elem_info%nterms_s,   &
+                                       IRANK,                &
+                                       itime_inner,          &
+                                       elem_info%dof_start,  &
+                                       NO_ID,                &
+                                       NO_ID,                &
                                        NO_ID)
 
                         ! Store HB contribution for all fields to lhs at one time
                         if (itime_inner /= itime_outer) then
-                            call lhs%dom(idom)%store_hb_element(hb_mat,face,seed,itime_outer)
+                            if (differentiate) call lhs%store_element(hb_mat,elem_info,seed,itime_outer)
                         end if
 
 
@@ -226,6 +217,11 @@ contains
         end do  ! itime_outer
 
         end associate
+
+
+        ! Assemble RHS, LHS after HB contributions
+        call data%sdata%rhs%assemble()
+        if (differentiate) call data%sdata%lhs%assemble()
 
 
     end subroutine assemble

@@ -525,9 +525,7 @@ contains
         integer(ik) :: field_index, ifield
         logical     :: found = .false.
 
-
         field_index = 0
-
 
         ! Search for character string in self%primary_fields array. If found set index
         do ifield = 1,self%nprimary_fields()

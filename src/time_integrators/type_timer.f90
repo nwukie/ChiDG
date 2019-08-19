@@ -104,13 +104,15 @@ contains
 
         real(rk)    :: elapsed_time
         
-        if (self%stopped) then
-            !elapsed_time = real(self%stop_time - self%start_time,rk)
-            elapsed_time = self%elapsed_time
-        else
-            call chidg_signal(WARN,'type_timer: Timer was not stopped')
-            elapsed_time = 123456789._rk
-        end if
+        !if (self%stopped) then
+        !    !elapsed_time = real(self%stop_time - self%start_time,rk)
+        !    elapsed_time = self%elapsed_time
+        !else
+        !    call chidg_signal(WARN,'type_timer: Timer was not stopped')
+        !    elapsed_time = 123456789._rk
+        !end if
+
+        elapsed_time = self%elapsed_time
 
     end function elapsed
     !****************************************************************************

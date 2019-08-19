@@ -98,8 +98,9 @@ contains
             call METIS_SetDefaultOptions(options)
             options_p = c_loc(options(0))
 
-            options(0)  = 0      ! PTYPE
-            options(3)  = 0      ! IPTYPE
+            options(0)  = 0      ! PTYPE  (Recursive Bisetion (a), k-way (b)
+            options(3)  = 0      ! IPTYPE (
+
             !options(10) = 2
             !options(16) = 1
 

@@ -76,7 +76,6 @@ module test__find_gq_donor_mod
     !----------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(ParameterizedTestCase) :: test_find_gq_donor
-        type(chidg_t)   :: chidg
 
         real(rk)                :: gqnode(3)
         type(element_info_t)    :: donor
@@ -91,6 +90,7 @@ module test__find_gq_donor_mod
 
 
 
+    type(chidg_t)   :: chidg
 
 
 
@@ -121,7 +121,7 @@ contains
 
 
         ! Initialize ChiDG environment
-        call this%chidg%start_up('core')
+        call chidg%start_up('core')
 
 
         ! Create 2x2x2-element Grid
@@ -135,12 +135,12 @@ contains
 
 
         ! Initialize equation set
-        call this%chidg%data%add_equation_set('Scalar Advection')
-        eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
+        call chidg%data%add_equation_set('Scalar Advection')
+        eqn_ID = chidg%data%get_equation_set_id('Scalar Advection')
 
 
         ! Add domain to ChiDG, initialize
-        call this%chidg%data%mesh%add_domain('D_01',                 &
+        call chidg%data%mesh%add_domain('D_01',                 &
                                              meshdata%nodes,         &
                                              meshdata%dnodes,        &
                                              meshdata%vnodes,        &
@@ -149,9 +149,9 @@ contains
                                              'Cartesian',            &
                                              eqn_ID)
 
-        call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%init('domains')
-        call this%chidg%init('comm - interior')
+        call chidg%set('Solution Order', integer_input=2)
+        call chidg%init('domains')
+        call chidg%init('comm - interior')
 
     end subroutine setUp
     !**************************************************************************************
@@ -168,7 +168,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%shut_down('core')
+        call chidg%shut_down('core')
 
     end subroutine tearDown
     !******************************************************************************
@@ -321,12 +321,12 @@ contains
         !
         ! Given some point, find a donor element in the grid. THIS IS BEING TESTED
         !
-        call find_gq_donor(self%chidg%data%mesh,    &
-                           self%gqnode,             &
-                           offset,                  &
-                           receiver,                &
-                           donor,                   &
-                           donor_coord,             &
+        call find_gq_donor(chidg%data%mesh, &
+                           self%gqnode,     &
+                           offset,          &
+                           receiver,        &
+                           donor,           &
+                           donor_coord,     &
                            donor_found)
 
 

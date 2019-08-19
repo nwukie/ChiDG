@@ -49,12 +49,13 @@ contains
         integer(ik), parameter          :: npt = 8
         real(rk)                        :: nodes(npt,3)
         real(rk)                        :: sqrt_two, inv_sqrt_two
-        integer(ik)                     :: ftype, ielem, idomain,                       &
-                                           neqns, nterms_s, ntime,                      &
-                                           ineighbor_domain_g,  ineighbor_domain_l,     &
-                                           ineighbor_element_g, ineighbor_element_l,    &
-                                           ineighbor_face, ineighbor_proc,              &
-                                           ineighbor_neqns, ineighbor_nterms_s
+        integer(ik)                     :: ftype, ielem, idomain,                                   &
+                                           nfields, nterms_s, ntime, dof_start, dof_local_start,    &
+                                           ineighbor_domain_g,  ineighbor_domain_l,                 &
+                                           ineighbor_element_g, ineighbor_element_l,                &
+                                           ineighbor_face, ineighbor_proc,                          &
+                                           ineighbor_nfields, ineighbor_ntime,                      &
+                                           ineighbor_nterms_s,ineighbor_dof_start,ineighbor_dof_local_start
         
         
         IO_DESTINATION='file'
@@ -78,29 +79,31 @@ contains
         !!
         sqrt_two        = sqrt(2._rk)
         inv_sqrt_two    = 1._rk/sqrt_two
-        nodes(1,:) = [0._rk, 0._rk, 0._rk]
-        nodes(2,:) = [inv_sqrt_two,inv_sqrt_two, 0._rk]
-        nodes(3,:) = [-inv_sqrt_two,inv_sqrt_two, 0._rk]
-        nodes(4,:) = [0._rk, sqrt_two, 0._rk]
-        nodes(5,:) = [0._rk, 0._rk, 1._rk]
-        nodes(6,:) = [inv_sqrt_two,inv_sqrt_two, 1._rk]
-        nodes(7,:) = [-inv_sqrt_two,inv_sqrt_two, 1._rk]
-        nodes(8,:) = [0._rk, sqrt_two, 1._rk]
+        nodes(1,:) = [0._rk,         0._rk,        0._rk]
+        nodes(2,:) = [inv_sqrt_two,  inv_sqrt_two, 0._rk]
+        nodes(3,:) = [0._rk,         sqrt_two,     0._rk]
+        nodes(4,:) = [-inv_sqrt_two, inv_sqrt_two, 0._rk]
+        nodes(5,:) = [0._rk,         0._rk,        1._rk]
+        nodes(6,:) = [inv_sqrt_two,  inv_sqrt_two, 1._rk]
+        nodes(7,:) = [0._rk,         sqrt_two,     1._rk]
+        nodes(8,:) = [-inv_sqrt_two, inv_sqrt_two, 1._rk]
 
         
         
         ! Initialize Element geometry and Numerics
-        idomain  = 1
-        ielem    = 1
-        neqns    = 2
-        nterms_s = 8
-        ntime    = 1
+        idomain         = 1
+        ielem           = 1
+        nfields         = 2
+        nterms_s        = 8
+        ntime           = 1
+        dof_start       = 1
+        dof_local_start = 1
         call this%elem%init_geom(nodes        = nodes,                                  &
                                  connectivity = [1, 2, 3, 4, 5, 6, 7, 8],               &
                                  etype        = 1,                                      &
                                  location     = [idomain,idomain,ielem,ielem,IRANK],    &
                                  coord_system = 'Cartesian')
-        call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime)
+        call this%elem%init_sol('Quadrature',1,nterms_s,nfields,ntime,dof_start,dof_local_start)
 
 
 
@@ -114,31 +117,46 @@ contains
 
         ! Initialize face neighbors
         ftype = 0
-        ineighbor_domain_g  = 0
-        ineighbor_domain_l  = 0
-        ineighbor_element_g = 0
-        ineighbor_element_l = 0
-        ineighbor_proc      = 0
-        ineighbor_neqns     = 2
-        ineighbor_nterms_s  = 8
-        call this%faces(XI_MIN)%set_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(XI_MAX)%set_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ETA_MIN)%set_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ETA_MAX)%set_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ZETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ZETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+        ineighbor_domain_g        = 0
+        ineighbor_domain_l        = 0
+        ineighbor_element_g       = 0
+        ineighbor_element_l       = 0
+        ineighbor_proc            = 0
+        ineighbor_nfields         = 2
+        ineighbor_ntime           = 1
+        ineighbor_nterms_s        = 8
+        ineighbor_dof_start       = 1
+        ineighbor_dof_local_start = 1
+        call this%faces(XI_MIN)%set_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(XI_MAX)%set_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ETA_MIN)%set_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ETA_MAX)%set_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ZETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ZETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
 
 
 

@@ -16,6 +16,7 @@ module mod_preconditioner
     use precon_RASILU0_overset, only: precon_RASILU0_overset_t
     use precon_line,            only: precon_line_t
     use precon_schur_element,   only: precon_schur_element_t
+    use precon_petsc,           only: precon_petsc_t
     implicit none
 
 
@@ -31,6 +32,7 @@ module mod_preconditioner
     type(precon_RASILU0_overset_t)  :: P_RASILU0_OVERSET
     type(precon_line_t)             :: P_LINE
     type(precon_schur_element_t)    :: P_SCHUR_ELEMENT
+    type(precon_petsc_t)            :: P_PETSC
 
 
 
@@ -81,6 +83,9 @@ contains
 
             case('Schur Element')
                 allocate(instance, source=P_SCHUR_ELEMENT)
+
+            case('petsc','PETSC')
+                allocate(instance, source=P_PETSC)
 
             case default
                 user_msg = "create_preconditioner: It seems like we can't find the preconditioner &

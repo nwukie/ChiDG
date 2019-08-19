@@ -1,5 +1,5 @@
 add_subdirectory(smoothbump)
-add_subdirectory(cylinder)
+#add_subdirectory(cylinder)
 #add_subdirectory(naca2412)
 
 add_test_sources(equations_fluid_euler)

@@ -30,6 +30,8 @@ module type_octree
         logical                         :: has_nodes = .false.
         
         integer(ik),    allocatable     :: successors(:)
+
+        integer(ik)                     :: num_nodes_in_leaves = 0
     contains
 
         procedure                       :: init
@@ -71,10 +73,10 @@ contains
 
 
         ! Copy the nodes if requested
-        if (self%params%copy_points) then
+        !if (self%params%copy_points) then
             self%global_nodes = global_nodes
             self%has_nodes = .true.
-        end if
+        !end if
 
         !----------------------------------------------------------------------------------------------------
         !
@@ -92,7 +94,7 @@ contains
         coord_max(2) = maxval(global_nodes(:,2))
         coord_max(3) = maxval(global_nodes(:,3))
 
-        extent = HALF*(coord_max - coord_min)
+        extent = 1.05_rk*HALF*(coord_max - coord_min)
 
         center = HALF*(coord_min + coord_max)
             
@@ -100,6 +102,7 @@ contains
         start_index = 1
         end_index   = num_points
 
+        if (allocated(self%successors)) deallocate(self%successors)
         allocate(self%successors(num_points))
         do inode = 1, num_points
             self%successors(inode) = inode+1
@@ -113,8 +116,12 @@ contains
         !    
 
 
-        call self%create_octant(center, extent, start_index, end_index, num_points, global_nodes, root_box_ID)
+       ! print *, 'call create octant' 
+        !call self%create_octant(center, extent, start_index, end_index, num_points, global_nodes, root_box_ID)
+        call self%create_octant(center, extent, start_index, end_index, num_points, root_box_ID)
         self%root_box_ID = root_box_ID
+        !print *, 'num nodes in leaves: ', self%num_nodes_in_leaves
+        !print *, 'num nodes total: ', num_points
 
     end subroutine build_octree_depth_first
 
@@ -125,12 +132,13 @@ contains
     !! @date    08/17/2018 
     !!
     !--------------------------------------------------------------------------------
-    recursive subroutine create_octant(self, center, extent, start_index, end_index, num_points, global_nodes, my_box_ID) 
+    !recursive subroutine create_octant(self, center, extent, start_index, end_index, num_points, global_nodes, my_box_ID) 
+    recursive subroutine create_octant(self, center, extent, start_index, end_index, num_points, my_box_ID) 
         class(octree_t),    intent(inout)   :: self 
         real(rk),           intent(in)      :: center(3), extent(3)
         integer(ik),        intent(in)      :: num_points, start_index, end_index
-        real(rk),           intent(in)      :: global_nodes(:,:)
-        integer(ik),        intent(out)     :: my_box_ID
+        !real(rk),           intent(in)      :: global_nodes(:,:)
+        integer(ik),        intent(inout)     :: my_box_ID
 
         
         integer(ik) :: box_ID, child_box_ID, idx, morton_code,last_child_box_ID, ichild, num_children, ipt
@@ -158,7 +166,7 @@ contains
             child_starts = 1
             child_ends = 1
             do ipt = 1, num_points
-                node = global_nodes(idx,:)
+                node = self%global_nodes(idx,:)
 
                 ! Morton code trickery
                 morton_code = 0
@@ -198,7 +206,8 @@ contains
 
                     ! Recursively call create_octant to create the child octant box
                     !print *, 'f'
-                    call self%create_octant(child_center, child_extent, child_starts(ichild), child_ends(ichild), child_sizes(ichild), global_nodes, child_box_ID) 
+                    !call self%create_octant(child_center, child_extent, child_starts(ichild), child_ends(ichild), child_sizes(ichild), global_nodes, child_box_ID) 
+                    call self%create_octant(child_center, child_extent, child_starts(ichild), child_ends(ichild), child_sizes(ichild), child_box_ID) 
 
                     !print *, 'g'
                     ! Store the child_box_ID in the current box
@@ -231,6 +240,7 @@ contains
         else
             
             !print *, 'leaf box'
+            self%num_nodes_in_leaves = self%num_nodes_in_leaves+num_points
         
         end if
         
@@ -273,7 +283,7 @@ contains
             corner(2) = center(2) + factor(transfer((iand(icorner-1,2)>0),1)+1)*extent(2)
             corner(3) = center(3) + factor(transfer((iand(icorner-1,4)>0),1)+1)*extent(3)
 
-            corner_is_contained = check_point_inclusion(corner, query_point, query_radius)
+            corner_is_contained = check_point_inclusion(corner, query_point, 1.05_rk*query_radius)
 !            corner_is_contained = &
 !            ((((corner(1)-query_point(1))/query_radius(1))**TWO+ &
 !              ((corner(2)-query_point(2))/query_radius(2))**TWO+ &
@@ -306,7 +316,7 @@ contains
             idx = self%boxes%data(box_ID)%start_index
             do ipt = 1, self%boxes%data(box_ID)%num_points
                 point = global_nodes(idx,:)
-                point_included = check_point_inclusion(point, query_point, query_radius) 
+                point_included = check_point_inclusion(point, query_point, 1.05_rk*query_radius) 
                 if (point_included) call hit_list%push_back(idx)
 
                 idx = self%successors(idx)
@@ -326,9 +336,9 @@ contains
                     ! Then it's trivial to check whether the BB overlaps with the octree child box
                     child_center = self%boxes%data(child_ID)%center
                     child_extent = self%boxes%data(child_ID)%extent
-                    child_overlaps = check_box_overlaps(child_center, child_extent, query_point, query_radius)
+                    child_overlaps = check_box_overlaps(child_center, child_extent, query_point, 1.05_rk*query_radius)
 
-                    if (child_overlaps) call self%radius_search(global_nodes, child_ID, query_point, query_radius, hit_list)
+                    if (child_overlaps) call self%radius_search(global_nodes, child_ID, query_point, 1.05_rk*query_radius, hit_list)
                 end if
 
             end do

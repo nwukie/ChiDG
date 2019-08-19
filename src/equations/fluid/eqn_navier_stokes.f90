@@ -94,7 +94,6 @@ contains
 
                 call navier_stokes_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
-
 !                call navier_stokes_eqns%add_operator('Geometric Conservation Volume Operator')
 !                call navier_stokes_eqns%add_operator('Geometric Conservation Boundary Average Operator')
 !                call navier_stokes_eqns%add_operator('Geometric Conservation BC Operator')

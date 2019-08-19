@@ -241,7 +241,7 @@ contains
             call partitions(1)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(1)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(1)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])    ! nodes
+            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 5, 4, 7, 8, 11, 10])      ! nodes
             call partitions(1)%connectivities(1)%data(1)%set_element_partition(0)                           ! IRANK
 
             ! element 2
@@ -249,7 +249,7 @@ contains
             call partitions(1)%connectivities(1)%data(2)%set_domain_index(1)                                ! idomain_g
             call partitions(1)%connectivities(1)%data(2)%set_element_index(2)                               ! ielement_g
             call partitions(1)%connectivities(1)%data(2)%set_element_mapping(1)                             ! mapping
-            call partitions(1)%connectivities(1)%data(2)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
+            call partitions(1)%connectivities(1)%data(2)%set_element_nodes([2, 3, 6, 5, 8, 9, 12, 11])      ! nodes
             call partitions(1)%connectivities(1)%data(2)%set_element_partition(0)                           ! IRANK
 
 
@@ -266,7 +266,7 @@ contains
             call partitions(2)%connectivities(1)%data(1)%set_domain_index(2)                                ! idomain_g
             call partitions(2)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(2)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])    ! nodes
+            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([1, 2, 5, 4, 7, 8, 11, 10])      ! nodes
             call partitions(2)%connectivities(1)%data(1)%set_element_partition(1)                           ! IRANK
 
             ! element 4
@@ -274,7 +274,7 @@ contains
             call partitions(2)%connectivities(1)%data(2)%set_domain_index(2)                                ! idomain_g
             call partitions(2)%connectivities(1)%data(2)%set_element_index(2)                               ! ielement_g
             call partitions(2)%connectivities(1)%data(2)%set_element_mapping(1)                             ! mapping
-            call partitions(2)%connectivities(1)%data(2)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])   ! nodes
+            call partitions(2)%connectivities(1)%data(2)%set_element_nodes([2, 3, 6, 5, 8, 9, 12, 11])      ! nodes
             call partitions(2)%connectivities(1)%data(2)%set_element_partition(1)                           ! IRANK
 
 
@@ -304,7 +304,7 @@ contains
             call partitions(1)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(1)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(1)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])      ! nodes
+            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 5, 4, 7, 8, 11, 10])      ! nodes
             call partitions(1)%connectivities(1)%data(1)%set_element_partition(0)                           ! IRANK
 
 
@@ -319,7 +319,7 @@ contains
             call partitions(2)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(2)%connectivities(1)%data(1)%set_element_index(2)                               ! ielement_g
             call partitions(2)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
+            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 6, 5, 8, 9, 12, 11])      ! nodes
             call partitions(2)%connectivities(1)%data(1)%set_element_partition(1)                           ! IRANK
 
 
@@ -335,7 +335,7 @@ contains
             call partitions(3)%connectivities(1)%data(1)%set_domain_index(2)                                ! idomain_g
             call partitions(3)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(3)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])      ! nodes
+            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([1, 2, 5, 4, 7, 8, 11, 10])      ! nodes
             call partitions(3)%connectivities(1)%data(1)%set_element_partition(2)                           ! IRANK
 
             ! element 4
@@ -343,7 +343,7 @@ contains
             call partitions(3)%connectivities(1)%data(2)%set_domain_index(2)                                ! idomain_g
             call partitions(3)%connectivities(1)%data(2)%set_element_index(2)                               ! ielement_g
             call partitions(3)%connectivities(1)%data(2)%set_element_mapping(1)                             ! mapping
-            call partitions(3)%connectivities(1)%data(2)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
+            call partitions(3)%connectivities(1)%data(2)%set_element_nodes([2, 3, 6, 5, 8, 9, 12, 11])      ! nodes
             call partitions(3)%connectivities(1)%data(2)%set_element_partition(2)                           ! IRANK
 
         else if (NRANK == 4) then
@@ -371,7 +371,7 @@ contains
             call partitions(1)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(1)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(1)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])      ! nodes
+            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 5, 4, 7, 8, 11, 10])      ! nodes
             call partitions(1)%connectivities(1)%data(1)%set_element_partition(0)                           ! IRANK
 
 
@@ -387,7 +387,7 @@ contains
             call partitions(2)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(2)%connectivities(1)%data(1)%set_element_index(2)                               ! ielement_g
             call partitions(2)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
+            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 6, 5, 8, 9, 12, 11])      ! nodes
             call partitions(2)%connectivities(1)%data(1)%set_element_partition(1)                           ! IRANK
 
 
@@ -403,7 +403,7 @@ contains
             call partitions(3)%connectivities(1)%data(1)%set_domain_index(2)                                ! idomain_g
             call partitions(3)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(3)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])      ! nodes
+            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([1, 2, 5, 4, 7, 8, 11, 10])      ! nodes
             call partitions(3)%connectivities(1)%data(1)%set_element_partition(2)                           ! IRANK
 
 
@@ -419,7 +419,7 @@ contains
             call partitions(4)%connectivities(1)%data(1)%set_domain_index(2)                                ! idomain_g
             call partitions(4)%connectivities(1)%data(1)%set_element_index(2)                               ! ielement_g
             call partitions(4)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(4)%connectivities(1)%data(1)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
+            call partitions(4)%connectivities(1)%data(1)%set_element_nodes([2, 3, 6, 5, 8, 9, 12, 11])      ! nodes
             call partitions(4)%connectivities(1)%data(1)%set_element_partition(3)                           ! IRANK
 
 
@@ -450,6 +450,7 @@ contains
         class(test_mesh_comm_chimera), intent(inout) :: this
 
         call this%chidg%shut_down('core')
+        call this%chidg%shut_down('mpi')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -481,7 +482,7 @@ contains
     subroutine test_chimera_ale_comm(self)
         class(test_mesh_comm_chimera), intent(inout) :: self
 
-        integer(ik)             :: nelem, ierr, idomain_g, ielement_g, nterms_s, neqns, &
+        integer(ik)             :: nelem, ierr, idomain_g, ielement_g, nterms_s, nfields, &
                                    nparallel_elements, pelem_ID, ChiID
         real(rk)                :: computed_norm, expected_norm, det_jacobian_grid,     &
                                    det_jacobian_grid_grad(3), inv_jacobian_grid(3,3), grid_velocity(3), &
@@ -632,18 +633,18 @@ contains
 
                 nparallel_elements = self%chidg%data%mesh%nparallel_elements()
                 ChiID              = self%chidg%data%mesh%domain(1)%faces(2,2)%ChiID
-                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%idomain_g
-                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
+                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%elem_info%idomain_g
+                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%elem_info%ielement_g
                 pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
                 nterms_s           = self%solution_order * self%solution_order * self%solution_order
-                neqns              = 1
+                nfields            = 1
 
                 ! Test indices
                 @assertEqual(1,nparallel_elements)
                 @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
                 @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
                 @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
-                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+                @assertEqual(nfields,    self%chidg%data%mesh%parallel_element(pelem_ID)%nfields)
 
                 ! Test element geometric/ALE quantities
                 !       .**.  
@@ -670,18 +671,18 @@ contains
 
                 nparallel_elements = self%chidg%data%mesh%nparallel_elements()
                 ChiID              = self%chidg%data%mesh%domain(1)%faces(1,1)%ChiID
-                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%idomain_g
-                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
+                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%elem_info%idomain_g
+                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%elem_info%ielement_g
                 pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
                 nterms_s           = self%solution_order * self%solution_order * self%solution_order
-                neqns              = 1
+                nfields            = 1
 
                 ! Test indices
                 @assertEqual(1,nparallel_elements)
                 @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
                 @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
                 @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
-                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+                @assertEqual(nfields,    self%chidg%data%mesh%parallel_element(pelem_ID)%nfields)
 
                 ! Test element geometric/ALE quantities
                 !       .****.
@@ -723,18 +724,18 @@ contains
 
                 nparallel_elements = self%chidg%data%mesh%nparallel_elements()
                 ChiID              = self%chidg%data%mesh%domain(1)%faces(1,2)%ChiID
-                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%idomain_g
-                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
+                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%elem_info%idomain_g
+                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%elem_info%ielement_g
                 pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
                 nterms_s           = self%solution_order * self%solution_order * self%solution_order
-                neqns              = 1
+                nfields            = 1
 
                 ! Test indices
                 @assertEqual(1,nparallel_elements)
                 @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
                 @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
                 @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
-                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+                @assertEqual(nfields,    self%chidg%data%mesh%parallel_element(pelem_ID)%nfields)
 
                 ! Test element geometric/ALE quantities
                 !       .**.  
@@ -757,18 +758,18 @@ contains
 
                 nparallel_elements = self%chidg%data%mesh%nparallel_elements()
                 ChiID              = self%chidg%data%mesh%domain(1)%faces(1,1)%ChiID
-                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%idomain_g
-                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
+                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%elem_info%idomain_g
+                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%elem_info%ielement_g
                 pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
                 nterms_s           = self%solution_order * self%solution_order * self%solution_order
-                neqns              = 1
+                nfields            = 1
 
                 ! Test indices
                 @assertEqual(1,nparallel_elements)
                 @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
                 @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
                 @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
-                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+                @assertEqual(nfields,    self%chidg%data%mesh%parallel_element(pelem_ID)%nfields)
 
                 ! Test element geometric/ALE quantities
                 !       .****.
@@ -808,18 +809,18 @@ contains
 
                 nparallel_elements = self%chidg%data%mesh%nparallel_elements()
                 ChiID              = self%chidg%data%mesh%domain(1)%faces(1,2)%ChiID
-                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%idomain_g
-                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
+                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%elem_info%idomain_g
+                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%elem_info%ielement_g
                 pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
                 nterms_s           = self%solution_order * self%solution_order * self%solution_order
-                neqns              = 1
+                nfields            = 1
 
                 ! Test indices
                 @assertEqual(1,nparallel_elements)
                 @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
                 @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
                 @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
-                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+                @assertEqual(nfields,    self%chidg%data%mesh%parallel_element(pelem_ID)%nfields)
 
                 ! Test element geometric/ALE quantities
                 !       .**.  
@@ -842,18 +843,18 @@ contains
 
                 nparallel_elements = self%chidg%data%mesh%nparallel_elements()
                 ChiID              = self%chidg%data%mesh%domain(1)%faces(1,1)%ChiID
-                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%idomain_g
-                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
+                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%elem_info%idomain_g
+                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%elem_info%ielement_g
                 pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
                 nterms_s           = self%solution_order * self%solution_order * self%solution_order
-                neqns              = 1
+                nfields            = 1
 
                 ! Test indices
                 @assertEqual(1,nparallel_elements)
                 @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
                 @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
                 @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
-                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+                @assertEqual(nfields,    self%chidg%data%mesh%parallel_element(pelem_ID)%nfields)
 
                 ! Test element geometric/ALE quantities
                 !       .****.

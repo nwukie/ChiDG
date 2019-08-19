@@ -1,10 +1,10 @@
 module type_function_status
 #include <messenger.h>
     use mod_constants,                  only: BOUNDARY_ADVECTIVE_FLUX
-    use type_mesh,                  only: mesh_t
+    use type_mesh,                      only: mesh_t
     use type_equationset_function_data, only: equationset_function_data_t
     use type_function_status_data,      only: function_status_data_t
-    use type_face_info,                 only: face_info_t
+    use type_element_info,              only: element_info_t
     use type_function_info,             only: function_info_t
     implicit none
 
@@ -109,17 +109,18 @@ contains
     !!  @return     res         True if function needs computed. False if already computed.
     !!
     !-----------------------------------------------------------------------------------------
-    function compute_function(self, face_info, function_info) result(res)
-        class(function_status_t),   intent(in)              :: self
-        type(face_info_t),          intent(in)              :: face_info
-        type(function_info_t),      intent(in)              :: function_info
+    function compute_function(self, elem_info, function_info, iface) result(res)
+        class(function_status_t),   intent(in)  :: self
+        type(element_info_t),       intent(in)  :: elem_info
+        type(function_info_t),      intent(in)  :: function_info
+        integer(ik),                intent(in)  :: iface
         
         logical :: function_already_computed
         logical :: res
 
 
 
-        associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
+        associate(idomain_l => elem_info%idomain_l,  ielement_l => elem_info%ielement_l,    &
                   type => function_info%type, ifcn => function_info%ifcn )
 
 
@@ -161,18 +162,19 @@ contains
     !!  @return     res         True if function needs computed. False if already computed.
     !!
     !-----------------------------------------------------------------------------------------
-    function compute_function_equation(self, face_info, function_info, ieqn) result(res)
-        class(function_status_t),   intent(in)              :: self
-        type(face_info_t),          intent(in)              :: face_info
-        type(function_info_t),      intent(in)              :: function_info
-        integer(ik),                intent(in)              :: ieqn
+    function compute_function_equation(self, elem_info, function_info, iface, ieqn) result(res)
+        class(function_status_t),   intent(in)      :: self
+        type(element_info_t),       intent(in)      :: elem_info
+        type(function_info_t),      intent(in)      :: function_info
+        integer(ik),                intent(in)      :: iface
+        integer(ik),                intent(in)      :: ieqn
         
         logical :: function_already_computed
         logical :: res
 
 
 
-        associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
+        associate(idomain_l => elem_info%idomain_l,  ielement_l => elem_info%ielement_l,    &
                   type => function_info%type, ifcn => function_info%ifcn )
 
 
@@ -211,16 +213,17 @@ contains
     !!  @return     res         True if function needs linearized. False if already linearized.
     !!
     !-----------------------------------------------------------------------------------------
-    function linearize_function(self, face_info, function_info) result(res)
+    function linearize_function(self, elem_info, function_info, iface) result(res)
         class(function_status_t),   intent(in)  :: self
-        type(face_info_t),          intent(in)  :: face_info
+        type(element_info_t),       intent(in)  :: elem_info
         type(function_info_t),      intent(in)  :: function_info
+        integer(ik),                intent(in)  :: iface
         
         logical :: function_already_linearized
         logical :: differentiating, res
 
 
-        associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
+        associate(idomain_l => elem_info%idomain_l,  ielement_l => elem_info%ielement_l, &
                   type => function_info%type, ifcn => function_info%ifcn,  idiff => function_info%idiff )
 
         differentiating = (idiff /= 0)
@@ -266,17 +269,18 @@ contains
     !!  @return     res         True if function needs linearized. False if already linearized.
     !!
     !-----------------------------------------------------------------------------------------
-    function linearize_function_equation(self, face_info, function_info, ieqn) result(res)
+    function linearize_function_equation(self, elem_info, function_info, iface, ieqn) result(res)
         class(function_status_t),   intent(in)  :: self
-        type(face_info_t),          intent(in)  :: face_info
+        type(element_info_t),       intent(in)  :: elem_info
         type(function_info_t),      intent(in)  :: function_info
+        integer(ik),                intent(in)  :: iface
         integer(ik),                intent(in)  :: ieqn
         
         logical :: function_already_linearized
         logical :: differentiating, res
 
 
-        associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
+        associate(idomain_l => elem_info%idomain_l,  ielement_l => elem_info%ielement_l,    &
                   type => function_info%type, ifcn => function_info%ifcn,  idiff => function_info%idiff )
 
         differentiating = (idiff /= 0) 
@@ -327,15 +331,16 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine register_function_computed(self,face_info,function_info,ieqn)
+    subroutine register_function_computed(self,elem_info,function_info,iface,ieqn)
         class(function_status_t),   intent(inout)   :: self
-        type(face_info_t),          intent(in)      :: face_info
+        type(element_info_t),       intent(in)      :: elem_info
         type(function_info_t),      intent(in)      :: function_info
+        integer(ik),                intent(in)      :: iface
         integer(ik),                intent(in)      :: ieqn
         
 
 
-        associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
+        associate(idomain_l => elem_info%idomain_l,  ielement_l => elem_info%ielement_l, &
                   type => function_info%type, ifcn => function_info%ifcn)
 
 
@@ -371,15 +376,16 @@ contains
     !!  @param[in]  ieqn            Index of equation being registered
     !!
     !------------------------------------------------------------------------------------------
-    subroutine register_function_linearized(self,face_info,function_info,ieqn)
+    subroutine register_function_linearized(self,elem_info,function_info,iface,ieqn)
         class(function_status_t),   intent(inout)   :: self
-        type(face_info_t),          intent(in)      :: face_info
+        type(element_info_t),       intent(in)      :: elem_info
         type(function_info_t),      intent(in)      :: function_info
+        integer(ik),                intent(in)      :: iface
         integer(ik),                intent(in)      :: ieqn
         
 
 
-        associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
+        associate(idomain_l => elem_info%idomain_l,  ielement_l => elem_info%ielement_l, &
                   type => function_info%type, ifcn => function_info%ifcn, idiff => function_info%idiff )
 
 

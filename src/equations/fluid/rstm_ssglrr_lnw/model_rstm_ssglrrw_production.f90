@@ -94,12 +94,20 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         
-        density_reynolds_11 = worker%get_field('Density * Reynolds-11',    'value')
-        density_reynolds_22 = worker%get_field('Density * Reynolds-22',    'value')
-        density_reynolds_33 = worker%get_field('Density * Reynolds-33',    'value')
-        density_reynolds_12 = worker%get_field('Density * Reynolds-12',    'value')
-        density_reynolds_13 = worker%get_field('Density * Reynolds-13',    'value')
-        density_reynolds_23 = worker%get_field('Density * Reynolds-23',    'value')
+        density = worker%get_field('Density',    'value')
+        density_reynolds_11 = worker%get_field('Reynolds-11',    'value')*density
+        density_reynolds_22 = worker%get_field('Reynolds-22',    'value')*density
+        density_reynolds_33 = worker%get_field('Reynolds-33',    'value')*density
+        density_reynolds_12 = worker%get_field('Reynolds-12',    'value')*density
+        density_reynolds_13 = worker%get_field('Reynolds-13',    'value')*density
+        density_reynolds_23 = worker%get_field('Reynolds-23',    'value')*density
+        !density_reynolds_11 = worker%get_field('Density * Reynolds-11',    'value')
+        !density_reynolds_22 = worker%get_field('Density * Reynolds-22',    'value')
+        !density_reynolds_33 = worker%get_field('Density * Reynolds-33',    'value')
+        !density_reynolds_12 = worker%get_field('Density * Reynolds-12',    'value')
+        !density_reynolds_13 = worker%get_field('Density * Reynolds-13',    'value')
+        !density_reynolds_23 = worker%get_field('Density * Reynolds-23',    'value')
+
 
         grad1_vel1  = worker%get_field('Velocity 1 - Gradient 1',   'value')
         grad2_vel1  = worker%get_field('Velocity 1 - Gradient 2',   'value')

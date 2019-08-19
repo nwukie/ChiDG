@@ -138,7 +138,7 @@ contains
         ! Update preconditioner
         !
         if (present(solver_controller)) then
-            if (solver_controller%update_preconditioner(A,M)) call M%update(A,b)
+            if (solver_controller%update_preconditioner(A,M,ChiDG_COMM)) call M%update(A,b)
         else
             call M%update(A,b)
         end if

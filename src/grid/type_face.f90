@@ -4,7 +4,7 @@ module type_face
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX,                 &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR,    &
                                       NO_INTERIOR_NEIGHBOR, NO_PROC,                    &
-                                      ZERO, ONE, TWO, ORPHAN, NO_MM_ASSIGNED, CARTESIAN, CYLINDRICAL
+                                      ZERO, ONE, TWO, ORPHAN, NO_MM_ASSIGNED, CARTESIAN, CYLINDRICAL, NO_ID
     use type_reference_element, only: reference_element_t
     use type_element,           only: element_t
     use type_densevector,       only: densevector_t
@@ -34,16 +34,15 @@ module type_face
     !------------------------------------------------------------------------------------------
     type, public :: face_t
 
-
         ! Self information
         integer(ik)             :: spacedim         ! Number of spatial dimensions
         integer(ik)             :: ftype            ! INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
-        integer(ik)             :: ChiID    = 0     ! Identifier for domain-local Chimera interfaces
-        integer(ik)             :: bc_ID    = 0     ! Index for bc state group data%bc_state_group(bc_ID)
-        integer(ik)             :: group_ID = 0     ! Index for bc patch group mesh%bc_patch_group(group_ID)
-        integer(ik)             :: patch_ID = 0     ! Index for bc patch 
-        integer(ik)             :: face_ID  = 0     ! Index for bc patch face
-        integer(ik)             :: mm_ID   = NO_MM_ASSIGNED
+        integer(ik)             :: ChiID    = NO_ID ! Identifier for domain-local Chimera interfaces
+        integer(ik)             :: bc_ID    = NO_ID ! Index for bc state group data%bc_state_group(bc_ID)
+        integer(ik)             :: group_ID = NO_ID ! Index for bc patch group mesh%bc_patch_group(group_ID)
+        integer(ik)             :: patch_ID = NO_ID ! Index for bc patch 
+        integer(ik)             :: face_ID  = NO_ID ! Index for bc patch face
+        integer(ik)             :: mm_ID    = NO_MM_ASSIGNED
 
         ! Owner-element information
         integer(ik)             :: face_location(5)! [idomain_g, idomain_l, iparent_g, iparent_l, iface]
@@ -52,25 +51,33 @@ module type_face
         integer(ik)             :: iparent_g       ! Domain-global index of the parent element
         integer(ik)             :: iparent_l       ! Processor-local index of the parent element
         integer(ik)             :: iface           ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
-        integer(ik)             :: neqns           ! Number of equations in equationset_t
+        integer(ik)             :: nfields         ! Number of equations in equationset_t
         integer(ik)             :: nterms_s        ! Number of terms in solution polynomial expansion
+        integer(ik)             :: dof_start       ! Starting DOF index in ChiDG-global index 
+        integer(ik)             :: dof_local_start ! Starting DOF index in ChiDG-local index 
         integer(ik)             :: ntime
         integer(ik)             :: coordinate_system    ! CARTESIAN, CYLINDRICAL. parameters from mod_constants.f90
 
 
         ! Neighbor information
-        integer(ik)             :: neighbor_location(5) = 0         ! [idomain_g, idomain_l, ielement_g, ielement_l, iface]
-        integer(ik)             :: ineighbor_proc       = NO_PROC   ! MPI processor rank of the neighboring element
-        integer(ik)             :: ineighbor_domain_g   = 0         ! Global index of the neighboring element's domain
-        integer(ik)             :: ineighbor_domain_l   = 0         ! Processor-local index of the neighboring element's domain
-        integer(ik)             :: ineighbor_element_g  = 0         ! Domain-global index of the neighboring element
-        integer(ik)             :: ineighbor_element_l  = 0         ! Processor-local index of the neighboring element
-        integer(ik)             :: ineighbor_face       = 0
-        integer(ik)             :: ineighbor_neqns      = 0
-        integer(ik)             :: ineighbor_nterms_s   = 0
-        integer(ik)             :: recv_comm            = 0
-        integer(ik)             :: recv_domain          = 0
-        integer(ik)             :: recv_element         = 0
+        integer(ik)             :: neighbor_location(7)      = 0         ! [idomain_g, idomain_l, ielement_g, ielement_l, iface, dof_start, dof_local_start]
+        integer(ik)             :: ineighbor_proc            = NO_PROC   ! MPI processor rank of the neighboring element
+        integer(ik)             :: ineighbor_domain_g        = 0         ! Global index of the neighboring element's domain
+        integer(ik)             :: ineighbor_domain_l        = 0         ! Processor-local index of the neighboring element's domain
+        integer(ik)             :: ineighbor_element_g       = 0         ! Domain-global index of the neighboring element
+        integer(ik)             :: ineighbor_element_l       = 0         ! Processor-local index of the neighboring element
+        integer(ik)             :: ineighbor_face            = 0
+        integer(ik)             :: ineighbor_nfields         = 0
+        integer(ik)             :: ineighbor_nterms_s        = 0
+        integer(ik)             :: ineighbor_ntime           = 0
+        integer(ik)             :: ineighbor_dof_start       = NO_ID
+        integer(ik)             :: ineighbor_dof_local_start = NO_ID
+        integer(ik)             :: ineighbor_pelem_ID        = NO_ID
+        integer(ik)             :: recv_comm                 = NO_ID
+        integer(ik)             :: recv_domain               = NO_ID
+        integer(ik)             :: recv_element              = NO_ID
+        integer(ik)             :: recv_dof                  = NO_ID
+
 
         ! Neighbor information: if neighbor is off-processor
         real(rk)                :: neighbor_h(3)           ! Approximate size of neighbor bounding box
@@ -80,6 +87,7 @@ module type_face
         real(rk),   allocatable :: neighbor_br2_face(:,:)  ! Matrix for computing/obtaining br2 modes at face nodes
         real(rk),   allocatable :: neighbor_br2_vol(:,:)   ! Matrix for computing/obtaining br2 modes at volume nodes
         real(rk),   allocatable :: neighbor_invmass(:,:)    
+
 
         ! Neighbor ALE: if neighbor is off-processor
         real(rk),   allocatable :: neighbor_interp_coords_vel(:,:)   
@@ -128,8 +136,13 @@ module type_face
 
         ! Face area
         real(rk)                :: total_area
+        real(rk)                :: centroid(3)
         real(rk),   allocatable :: differential_areas(:)
         real(rk),   allocatable :: ale_area_ratio(:)
+
+        ! Smoothed h-field
+        real(rk),   allocatable :: h_smooth(:,:)        ! (ngq, 3)
+        real(rk),   allocatable :: size_smooth(:)       ! (ngq)
 
 
         ! Arbitrary Lagrangian Eulerian data
@@ -151,8 +164,8 @@ module type_face
 
         ! Logical tests
         logical :: geom_initialized    = .false.
+        logical :: sol_initialized     = .false.
         logical :: neighborInitialized = .false.
-        logical :: numInitialized      = .false.
 
 
     contains
@@ -167,6 +180,8 @@ module type_face
         procedure, private  :: interpolate_metrics       
         procedure, private  :: interpolate_normals       
         procedure, private  :: interpolate_gradients     
+
+        procedure           :: compute_projected_areas
 
         
         ! Deformed element/ALE procedures
@@ -233,15 +248,18 @@ contains
         !
         ! No neighbor associated at this point
         !
-        self%ineighbor_domain_g  = NO_INTERIOR_NEIGHBOR
-        self%ineighbor_domain_l  = NO_INTERIOR_NEIGHBOR
-        self%ineighbor_element_g = NO_INTERIOR_NEIGHBOR
-        self%ineighbor_element_l = NO_INTERIOR_NEIGHBOR
-        self%ineighbor_face      = NO_INTERIOR_NEIGHBOR
-        self%ineighbor_proc      = NO_PROC
-        self%neighbor_location = [self%ineighbor_domain_g, self%ineighbor_domain_l, &
+        self%ineighbor_domain_g        = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_domain_l        = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_element_g       = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_element_l       = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_face            = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_proc            = NO_PROC
+        self%ineighbor_dof_start       = NO_ID
+        self%ineighbor_dof_local_start = NO_ID
+        self%neighbor_location = [self%ineighbor_domain_g, self%ineighbor_domain_l,   &
                                   self%ineighbor_element_g, self%ineighbor_element_l, &
-                                  self%ineighbor_face]
+                                  self%ineighbor_face, self%ineighbor_dof_start,      &
+                                  self%ineighbor_dof_local_start]
         
 
         !
@@ -289,8 +307,9 @@ contains
         !
         ! Set indices and associate quadrature instances.
         !
-        self%neqns      = elem%neqns
+        self%nfields    = elem%nfields
         self%nterms_s   = elem%nterms_s
+        self%dof_start  = elem%dof_start
         self%ntime      = elem%ntime
         self%basis_s    => elem%basis_s
         self%basis_c    => elem%basis_c
@@ -324,7 +343,9 @@ contains
                        self%neighbor_interp_coords_vel,  &
                        self%grad1,                  &
                        self%grad2,                  &
-                       self%grad3                   &
+                       self%grad3,                  &
+                       self%h_smooth,               &
+                       self%size_smooth             &
                        ) 
 
 
@@ -354,6 +375,8 @@ contains
                  self%grad1(nnodes,self%nterms_s),      &
                  self%grad2(nnodes,self%nterms_s),      &
                  self%grad3(nnodes,self%nterms_s),      &
+                 self%h_smooth(nnodes,3),               &
+                 self%size_smooth(nnodes),              &
                  stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -381,7 +404,7 @@ contains
         !
         ! Confirm face numerics were initialized
         !
-        self%numInitialized  = .true.
+        self%sol_initialized  = .true.
 
     end subroutine init_sol
     !******************************************************************************************
@@ -438,6 +461,7 @@ contains
         ddxi    = self%basis_c%interpolator_face('ddxi',  self%iface)
         ddeta   = self%basis_c%interpolator_face('ddeta', self%iface)
         ddzeta  = self%basis_c%interpolator_face('ddzeta',self%iface)
+
 
         !
         ! Compute element jacobian matrix at interpolation nodes
@@ -827,6 +851,14 @@ contains
             self%interp_coords(inode,1:3) = [c1(inode), c2(inode), c3(inode)]
         end do !inode
 
+
+        !
+        ! Update face centroid, here we just take as an arithmetic average.
+        !
+        self%centroid(1) = sum(self%interp_coords(:,1))/size(self%interp_coords(:,1))
+        self%centroid(2) = sum(self%interp_coords(:,2))/size(self%interp_coords(:,2))
+        self%centroid(3) = sum(self%interp_coords(:,3))/size(self%interp_coords(:,3))
+
     end subroutine interpolate_coords
     !******************************************************************************************
 
@@ -1150,6 +1182,41 @@ contains
 
 
 
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/05/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function compute_projected_areas(self) result(integral)
+        class(face_t), intent(in) :: self
+
+        real(rk)    :: integral(3)
+        integer(ik) :: idir
+
+        do idir = 1,3
+            integral(idir) = sum(abs(self%norm(:,idir))*self%basis_s%weights_face(self%iface))
+        end do
+
+    end function compute_projected_areas
+    !********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     !>  Initialize neighbor location.
@@ -1158,10 +1225,11 @@ contains
     !!  @date   6/10/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine set_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,              &
-                                       ineighbor_element_g,ineighbor_element_l,            &
-                                       ineighbor_face,ineighbor_neqns, ineighbor_nterms_s, &
-                                       ineighbor_proc)
+    subroutine set_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,                   &
+                                       ineighbor_element_g,ineighbor_element_l,                 &
+                                       ineighbor_face,ineighbor_nfields,ineighbor_ntime,        &
+                                       ineighbor_nterms_s, ineighbor_proc,ineighbor_dof_start,  &
+                                       ineighbor_dof_local_start)
         class(face_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: ftype
         integer(ik),    intent(in)      :: ineighbor_domain_g
@@ -1169,24 +1237,30 @@ contains
         integer(ik),    intent(in)      :: ineighbor_element_g
         integer(ik),    intent(in)      :: ineighbor_element_l
         integer(ik),    intent(in)      :: ineighbor_face
-        integer(ik),    intent(in)      :: ineighbor_proc
-        integer(ik),    intent(in)      :: ineighbor_neqns
+        integer(ik),    intent(in)      :: ineighbor_nfields
+        integer(ik),    intent(in)      :: ineighbor_ntime
         integer(ik),    intent(in)      :: ineighbor_nterms_s
+        integer(ik),    intent(in)      :: ineighbor_proc
+        integer(ik),    intent(in)      :: ineighbor_dof_start
+        integer(ik),    intent(in)      :: ineighbor_dof_local_start
 
 
-        self%ftype               = ftype
-        self%ineighbor_domain_g  = ineighbor_domain_g
-        self%ineighbor_domain_l  = ineighbor_domain_l
-        self%ineighbor_element_g = ineighbor_element_g
-        self%ineighbor_element_l = ineighbor_element_l
-        self%ineighbor_face      = ineighbor_face
-        self%ineighbor_neqns     = ineighbor_neqns
-        self%ineighbor_nterms_s  = ineighbor_nterms_s
-        self%ineighbor_proc      = ineighbor_proc
+        self%ftype                     = ftype
+        self%ineighbor_domain_g        = ineighbor_domain_g
+        self%ineighbor_domain_l        = ineighbor_domain_l
+        self%ineighbor_element_g       = ineighbor_element_g
+        self%ineighbor_element_l       = ineighbor_element_l
+        self%ineighbor_face            = ineighbor_face
+        self%ineighbor_nfields         = ineighbor_nfields
+        self%ineighbor_ntime           = ineighbor_ntime
+        self%ineighbor_nterms_s        = ineighbor_nterms_s
+        self%ineighbor_proc            = ineighbor_proc
+        self%ineighbor_dof_start       = ineighbor_dof_start
+        self%ineighbor_dof_local_start = ineighbor_dof_local_start
 
         self%neighbor_location = [ineighbor_domain_g,  ineighbor_domain_l,  &
                                   ineighbor_element_g, ineighbor_element_l, &
-                                  ineighbor_face]
+                                  ineighbor_face, ineighbor_dof_start, ineighbor_dof_local_start]
 
         self%neighborInitialized = .true.
 
@@ -1253,33 +1327,13 @@ contains
         integer(ik) :: neighbor_e
         integer(ik) :: neighbor_f
 
-
         neighbor_e = self%get_neighbor_element_l()
 
-
         if ( neighbor_e == NO_INTERIOR_NEIGHBOR ) then
-            
             neighbor_f = NO_INTERIOR_NEIGHBOR
-
         else
-
-            !& ASSUMPTION: All elements have same orientation.
-            if ( self%iface == XI_MIN ) then
-                neighbor_f = XI_MAX
-            else if ( self%iface == XI_MAX ) then
-                neighbor_f = XI_MIN
-            else if ( self%iface == ETA_MIN ) then
-                neighbor_f = ETA_MAX
-            else if ( self%iface == ETA_MAX ) then
-                neighbor_f = ETA_MIN
-            else if ( self%iface == ZETA_MIN ) then
-                neighbor_f = ZETA_MAX
-            else if ( self%iface == ZETA_MAX ) then
-                neighbor_f = ZETA_MIN
-            end if
-
+            neighbor_f = self%ineighbor_face
         end if
-
 
     end function get_neighbor_face
     !******************************************************************************************

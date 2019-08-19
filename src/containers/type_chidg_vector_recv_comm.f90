@@ -169,12 +169,12 @@ contains
                         ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
                         do idonor = 1,mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
 
-                            comm_donor = (proc == mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc )
+                            comm_donor = (proc == mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%iproc )
 
                             donor_recv_found = .false.
                             if (comm_donor) then
-                                donor_domain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
-                                donor_element_g = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
+                                donor_domain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_g
+                                donor_element_g = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_g
 
 
                                 ! Loop through domains being received to find the right domain
@@ -189,9 +189,9 @@ contains
 
                                             ! Set the location where a face can find its off-processor neighbor 
                                             if (recv_element == donor_element_g) then
-                                                mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_comm    = comm
-                                                mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_domain  = idom_recv
-                                                mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_element = ielem_recv
+                                                mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_comm    = comm
+                                                mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_domain  = idom_recv
+                                                mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_element = ielem_recv
                                                 donor_recv_found = .true.
                                                 exit
                                             end if
@@ -251,12 +251,14 @@ contains
 
                                             ! Set the location where a face can find its off-processor neighbor 
                                             if (recv_element == bc_element_g) then
-                                                call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_recv(face_ID,      &
-                                                                                                                            bc_domain_g,  &
-                                                                                                                            bc_element_g, &
-                                                                                                                            comm,         &
-                                                                                                                            idom_recv,    &
-                                                                                                                            ielem_recv )
+                                                call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_recv(face_ID      = face_ID,      &
+                                                                                                                            idomain_g    = bc_domain_g,  &
+                                                                                                                            ielement_g   = bc_element_g, &
+                                                                                                                            recv_comm    = comm,         &
+                                                                                                                            recv_domain  = idom_recv,    &
+                                                                                                                            recv_element = ielem_recv,   &
+                                                                                                                            recv_dof     = NO_ID)
+                                                
                                                 bc_recv_found = .true.
                                                 exit
                                             end if

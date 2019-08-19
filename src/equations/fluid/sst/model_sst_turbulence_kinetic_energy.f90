@@ -86,6 +86,7 @@ contains
             density, density_k, k, k_smooth
 
         real(rk) :: b, c, k_infty
+        real(rk), allocatable :: dummy(:)
         !
         ! Interpolate solution to quadrature nodes
         !
@@ -103,10 +104,13 @@ contains
         !print *, k(:)%x_ad_
         !k_smooth = smax(k, ZERO*k)
         !k_infty = (sst_tu_infty*69.0_rk)**TWO
+        allocate(dummy(size(k)))
+        dummy = ZERO
         k_smooth = k
+        !k_smooth = k*sin_ramp(k, ZERO*dummy, 10.0_rk*sst_k_infty + ZERO*dummy)
         k_smooth = k*sin_ramp(k, ZERO, 10.0_rk*sst_k_infty)
-        !;print *, 'k_smooth - v2'
-        !;print *, k_smooth(:)%x_ad_
+        !print *, 'k_smooth '
+        !print *, k_smooth(:)%x_ad_
 
         call worker%store_model_field('k', 'value', k_smooth)
 

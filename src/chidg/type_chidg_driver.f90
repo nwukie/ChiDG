@@ -38,6 +38,7 @@ submodule (type_chidg) type_chidg_driver
     use mod_hdf_utilities,      only: get_properties_hdf, check_file_exists_hdf
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
     use type_file_properties,   only: file_properties_t
+    use precon_RASILU0,         only: precon_RASILU0_t
     implicit none
 
 
@@ -158,6 +159,15 @@ contains
         call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
         call wall_distance%set('Preconditioner'  , algorithm='RASILU0')
 
+
+        ! Set RASILU settings for petsc
+        select type (precon => wall_distance%preconditioner)
+            type is (precon_RASILU0_t)
+                precon%asm_overlap = 6
+                precon%ilu_levels = 3
+        end select
+
+
         order = chidg%nterms_s_1d
         call wall_distance%set('Solution Order', integer_input=order)
 
@@ -219,7 +229,10 @@ contains
         if (wd_file_exists .and. have_wd_field) then
 
             call wall_distance%read_fields(aux_file)
-            wall_distance%data%sdata%q = wall_distance%data%sdata%q_in
+            associate (q_in => wall_distance%data%sdata%q_in, q => wall_distance%data%sdata%q)
+                !wall_distance%data%sdata%q = wall_distance%data%sdata%q_in     ! For some reason, this causes a segfault, but is okay when wrapped inside associate
+                q = q_in
+            end associate
 
 
         ! If we don't have an accurate wall distance field in file, solve for a new one.
@@ -240,13 +253,14 @@ contains
             !       p = 2,4,6
             !
             iorder = 2
-            call noptions%set('tol',1.e-4_rk)   
+            call noptions%set('tol',1.e-3_rk)   
+            call noptions%set('rtol',1.e-16_rk)   
             call noptions%set('ptc',.true.)    
             call noptions%set('smooth',.false.)
             call loptions%set('tol',1.e-5_rk)   ! Set linear solver options
+            call loptions%set('rtol',1.e-16_rk) ! Set linear solver options
             call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
             call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
-!            wall_distance%nonlinear_solver%norders_reduction = 3
             do p = 2,6,2
                 call write_line('Wall Distance Driver : Loop 1 : p = ', p)
                 
@@ -275,9 +289,9 @@ contains
                 end if
 
                 ! Run ChiDG simulation
-                call wall_distance%report('before')
-                call wall_distance%run(write_initial=.false., write_final=.false.)
-                call wall_distance%report('after')
+                call wall_distance%reporter('before')
+                call wall_distance%run(write_initial=.false., write_final=.false., write_tecio=.false.)
+                call wall_distance%reporter('after')
 
                 ! Write wall distance to auxiliary field
                 call wall_distance%write_fields(aux_file)
@@ -303,15 +317,14 @@ contains
             !
             p = 6
             call set_p_poisson_parameter(real(p,rk))
-            call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
-            call noptions%set('ptc',.true.)   ! Set nonlinear solver options
-            call noptions%set('smooth',.false.)   ! Set nonlinear solver options
-            call loptions%set('tol',1.e-8_rk)   ! Set linear solver options
+            call noptions%set('tol',1.e-3_rk)   ! Set nonlinear solver options
+            call noptions%set('rtol',1.e-16_rk) ! Set nonlinear solver options
+            call noptions%set('ptc',.true.)     ! Set nonlinear solver options
+            call noptions%set('smooth',.false.) ! Set nonlinear solver options
+            call loptions%set('tol',1.e-7_rk)   ! Set linear solver options
+            call loptions%set('rtol',1.e-16_rk) ! Set linear solver options
             call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
             call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
-
-!            wall_distance%nonlinear_solver%norders_reduction = 8
-!            wall_distance%nonlinear_solver%norders_reduction = 30
 
             order = chidg%nterms_s_1d
             do iorder = 3,order
@@ -325,9 +338,9 @@ contains
                 call wall_distance%read_fields(aux_file)
 
                 ! Run ChiDG simulation
-                call wall_distance%report('before')
-                call wall_distance%run(write_initial=.false., write_final=.false.)
-                call wall_distance%report('after')
+                call wall_distance%reporter('before')
+                call wall_distance%run(write_initial=.false., write_final=.false., write_tecio=.false.)
+                call wall_distance%reporter('after')
 
                 ! Write wall distance to auxiliary field
                 call wall_distance%write_fields(aux_file)
@@ -337,23 +350,9 @@ contains
         end if ! have_wd_field .and. wd_file_exists
 
 
-
-        ! Try to find 'Wall Distance' auxiliary field storage.
-        call write_line('Storing Wall Distance field to Auxiliary field ChiDG Vector:', io_proc=GLOBAL_MASTER)
-        aux_field_index = chidg%data%sdata%get_auxiliary_field_index('Wall Distance : p-Poisson')
-
-        ! If no 'Wall Distance' auxiliary field storage was not found, create one.
-        if (aux_field_index == 0) then
-
-            call chidg%data%sdata%add_auxiliary_field('Wall Distance : p-Poisson', wall_distance%data%sdata%q)
-
-        ! If 'Wall Distance' auxiliary field storage was found, copy Wall Distance solution 
-        ! to working ChiDG environment.
-        else
-            chidg%data%sdata%auxiliary_field(aux_field_index) = wall_distance%data%sdata%q
-
-        end if
-
+        ! Read scalar field 'u' to auxiliary field 'Wall Distance : p-Poisson'
+        call write_line('Reading Wall Distance field from file to Auxiliary field ChiDG Vector:', io_proc=GLOBAL_MASTER)
+        call chidg%read_auxiliary_field(aux_file,field='u',store_as='Wall Distance : p-Poisson')
 
 
     end subroutine wall_distance_driver

@@ -189,6 +189,7 @@ module mod_constants
     integer(ik),    parameter   :: NO_PARTITION = -1
     integer(ik),    parameter   :: NO_PROC      = -2
     integer(ik),    parameter   :: NO_ID        = -1
+    integer(ik),    parameter   :: NO_DATA      =  0
 
 
 

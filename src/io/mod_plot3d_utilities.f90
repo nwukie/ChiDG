@@ -80,23 +80,28 @@ contains
     !>  Given coordinate arrays for a block-structured grid, return an array of element
     !!  indices for the block.
     !!
+    !!  Element connectivities correspond to CGNS convention.
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   10/15/2016
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping,idomain) result(elements)
+    function get_block_elements_plot3d(xcoords,ycoords,zcoords,order,idomain) result(elements_cgns)
         real(rk),       intent(in)  :: xcoords(:,:,:)
         real(rk),       intent(in)  :: ycoords(:,:,:)
         real(rk),       intent(in)  :: zcoords(:,:,:)
-        integer(ik),    intent(in)  :: mapping
+        integer(ik),    intent(in)  :: order
         integer(ik),    intent(in)  :: idomain
 
-        integer(ik) :: npt_i, npt_j, npt_k, nelem_i, nelem_j, nelem_k, nelem, &
-                       info_size, npts_1d, npts_element, ielem, ielem_i, ielem_j, ielem_k, &
-                       istart_i, istart_j, istart_k, ipt_i, ipt_j, ipt_k, ipt, ipt_elem, ierr
+        integer(ik) :: npt_i, npt_j, npt_k, nelem_i, nelem_j, nelem_k, nelem,               &
+                       info_size, npts_1d, npts_element, ielem, ielem_i, ielem_j, ielem_k,  &
+                       istart_i, istart_j, istart_k, ipt_i, ipt_j, ipt_k, ipt, ipt_elem,    &
+                       ierr, inode, inode_inner
 
-        integer(ik), allocatable    :: elements(:,:)
+        integer(ik), allocatable    :: elements_plot3d(:,:), elements_cgns(:,:)
+
+        logical :: exists, unique
 
         !
         ! Dimensions for reading plot3d grid
@@ -109,16 +114,16 @@ contains
         !
         ! Determine number of points for geometry features
         !
-        npts_1d      = mapping+1
+        npts_1d      = order+1
         npts_element = npts_1d * npts_1d * npts_1d
 
 
         !
         ! Compute number of elements in current block
         !
-        nelem_i = (npt_i-1)/mapping
-        nelem_j = (npt_j-1)/mapping
-        nelem_k = (npt_k-1)/mapping
+        nelem_i = (npt_i-1)/order
+        nelem_j = (npt_j-1)/order
+        nelem_k = (npt_k-1)/order
         nelem   = nelem_i * nelem_j * nelem_k
 
 
@@ -129,7 +134,7 @@ contains
         info_size = 3  ! idomain, ielem, elem_type, ipt_1, ipt_2, ipt_3, ...
 
 
-        allocate(elements(nelem, info_size+npts_element), stat=ierr)
+        allocate(elements_plot3d(nelem, info_size+npts_element), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ielem = 1
@@ -138,26 +143,26 @@ contains
                 do ielem_i = 1,nelem_i
 
                     ! Set element info
-                    elements(ielem,1) = idomain
-                    elements(ielem,2) = ielem
-                    elements(ielem,3) = mapping
+                    elements_plot3d(ielem,1) = idomain
+                    elements_plot3d(ielem,2) = ielem
+                    elements_plot3d(ielem,3) = order
 
                     ! Get starting point
-                    istart_i = 1 + ((ielem_i-1)*mapping) 
-                    istart_j = 1 + ((ielem_j-1)*mapping) 
-                    istart_k = 1 + ((ielem_k-1)*mapping) 
+                    istart_i = 1 + ((ielem_i-1)*order) 
+                    istart_j = 1 + ((ielem_j-1)*order) 
+                    istart_k = 1 + ((ielem_k-1)*order) 
 
                     !
                     ! For the current element, compute node indices
                     !
                     ipt=1       ! Global point index
                     ipt_elem=1  ! Local-element point index
-                    do ipt_k = istart_k,(istart_k + mapping)
-                        do ipt_j = istart_j,(istart_j + mapping)
-                            do ipt_i = istart_i,(istart_i + mapping)
+                    do ipt_k = istart_k,(istart_k + order)
+                        do ipt_j = istart_j,(istart_j + order)
+                            do ipt_i = istart_i,(istart_i + order)
 
                                 ipt = ipt_i  +  (ipt_j-1)*npt_i  +  (ipt_k-1)*(npt_i*npt_j)
-                                elements(ielem,info_size+ipt_elem) = ipt
+                                elements_plot3d(ielem,info_size+ipt_elem) = ipt
 
                                 ipt_elem = ipt_elem + 1
                             end do
@@ -169,6 +174,345 @@ contains
                 end do
             end do
         end do
+
+
+
+        !
+        ! Convert to CGNS connectivity
+        !
+        elements_cgns = elements_plot3d
+
+        do ielem = 1,size(elements_plot3d,1)
+
+            select case (order)
+
+                ! Linear hexahedrals: HEXA_8
+                case(1)
+                    elements_cgns(ielem,info_size+1) = elements_plot3d(ielem,info_size+1)
+                    elements_cgns(ielem,info_size+2) = elements_plot3d(ielem,info_size+2)
+                    elements_cgns(ielem,info_size+3) = elements_plot3d(ielem,info_size+4)
+                    elements_cgns(ielem,info_size+4) = elements_plot3d(ielem,info_size+3)
+
+                    elements_cgns(ielem,info_size+5) = elements_plot3d(ielem,info_size+5)
+                    elements_cgns(ielem,info_size+6) = elements_plot3d(ielem,info_size+6)
+                    elements_cgns(ielem,info_size+7) = elements_plot3d(ielem,info_size+8)
+                    elements_cgns(ielem,info_size+8) = elements_plot3d(ielem,info_size+7)
+
+
+
+
+
+                ! Quadratic hexahedrals: HEXA_27
+                case(2)
+                    elements_cgns(ielem,info_size+1) = elements_plot3d(ielem,info_size+1)
+                    elements_cgns(ielem,info_size+2) = elements_plot3d(ielem,info_size+3)
+                    elements_cgns(ielem,info_size+3) = elements_plot3d(ielem,info_size+9)
+                    elements_cgns(ielem,info_size+4) = elements_plot3d(ielem,info_size+7)
+
+                    elements_cgns(ielem,info_size+5) = elements_plot3d(ielem,info_size+19)
+                    elements_cgns(ielem,info_size+6) = elements_plot3d(ielem,info_size+21)
+                    elements_cgns(ielem,info_size+7) = elements_plot3d(ielem,info_size+27)
+                    elements_cgns(ielem,info_size+8) = elements_plot3d(ielem,info_size+25)
+
+                    elements_cgns(ielem,info_size+9 ) = elements_plot3d(ielem,info_size+2)
+                    elements_cgns(ielem,info_size+10) = elements_plot3d(ielem,info_size+6)
+                    elements_cgns(ielem,info_size+11) = elements_plot3d(ielem,info_size+8)
+                    elements_cgns(ielem,info_size+12) = elements_plot3d(ielem,info_size+4)
+
+                    elements_cgns(ielem,info_size+13) = elements_plot3d(ielem,info_size+10)
+                    elements_cgns(ielem,info_size+14) = elements_plot3d(ielem,info_size+12)
+                    elements_cgns(ielem,info_size+15) = elements_plot3d(ielem,info_size+18)
+                    elements_cgns(ielem,info_size+16) = elements_plot3d(ielem,info_size+16)
+
+                    elements_cgns(ielem,info_size+17) = elements_plot3d(ielem,info_size+20)
+                    elements_cgns(ielem,info_size+18) = elements_plot3d(ielem,info_size+24)
+                    elements_cgns(ielem,info_size+19) = elements_plot3d(ielem,info_size+26)
+                    elements_cgns(ielem,info_size+20) = elements_plot3d(ielem,info_size+22)
+
+                    elements_cgns(ielem,info_size+21) = elements_plot3d(ielem,info_size+5)
+                    elements_cgns(ielem,info_size+22) = elements_plot3d(ielem,info_size+11)
+                    elements_cgns(ielem,info_size+23) = elements_plot3d(ielem,info_size+15)
+                    elements_cgns(ielem,info_size+24) = elements_plot3d(ielem,info_size+17)
+
+                    elements_cgns(ielem,info_size+25) = elements_plot3d(ielem,info_size+13)
+                    elements_cgns(ielem,info_size+26) = elements_plot3d(ielem,info_size+23)
+                    elements_cgns(ielem,info_size+27) = elements_plot3d(ielem,info_size+14)
+
+                ! Cubic hexahedrals: HEXA_64
+                case(3)
+                
+                    elements_cgns(ielem,info_size+1 ) = elements_plot3d(ielem,info_size+1)
+                    elements_cgns(ielem,info_size+2 ) = elements_plot3d(ielem,info_size+4)
+                    elements_cgns(ielem,info_size+3 ) = elements_plot3d(ielem,info_size+16)
+                    elements_cgns(ielem,info_size+4 ) = elements_plot3d(ielem,info_size+13)
+
+                    elements_cgns(ielem,info_size+5 ) = elements_plot3d(ielem,info_size+49)
+                    elements_cgns(ielem,info_size+6 ) = elements_plot3d(ielem,info_size+52)
+                    elements_cgns(ielem,info_size+7 ) = elements_plot3d(ielem,info_size+64)
+                    elements_cgns(ielem,info_size+8 ) = elements_plot3d(ielem,info_size+61)
+
+                    elements_cgns(ielem,info_size+9 ) = elements_plot3d(ielem,info_size+2)
+                    elements_cgns(ielem,info_size+10) = elements_plot3d(ielem,info_size+3)
+                    elements_cgns(ielem,info_size+11) = elements_plot3d(ielem,info_size+8)
+                    elements_cgns(ielem,info_size+12) = elements_plot3d(ielem,info_size+12)
+
+                    elements_cgns(ielem,info_size+13) = elements_plot3d(ielem,info_size+15)
+                    elements_cgns(ielem,info_size+14) = elements_plot3d(ielem,info_size+14)
+                    elements_cgns(ielem,info_size+15) = elements_plot3d(ielem,info_size+9)
+                    elements_cgns(ielem,info_size+16) = elements_plot3d(ielem,info_size+5)
+
+                    elements_cgns(ielem,info_size+17) = elements_plot3d(ielem,info_size+17)
+                    elements_cgns(ielem,info_size+18) = elements_plot3d(ielem,info_size+33)
+                    elements_cgns(ielem,info_size+19) = elements_plot3d(ielem,info_size+20)
+                    elements_cgns(ielem,info_size+20) = elements_plot3d(ielem,info_size+36)
+
+                    elements_cgns(ielem,info_size+21) = elements_plot3d(ielem,info_size+32)
+                    elements_cgns(ielem,info_size+22) = elements_plot3d(ielem,info_size+48)
+                    elements_cgns(ielem,info_size+23) = elements_plot3d(ielem,info_size+29)
+                    elements_cgns(ielem,info_size+24) = elements_plot3d(ielem,info_size+45)
+
+                    elements_cgns(ielem,info_size+25) = elements_plot3d(ielem,info_size+50)
+                    elements_cgns(ielem,info_size+26) = elements_plot3d(ielem,info_size+51)
+                    elements_cgns(ielem,info_size+27) = elements_plot3d(ielem,info_size+56)
+                    elements_cgns(ielem,info_size+28) = elements_plot3d(ielem,info_size+60)
+
+                    elements_cgns(ielem,info_size+29) = elements_plot3d(ielem,info_size+63)
+                    elements_cgns(ielem,info_size+30) = elements_plot3d(ielem,info_size+62)
+                    elements_cgns(ielem,info_size+31) = elements_plot3d(ielem,info_size+57)
+                    elements_cgns(ielem,info_size+32) = elements_plot3d(ielem,info_size+53)
+
+                    elements_cgns(ielem,info_size+33) = elements_plot3d(ielem,info_size+6)
+                    elements_cgns(ielem,info_size+34) = elements_plot3d(ielem,info_size+7)
+                    elements_cgns(ielem,info_size+35) = elements_plot3d(ielem,info_size+11)
+                    elements_cgns(ielem,info_size+36) = elements_plot3d(ielem,info_size+10)
+
+                    elements_cgns(ielem,info_size+37) = elements_plot3d(ielem,info_size+18)
+                    elements_cgns(ielem,info_size+38) = elements_plot3d(ielem,info_size+19)
+                    elements_cgns(ielem,info_size+39) = elements_plot3d(ielem,info_size+35)
+                    elements_cgns(ielem,info_size+40) = elements_plot3d(ielem,info_size+34)
+
+                    elements_cgns(ielem,info_size+41) = elements_plot3d(ielem,info_size+24)
+                    elements_cgns(ielem,info_size+42) = elements_plot3d(ielem,info_size+28)
+                    elements_cgns(ielem,info_size+43) = elements_plot3d(ielem,info_size+44)
+                    elements_cgns(ielem,info_size+44) = elements_plot3d(ielem,info_size+40)
+
+                    elements_cgns(ielem,info_size+45) = elements_plot3d(ielem,info_size+31)
+                    elements_cgns(ielem,info_size+46) = elements_plot3d(ielem,info_size+30)
+                    elements_cgns(ielem,info_size+47) = elements_plot3d(ielem,info_size+46)
+                    elements_cgns(ielem,info_size+48) = elements_plot3d(ielem,info_size+47)
+
+                    elements_cgns(ielem,info_size+49) = elements_plot3d(ielem,info_size+25)
+                    elements_cgns(ielem,info_size+50) = elements_plot3d(ielem,info_size+21)
+                    elements_cgns(ielem,info_size+51) = elements_plot3d(ielem,info_size+37)
+                    elements_cgns(ielem,info_size+52) = elements_plot3d(ielem,info_size+41)
+
+                    elements_cgns(ielem,info_size+53) = elements_plot3d(ielem,info_size+54)
+                    elements_cgns(ielem,info_size+54) = elements_plot3d(ielem,info_size+55)
+                    elements_cgns(ielem,info_size+55) = elements_plot3d(ielem,info_size+59)
+                    elements_cgns(ielem,info_size+56) = elements_plot3d(ielem,info_size+58)
+
+                    elements_cgns(ielem,info_size+57) = elements_plot3d(ielem,info_size+22)
+                    elements_cgns(ielem,info_size+58) = elements_plot3d(ielem,info_size+23)
+                    elements_cgns(ielem,info_size+59) = elements_plot3d(ielem,info_size+27)
+                    elements_cgns(ielem,info_size+60) = elements_plot3d(ielem,info_size+26)
+
+                    elements_cgns(ielem,info_size+61) = elements_plot3d(ielem,info_size+38)
+                    elements_cgns(ielem,info_size+62) = elements_plot3d(ielem,info_size+39)
+                    elements_cgns(ielem,info_size+63) = elements_plot3d(ielem,info_size+43)
+                    elements_cgns(ielem,info_size+64) = elements_plot3d(ielem,info_size+42)
+
+                ! Quartic hexahedrals: HEXA_125
+                case(4)
+
+                    elements_cgns(ielem,info_size+1 )  = elements_plot3d(ielem,info_size+1)
+                    elements_cgns(ielem,info_size+2 )  = elements_plot3d(ielem,info_size+5)
+                    elements_cgns(ielem,info_size+3 )  = elements_plot3d(ielem,info_size+25)
+                    elements_cgns(ielem,info_size+4 )  = elements_plot3d(ielem,info_size+21)
+                    elements_cgns(ielem,info_size+5 )  = elements_plot3d(ielem,info_size+101)
+                    elements_cgns(ielem,info_size+6 )  = elements_plot3d(ielem,info_size+105)
+                    elements_cgns(ielem,info_size+7 )  = elements_plot3d(ielem,info_size+125)
+                    elements_cgns(ielem,info_size+8 )  = elements_plot3d(ielem,info_size+121)
+                    elements_cgns(ielem,info_size+9 )  = elements_plot3d(ielem,info_size+2)
+
+                    elements_cgns(ielem,info_size+10)  = elements_plot3d(ielem,info_size+3)
+                    elements_cgns(ielem,info_size+11)  = elements_plot3d(ielem,info_size+4)
+                    elements_cgns(ielem,info_size+12)  = elements_plot3d(ielem,info_size+10)
+                    elements_cgns(ielem,info_size+13)  = elements_plot3d(ielem,info_size+15)
+                    elements_cgns(ielem,info_size+14)  = elements_plot3d(ielem,info_size+20)
+                    elements_cgns(ielem,info_size+15)  = elements_plot3d(ielem,info_size+24)
+                    elements_cgns(ielem,info_size+16)  = elements_plot3d(ielem,info_size+23)
+                    elements_cgns(ielem,info_size+17)  = elements_plot3d(ielem,info_size+22)
+                    elements_cgns(ielem,info_size+18)  = elements_plot3d(ielem,info_size+16)
+                    elements_cgns(ielem,info_size+19)  = elements_plot3d(ielem,info_size+11)
+
+                    elements_cgns(ielem,info_size+20)  = elements_plot3d(ielem,info_size+6)
+                    elements_cgns(ielem,info_size+21)  = elements_plot3d(ielem,info_size+26)
+                    elements_cgns(ielem,info_size+22)  = elements_plot3d(ielem,info_size+51)
+                    elements_cgns(ielem,info_size+23)  = elements_plot3d(ielem,info_size+76)
+                    elements_cgns(ielem,info_size+24)  = elements_plot3d(ielem,info_size+30)
+                    elements_cgns(ielem,info_size+25)  = elements_plot3d(ielem,info_size+55)
+                    elements_cgns(ielem,info_size+26)  = elements_plot3d(ielem,info_size+80)
+                    elements_cgns(ielem,info_size+27)  = elements_plot3d(ielem,info_size+50)
+                    elements_cgns(ielem,info_size+28)  = elements_plot3d(ielem,info_size+75)
+                    elements_cgns(ielem,info_size+29)  = elements_plot3d(ielem,info_size+100)
+
+                    elements_cgns(ielem,info_size+30)  = elements_plot3d(ielem,info_size+46)
+                    elements_cgns(ielem,info_size+31)  = elements_plot3d(ielem,info_size+71)
+                    elements_cgns(ielem,info_size+32)  = elements_plot3d(ielem,info_size+96)
+                    elements_cgns(ielem,info_size+33)  = elements_plot3d(ielem,info_size+102)
+                    elements_cgns(ielem,info_size+34)  = elements_plot3d(ielem,info_size+103)
+                    elements_cgns(ielem,info_size+35)  = elements_plot3d(ielem,info_size+104)
+                    elements_cgns(ielem,info_size+36)  = elements_plot3d(ielem,info_size+110)
+                    elements_cgns(ielem,info_size+37)  = elements_plot3d(ielem,info_size+115)
+                    elements_cgns(ielem,info_size+38)  = elements_plot3d(ielem,info_size+120)
+                    elements_cgns(ielem,info_size+39)  = elements_plot3d(ielem,info_size+124)
+
+                    elements_cgns(ielem,info_size+40)  = elements_plot3d(ielem,info_size+123)
+                    elements_cgns(ielem,info_size+41)  = elements_plot3d(ielem,info_size+122)
+                    elements_cgns(ielem,info_size+42)  = elements_plot3d(ielem,info_size+116)
+                    elements_cgns(ielem,info_size+43)  = elements_plot3d(ielem,info_size+111)
+                    elements_cgns(ielem,info_size+44)  = elements_plot3d(ielem,info_size+106)
+                    elements_cgns(ielem,info_size+45)  = elements_plot3d(ielem,info_size+7)
+                    elements_cgns(ielem,info_size+46)  = elements_plot3d(ielem,info_size+8)
+                    elements_cgns(ielem,info_size+47)  = elements_plot3d(ielem,info_size+9)
+                    elements_cgns(ielem,info_size+48)  = elements_plot3d(ielem,info_size+14)
+                    elements_cgns(ielem,info_size+49)  = elements_plot3d(ielem,info_size+19)
+
+                    elements_cgns(ielem,info_size+50)  = elements_plot3d(ielem,info_size+18)
+                    elements_cgns(ielem,info_size+51)  = elements_plot3d(ielem,info_size+17)
+                    elements_cgns(ielem,info_size+52)  = elements_plot3d(ielem,info_size+12)
+                    elements_cgns(ielem,info_size+53)  = elements_plot3d(ielem,info_size+13)
+                    elements_cgns(ielem,info_size+54)  = elements_plot3d(ielem,info_size+27)
+                    elements_cgns(ielem,info_size+55)  = elements_plot3d(ielem,info_size+28)
+                    elements_cgns(ielem,info_size+56)  = elements_plot3d(ielem,info_size+29)
+                    elements_cgns(ielem,info_size+57)  = elements_plot3d(ielem,info_size+54)
+                    elements_cgns(ielem,info_size+58)  = elements_plot3d(ielem,info_size+79)
+                    elements_cgns(ielem,info_size+59)  = elements_plot3d(ielem,info_size+78)
+
+                    elements_cgns(ielem,info_size+60)  = elements_plot3d(ielem,info_size+77)
+                    elements_cgns(ielem,info_size+61)  = elements_plot3d(ielem,info_size+52)
+                    elements_cgns(ielem,info_size+62)  = elements_plot3d(ielem,info_size+53)
+                    elements_cgns(ielem,info_size+63)  = elements_plot3d(ielem,info_size+35)
+                    elements_cgns(ielem,info_size+64)  = elements_plot3d(ielem,info_size+40)
+                    elements_cgns(ielem,info_size+65)  = elements_plot3d(ielem,info_size+45)
+                    elements_cgns(ielem,info_size+66)  = elements_plot3d(ielem,info_size+70)
+                    elements_cgns(ielem,info_size+67)  = elements_plot3d(ielem,info_size+95)
+                    elements_cgns(ielem,info_size+68)  = elements_plot3d(ielem,info_size+90)
+                    elements_cgns(ielem,info_size+69)  = elements_plot3d(ielem,info_size+85)
+
+                    elements_cgns(ielem,info_size+70)  = elements_plot3d(ielem,info_size+60)
+                    elements_cgns(ielem,info_size+71)  = elements_plot3d(ielem,info_size+65)
+                    elements_cgns(ielem,info_size+72)  = elements_plot3d(ielem,info_size+49)
+                    elements_cgns(ielem,info_size+73)  = elements_plot3d(ielem,info_size+48)
+                    elements_cgns(ielem,info_size+74)  = elements_plot3d(ielem,info_size+47)
+                    elements_cgns(ielem,info_size+75)  = elements_plot3d(ielem,info_size+72)
+                    elements_cgns(ielem,info_size+76)  = elements_plot3d(ielem,info_size+97)
+                    elements_cgns(ielem,info_size+77)  = elements_plot3d(ielem,info_size+98)
+                    elements_cgns(ielem,info_size+78)  = elements_plot3d(ielem,info_size+99)
+                    elements_cgns(ielem,info_size+79)  = elements_plot3d(ielem,info_size+74)
+
+                    elements_cgns(ielem,info_size+80)  = elements_plot3d(ielem,info_size+73)
+                    elements_cgns(ielem,info_size+81)  = elements_plot3d(ielem,info_size+41)
+                    elements_cgns(ielem,info_size+82)  = elements_plot3d(ielem,info_size+36)
+                    elements_cgns(ielem,info_size+83)  = elements_plot3d(ielem,info_size+31)
+                    elements_cgns(ielem,info_size+84)  = elements_plot3d(ielem,info_size+56)
+                    elements_cgns(ielem,info_size+85)  = elements_plot3d(ielem,info_size+81)
+                    elements_cgns(ielem,info_size+86)  = elements_plot3d(ielem,info_size+86)
+                    elements_cgns(ielem,info_size+87)  = elements_plot3d(ielem,info_size+91)
+                    elements_cgns(ielem,info_size+88)  = elements_plot3d(ielem,info_size+66)
+                    elements_cgns(ielem,info_size+89)  = elements_plot3d(ielem,info_size+61)
+
+                    elements_cgns(ielem,info_size+90)  = elements_plot3d(ielem,info_size+107)
+                    elements_cgns(ielem,info_size+91)  = elements_plot3d(ielem,info_size+108)
+                    elements_cgns(ielem,info_size+92)  = elements_plot3d(ielem,info_size+109)
+                    elements_cgns(ielem,info_size+93)  = elements_plot3d(ielem,info_size+114)
+                    elements_cgns(ielem,info_size+94)  = elements_plot3d(ielem,info_size+119)
+                    elements_cgns(ielem,info_size+95)  = elements_plot3d(ielem,info_size+118)
+                    elements_cgns(ielem,info_size+96)  = elements_plot3d(ielem,info_size+117)
+                    elements_cgns(ielem,info_size+97)  = elements_plot3d(ielem,info_size+112)
+                    elements_cgns(ielem,info_size+98)  = elements_plot3d(ielem,info_size+113)
+                    elements_cgns(ielem,info_size+99)  = elements_plot3d(ielem,info_size+32)
+
+                    elements_cgns(ielem,info_size+100) = elements_plot3d(ielem,info_size+33)
+                    elements_cgns(ielem,info_size+101) = elements_plot3d(ielem,info_size+34)
+                    elements_cgns(ielem,info_size+102) = elements_plot3d(ielem,info_size+39)
+                    elements_cgns(ielem,info_size+103) = elements_plot3d(ielem,info_size+44)
+                    elements_cgns(ielem,info_size+104) = elements_plot3d(ielem,info_size+43)
+                    elements_cgns(ielem,info_size+105) = elements_plot3d(ielem,info_size+42)
+                    elements_cgns(ielem,info_size+106) = elements_plot3d(ielem,info_size+37)
+                    elements_cgns(ielem,info_size+107) = elements_plot3d(ielem,info_size+38)
+                    elements_cgns(ielem,info_size+108) = elements_plot3d(ielem,info_size+57)
+                    elements_cgns(ielem,info_size+109) = elements_plot3d(ielem,info_size+58)
+
+                    elements_cgns(ielem,info_size+110) = elements_plot3d(ielem,info_size+59)
+                    elements_cgns(ielem,info_size+111) = elements_plot3d(ielem,info_size+64)
+                    elements_cgns(ielem,info_size+112) = elements_plot3d(ielem,info_size+69)
+                    elements_cgns(ielem,info_size+113) = elements_plot3d(ielem,info_size+68)
+                    elements_cgns(ielem,info_size+114) = elements_plot3d(ielem,info_size+67)
+                    elements_cgns(ielem,info_size+115) = elements_plot3d(ielem,info_size+62)
+                    elements_cgns(ielem,info_size+116) = elements_plot3d(ielem,info_size+63)
+                    elements_cgns(ielem,info_size+117) = elements_plot3d(ielem,info_size+82)
+                    elements_cgns(ielem,info_size+118) = elements_plot3d(ielem,info_size+83)
+                    elements_cgns(ielem,info_size+119) = elements_plot3d(ielem,info_size+84)
+
+                    elements_cgns(ielem,info_size+120) = elements_plot3d(ielem,info_size+89)
+                    elements_cgns(ielem,info_size+121) = elements_plot3d(ielem,info_size+94)
+                    elements_cgns(ielem,info_size+122) = elements_plot3d(ielem,info_size+93)
+                    elements_cgns(ielem,info_size+123) = elements_plot3d(ielem,info_size+92)
+                    elements_cgns(ielem,info_size+124) = elements_plot3d(ielem,info_size+87)
+                    elements_cgns(ielem,info_size+125) = elements_plot3d(ielem,info_size+88)
+
+
+
+            end select
+
+
+
+            !
+            ! Check node indices are each a part of the original node set to catch errors
+            !
+            do inode = 1,(size(elements_cgns,2) - info_size)
+
+                ! Check exists in original node set
+                exists = .false.
+                do inode_inner = 1,(size(elements_plot3d,2) - info_size)
+                    if ( elements_cgns(ielem,info_size+inode) == elements_plot3d(ielem,info_size+inode_inner) ) then
+                        exists = .true.
+                        exit
+                    end if
+                end do !inode_tmp
+
+                if (.not. exists) call chidg_signal(FATAL,'get_block_elements_plot3d: node mapped to CGNS connectivity does not exist in Plot3D connectivity.')
+            end do !inode
+
+
+
+            !
+            ! Check node indices are unique for each element to catch duplication error.
+            !
+            do inode = 1,(size(elements_cgns,2) - info_size)
+
+                ! Check no duplicate nodes in cgns set.
+                unique = .true.
+                do inode_inner = 1,(size(elements_cgns,2) - info_size)
+                    if ( (inode /= inode_inner) .and. &
+                         (elements_cgns(ielem,info_size+inode) == elements_cgns(ielem,info_size+inode_inner)) ) then
+                        unique = .false.
+                        exit
+                    end if
+                end do !inode_tmp
+
+                if (.not. unique) call chidg_signal(FATAL,'get_block_elements_plot3d: nodes mapped to CGNS connectivity from Plot3D are not unique.')
+            end do !inode
+
+
+
+
+
+        end do !ielem
+
+
+
 
 
     end function get_block_elements_plot3d

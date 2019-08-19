@@ -90,97 +90,98 @@ contains
         !
         density             = worker%get_field('Density',                   'value') 
 
-        if (worker%interpolation_source == 'boundary') then
-            distance            = worker%get_field('Wall Distance',             'value', 'face interior') 
-        else if (worker%interpolation_source == 'face exterior') then
-            distance            = worker%get_field('Wall Distance',             'value', 'face interior') 
-        else
-            distance            = worker%get_field('Wall Distance',             'value') 
-        end if
-
-        omega_t               = worker%get_field('Omega',                     'value')
-        omega_source_term   = worker%get_field('SST CD',                     'value')
-        k_t                 = worker%get_field('k', 'value')
-
-        mu_l                = worker%get_field('Laminar Viscosity',         'value')
-
-        !print *, 'distance'
-        !print *, distance(:)%x_ad_
-        
-        CD = density
-        CD  = smax(sst_e_sigma_d*omega_source_term-1.0e-10_rk, ZERO*omega_source_term)+1.0e-10_rk 
-        !CD  = max(sst_e_sigma_d*omega_source_term,1.0e-10_rk) 
-        !print *, 'mu t max argument 1'
-        !print *, sst_e_sigma_d*omega_source_term(:)%x_ad_
-
-
-        !print *, 'CD'
-        !print *, CD(:)%x_ad_
-        zeta = density
-        temp1 = density
-        temp2 = density
-        temp3 = density
-        temp4 = density
-
-        !temp1   = exp(0.5_rk*log(k_t))/(0.09_rk*exp(omega_t)*distance + 1.0e-12_rk)
-        temp1   = MY_SQRT(k_t)
-        !do ii = 1, size(temp1)
-        !temp1(ii)%xp_ad_(:) = ZERO
-        !end do
-        temp1=temp1/(0.09_rk*exp(omega_t)*distance + 1.0e-14_rk)
-        !print *, 'temp1'
-        !print *, temp1(:)%x_ad_
-        
-        temp2    =  500._rk*mu_l/(density*exp(omega_t)*distance**TWO + 1.0e-14_rk)
-        !print *, 'temp2'
-        !print *, temp2(:)%x_ad_
-
-        temp3    = smax(temp1, temp2)
-        !print *, 'F1 -1 max argument 1'
-        !print *, temp1(:)%x_ad_
-        !print *, 'F1 -1 max argument 2'
-        !print *, temp2(:)%x_ad_
-
-
-        !temp3    = max(temp1, temp2)
-
-        !print *, 'temp3'
-        !print *, temp3(:)%x_ad_
-
-        temp4   = TWO*sst_e_sigma_d*density*k_t/(CD*distance**TWO + 1.0e-14_rk)
-        !print *, 'temp4'
-        !print *, temp4(:)%x_ad_
-
-        zeta = smin(temp3, temp4)
-        !print *, 'F1-2 min argument 1'
-        !print *, temp3(:)%x_ad_
-        !print *, 'F1-2 min argument 2'
-        !print *, temp4(:)%x_ad_
-
-
-        !zeta = min(temp3, temp4)
-        !print *, 'zeta'
-        !print *, zeta(:)%x_ad_
-
-
-        !zeta    = min( &
-        !            max(sqrt((k_t(:)%x_ad_))/(0.09_rk*exp(omega_t)*distance + 1.0e-10_rk), &
-        !            500._rk*mu_l/(density*exp(omega_t)*distance**TWO + 1.0e-10_rk)),&
-        !            TWO*sst_e_sigma_d*density*k_t/(CD*distance**TWO + 1.0e-10_rk))
-
-        ! Blending coefficient
-        F1 = zeta
-        arg = zeta**FOUR
-        temp1 = F1
-        temp1 = ONE-exp(-TWO*arg)
-        temp2 = temp1
-        temp2 = exp(-TWO*arg)+ONE
-        F1 = temp1/temp2
+!        if (worker%interpolation_source == 'boundary') then
+!            distance            = worker%get_field('Wall Distance',             'value', 'face interior') 
+!        else if (worker%interpolation_source == 'face exterior') then
+!            distance            = worker%get_field('Wall Distance',             'value', 'face interior') 
+!        else
+!            distance            = worker%get_field('Wall Distance',             'value') 
+!        end if
+!
+!        omega_t               = worker%get_field('Omega',                     'value')
+!        omega_source_term   = worker%get_field('SST CD',                     'value')
+!        k_t                 = worker%get_field('k', 'value')
+!
+!        mu_l                = worker%get_field('Laminar Viscosity',         'value')
+!
+!        !print *, 'distance'
+!        !print *, distance(:)%x_ad_
+!        
+!        CD = density
+!        CD  = smax(sst_e_sigma_d*omega_source_term-1.0e-10_rk, ZERO*omega_source_term)+1.0e-10_rk 
+!        !CD  = max(sst_e_sigma_d*omega_source_term,1.0e-10_rk) 
+!        !print *, 'mu t max argument 1'
+!        !print *, sst_e_sigma_d*omega_source_term(:)%x_ad_
+!
+!
+!        !print *, 'CD'
+!        !print *, CD(:)%x_ad_
+!        zeta = density
+!        temp1 = density
+!        temp2 = density
+!        temp3 = density
+!        temp4 = density
+!
+!        !temp1   = exp(0.5_rk*log(k_t))/(0.09_rk*exp(omega_t)*distance + 1.0e-12_rk)
+!        temp1   = MY_SQRT(k_t)
+!        !do ii = 1, size(temp1)
+!        !temp1(ii)%xp_ad_(:) = ZERO
+!        !end do
+!        temp1=temp1/(0.09_rk*exp(omega_t)*distance + 1.0e-14_rk)
+!        !print *, 'temp1'
+!        !print *, temp1(:)%x_ad_
+!        
+!        temp2    =  500._rk*mu_l/(density*exp(omega_t)*distance**TWO + 1.0e-14_rk)
+!        !print *, 'temp2'
+!        !print *, temp2(:)%x_ad_
+!
+!        temp3    = smax(temp1, temp2)
+!        !print *, 'F1 -1 max argument 1'
+!        !print *, temp1(:)%x_ad_
+!        !print *, 'F1 -1 max argument 2'
+!        !print *, temp2(:)%x_ad_
+!
+!
+!        !temp3    = max(temp1, temp2)
+!
+!        !print *, 'temp3'
+!        !print *, temp3(:)%x_ad_
+!
+!        temp4   = TWO*sst_e_sigma_d*density*k_t/(CD*distance**TWO + 1.0e-14_rk)
+!        !print *, 'temp4'
+!        !print *, temp4(:)%x_ad_
+!
+!        zeta = smin(temp3, temp4)
+!        !print *, 'F1-2 min argument 1'
+!        !print *, temp3(:)%x_ad_
+!        !print *, 'F1-2 min argument 2'
+!        !print *, temp4(:)%x_ad_
+!
+!
+!        !zeta = min(temp3, temp4)
+!        !print *, 'zeta'
+!        !print *, zeta(:)%x_ad_
+!
+!
+!        !zeta    = min( &
+!        !            max(sqrt((k_t(:)%x_ad_))/(0.09_rk*exp(omega_t)*distance + 1.0e-10_rk), &
+!        !            500._rk*mu_l/(density*exp(omega_t)*distance**TWO + 1.0e-10_rk)),&
+!        !            TWO*sst_e_sigma_d*density*k_t/(CD*distance**TWO + 1.0e-10_rk))
+!
+!        ! Blending coefficient
+!        F1 = zeta
+!        arg = zeta**FOUR
+!        temp1 = F1
+!        temp1 = ONE-exp(-TWO*arg)
+!        temp2 = temp1
+!        temp2 = exp(-TWO*arg)+ONE
+!        F1 = temp1/temp2
 
         !do ii = 1, size(temp1)
         !    F1(ii)%xp_ad_(:) = ZERO
         !end do
         !F1 = tanh(zeta(:)%x_ad_**FOUR)
+        F1 = density
         F1 = 1.0_rk
         !F1 = 0.0_rk
 

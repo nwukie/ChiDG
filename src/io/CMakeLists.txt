@@ -13,4 +13,5 @@ add_lib_sources(mod_io.f90
                 mod_HB_post.f90
                 mod_HB_interpolate.f90
                 mod_matplotlib_io.f90
+                mod_gmsh.f90
                 )

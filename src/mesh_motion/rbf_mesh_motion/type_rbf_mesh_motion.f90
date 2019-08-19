@@ -116,7 +116,7 @@ contains
 
         type(svector_t)     :: patch_names
         type(string_t)      :: patch_name
-        integer(ik)         :: ipatch, npatches, inode, nnodes, nnodes_base
+        integer(ik)         :: ipatch, npatches, inode, nnodes, nnodes_base, ierr
         real(rk) :: radius_base(3)
 
         call self%init_name()
@@ -142,16 +142,17 @@ contains
         call self%rbfi%assemble_rbf_patch(mesh,patch_names)
 
         nnodes = self%rbfi%rbf_node_patch%nnodes_patch
-        allocate(self%dnodes(nnodes,3), self%vnodes(nnodes,3), &
-            self%dcoeff(nnodes,3), self%vcoeff(nnodes,3), &
-            self%rbf_mm_driver_ID(nnodes))
+        allocate(self%dnodes(nnodes,3), &
+                 self%vnodes(nnodes,3), &
+                 self%dcoeff(nnodes,3), &
+                 self%vcoeff(nnodes,3), &
+                self%rbf_mm_driver_ID(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
 
         ! Assign each node to a driver
         do inode = 1, nnodes
-
             self%rbf_mm_driver_ID(inode) = self%rbfi%rbf_node_patch%patch_ID(inode)
-
-
         end do
 
 
@@ -170,38 +171,50 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine update(self,mesh,time)
-        class(rbf_mesh_motion_t),  intent(inout)   :: self
-        type(mesh_t),                   intent(inout)   :: mesh
-        real(rk),                       intent(in)      :: time
+        class(rbf_mesh_motion_t),   intent(inout)   :: self
+        type(mesh_t),               intent(inout)   :: mesh
+        real(rk),                   intent(in)      :: time
 
         integer(ik) :: inode, idir, driver_ID
         real(rk) :: node(3), val(3)
-        ! Loop over RBF source nodes and apply the driver
 
+        ! Loop over RBF source nodes and apply the driver
         do inode = 1, self%rbfi%rbf_node_patch%nnodes_patch
 
             driver_ID = self%rbf_mm_driver_ID(inode)
+            node(1:3) = self%rbfi%rbf_node_patch%nodes(inode,1:3)
 
-            node = self%rbfi%rbf_node_patch%nodes(inode,1:3)
+! internal compiler error when using fbounds=check
+!            !self%dnodes(inode,1:3) = self%rbf_mm_driver(driver_ID)%driver%compute_disp(time, node)
+!            !self%vnodes(inode,1:3) = self%rbf_mm_driver(driver_ID)%driver%compute_vel(time, node)
+!            val = self%rbf_mm_driver(driver_ID)%driver%compute_disp(time, node)
+!            self%dnodes(inode,:) = val!self%rbf_mm_driver(driver_ID)%driver%compute_disp(time, node)
+!            val = self%rbf_mm_driver(driver_ID)%driver%compute_vel(time, node)
+!            self%vnodes(inode,:) = val!self%rbf_mm_driver(driver_ID)%driver%compute_vel(time, node)
 
-            !self%dnodes(inode,1:3) = self%rbf_mm_driver(driver_ID)%driver%compute_disp(time, node)
-            !self%vnodes(inode,1:3) = self%rbf_mm_driver(driver_ID)%driver%compute_vel(time, node)
-            val = self%rbf_mm_driver(driver_ID)%driver%compute_disp(time, node)
-            self%dnodes(inode,:) = val!self%rbf_mm_driver(driver_ID)%driver%compute_disp(time, node)
-            val = self%rbf_mm_driver(driver_ID)%driver%compute_vel(time, node)
-            self%vnodes(inode,:) = val!self%rbf_mm_driver(driver_ID)%driver%compute_vel(time, node)
+
+print*, 'WARNING: uncomment in type_rbf_mesh_motion.f90'
+!            val = self%rbf_mm_driver(driver_ID)%driver%compute_disp(time,node)
+!            self%dnodes(inode,:) = val
+!
+!            val = self%rbf_mm_driver(driver_ID)%driver%compute_vel(time,node)
+!            self%vnodes(inode,:) = val
+            
 
         end do
 
 
         ! Solve for coefficients
-
         do idir = 1,3
-
             self%dcoeff(:,idir) = self%rbfi%solve(self%dnodes(:,idir))
             self%vcoeff(:,idir) = self%rbfi%solve(self%vnodes(:,idir))
         end do
+
     end subroutine update
+    !*******************************************************************************
+
+
+
 
     !>
     !! Description: Applies the RBFMM to the mesh nodes
@@ -222,10 +235,8 @@ contains
             if (mm_ID == self%mm_ID) then
                 do idir = 1,3
                     do inode = 1, size(mesh%domain(idom)%nodes,1)
-                        mesh%domain(idom)%dnodes(inode,idir) = self%rbfi%evaluate(self%dcoeff(:,idir),&
-                            mesh%domain(idom)%nodes(inode,:))
-                        mesh%domain(idom)%vnodes(inode,idir) = self%rbfi%evaluate(self%vcoeff(:,idir),&
-                            mesh%domain(idom)%nodes(inode,:))
+                        mesh%domain(idom)%dnodes(inode,idir) = self%rbfi%evaluate(self%dcoeff(:,idir),mesh%domain(idom)%nodes(inode,:))
+                        mesh%domain(idom)%vnodes(inode,idir) = self%rbfi%evaluate(self%vcoeff(:,idir),mesh%domain(idom)%nodes(inode,:))
                     end do
                 end do
             end if

@@ -13,6 +13,7 @@ module model_rstm_ssglrrw_turbulence_quantities
     use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
     use ieee_arithmetic,        only: ieee_is_nan
+    use mod_fluid,              only: cp
     use mod_rstm_ssglrrw
 
     implicit none
@@ -68,19 +69,19 @@ contains
         call self%add_model_field('Omega Gradient Squared')
 
 
-        call self%add_model_field('Reynolds-11')
-        call self%add_model_field('Reynolds-22')
-        call self%add_model_field('Reynolds-33')
-        call self%add_model_field('Reynolds-12')
-        call self%add_model_field('Reynolds-13')
-        call self%add_model_field('Reynolds-23')
+        !call self%add_model_field('Reynolds-11')
+        !call self%add_model_field('Reynolds-22')
+        !call self%add_model_field('Reynolds-33')
+        !call self%add_model_field('Reynolds-12')
+        !call self%add_model_field('Reynolds-13')
+        !call self%add_model_field('Reynolds-23')
 
-        call self%add_model_field('Reynolds-Stress-11')
-        call self%add_model_field('Reynolds-Stress-22')
-        call self%add_model_field('Reynolds-Stress-33')
-        call self%add_model_field('Reynolds-Stress-12')
-        call self%add_model_field('Reynolds-Stress-13')
-        call self%add_model_field('Reynolds-Stress-23')
+        !call self%add_model_field('Reynolds-Stress-11')
+        !call self%add_model_field('Reynolds-Stress-22')
+        !call self%add_model_field('Reynolds-Stress-33')
+        !call self%add_model_field('Reynolds-Stress-12')
+        !call self%add_model_field('Reynolds-Stress-13')
+        !call self%add_model_field('Reynolds-Stress-23')
 
 
 
@@ -133,6 +134,9 @@ contains
         call self%add_model_field('Omega Source Term')
 
         call self%add_model_field('Equivalent Eddy Viscosity')
+        call self%add_model_field('Turbulent Viscosity')
+        call self%add_model_field('Second Coefficient of Turbulent Viscosity')
+        call self%add_model_field('Turbulent Thermal Conductivity')
     end subroutine init
     !***************************************************************************************
 
@@ -215,26 +219,26 @@ contains
         reynolds_13 = worker%get_field('Density * Reynolds-13', 'value')
         reynolds_23 = worker%get_field('Density * Reynolds-23', 'value')
 
-        if ((any(reynolds_11(:)%x_ad_ < 0.0_rk)) .or. (any(reynolds_22(:)%x_ad_ < 0.0_rk)) .or. (any(reynolds_33(:)%x_ad_ < 0.0_rk))) then
-            print *, 'warning, negative R diag, ', worker%interpolation_source
-        end if
-        
-        if (any(abs(reynolds_12(:)%x_ad_) > sqrt(abs(reynolds_11(:)%x_ad_*reynolds_22(:)%x_ad_)))) print *, 'warning, r_12 unrealizable, ', worker%interpolation_source
-        if (any(abs(reynolds_13(:)%x_ad_) > sqrt(abs(reynolds_11(:)%x_ad_*reynolds_33(:)%x_ad_)))) print *, 'warning, r_13 unrealizable, ', worker%interpolation_source
-        if (any(abs(reynolds_23(:)%x_ad_) > sqrt(abs(reynolds_22(:)%x_ad_*reynolds_33(:)%x_ad_)))) print *, 'warning, r_23 unrealizable, ', worker%interpolation_source
+        !if ((any(reynolds_11(:)%x_ad_ < 0.0_rk)) .or. (any(reynolds_22(:)%x_ad_ < 0.0_rk)) .or. (any(reynolds_33(:)%x_ad_ < 0.0_rk))) then
+        !    print *, 'warning, negative R diag, ', worker%interpolation_source
+        !end if
+        !
+        !if (any(abs(reynolds_12(:)%x_ad_) > sqrt(abs(reynolds_11(:)%x_ad_*reynolds_22(:)%x_ad_)))) print *, 'warning, r_12 unrealizable, ', worker%interpolation_source
+        !if (any(abs(reynolds_13(:)%x_ad_) > sqrt(abs(reynolds_11(:)%x_ad_*reynolds_33(:)%x_ad_)))) print *, 'warning, r_13 unrealizable, ', worker%interpolation_source
+        !if (any(abs(reynolds_23(:)%x_ad_) > sqrt(abs(reynolds_22(:)%x_ad_*reynolds_33(:)%x_ad_)))) print *, 'warning, r_23 unrealizable, ', worker%interpolation_source
 
-        det_r =  reynolds_11(:)%x_ad_*(reynolds_22(:)%x_ad_*reynolds_33(:)%x_ad_-reynolds_23(:)%x_ad_*reynolds_23(:)%x_ad_) &
-                -reynolds_12(:)%x_ad_*(reynolds_12(:)%x_ad_*reynolds_33(:)%x_ad_-reynolds_23(:)%x_ad_*reynolds_13(:)%x_ad_) &
-                +reynolds_13(:)%x_ad_*(reynolds_12(:)%x_ad_*reynolds_23(:)%x_ad_-reynolds_22(:)%x_ad_*reynolds_13(:)%x_ad_) 
+        !det_r =  reynolds_11(:)%x_ad_*(reynolds_22(:)%x_ad_*reynolds_33(:)%x_ad_-reynolds_23(:)%x_ad_*reynolds_23(:)%x_ad_) &
+        !        -reynolds_12(:)%x_ad_*(reynolds_12(:)%x_ad_*reynolds_33(:)%x_ad_-reynolds_23(:)%x_ad_*reynolds_13(:)%x_ad_) &
+        !        +reynolds_13(:)%x_ad_*(reynolds_12(:)%x_ad_*reynolds_23(:)%x_ad_-reynolds_22(:)%x_ad_*reynolds_13(:)%x_ad_) 
 
-        if (any(det_r<0.0_rk)) print *, 'warning det R < 0, ', worker%interpolation_source
+        !if (any(det_r<0.0_rk)) print *, 'warning det R < 0, ', worker%interpolation_source
 
-        call worker%store_model_field('Reynolds-Stress-11', 'value', -(reynolds_11))
-        call worker%store_model_field('Reynolds-Stress-22', 'value', -(reynolds_22))
-        call worker%store_model_field('Reynolds-Stress-33', 'value', -(reynolds_33))
-        call worker%store_model_field('Reynolds-Stress-12', 'value', -reynolds_12)
-        call worker%store_model_field('Reynolds-Stress-13', 'value', -reynolds_13)
-        call worker%store_model_field('Reynolds-Stress-23', 'value', -reynolds_23)
+        !!call worker%store_model_field('Reynolds-Stress-11', 'value', -(reynolds_11))
+        !!call worker%store_model_field('Reynolds-Stress-22', 'value', -(reynolds_22))
+        !!call worker%store_model_field('Reynolds-Stress-33', 'value', -(reynolds_33))
+        !!call worker%store_model_field('Reynolds-Stress-12', 'value', -reynolds_12)
+        !!call worker%store_model_field('Reynolds-Stress-13', 'value', -reynolds_13)
+        !!call worker%store_model_field('Reynolds-Stress-23', 'value', -reynolds_23)
 
 
         reynolds_11 = invdensity*reynolds_11
@@ -245,12 +249,12 @@ contains
         reynolds_23 = invdensity*reynolds_23
 
 
-        call worker%store_model_field('Reynolds-11', 'value', (reynolds_11))
-        call worker%store_model_field('Reynolds-22', 'value', (reynolds_22))
-        call worker%store_model_field('Reynolds-33', 'value', (reynolds_33))
-        call worker%store_model_field('Reynolds-12', 'value', reynolds_12)
-        call worker%store_model_field('Reynolds-13', 'value', reynolds_13)
-        call worker%store_model_field('Reynolds-23', 'value', reynolds_23)
+        !call worker%store_model_field('Reynolds-11', 'value', (reynolds_11))
+        !call worker%store_model_field('Reynolds-22', 'value', (reynolds_22))
+        !call worker%store_model_field('Reynolds-33', 'value', (reynolds_33))
+        !call worker%store_model_field('Reynolds-12', 'value', reynolds_12)
+        !call worker%store_model_field('Reynolds-13', 'value', reynolds_13)
+        !call worker%store_model_field('Reynolds-23', 'value', reynolds_23)
 
         grad1_density_reynolds_11 = worker%get_field('Density * Reynolds-11', 'grad1')
         grad2_density_reynolds_11 = worker%get_field('Density * Reynolds-11', 'grad2')
@@ -326,26 +330,21 @@ contains
         call worker%store_model_field('Reynolds-23 - Gradient 2', 'value', grad2_reynolds_23)
         call worker%store_model_field('Reynolds-23 - Gradient 3', 'value', grad3_reynolds_23)
 
+        !
+        ! Get realizable Reynolds stress tensor
+        !
+        reynolds_11 = worker%get_field('Reynolds-11', 'value')
+        reynolds_22 = worker%get_field('Reynolds-22', 'value')
+        reynolds_33 = worker%get_field('Reynolds-33', 'value')
+        reynolds_12 = worker%get_field('Reynolds-12', 'value')
+        reynolds_13 = worker%get_field('Reynolds-13', 'value')
+        reynolds_23 = worker%get_field('Reynolds-23', 'value')
+
 
         k_t = 0.5_rk*((reynolds_11)+(reynolds_22)+(reynolds_33))
-        
-        k_t = 0.5_rk*(abs(k_t)+k_t)
-
-
         grad1_k_t = 0.5_rk*(grad1_reynolds_11 + grad1_reynolds_22 + grad1_reynolds_33)
         grad2_k_t = 0.5_rk*(grad2_reynolds_11 + grad2_reynolds_22 + grad2_reynolds_33)
         grad3_k_t = 0.5_rk*(grad3_reynolds_11 + grad3_reynolds_22 + grad3_reynolds_33)
-
-        epsilon_t = SSG_LRRW_cmu*k_t*exp(omega)
-
-        anisotropy_11 = reynolds_11/(k_t+0.0e-16_rk)-(2.0_rk/3.0_rk)
-        anisotropy_22 = reynolds_22/(k_t+0.0e-16_rk)-(2.0_rk/3.0_rk)
-        anisotropy_33 = reynolds_33/(k_t+0.0e-16_rk)-(2.0_rk/3.0_rk)
-        anisotropy_12 = reynolds_12/(k_t+0.0e-16_rk)
-        anisotropy_13 = reynolds_13/(k_t+0.0e-16_rk)
-        anisotropy_23 = reynolds_23/(k_t+0.0e-16_rk)
-
-
 
         call worker%store_model_field('Turbulence Kinetic Energy', 'value', (k_t))
         call worker%store_model_field('Turbulence Kinetic Energy - Gradient 1', 'value', grad1_k_t)
@@ -353,7 +352,15 @@ contains
         call worker%store_model_field('Turbulence Kinetic Energy - Gradient 3', 'value', grad3_k_t)
 
 
+        epsilon_t = SSG_LRRW_cmu*k_t*exp(omega)
         call worker%store_model_field('Turbulence Isotropic Dissipation Rate', 'value', (epsilon_t))
+
+        anisotropy_11 = reynolds_11/(k_t+1.0e-11_rk)-(2.0_rk/3.0_rk)
+        anisotropy_22 = reynolds_22/(k_t+1.0e-11_rk)-(2.0_rk/3.0_rk)
+        anisotropy_33 = reynolds_33/(k_t+1.0e-11_rk)-(2.0_rk/3.0_rk)
+        anisotropy_12 = reynolds_12/(k_t+1.0e-11_rk)
+        anisotropy_13 = reynolds_13/(k_t+1.0e-11_rk)
+        anisotropy_23 = reynolds_23/(k_t+1.0e-11_rk)
         
         call worker%store_model_field('Anisotropy-11', 'value', anisotropy_11)
         call worker%store_model_field('Anisotropy-22', 'value', anisotropy_22)
@@ -363,7 +370,8 @@ contains
         call worker%store_model_field('Anisotropy-23', 'value', anisotropy_23)
 
         temp1 = grad1_k_t*grad1_omega+grad2_k_t*grad2_omega+grad3_k_t*grad3_omega
-        temp2 = 0.5_rk*(abs(temp1) + temp1)
+        temp2 = temp1*sin_ramp(temp1, 0.0_rk, rstm_ssglrrw_k_infty)
+        !temp2 = 0.5_rk*(abs(temp1) + temp1)
         !temp2 = max(temp1, ZERO)
         omega_source_term = (density*exp(-omega))*temp2
 
@@ -372,6 +380,10 @@ contains
 
         mu_t = density*k_t*exp(-omega)
         call worker%store_model_field('Equivalent Eddy Viscosity', 'value', (mu_t))
+
+        call worker%store_model_field('Turbulent Viscosity', 'value', (mu_t))
+        call worker%store_model_field('Second Coefficient of Turbulent Viscosity', 'value', (-TWO/THREE)*(mu_t))
+        call worker%store_model_field('Turbulent Thermal Conductivity', 'value', cp*(mu_t)/0.9_rk)
     end subroutine compute
     !***************************************************************************************
 

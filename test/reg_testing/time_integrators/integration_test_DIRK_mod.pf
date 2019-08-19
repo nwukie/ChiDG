@@ -258,7 +258,6 @@ module integration_test_DIRK_mod
         character(:),   allocatable :: gridfile
         character(:),   allocatable :: integrator
 
-        type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
 
     contains
@@ -268,6 +267,7 @@ module integration_test_DIRK_mod
     !****************************************************************************************
 
 
+    type(chidg_t)   :: chidg
 
 
 contains
@@ -593,11 +593,49 @@ contains
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
+
+        !------------------------------------------------------------------------------
+        !
+        ! Define input data here that is normally read through the namelist input file
+        !
+        ! As a result, we don't call chidg%init('io')
+        !
+        !------------------------------------------------------------------------------
+        basis            = 'legendre'
+        gq_rule          = 1
+        time_integrator  = trim(this%integrator)
+        dt               = this%dt
+        time_steps       = this%nsteps
+        ntime_instances  = 1
+        nonlinear_solver = 'newton'
+        linear_solver    = 'fgmres'
+        preconditioner   = 'RASILU0'
+        nwrite           = 10000000
+        IO_DESTINATION   = 'file'
+
+        ! Set linear solver options to pass during initialization
+        call loptions%set('tol',1.e-14_rk)
+        call loptions%set('rtol',1.e-15_rk)
+
+        ! Set nonlinear solver options
+        call noptions%set('tol',5.e-10_rk)
+        call noptions%set('rtol',1.e-15_rk)
+        call noptions%set('cfl0',1.0_rk)
+        call noptions%set('nsteps',100)
+        !------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
         !
         ! Initialize ChiDG environment
         !
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
+        call chidg%start_up('mpi',this%ChiDG_COMM)
+        call chidg%start_up('core')
 
 
         !-------------------------------------------------------------------------------
@@ -619,35 +657,6 @@ contains
         call registered_fcns%push_back(gaussian)
 
 
-        !------------------------------------------------------------------------------
-        !
-        ! Define input data here that is normally read through the namelist input file
-        !
-        ! As a result, we don't call chidg%init('io')
-        !
-        !------------------------------------------------------------------------------
-        basis            = 'legendre'
-        gq_rule          = 1
-        time_integrator  = trim(this%integrator)
-        dt               = this%dt
-        time_steps       = this%nsteps
-        ntime_instances  = 1
-        nonlinear_solver = 'Newton'
-        linear_solver    = 'fgmres_cgs'
-        preconditioner   = 'RASILU0'
-        nwrite           = 10000000
-        IO_DESTINATION   = 'file'
-
-        ! Set linear solver options to pass during initialization
-        call loptions%set('tol',1.e-14_rk)
-        call loptions%set('rtol',1.e-15_rk)
-
-        ! Set nonlinear solver options
-        call noptions%set('tol',5.e-10_rk)
-        call noptions%set('rtol',1.e-15_rk)
-        call noptions%set('cfl0',1.0_rk)
-        call noptions%set('nsteps',100)
-        !------------------------------------------------------------------------------
 
 
         !
@@ -705,17 +714,17 @@ contains
         !
         ! Set ChiDG components
         !
-        call this%chidg%set('Solution Order',   integer_input=5)
-        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+        call chidg%set('Time Integrator',  algorithm=time_integrator)
+        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call chidg%set('Preconditioner',   algorithm=preconditioner)
+        call chidg%set('Solution Order',   integer_input=5)
 
 
         !
         ! Read grid
         !
-        call this%chidg%read_mesh(this%gridfile)
+        call chidg%read_mesh(this%gridfile)
 
 
 
@@ -723,7 +732,7 @@ contains
         ! Initialize solution
         !
         call create_function(fcn,'Gaussian Test')
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
 
 
     end subroutine SetUp
@@ -740,7 +749,7 @@ contains
         class(linear_advection_1D),  intent(inout)   :: this
 
         ! Close ChiDG
-        call this%chidg%shut_down('core')
+        call chidg%shut_down('core')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -769,8 +778,9 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    !@Test(npes=[6])
-    @Test(npes=[4])
+    @Test(npes=[8])
+    !@Test(npes=[4])
+    !@Test(npes=[1])
     subroutine run_calculations(self)
         class(linear_advection_1D),  intent(inout)   :: self
 
@@ -785,13 +795,13 @@ contains
         !
         ! Run ChiDG simulation
         !
-        call self%chidg%run(write_initial=.false., write_final=.false.)
+        call chidg%run(write_initial=.false., write_final=.false.)
 
 
         !
         ! Compute error
         !
-        computed_error = compute_DIRK_error(self%chidg%data,self%ChiDG_COMM)
+        computed_error = compute_DIRK_error(chidg%data,self%ChiDG_COMM)
 
 
         !
@@ -909,7 +919,7 @@ contains
             itime = 1
             time  = ZERO
             do idom = 1,data%mesh%ndomains()
-                do ielem = 1,data%mesh%domain(idom)%nelem
+                do ielem = 1,data%mesh%domain(idom)%nelements()
 
 
                     !
@@ -956,48 +966,6 @@ contains
 
     end function compute_DIRK_error
     !*****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   05/30/2017
-!    !!
-!    !!
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    function time_parameter(itime) result(param)
-!        integer(ik),    intent(in)  :: itime
-!
-!        real(rk)    :: dt, param
-!
-!        select case (itime)
-!            case(1)
-!                dt = 0.0125_rk
-!            case(2)
-!                dt = 0.00625_rk
-!            case default
-!                call chidg_signal(FATAL,"integration_test_DIRK_mod%time_parameter: invalid itime")
-!        end select
-!
-!        param = ONE/dt
-!
-!    end function time_parameter
-!    !****************************************************************************************
-
 
 
 

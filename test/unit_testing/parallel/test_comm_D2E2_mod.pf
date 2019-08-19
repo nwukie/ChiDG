@@ -4,7 +4,8 @@ module test_comm_D2E2_mod
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
     use type_chidg,                 only: chidg_t
-    use type_chidg_vector,           only: chidg_vector_t
+    use type_chidg_vector,          only: chidg_vector_t
+    use type_element_info,          only: element_info_t
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use operator_chidg_dot,         only: dot
     use mpi_f08,                    only: MPI_COMM
@@ -54,8 +55,9 @@ contains
     subroutine setUp(this)
         class(test_comm_D2E2), intent(inout) :: this
 
-        integer(ik) :: iread, ierr, idom, ielem, ivar, itime
-        real(rk)    :: initial_vals(this%nterms_s)
+        integer(ik)             :: iread, ierr, idom, ielem, ifield, itime
+        real(rk)                :: initial_vals(this%nterms_s)
+        type(element_info_t)    :: elem_info
 
         
         IRANK                   = this%getProcessRank()
@@ -69,6 +71,7 @@ contains
 
         IO_DESTINATION = 'file'
         this%gridfile  = 'D2E2M1.h5'
+
 
         !
         ! Create grid file
@@ -95,14 +98,14 @@ contains
         ! Initialize solution vector
         !
         initial_vals = 1.2_rk
-        ivar  = 1
-        itime = 1
+        ifield = 1
+        itime  = 1
         do idom = 1,this%chidg%data%mesh%ndomains()
-            do ielem = 1,this%chidg%data%mesh%domain(idom)%nelem
-                call this%chidg%data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,itime,initial_vals)
+            do ielem = 1,this%chidg%data%mesh%domain(idom)%nelements()
+                elem_info = this%chidg%data%mesh%get_element_info(idom,ielem)
+                call this%chidg%data%sdata%q%set_field(initial_vals,elem_info,ifield,itime)
             end do
         end do
-
 
 
     end subroutine setUp
@@ -118,6 +121,7 @@ contains
         class(test_comm_D2E2), intent(inout) :: this
 
         call this%chidg%shut_down('core')
+        call this%chidg%shut_down('mpi')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -150,7 +154,6 @@ contains
 
         IRANK = self%getProcessRank()
 
-
         !
         ! Compute vector norm across processors. THIS IS BEING TESTED
         !
@@ -160,7 +163,6 @@ contains
         expected_norm = (1.2_rk**TWO) * self%nterms_s * nelem
         expected_norm = sqrt(expected_norm)
 
-        
         @assertEqual(expected_norm,computed_norm)
 
     end subroutine chidg_vector__norm_comm
@@ -194,16 +196,12 @@ contains
         a = self%chidg%data%sdata%q
         b = self%chidg%data%sdata%q
 
-
         ! Compute vector dot-product across processors. THIS IS BEING TESTED
         computed_dot = dot(a,b,self%ChiDG_COMM)
-
 
         ! Compute expected result
         nelem = 4
         expected_dot = (1.2_rk*1.2_rk) * self%nterms_s * nelem
-
-
 
         @assertEqual(expected_dot,computed_dot,1.e-12_rk)
 

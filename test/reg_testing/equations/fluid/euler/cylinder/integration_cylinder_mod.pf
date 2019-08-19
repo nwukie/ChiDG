@@ -99,7 +99,6 @@ module integration_cylinder_mod
     type, extends(MpiTestCase) :: cylinder
         integer(ik)                     :: order
         character(:),       allocatable :: gridfile
-        type(chidg_t)                   :: chidg
         type(mpi_comm)                  :: ChiDG_COMM
     contains
         procedure   :: setUp
@@ -108,6 +107,7 @@ module integration_cylinder_mod
     !*******************************************************************************
 
 
+    type(chidg_t)                   :: chidg
 
 
 contains
@@ -190,7 +190,7 @@ contains
         ! Get MPI communicator information from pFUnit
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+        chidg_COMM%mpi_val = this%getMpiCommunicator()
 
         !------------------------------------------------------------------------------
         !
@@ -213,8 +213,8 @@ contains
         !------------------------------------------------------------------------------
 
         ! Initialize ChiDG environment
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
+        call chidg%start_up('mpi',chidg_COMM)
+        call chidg%start_up('core')
 
         
         ! Set linear solver options to pass during initialization
@@ -305,34 +305,34 @@ contains
 
 
         ! Set ChiDG components
-        call this%chidg%set('Solution Order',   integer_input=this%order)
-        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+        call chidg%set('Solution Order',   integer_input=this%order)
+        call chidg%set('Time Integrator',  algorithm=time_integrator)
+        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call chidg%set('Preconditioner',   algorithm=preconditioner)
 
         ! Read grid
-        call this%chidg%read_mesh(this%gridfile)
+        call chidg%read_mesh(this%gridfile)
 
         ! Initialize solution
         if (this%order == 1) then
             call create_function(fcn,'constant')
 
             call fcn%set_option('val',1.15_rk)
-            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
             call fcn%set_option('val',50.0_rk)
-            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,2)
             call fcn%set_option('val',ZERO)
-            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,3)
             call fcn%set_option('val',ZERO)
-            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,4)
             call fcn%set_option('val',248000.0_rk)
-            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,5)
 
         else
 
             inquire(file='cylinder_solution.h5', exist=file_exists)
-            if (file_exists) call this%chidg%read_fields('cylinder_solution.h5')
+            if (file_exists) call chidg%read_fields('cylinder_solution.h5')
 
         end if
 
@@ -351,7 +351,7 @@ contains
         logical :: file_exists
 
         ! Close ChiDG
-        call this%chidg%shut_down('core')
+        call chidg%shut_down('core')
 
         ! Delete grid file
         if (IRANK == GLOBAL_MASTER) then
@@ -398,12 +398,12 @@ contains
         order_index = get_order_index(self%order)
 
         ! Run ChiDG simulation
-        call self%chidg%run(write_initial=.false., write_final=.false.)
-        call self%chidg%write_fields('cylinder_solution.h5')
+        call chidg%run(write_initial=.false., write_final=.false.)
+        call chidg%write_fields('cylinder_solution.h5')
 
 
         ! Store the nonlinear convergence of the calculation
-        nonlinear_convergence(npes_index,order_index) = self%chidg%nonlinear_solver%residual_norm
+        nonlinear_convergence(npes_index,order_index) = chidg%nonlinear_solver%residual_norm
 
         ! Test symmetry. Do some comparisons of the solution between symmetrically 
         ! located elements.
@@ -418,7 +418,7 @@ contains
         elems_bot = [34, 33]  !   domain 3. These are the bottom two middle elements of block 3
 
 
-        send_size = size(self%chidg%data%sdata%q%dom(1)%vecs(1)%vec)
+        send_size = size(chidg%data%sdata%q%dom(1)%vecs(1)%vec)
         allocate(top_solution(send_size), bot_solution(send_size))
 
         do ielem_search = 1,size(elems_top)
@@ -428,13 +428,13 @@ contains
             dom_search = doms_top(ielem_search)
             elem_search = elems_top(ielem_search)
 
-            do idom = 1,self%chidg%data%mesh%ndomains()
-                if (self%chidg%data%mesh%domain(idom)%idomain_g == dom_search) then
+            do idom = 1,chidg%data%mesh%ndomains()
+                if (chidg%data%mesh%domain(idom)%idomain_g == dom_search) then
 
-                    do ielem = 1,size(self%chidg%data%mesh%domain(idom)%elems)
-                        if (self%chidg%data%mesh%domain(idom)%elems(ielem)%ielement_g == elem_search) then
+                    do ielem = 1,size(chidg%data%mesh%domain(idom)%elems)
+                        if (chidg%data%mesh%domain(idom)%elems(ielem)%ielement_g == elem_search) then
 
-                            call MPI_ISend(self%chidg%data%sdata%q%dom(idom)%vecs(ielem)%vec, send_size, MPI_REAL8, GLOBAL_MASTER, 0, ChiDG_COMM, tmp_request, ierr)
+                            call MPI_ISend(chidg%data%sdata%q%dom(idom)%vecs(ielem)%vec, send_size, MPI_REAL8, GLOBAL_MASTER, 0, ChiDG_COMM, tmp_request, ierr)
 
                         end if
                     end do !ielem
@@ -445,13 +445,13 @@ contains
             dom_search = doms_bot(ielem_search)
             elem_search = elems_bot(ielem_search)
 
-            do idom = 1,self%chidg%data%mesh%ndomains()
-                if (self%chidg%data%mesh%domain(idom)%idomain_g == dom_search) then
+            do idom = 1,chidg%data%mesh%ndomains()
+                if (chidg%data%mesh%domain(idom)%idomain_g == dom_search) then
 
-                    do ielem = 1,size(self%chidg%data%mesh%domain(idom)%elems)
-                        if (self%chidg%data%mesh%domain(idom)%elems(ielem)%ielement_g == elem_search) then
+                    do ielem = 1,size(chidg%data%mesh%domain(idom)%elems)
+                        if (chidg%data%mesh%domain(idom)%elems(ielem)%ielement_g == elem_search) then
 
-                            call MPI_ISend(self%chidg%data%sdata%q%dom(idom)%vecs(ielem)%vec, send_size, MPI_REAL8, GLOBAL_MASTER, 1, ChiDG_COMM, tmp_request, ierr)
+                            call MPI_ISend(chidg%data%sdata%q%dom(idom)%vecs(ielem)%vec, send_size, MPI_REAL8, GLOBAL_MASTER, 1, ChiDG_COMM, tmp_request, ierr)
 
                         end if
                     end do !ielem

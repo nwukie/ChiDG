@@ -627,9 +627,11 @@ contains
 
 
         ! Mesh size fields + smoothing
-        call self%data%compute_area_weighted_h()
-        call self%record_mesh_size()
-        call self%data%perform_h_smoothing()
+        if (construct_smooth_mesh_fields) then
+            call self%data%compute_area_weighted_h()
+            call self%record_mesh_size()
+            call self%data%perform_h_smoothing()
+        end if
 
         call write_line('Done reading mesh.', io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
@@ -799,35 +801,36 @@ contains
 
 
         !!!-------------------------  REVISIT  --------------------------------!!!
-        call self%data%mesh%set_nelems_per_domain(nelems_per_domain)
-        call self%data%mesh%set_global_nodes(self%data%sdata%global_nodes)
+        if (construct_octree_rbf) then
+            call self%data%mesh%set_nelems_per_domain(nelems_per_domain)
+            call self%data%mesh%set_global_nodes(self%data%sdata%global_nodes)
 
-        call self%data%mesh%octree%init(8, 0.0_rk, (/1, 1, 1/), .true.)
-        call write_line("   building octree...", ltrim=.false., io_proc=GLOBAL_MASTER)
-        call self%data%mesh%octree%build_octree_depth_first(self%data%mesh%global_nodes)
-        call write_line("   building octree - completed...", ltrim=.false., io_proc=GLOBAL_MASTER)
-        call self%data%construct_rbf_arrays()
+            call self%data%mesh%octree%init(8, 0.0_rk, (/1, 1, 1/), .true.)
+            call write_line("   building octree...", ltrim=.false., io_proc=GLOBAL_MASTER)
+            call self%data%mesh%octree%build_octree_depth_first(self%data%mesh%global_nodes)
+            call write_line("   building octree - completed...", ltrim=.false., io_proc=GLOBAL_MASTER)
+            call self%data%construct_rbf_arrays()
 
 
-        ! Wait for all processors to finish initializing their meshes, then communicate RBF info.
-        nelems = sum(nelems_per_domain)
-        allocate(rbf_center_recv(nelems,3), &
-                 rbf_radius_recv(nelems,3), stat=ierr)
-        if (ierr /= 0) call AllocationError
+            ! Wait for all processors to finish initializing their meshes, then communicate RBF info.
+            nelems = sum(nelems_per_domain)
+            allocate(rbf_center_recv(nelems,3), &
+                     rbf_radius_recv(nelems,3), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
-        call write_line("   communicating RBF arrays...", ltrim=.false., io_proc=GLOBAL_MASTER)
-        rbf_center_sendv = self%data%sdata%rbf_center
-        rbf_radius_sendv = self%data%sdata%rbf_radius
-        call MPI_AllReduce(rbf_center_sendv, rbf_center_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
-        call MPI_AllReduce(rbf_radius_sendv, rbf_radius_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
-        self%data%sdata%rbf_center = rbf_center_recv
-        self%data%sdata%rbf_radius = rbf_radius_recv
-        call write_line("   communicating RBF arrays - completed...", ltrim=.false., io_proc=GLOBAL_MASTER)
+            call write_line("   communicating RBF arrays...", ltrim=.false., io_proc=GLOBAL_MASTER)
+            rbf_center_sendv = self%data%sdata%rbf_center
+            rbf_radius_sendv = self%data%sdata%rbf_radius
+            call MPI_AllReduce(rbf_center_sendv, rbf_center_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
+            call MPI_AllReduce(rbf_radius_sendv, rbf_radius_recv, 3*nelems, MPI_REAL8, MPI_SUM,ChiDG_COMM, ierr)
+            self%data%sdata%rbf_center = rbf_center_recv
+            self%data%sdata%rbf_radius = rbf_radius_recv
+            call write_line("   communicating RBF arrays - completed...", ltrim=.false., io_proc=GLOBAL_MASTER)
 
-        call write_line("   finding RBF connectivities...", ltrim=.false., io_proc=GLOBAL_MASTER)
-        call self%data%find_who_rbfs_touch() 
-        call write_line("   finding RBF connectivities - done...", ltrim=.false., io_proc=GLOBAL_MASTER)
-
+            call write_line("   finding RBF connectivities...", ltrim=.false., io_proc=GLOBAL_MASTER)
+            call self%data%find_who_rbfs_touch() 
+            call write_line("   finding RBF connectivities - done...", ltrim=.false., io_proc=GLOBAL_MASTER)
+        end if
         !!!-------------------------  REVISIT  --------------------------------!!!
 
 

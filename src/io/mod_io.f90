@@ -37,7 +37,9 @@ module mod_io
     real(rk),               save    :: frequencies(100) = ZERO
 
     ! Infrastructure
-    character(len=100),     save    :: backend          = 'native'
+    character(len=100),     save    :: backend                      = 'native'
+    logical,                save    :: construct_octree_rbf         = .false.
+    logical,                save    :: construct_smooth_mesh_fields = .false.
 
    
     ! Nonlinear solver parameters
@@ -151,7 +153,9 @@ module mod_io
                                         ntime_instances,    &
                                         frequencies
 
-    namelist /infrastructure/           backend
+    namelist /infrastructure/           backend,                &
+                                        construct_octree_rbf,   &
+                                        construct_smooth_mesh_fields
 
 
     namelist /nonlinear_solve/          nonlinear_solver,   &

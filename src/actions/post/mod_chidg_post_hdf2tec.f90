@@ -132,7 +132,6 @@ contains
         character(:),           allocatable :: time_string, solution_file_prefix, plt_filename
         integer(ik)                         :: nterms_s, solution_order, ierr, iproc
 
-
         ! Get nterms_s 
         do iproc = 0,NRANK-1
             if (iproc == IRANK) then
@@ -166,18 +165,17 @@ contains
         call chidg%process()
 
 
-
         ! Get post processing data (q_out)
         call chidg%time_integrator%initialize_state(chidg%data)
         do iproc = 0,NRANK-1
             if (iproc == IRANK) then
                 call chidg%time_integrator%read_time_options(chidg%data,solution_file,'process')
-                call chidg%time_integrator%process_data_for_output(chidg%data)
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_post_hdf2tec_new: error in MPI_Barrier.')
         end do
 
+        call chidg%time_integrator%process_data_for_output(chidg%data)
 
         ! Write solution
         solution_file_prefix = get_file_prefix(solution_file,'.h5')

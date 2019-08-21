@@ -117,6 +117,7 @@ module mod_io
     integer(ik),            save    :: nwrite           = 100
     integer(ik),            save    :: verbosity        = 2
     character(len=100),     save    :: report           = 'none'
+    character(len=100),     save    :: report_info      = 'none'
      
 
     ! Initial fields
@@ -195,7 +196,8 @@ module mod_io
                                         final_write,        &
                                         tecio_write,        &
                                         verbosity,          &
-                                        report
+                                        report,             &
+                                        report_info
 
     namelist /initial/                  initial_fields
 

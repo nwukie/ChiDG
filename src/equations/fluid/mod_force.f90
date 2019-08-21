@@ -46,7 +46,7 @@ contains
     !!  @result[out]    force           Integrated force vector: force = [f1, f2, f3]
     !!
     !-----------------------------------------------------------------------------------
-    subroutine report_aerodynamics(data,patch_group,force,work)
+    subroutine report_forces(data,patch_group,force,work)
         type(chidg_data_t), intent(inout)               :: data
         character(*),       intent(in)                  :: patch_group
         real(rk),           intent(inout),  optional    :: force(3)
@@ -166,6 +166,11 @@ contains
                     norm_1_phys = det_jacobian_grid*(jacobian_grid(1,1,:)*norm_1 + jacobian_grid(2,1,:)*norm_2 + jacobian_grid(3,1,:)*norm_3)
                     norm_2_phys = det_jacobian_grid*(jacobian_grid(1,2,:)*norm_1 + jacobian_grid(2,2,:)*norm_2 + jacobian_grid(3,2,:)*norm_3)
                     norm_3_phys = det_jacobian_grid*(jacobian_grid(1,3,:)*norm_1 + jacobian_grid(2,3,:)*norm_2 + jacobian_grid(3,3,:)*norm_3)
+
+                    !norm_1_phys = -worker%unit_normal_ale(1)
+                    !norm_2_phys = -worker%unit_normal_ale(2)
+                    !norm_3_phys = -worker%unit_normal_ale(3)
+                    ! But then need to add area scaling
                     
 
                     ! Compute \vector{n} dot \tensor{tau}
@@ -206,7 +211,7 @@ contains
         if (present(work))  call MPI_AllReduce(work_local, work, 1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 
 
-    end subroutine report_aerodynamics
+    end subroutine report_forces
     !******************************************************************************************
 
 

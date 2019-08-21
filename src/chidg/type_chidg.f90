@@ -8,7 +8,7 @@ module type_chidg
     use mod_function,               only: register_functions
     use mod_prescribed_mesh_motion_function, only: register_prescribed_mesh_motion_functions
     use mod_radial_basis_function,  only: register_radial_basis_functions
-    use mod_force,                      only: report_aerodynamics
+    use mod_force,                      only: report_forces
 
 
     use mod_grid,                   only: initialize_grid
@@ -1585,9 +1585,9 @@ contains
                     !call self%preconditioner%report()
                 end if
 
-            case ('aerodynamics')
+            case ('forces')
 
-                call report_aerodynamics(self%data,'Airfoil',force=force, work=work)
+                call report_forces(self%data,trim(report_info),force=force, work=work)
                 if (IRANK == GLOBAL_MASTER) then
                     inquire(file="aero.txt", exist=exists)
                     if (exists) then

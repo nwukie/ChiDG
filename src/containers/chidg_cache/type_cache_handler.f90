@@ -2426,19 +2426,6 @@ contains
         iface      = worker%iface
 
 
-        if (iface == XI_MIN) then
-            iface_n = XI_MAX
-        else if (iface == ETA_MIN) then
-            iface_n = ETA_MAX
-        else if (iface == ZETA_MIN) then
-            iface_n = ZETA_MAX
-        else if (iface == XI_MAX) then
-            iface_n = XI_MIN
-        else if (iface == ETA_MAX) then
-            iface_n = ETA_MIN
-        else if (iface == ZETA_MAX) then
-            iface_n = ZETA_MIN
-        end if
 
 
         !
@@ -2449,6 +2436,19 @@ contains
 
 
 !        ! OLD
+!        if (iface == XI_MIN) then
+!            iface_n = XI_MAX
+!        else if (iface == ETA_MIN) then
+!            iface_n = ETA_MAX
+!        else if (iface == ZETA_MIN) then
+!            iface_n = ZETA_MAX
+!        else if (iface == XI_MAX) then
+!            iface_n = XI_MIN
+!        else if (iface == ETA_MAX) then
+!            iface_n = ETA_MIN
+!        else if (iface == ZETA_MAX) then
+!            iface_n = ZETA_MIN
+!        end if
 !        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface_n),                         &
 !                    !br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
 !                    br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface_n)%br2_face)

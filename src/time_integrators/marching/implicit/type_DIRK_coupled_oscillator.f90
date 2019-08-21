@@ -33,7 +33,6 @@ module type_DIRK_coupled_oscillator
     use mod_constants,                  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, NO_ID
     use mod_spatial,                    only: update_space
     use mod_oscillating_cylinder_1,     only: oscillating_cylinder
-    use mod_force,                      only: report_aerodynamics
 !    use mod_update_grid,                only: update_grid
     use mod_io,                         only: verbosity
 
@@ -214,11 +213,11 @@ contains
         t_n = data%time_manager%t
 
 
-        !external_forces = compute_force(data,'Oscillator Wall')
-        call report_aerodynamics(data,'Oscillator Wall',force=external_forces)
-        ! One DOF only
-        external_forces(1) = ZERO
-        external_forces(3) = ZERO
+!        !external_forces = compute_force(data,'Oscillator Wall')
+!        call report_aerodynamics(data,'Oscillator Wall',force=external_forces)
+!        ! One DOF only
+!        external_forces(1) = ZERO
+!        external_forces(3) = ZERO
 
         call oscillating_cylinder%update_oscillator_step(data%time_manager%dt,t_n,external_forces)
         select type(associate_name => self%system)

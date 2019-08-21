@@ -291,6 +291,10 @@ program driver
 
 
                     call chidg_post_hdf2tec_new(chidg,trim(solution_file),trim(solution_file))
+
+                    ! Release existing data
+                    call chidg%data%release()
+
                 end do
 
 

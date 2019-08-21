@@ -131,15 +131,31 @@ contains
 
 
                     ! Get pressure
-                    pressure = worker%get_field('Pressure', 'value', 'boundary')
+                    if (worker%check_field_exists('Pressure')) then
+                        pressure = worker%get_field('Pressure', 'value', 'boundary')
+                    else
+                        if (patch_ID == 1) call write_line('NOTE: Pressure not found in equation set, setting to zero.',io_proc=GLOBAL_MASTER)
+                        pressure = ZERO*worker%get_field('Density', 'value', 'boundary')
+                    end if
 
                     ! Get shear stress tensor
-                    tau_11 = worker%get_field('Shear-11', 'value', 'boundary')
-                    tau_22 = worker%get_field('Shear-22', 'value', 'boundary')
-                    tau_33 = worker%get_field('Shear-33', 'value', 'boundary')
-                    tau_12 = worker%get_field('Shear-12', 'value', 'boundary')
-                    tau_13 = worker%get_field('Shear-13', 'value', 'boundary')
-                    tau_23 = worker%get_field('Shear-23', 'value', 'boundary')
+                    if (worker%check_field_exists('Shear-11')) then
+                        tau_11 = worker%get_field('Shear-11', 'value', 'boundary')
+                        tau_22 = worker%get_field('Shear-22', 'value', 'boundary')
+                        tau_33 = worker%get_field('Shear-33', 'value', 'boundary')
+                        tau_12 = worker%get_field('Shear-12', 'value', 'boundary')
+                        tau_13 = worker%get_field('Shear-13', 'value', 'boundary')
+                        tau_23 = worker%get_field('Shear-23', 'value', 'boundary')
+                    else
+                        if (patch_ID == 1) call write_line('NOTE: Shear-## not found in equation set, setting to zero.',io_proc=GLOBAL_MASTER)
+                        tau_11 = ZERO*worker%get_field('Density', 'value', 'boundary')
+                        tau_22 = ZERO*worker%get_field('Density', 'value', 'boundary')
+                        tau_33 = ZERO*worker%get_field('Density', 'value', 'boundary')
+                        tau_12 = ZERO*worker%get_field('Density', 'value', 'boundary')
+                        tau_13 = ZERO*worker%get_field('Density', 'value', 'boundary')
+                        tau_23 = ZERO*worker%get_field('Density', 'value', 'boundary')
+                    end if
+
 
                     ! From symmetry
                     tau_21 = tau_12

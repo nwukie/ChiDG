@@ -40,6 +40,7 @@ module mod_io
     character(len=100),     save    :: backend                      = 'native'
     logical,                save    :: construct_octree_rbf         = .false.
     logical,                save    :: construct_smooth_mesh_fields = .false.
+    character(len=100),     save    :: h_field_dimension            = '3D'
 
    
     ! Nonlinear solver parameters
@@ -156,7 +157,8 @@ module mod_io
 
     namelist /infrastructure/           backend,                &
                                         construct_octree_rbf,   &
-                                        construct_smooth_mesh_fields
+                                        construct_smooth_mesh_fields, &
+                                        h_field_dimension
 
 
     namelist /nonlinear_solve/          nonlinear_solver,   &

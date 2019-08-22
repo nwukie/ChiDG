@@ -2,6 +2,7 @@ module model_mnph_shock_sensor
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: ZERO,HALF, ONE, TWO, THREE, PI
+    use mod_io,             only: h_field_dimension
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use mod_interpolate,           only: interpolate_from_vertices
@@ -139,8 +140,21 @@ contains
 
         !end do
  
+
+
+
         h_field = worker%h_smooth()
-        h_scalar = (h_field(:,1) + h_field(:,2) + h_field(:,3))/THREE
+        select case (trim(h_field_dimension))
+            case('2D','2d')
+                h_scalar = (h_field(:,1) + h_field(:,2))/TWO
+            case('3D','3d')
+                h_scalar = (h_field(:,1) + h_field(:,2) + h_field(:,3))/THREE
+            case default
+                call chidg_signal(FATAL,'mnph_artificial_viscosity: invalid input for h_field_dimension (2D,3D).')
+
+        end select
+
+        !h_scalar = (h_field(:,1) + h_field(:,2) + h_field(:,3))/THREE
         !h_scalar = (h_field(:,1)*h_field(:,2)*h_field(:,3))**(ONE/THREE)
         !h_scalar = (h_field(:,1) + h_field(:,2))/TWO
         !print *, 'h_scalar: ', h_scalar

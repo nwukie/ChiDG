@@ -128,7 +128,7 @@ module integration_force_cylindrical_mod
     use pfunit_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, HALF, ONE, THREE, IO_DESTINATION
-    use mod_force,                  only: report_aerodynamics
+    use mod_force,                  only: report_forces
     use type_chidg,                 only: chidg_t
     use type_chidg_worker,          only: chidg_worker_t
     use type_model,                 only: model_t
@@ -784,7 +784,7 @@ contains
         real(rk)    :: tol, force_computed(3), force_expected(3)
 
         ! Compute force: THIS IS BEING TESTED
-        call report_aerodynamics(chidg%data, 'Walls', force=force_computed)
+        call report_forces(chidg%data, 'Walls', force=force_computed)
 
 
         ! Test that computed entropy error is the expected value

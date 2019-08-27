@@ -1,3 +1,6 @@
 [submodule "external/pfunit"]
 	path = external/pfunit
 	url = https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git
+[submodule "external/tioga"]
+	path = external/tioga
+	url = https://github.com/jsitaraman/tioga.git

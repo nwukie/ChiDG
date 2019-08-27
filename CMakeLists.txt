@@ -413,6 +413,82 @@ include_directories(${PROJECT_SOURCE_DIR}/tecio/teciompisrc)
 
 
 
+#----------------------------------------------------------------------------------------------
+#
+#   TIOGA external project for hole-cutting.
+#
+#   The following code is based on modifications of code by Randovan Bast. See file LICENSE, 
+#   section BAST for license.
+#
+#   TIOGA from git submodule:
+#   --------------------------
+#   This is already set-up. This step requires internet access to clone the TIOGA project 
+#   from git. If internet access is not available, one can provide the TIOGA source as 
+#   a .tar archive as detailed in the next section.
+#   
+#   TIOGA from .tar:
+#   --------------------------
+#   If TIOGA_TAR is defined during configure:
+#       cmake <other_stuff> -DTIOGA_TAR=/example/path/tioga.tar <other_stuff>
+#   Then this will bypass the git submodule approach for obtaining the TIOGA source.
+#   This approach is useful if internet access is not available on the host machine.
+#   
+#   An archive of TIOGA can be obtained at: 
+#       https://github.com/jsitaraman/tioga
+#
+#----------------------------------------------------------------------------------------------
+
+
+if (TIOGA_TAR)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory external
+                    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+                    )
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory tioga-src
+                    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/external
+                    )
+    execute_process(COMMAND tar xzf ${TIOGA_TAR} -C ${PROJECT_BINARY_DIR}/external/tioga-src --strip-components=1
+                    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+                    )
+    set(TIOGA_DOWNLOAD_COMMAND "")
+    set(TIOGA_DOWNLOAD_DIR "")
+    set(TIOGA_SOURCE_DIR ${PROJECT_BINARY_DIR}/external/tioga-src)
+
+else()
+    set(TIOGA_DOWNLOAD_COMMAND git submodule update)
+    set(TIOGA_DOWNLOAD_DIR "${PROJECT_SOURCE_DIR}")
+    set(TIOGA_SOURCE_DIR "${PROJECT_SOURCE_DIR}/external/tioga")
+endif()
+
+
+
+
+set(ExternalProjectCMakeArgs
+    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/external/tioga
+    -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    )
+
+
+
+ExternalProject_Add(
+    tioga
+    DOWNLOAD_COMMAND ${TIOGA_DOWNLOAD_COMMAND}
+    DOWNLOAD_DIR ${TIOGA_DOWNLOAD_DIR}
+    SOURCE_DIR ${TIOGA_SOURCE_DIR}
+    BINARY_DIR ${PROJECT_BINARY_DIR}/external/tioga-build
+    STAMP_DIR ${PROJECT_BINARY_DIR}/external/tioga-stamp
+    TMP_DIR ${PROJECT_BINARY_DIR}/external/tioga-tmp
+    INSTALL_DIR ${PROJECT_BINARY_DIR}/external
+    CMAKE_ARGS ${ExternalProjectCMakeArgs}
+    )
+
+
+if (NOT TIOGA_TAR)
+    add_dependencies(tioga git_update)
+endif()
+
 
 
 #----------------------------------------------------------------------------------------------

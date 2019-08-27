@@ -437,6 +437,8 @@ include_directories(${PROJECT_SOURCE_DIR}/tecio/teciompisrc)
 #       https://github.com/jsitaraman/tioga
 #
 #----------------------------------------------------------------------------------------------
+message(STATUS " ")
+message(STATUS "TIOGA Summary: ")
 
 
 if (TIOGA_TAR)
@@ -484,11 +486,15 @@ ExternalProject_Add(
     CMAKE_ARGS ${ExternalProjectCMakeArgs}
     )
 
-
 if (NOT TIOGA_TAR)
     add_dependencies(tioga git_update)
 endif()
 
+set(TIOGA_LIBRARIES ${PROJECT_BINARY_DIR}/external/tioga/lib/libtioga.dylib)
+set(TIOGA_INCLUDE_DIR ${PROJECT_BINARY_DIR}/external/tioga/include)
+include_directories(${TIOGA_INCLUDE_DIR})
+
+message(STATUS "    TIOGA Libraries: "     ${TIOGA_LIBRARIES})
 
 
 #----------------------------------------------------------------------------------------------
@@ -642,6 +648,7 @@ target_link_libraries(chidg_library
                       ${MPI_Fortran_LIBRARIES}
                       ${METIS_LIBRARIES}
                       ${PETSC_LIBRARIES}
+                      ${TIOGA_LIBRARIES}
                       )
 set_target_properties(chidg_library PROPERTIES 
                              COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"

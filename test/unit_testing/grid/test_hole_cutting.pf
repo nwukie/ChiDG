@@ -1,0 +1,75 @@
+@Test
+subroutine test_hole_cutting()
+    use pfunit_mod
+    use type_chidg,             only: chidg_t
+    use mod_chidg_mpi,          only: ChiDG_COMM
+    use mod_tioga_interfaces,   only: tioga_init_f90, tioga_registergrid_data_mb, tioga_preprocess_grids, tioga_performconnectivity
+    use iso_c_binding,          only: c_int, c_double
+
+    integer(c_int)  :: bid1, btag1, nnodes1, nwall_nodes1, noverset_nodes1, nelement_types1, nvertices_per_element1, nelements1
+    integer(c_int)  :: bid2, btag2, nnodes2, nwall_nodes2, noverset_nodes2, nelement_types2, nvertices_per_element2, nelements2
+
+    real(c_double), allocatable, dimension(:)   :: xyz1, xyz2
+    integer(c_int), allocatable, dimension(:,:) :: connectivity1, connectivity2
+    integer(c_int), allocatable, dimension(:)   :: iblank1, iblank2, wall_nodes1, wall_nodes2, overset_nodes1, overset_nodes2
+
+    
+    type(chidg_t)   :: chidg
+    call chidg%start_up('mpi')
+
+    ! Initialize tioga library
+    call tioga_init_f90(ChiDG_COMM)
+
+
+
+    ! Assemble multiblock grid
+
+    ! Block 1
+    bid1  = 1
+    btag1 = 1
+
+
+
+
+
+
+
+
+
+
+
+    ! Register blocks
+    call tioga_registergrid_data_mb(bid1, btag1, nnodes1, xyz1, iblank1, nwall_nodes1, noverset_nodes1, wall_nodes1, overset_nodes1, nelement_types1, nvertices_per_element1, nelements1, connectivity1)
+    call tioga_registergrid_data_mb(bid2, btag2, nnodes2, xyz2, iblank2, nwall_nodes2, noverset_nodes2, wall_nodes2, overset_nodes2, nelement_types2, nvertices_per_element2, nelements2, connectivity2)
+
+
+!    subroutine tioga_registergrid_data_mb(bid, btag, nnodes, xyz, iblank, nwall_nodes, noverset_nodes, wall_nodes, overset_nodes, nelement_types, nvertices_per_element, nelements, connectivity) bind(C,name="tioga_registergrid_data_mb_")
+!        use iso_c_binding,  only: c_int, c_double
+!        implicit none
+!        integer(c_int), intent(in)  :: bid
+!        integer(c_int), intent(in)  :: btag
+!        integer(c_int), intent(in)  :: nnodes
+!        real(c_double), intent(in)  :: xyz(:)       ! [3*nnodes]
+!        integer(c_int), intent(in)  :: iblank(:)    ! [nnodes?]
+!        integer(c_int), intent(in)  :: nwall_nodes
+!        integer(c_int), intent(in)  :: noverset_nodes
+!        integer(c_int), intent(in)  :: wall_nodes(:)
+!        integer(c_int), intent(in)  :: overset_nodes(:)
+!        integer(c_int), intent(in)  :: nelement_types
+!        integer(c_int), intent(in)  :: nvertices_per_element
+!        integer(c_int), intent(in)  :: nelements
+!        integer(c_int), intent(in)  :: connectivity(:,:)    ! [conn_size, nelements]
+!    end subroutine
+
+
+
+
+    ! Run tioga
+!    call tioga_preprocess_grids()
+!    call tioga_performconnectivity()
+
+
+    call assertTrue(.true.)
+
+    
+end subroutine test_hole_cutting

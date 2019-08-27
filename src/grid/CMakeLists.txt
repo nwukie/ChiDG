@@ -1,5 +1,6 @@
 add_subdirectory(octree)
 add_subdirectory(radial_basis_functions)
+add_subdirectory(hole_cutting)
 
 add_lib_sources(
                 type_point.f90 

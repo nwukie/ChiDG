@@ -8,7 +8,8 @@ module type_chidg
     use mod_function,               only: register_functions
     use mod_prescribed_mesh_motion_function, only: register_prescribed_mesh_motion_functions
     use mod_radial_basis_function,  only: register_radial_basis_functions
-    use mod_force,                      only: report_forces
+    use mod_force,                  only: report_forces
+    use mod_hole_cutting,           only: compute_iblank
 
 
     use mod_grid,                   only: initialize_grid
@@ -603,6 +604,9 @@ contains
 
         call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('Reading mesh... ', io_proc=GLOBAL_MASTER)
+
+        ! Run pre-processor to compute iblank 
+        call compute_iblank(grid_file,ChiDG_COMM)
 
 
         ! Read domain geometry. Also performs partitioning.

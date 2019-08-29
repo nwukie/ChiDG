@@ -15,21 +15,29 @@ end interface
 
 interface 
     subroutine tioga_registergrid_data_mb(bid, btag, nnodes, xyz, iblank, nwall_nodes, noverset_nodes, wall_nodes, overset_nodes, nelement_types, nvertices_per_element, nelements, connectivity) bind(C,name="tioga_registergrid_data_mb_")
-        use iso_c_binding,  only: c_int, c_double
+        use iso_c_binding,  only: c_int, c_double, c_ptr
         implicit none
-        integer(c_int), intent(in)  :: bid
-        integer(c_int), intent(in)  :: btag
-        integer(c_int), intent(in)  :: nnodes
-        real(c_double), intent(in)  :: xyz(:)       ! [3*nnodes]
-        integer(c_int), intent(in)  :: iblank(:)    ! [nnodes?]
-        integer(c_int), intent(in)  :: nwall_nodes
-        integer(c_int), intent(in)  :: noverset_nodes
-        integer(c_int), intent(in)  :: wall_nodes(:)
-        integer(c_int), intent(in)  :: overset_nodes(:)
-        integer(c_int), intent(in)  :: nelement_types
-        integer(c_int), intent(in)  :: nvertices_per_element
-        integer(c_int), intent(in)  :: nelements
-        integer(c_int), intent(in)  :: connectivity(:,:)    ! [conn_size, nelements]
+        integer(c_int), intent(in), target  :: bid
+        integer(c_int), intent(in), target  :: btag
+        integer(c_int), intent(in), target  :: nnodes
+        !real(c_double), intent(in), target  :: xyz(:)       ! [3*nnodes]
+        !integer(c_int), intent(in), target  :: iblank(:)    ! [nnodes?]
+        type(c_ptr),    intent(in), value   :: xyz       ! [3*nnodes]
+        type(c_ptr),    intent(in), value   :: iblank    ! [nnodes?]
+        integer(c_int), intent(in), target  :: nwall_nodes
+        integer(c_int), intent(in), target  :: noverset_nodes
+        !integer(c_int), intent(in), target  :: wall_nodes(:)
+        !integer(c_int), intent(in), target  :: overset_nodes(:)
+        type(c_ptr),    intent(in), value   :: wall_nodes
+        type(c_ptr),    intent(in), value   :: overset_nodes
+        integer(c_int), intent(in), target  :: nelement_types
+        integer(c_int), intent(in), target  :: nvertices_per_element
+        integer(c_int), intent(in), target  :: nelements
+        !integer(c_int), intent(in), target  :: connectivity(:)    ! [conn_size, nelements]
+        !integer(c_int), intent(in), target  :: connectivity(:,:)    ! [conn_size, nelements]
+        !type(c_ptr),    intent(in), value   :: nvertices_per_element
+        !type(c_ptr),    intent(in), value   :: nelements
+        type(c_ptr),    intent(in), value   :: connectivity
     end subroutine
 end interface
 

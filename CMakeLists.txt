@@ -17,6 +17,7 @@ if ( (CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION EQUAL 6 AND CMAKE_PATC
 endif()
 
 
+
 #-----------------------------------------------------------------------------------
 #                      CMake macros for adding source files
 #-----------------------------------------------------------------------------------
@@ -470,6 +471,9 @@ set(ExternalProjectCMakeArgs
     -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DTIOGA_HAS_NODEGID=OFF
+    -DBUILD_TIOGA_EXE=OFF
+    -DBUILD_GRIDGEN_EXE=OFF
     )
 
 
@@ -639,7 +643,7 @@ list(APPEND LIB_SRCS "${CMAKE_CURRENT_BINARY_DIR}/mod_kinds.f90")
 #----------------------------------------------------------------------------------------------
 message(STATUS " ")
 add_library(chidg_library STATIC ${LIB_SRCS})
-add_dependencies(chidg_library teciompi)
+add_dependencies(chidg_library teciompi tioga)
 target_link_libraries(chidg_library
                       ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES} 
                       ${LAPACK_LIBRARIES}

@@ -1,12 +1,12 @@
 @Test
 subroutine test_hole_cutting()
+#include <messenger.h>
     use pfunit_mod
     use type_chidg,             only: chidg_t
     use mod_constants,          only: ZERO, ONE, TWO, PI
     use mod_kinds,              only: rk, ik
     use mod_chidg_mpi,          only: ChiDG_COMM
     use mod_tioga_interfaces,   only: tioga_init_f90, tioga_registergrid_data_mb, tioga_preprocess_grids, tioga_performconnectivity
-    !use mod_tioga_interfaces,   only: tioga_init_f90, tioga_preprocess_grids, tioga_performconnectivity
     use mod_gridspace,          only: linspace
     use iso_c_binding,          only: c_int, c_double, c_ptr, c_null_ptr, c_loc
     implicit none
@@ -15,30 +15,39 @@ subroutine test_hole_cutting()
     integer(c_int), target :: bid2, btag2, nnodes2, nwall_nodes2, noverset_nodes2, nelement_types2, nvertices_per_element2, nelements2
 
     real(c_double), allocatable, dimension(:),      target  :: xyz1, xyz2, radii, thetas, zs, xs, ys
-    !integer(c_int), allocatable, dimension(:,:),    target  :: connectivity1, connectivity2
-    integer(c_int), allocatable, dimension(:),      target  :: connectivity1, connectivity2
+    integer(c_int), allocatable, dimension(:,:),    target  :: connectivity1, connectivity2
     integer(c_int), allocatable, dimension(:),      target  :: iblank1, iblank2, wall_nodes1, wall_nodes2, overset_nodes1, overset_nodes2
 
     integer(c_int)  :: nnodes_xi, nnodes_eta, nnodes_zeta, inode, inode_xi, inode_eta, inode_zeta, iwall_node, ioverset_node, &
-                       nelem_xi, nelem_eta, nelem_zeta, ielem, ielem_xi, ielem_eta, ielem_zeta, node_start
-    type(c_ptr) :: connectivity1_p, connectivity2_p, nvertices_per_element1_p, nelements1_p, xyz1_p, iblank1_p, wall_nodes1_p, overset_nodes1_p
+                       nelem_xi, nelem_eta, nelem_zeta, ielem, ielem_xi, ielem_eta, ielem_zeta, node_start, ierr
 
-    real(c_double) :: r_in, r_out, r, theta, z, x, y, x_max, x_min, y_max, y_min, z_max, z_min
+    type(c_ptr) :: connectivity1_p, xyz1_p, iblank1_p, wall_nodes1_p, overset_nodes1_p
+    type(c_ptr) :: connectivity2_p, xyz2_p, iblank2_p, wall_nodes2_p, overset_nodes2_p
+
+    real(c_double) :: r_in, r_out, r, theta, z, x, y, x_max, x_min, y_max, y_min, z_max, z_min, tol
     
     type(chidg_t)   :: chidg
+    logical :: passing
+    integer :: file_unit
 
-    connectivity1_p = c_null_ptr
-    connectivity2_p = c_null_ptr
 
-    nvertices_per_element1_p = c_null_ptr
-    nelements1_p = c_null_ptr
+    connectivity1_p  = c_null_ptr
+    connectivity2_p  = c_null_ptr
+    xyz1_p           = c_null_ptr
+    xyz2_p           = c_null_ptr
+    iblank1_p        = c_null_ptr
+    iblank2_p        = c_null_ptr
+    wall_nodes1_p    = c_null_ptr
+    wall_nodes2_p    = c_null_ptr
+    overset_nodes1_p = c_null_ptr
+    overset_nodes2_p = c_null_ptr
 
     call chidg%start_up('mpi')
     call chidg%start_up('core')
 
+
     ! Initialize tioga library
     call tioga_init_f90(ChiDG_COMM)
-
 
 
     ! Assemble multiblock grid
@@ -46,29 +55,28 @@ subroutine test_hole_cutting()
     ! Block 1
     bid1  = 1
     btag1 = 1
-    nnodes_xi = 10
-    nnodes_eta = 10
-    nnodes_zeta = 2
+    nnodes_xi   = 200
+    nnodes_eta  = 200
+    nnodes_zeta = 3
     nelem_xi   = nnodes_xi-1
     nelem_eta  = nnodes_eta-1
     nelem_zeta = nnodes_zeta-1
     nnodes1 = nnodes_xi * nnodes_eta * nnodes_zeta
-    nwall_nodes1 = nnodes_eta*nnodes_zeta
-    !noverset_nodes1 = nnodes_eta*nnodes_zeta
-    noverset_nodes1 = 0
+    nwall_nodes1    = nnodes_eta*nnodes_zeta
+    noverset_nodes1 = nnodes_eta*nnodes_zeta
     nelement_types1 = 1
     nvertices_per_element1 = 8
     nelements1 = nelem_xi * nelem_eta * nelem_zeta
 
-    !allocate(xyz1(3*nnodes1), iblank1(nnodes1), wall_nodes1(nwall_nodes1), overset_nodes1(noverset_nodes1), connectivity1(nvertices_per_element1,nelements1))
-    allocate(xyz1(3*nnodes1), iblank1(nnodes1), wall_nodes1(nwall_nodes1), overset_nodes1(noverset_nodes1), connectivity1(nvertices_per_element1*nelements1*100))
+    allocate(xyz1(3*nnodes1), iblank1(nnodes1), wall_nodes1(nwall_nodes1), overset_nodes1(noverset_nodes1), connectivity1(nvertices_per_element1,nelements1),stat=ierr)
+    if (ierr /= 0) call AllocationError
 
 
 
     r_in   = 0.5
     r_out  = 1.5
     radii  = real(linspace(real(r_in,rk),real(r_out,rk),int(nnodes_xi,  ik)), c_double)
-    thetas = real(linspace(ZERO,         TWO*PI,        int(nnodes_eta, ik)), c_double)
+    thetas = real(linspace(ZERO,         TWO*PI+0.1,        int(nnodes_eta, ik)), c_double)
     zs     = real(linspace(ZERO,         ONE,           int(nnodes_zeta,ik)), c_double)
 
 
@@ -91,10 +99,10 @@ subroutine test_hole_cutting()
                     wall_nodes1(iwall_node) = inode
                     iwall_node = iwall_node + 1
                 end if
-!                if (inode_xi == nnodes_xi) then
-!                    overset_nodes1(ioverset_node) = inode
-!                    ioverset_node = ioverset_node + 1
-!                end if
+                if (inode_xi == nnodes_xi) then
+                    overset_nodes1(ioverset_node) = inode
+                    ioverset_node = ioverset_node + 1
+                end if
 
                 ! Next
                 inode = inode + 1
@@ -108,22 +116,14 @@ subroutine test_hole_cutting()
             do ielem_xi = 1,(nnodes_xi-1)
                 ielem = (nelem_xi*nelem_eta)*(ielem_zeta-1) + (nelem_xi)*(ielem_eta-1) + ielem_xi
                 node_start = (nnodes_xi*nnodes_eta)*(ielem_zeta-1) + (nnodes_xi)*(ielem_eta-1) + ielem_xi
-                connectivity1(nvertices_per_element1*(ielem-1) + 1) = node_start
-                connectivity1(nvertices_per_element1*(ielem-1) + 2) = node_start + 1
-                connectivity1(nvertices_per_element1*(ielem-1) + 3) = node_start + nnodes_xi
-                connectivity1(nvertices_per_element1*(ielem-1) + 4) = node_start + nnodes_xi + 1
-                connectivity1(nvertices_per_element1*(ielem-1) + 5) = node_start + (nnodes_xi*nnodes_eta)
-                connectivity1(nvertices_per_element1*(ielem-1) + 6) = node_start + (nnodes_xi*nnodes_eta) + 1
-                connectivity1(nvertices_per_element1*(ielem-1) + 7) = node_start + (nnodes_xi*nnodes_eta) + nnodes_xi
-                connectivity1(nvertices_per_element1*(ielem-1) + 8) = node_start + (nnodes_xi*nnodes_eta) + nnodes_xi + 1
-!                connectivity1(1,ielem) = node_start
-!                connectivity1(2,ielem) = node_start + 1
-!                connectivity1(3,ielem) = node_start + nnodes_xi
-!                connectivity1(4,ielem) = node_start + nnodes_xi + 1
-!                connectivity1(5,ielem) = node_start + (nnodes_xi*nnodes_eta)
-!                connectivity1(6,ielem) = node_start + (nnodes_xi*nnodes_eta) + 1
-!                connectivity1(7,ielem) = node_start + (nnodes_xi*nnodes_eta) + nnodes_xi
-!                connectivity1(8,ielem) = node_start + (nnodes_xi*nnodes_eta) + nnodes_xi + 1
+                connectivity1(1,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta-1)
+                connectivity1(2,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta-1) + 1
+                connectivity1(3,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta-1) + nnodes_xi + 1
+                connectivity1(4,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta-1) + nnodes_xi
+                connectivity1(5,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta)
+                connectivity1(6,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta)   + 1
+                connectivity1(7,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta)   + nnodes_xi + 1
+                connectivity1(8,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta)   + nnodes_xi
             end do
         end do
     end do
@@ -132,98 +132,152 @@ subroutine test_hole_cutting()
 
 
 !    ! Block 2
-!    bid2  = 2
-!    btag2 = 2
-!    nnodes_xi = 10
-!    nnodes_eta = 10
-!    nnodes_zeta = 2
-!    nnodes2 = nnodes_xi * nnodes_eta * nnodes_zeta
-!    nwall_nodes2    = 0
-!    noverset_nodes2 = 0
-!    nelement_types2 = 1
-!    nvertices_per_element2 = 8
-!    nelements2 = (nnodes_xi-1) * (nnodes_eta-1) * (nnodes_zeta-1)
-!
-!    allocate(xyz2(3*nnodes2), iblank2(nnodes2), wall_nodes2(nwall_nodes2), overset_nodes2(noverset_nodes2))
-!
-!
-!    x_min  = -2._rk
-!    x_max  =  2._rk
-!    y_min  = -2._rk
-!    y_max  =  2._rk
-!    z_min  =  0._rk
-!    z_max  =  1._rk
-!
-!    xs = real(linspace(real(x_min,rk),real(x_max,rk),int(nnodes_xi,  ik)), c_double)
-!    ys = real(linspace(real(y_min,rk),real(y_max,rk),int(nnodes_eta, ik)), c_double)
-!    zs = real(linspace(real(z_min,rk),real(z_max,rk),int(nnodes_zeta,ik)), c_double)
-!
-!
-!    inode = 1
-!    iwall_node = 1
-!    ioverset_node = 1
-!    do inode_zeta = 1,nnodes_zeta
-!        do inode_eta = 1,nnodes_eta
-!            do inode_xi = 1,nnodes_xi
-!                x = xs(inode_xi)
-!                y = ys(inode_eta)
-!                z = zs(inode_zeta)
-!                xyz2(3*inode-2) = xs(inode_xi)
-!                xyz2(3*inode-1) = ys(inode_eta)
-!                xyz2(3*inode-0) = zs(inode_zeta)
-!                inode = inode + 1
-!            end do
-!        end do
-!    end do
+    bid2  = 2
+    btag2 = 2
+    nnodes_xi   = 200
+    nnodes_eta  = 200
+    nnodes_zeta = 3
+    nelem_xi   = nnodes_xi-1
+    nelem_eta  = nnodes_eta-1
+    nelem_zeta = nnodes_zeta-1
+    nnodes2 = nnodes_xi * nnodes_eta * nnodes_zeta
+    nwall_nodes2    = 0
+    noverset_nodes2 = 0
+    nelement_types2 = 1
+    nvertices_per_element2 = 8
+    nelements2 = nelem_xi * nelem_eta * nelem_zeta
+
+    allocate(xyz2(3*nnodes2), iblank2(nnodes2), wall_nodes2(nwall_nodes2), overset_nodes2(noverset_nodes2), connectivity2(nvertices_per_element2,nelements2))
+
+
+    x_min  = -2._rk
+    x_max  =  2._rk
+    y_min  = -2._rk
+    y_max  =  2._rk
+    z_min  =  0._rk
+    z_max  =  1._rk
+
+    xs = real(linspace(real(x_min,rk),real(x_max,rk),int(nnodes_xi,  ik)), c_double)
+    ys = real(linspace(real(y_min,rk),real(y_max,rk),int(nnodes_eta, ik)), c_double)
+    zs = real(linspace(real(z_min,rk),real(z_max,rk),int(nnodes_zeta,ik)), c_double)
+
+
+    inode = 1
+    do inode_zeta = 1,nnodes_zeta
+        do inode_eta = 1,nnodes_eta
+            do inode_xi = 1,nnodes_xi
+
+                x = xs(inode_xi)
+                y = ys(inode_eta)
+                z = zs(inode_zeta)
+                xyz2(3*inode-2) = xs(inode_xi)
+                xyz2(3*inode-1) = ys(inode_eta)
+                xyz2(3*inode-0) = zs(inode_zeta)
+
+                ! Next
+                inode = inode + 1
+
+            end do
+        end do
+    end do
+
+
+    ! Assemble element connectivities
+    do ielem_zeta = 1,(nnodes_zeta-1)
+        do ielem_eta = 1,(nnodes_eta-1)
+            do ielem_xi = 1,(nnodes_xi-1)
+                ielem = (nelem_xi*nelem_eta)*(ielem_zeta-1) + (nelem_xi)*(ielem_eta-1) + ielem_xi
+                node_start = (nnodes_xi*nnodes_eta)*(ielem_zeta-1) + (nnodes_xi)*(ielem_eta-1) + ielem_xi
+                connectivity2(1,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta-1)
+                connectivity2(2,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta-1) + 1
+                connectivity2(3,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta-1) + nnodes_xi + 1
+                connectivity2(4,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta-1) + nnodes_xi
+                connectivity2(5,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta)
+                connectivity2(6,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta)   + 1
+                connectivity2(7,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta)   + nnodes_xi + 1
+                connectivity2(8,ielem) = node_start + (nnodes_xi*nnodes_eta)*(ielem_zeta)   + nnodes_xi
+            end do
+        end do
+    end do
 
 
 
-
-
-    connectivity1_p = c_loc(connectivity1(1))
-    xyz1_p = c_loc(xyz1(1))
-    iblank1_p = c_loc(iblank1(1))
-    wall_nodes1_p = c_loc(wall_nodes1(1))
+    connectivity1_p  = c_loc(connectivity1(1,1))
+    xyz1_p           = c_loc(xyz1(1))
+    iblank1_p        = c_loc(iblank1(1))
+    wall_nodes1_p    = c_loc(wall_nodes1(1))
     overset_nodes1_p = c_loc(overset_nodes1(1))
-    nvertices_per_element1_p = c_loc(nvertices_per_element1)
-    nelements1_p = c_loc(nelements1)
 
+    connectivity2_p  = c_loc(connectivity2(1,1))
+    xyz2_p           = c_loc(xyz2(1))
+    iblank2_p        = c_loc(iblank2(1))
+    wall_nodes2_p    = c_loc(wall_nodes2(1))
+    overset_nodes2_p = c_loc(overset_nodes2(1))
 
     ! Register blocks
     call tioga_registergrid_data_mb(bid1, btag1, nnodes1, xyz1_p, iblank1_p, nwall_nodes1, noverset_nodes1, wall_nodes1_p, overset_nodes1_p, nelement_types1, nvertices_per_element1, nelements1, connectivity1_p)
-    !call tioga_registergrid_data_mb(bid1, btag1, nnodes1, xyz1_p, iblank1_p, nwall_nodes1, noverset_nodes1, wall_nodes1_p, overset_nodes1_p, nelement_types1, nvertices_per_element1, nelements1, connectivity1_p)
-!    call tioga_registergrid_data_mb(bid2, btag2, nnodes2, xyz2, iblank2, nwall_nodes2, noverset_nodes2, wall_nodes2, overset_nodes2, nelement_types2, nvertices_per_element2, nelements2, connectivity2)
-
-
-!    subroutine tioga_registergrid_data_mb(bid, btag, nnodes, xyz, iblank, nwall_nodes, noverset_nodes, wall_nodes, overset_nodes, nelement_types, nvertices_per_element, nelements, connectivity) bind(C,name="tioga_registergrid_data_mb_")
-!        use iso_c_binding,  only: c_int, c_double
-!        implicit none
-!        integer(c_int), intent(in)  :: bid
-!        integer(c_int), intent(in)  :: btag
-!        integer(c_int), intent(in)  :: nnodes
-!        real(c_double), intent(in)  :: xyz(:)       ! [3*nnodes]
-!        integer(c_int), intent(in)  :: iblank(:)    ! [nnodes?]
-!        integer(c_int), intent(in)  :: nwall_nodes
-!        integer(c_int), intent(in)  :: noverset_nodes
-!        integer(c_int), intent(in)  :: wall_nodes(:)
-!        integer(c_int), intent(in)  :: overset_nodes(:)
-!        integer(c_int), intent(in)  :: nelement_types
-!        integer(c_int), intent(in)  :: nvertices_per_element
-!        integer(c_int), intent(in)  :: nelements
-!        integer(c_int), intent(in)  :: connectivity(:,:)    ! [conn_size, nelements]
-!    end subroutine
-
+    call tioga_registergrid_data_mb(bid2, btag2, nnodes2, xyz2_p, iblank2_p, nwall_nodes2, noverset_nodes2, wall_nodes2_p, overset_nodes2_p, nelement_types2, nvertices_per_element2, nelements2, connectivity2_p)
 
 
 
     ! Run tioga
     call tioga_preprocess_grids()
-!    call tioga_performconnectivity()
+    call tioga_performconnectivity()
 
 
-    ! Get iblank data
 
+    open(newunit=file_unit, file='data1.dat', form='formatted', access='sequential', iostat=ierr)
+    do inode = 1,nnodes1
+        if (xyz1(3*inode) < 0.5) then
+            write(file_unit,*) xyz1(3*inode-2), xyz1(3*inode-1), xyz1(3*inode-0), iblank1(inode)
+        end if
+    end do
+    close(file_unit)
+
+    open(newunit=file_unit, file='data2.dat', form='formatted', access='sequential', iostat=ierr)
+    do inode = 1,nnodes2
+        if (xyz2(3*inode) < 0.5) then
+            write(file_unit,*) xyz2(3*inode-2), xyz2(3*inode-1), xyz2(3*inode-0), iblank2(inode)
+        end if
+    end do
+    close(file_unit)
+
+
+    ! Check that all nodes outside the cylinder are valid and all nodes inside the cylinder are cut
+    tol = 1.e-16_rk
+    do inode = 1,nnodes1
+        x = xyz1(3*inode-2)
+        y = xyz1(3*inode-1)
+        r = sqrt(x*x + y*y)
+
+        if (r < (0.5_rk-tol) ) then
+            passing = (iblank1(inode) == 0)
+            if (.not. passing) print*, x,y,r, iblank1(inode)
+            call assertTrue(passing)
+        else if (r >= (0.5_rk-tol) ) then
+            passing = ( (iblank1(inode) == 1) .or. (iblank1(inode) == -1))
+            if (.not. passing) print*, x,y,r, iblank1(inode)
+            call assertTrue(passing)
+        end if
+
+    end do
+
+    do inode = 1,nnodes2
+        x = xyz2(3*inode-2)
+        y = xyz2(3*inode-1)
+        r = sqrt(x*x + y*y)
+
+        if (r < (0.5_rk-tol) ) then
+            passing = (iblank2(inode) == 0) 
+            if (.not. passing) print*, x,y,r, iblank2(inode)
+            call assertTrue(passing)
+        else if (r >= (0.5_rk-tol) ) then
+            passing = ( (iblank2(inode) == 1) .or. (iblank2(inode) == -1) )
+            if (.not. passing) print*, x,y,r, iblank2(inode)
+            call assertTrue(passing)
+        end if
+
+    end do
     call assertTrue(.true.)
-
     
 end subroutine test_hole_cutting

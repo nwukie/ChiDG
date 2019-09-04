@@ -122,6 +122,13 @@ module mod_constants
     integer(ik), parameter :: ORPHAN     = -3     ! orphan face - has no identity. Every face needs an identity.
     integer(ik), parameter :: NOT_A_FACE = -4     ! if chidg_worker is returning a face type without a face iface, could return NOT_A_FACE
 
+    
+    !
+    ! NODE TYPES
+    !
+    integer(ik), parameter :: FRINGE_NODE = -1
+    integer(ik), parameter :: HOLE_NODE   =  0
+    integer(ik), parameter :: FIELD_NODE  =  1
 
 
     !

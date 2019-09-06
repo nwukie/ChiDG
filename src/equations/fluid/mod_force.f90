@@ -46,11 +46,11 @@ contains
     !!  @result[out]    force           Integrated force vector: force = [f1, f2, f3]
     !!
     !-----------------------------------------------------------------------------------
-    subroutine report_forces(data,patch_group,force,work)
+    subroutine report_forces(data,patch_group,force,power)
         type(chidg_data_t), intent(inout)               :: data
         character(*),       intent(in)                  :: patch_group
         real(rk),           intent(inout),  optional    :: force(3)
-        real(rk),           intent(inout),  optional    :: work
+        real(rk),           intent(inout),  optional    :: power
     
         integer(ik)                 :: group_ID, patch_ID, face_ID, &
                                        idomain_g,  idomain_l,        &
@@ -63,7 +63,7 @@ contains
 
 
         real(rk)                                ::  &
-            force_local(3), work_local
+            force_local(3), power_local
 
 
         real(rk),   allocatable, dimension(:)   ::  &
@@ -99,7 +99,7 @@ contains
 
         ! Loop over domains/elements/faces for "patch_group" 
         force_local = ZERO
-        work_local  = ZERO
+        power_local = ZERO
 
         if (group_ID /= NO_ID) then
             do patch_ID = 1,data%mesh%bc_patch_group(group_ID)%npatches()
@@ -211,10 +211,10 @@ contains
                         force_local(3) = force_local(3) + sum( stress_z(:)%x_ad_ * weights)
                     end if
 
-                    if (present(work)) then
-                        work_local = work_local + sum( (stress_x(:)%x_ad_ * grid_velocity(:,1) * weights) + &
-                                                       (stress_y(:)%x_ad_ * grid_velocity(:,2) * weights) + &
-                                                       (stress_z(:)%x_ad_ * grid_velocity(:,3) * weights) )
+                    if (present(power)) then
+                        power_local = power_local + sum( (stress_x(:)%x_ad_ * grid_velocity(:,1) * weights) + &
+                                                         (stress_y(:)%x_ad_ * grid_velocity(:,2) * weights) + &
+                                                         (stress_z(:)%x_ad_ * grid_velocity(:,3) * weights) )
                     end if
 
                 end do !iface
@@ -224,7 +224,7 @@ contains
 
         ! Reduce result across processors
         if (present(force)) call MPI_AllReduce(force_local,force,3,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
-        if (present(work))  call MPI_AllReduce(work_local, work, 1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+        if (present(power)) call MPI_AllReduce(power_local,power,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 
 
     end subroutine report_forces

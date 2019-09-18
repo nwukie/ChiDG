@@ -335,8 +335,8 @@ contains
                             ! Determine which donor to use
                             !
                             if ( local_donor .and. parallel_donor ) then
-                                use_local    = (local_vol    < parallel_vol)
-                                use_parallel = (parallel_vol < local_vol   )
+                                use_local    = (local_vol    <= parallel_vol)
+                                use_parallel = (parallel_vol <  local_vol   )
 
                             else if (local_donor .and. (.not. parallel_donor)) then
                                 use_local = .true.

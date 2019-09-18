@@ -116,4 +116,80 @@ contains
     end function inv
     !**************************************************************************************
 
+
+
+    !> Returns the inverse of a complex matrix calculated by finding the LU
+    !! decomposition.  Depends on LAPACK.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/25/2018
+    !!
+    !---------------------------------------------------------------------------
+    function zinv(A) result(Ainv)
+        complex(kind=rk), dimension(:,:),               intent(inout)   :: A
+        complex(kind=rk), dimension(size(A,1),size(A,2))                :: Ainv
+
+        complex(kind=rk), dimension(size(A,1))   :: work    ! work array for LAPACK
+        integer,          dimension(size(A,1))   :: ipiv    ! pivot indices
+        integer :: n, info
+
+
+
+        ! Store A in Ainv to prevent it from being overwritten by LAPACK
+        Ainv = A
+        n = size(A,1)
+
+
+        !
+        ! ZGETRF computes an LU factorization of a general M-by-N complex matrix A
+        ! using partial pivoting with row interchanges.
+        !
+        if ( rk == rdouble ) then
+            call ZGETRF(n, n, Ainv, n, ipiv, info)
+        else if ( rk == rsingle ) then
+            call CGETRF(n, n, Ainv, n, ipiv, info)
+        else
+            call chidg_signal(FATAL,"inv: Invalid selected precision for matrix inversion.")
+        end if
+
+        if (info /= 0) then
+            call chidg_signal(FATAL,"inv: Matrix is numerically singular!")
+        end if
+
+
+
+        !
+        ! DGETRI computes the inverse of a matrix using the LU factorization
+        ! computed by DGETRF.
+        !
+        if ( rk == rdouble ) then
+            call ZGETRI(n, Ainv, n, ipiv, work, n, info)
+        else if ( rk == rsingle ) then
+            call CGETRI(n, Ainv, n, ipiv, work, n, info)
+        else
+            call chidg_signal(FATAL,"inv: Invalid selected precision for matrix inversion.")
+        end if
+
+
+
+        if (info /= 0) then
+            call chidg_signal(FATAL,"inv: matrix inversion failed!.")
+        end if
+
+    end function zinv
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 end module mod_inv

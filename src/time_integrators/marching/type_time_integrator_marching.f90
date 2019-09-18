@@ -54,9 +54,38 @@ contains
         class(time_integrator_marching_t),  intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
 
-        associate( q => data%sdata%q, q_in => data%sdata%q_in)
+        integer(ik)                 :: idom,ielem,ivar,ierr
+        real(rk),   allocatable     :: temp(:)
 
-            q = q_in
+        associate( q          => data%sdata%q,             &
+                   q_in       => data%sdata%q_in,          &
+                   ntime_q    => data%sdata%q%get_ntime(), &
+                   ntime_q_in => data%sdata%q_in%get_ntime())
+
+            if (ntime_q == ntime_q_in) then
+                q = q_in
+            else if (ntime_q .ne. ntime_q_in .and. ntime_q == 1) then
+
+                    do idom = 1,data%mesh%ndomains()
+
+
+                        if (allocated(temp)) deallocate(temp)
+                        allocate(temp(data%mesh%domain(idom)%nterms_s), stat=ierr)
+                        if (ierr /= 0) call AllocationError
+
+                        do ielem = 1,data%mesh%domain(idom)%nelem
+                            do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
+
+                                temp = q_in%dom(idom)%vecs(ielem)%getvar(ivar,ntime_q_in)
+                                call q%dom(idom)%vecs(ielem)%setvar(ivar,1,temp)
+
+                            end do
+                        end do
+
+                    end do
+            else
+                call chidg_signal(FATAL, 'Initialization array incompatible with solution array')
+            end if
 
         end associate
 
@@ -76,20 +105,17 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(HID_T)                  :: fid
-        integer(ik)                     :: ierr, iwrite
+        integer(HID_T)  :: fid
+        integer(ik)     :: ierr, iwrite
         
 
-        do iwrite = 0,NRANK -1
+        do iwrite = 0,NRANK-1
             if (iwrite == IRANK) then
 
-                !
-                ! Write dt, no. of time steps and nwrite to hdf file
-                !
                 fid = open_file_hdf(filename)
                 call set_time_integrator_hdf(fid, trim(data%time_manager%get_name()))
-                call set_time_step_hdf(      fid, data%time_manager%dt              )
                 call set_times_hdf(          fid, [data%time_manager%t]             )
+                call set_time_step_hdf(      fid, data%time_manager%dt              )
                 call set_nsteps_hdf(         fid, data%time_manager%nsteps          )
                 call set_nwrite_hdf(         fid, data%time_manager%nwrite          )
                 call close_file_hdf(fid)
@@ -119,15 +145,11 @@ contains
         integer(HID_T)  :: fid
 
 
-        !
         ! Open hdf file
-        !
         fid = open_file_hdf(filename)
 
 
-        !
         ! Read dt, no. of time steps and nwrite
-        !
         select case(trim(read_type))
             case('run')
                 ! For running a time-marching case, 
@@ -148,9 +170,7 @@ contains
         end select
 
 
-        !
         ! Close file
-        !
         call close_file_hdf(fid)
 
 
@@ -169,17 +189,15 @@ contains
         class(time_integrator_marching_t),  intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
 
+        associate (q_out => data%sdata%q_out, q_in => data%sdata%q_in)
 
-        !
-        ! Set q_out
-        ! TODO: This part will change after implementation of time marching integrators
-        !
-        call data%sdata%q_out%init(data%mesh,data%time_manager%ntime)
-        call data%sdata%q_out%set_ntime(data%time_manager%ntime)
-        call data%sdata%q_out%clear()
+            call q_out%init(data%mesh,data%time_manager%ntime)
+            call q_out%set_ntime(data%time_manager%ntime)
+            call q_out%clear()
 
-        data%sdata%q_out = data%sdata%q_in
+            q_out = q_in
 
+        end associate
 
     end subroutine process_data_for_output
     !*******************************************************************************

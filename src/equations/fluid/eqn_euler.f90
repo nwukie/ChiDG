@@ -11,7 +11,7 @@ module eqn_euler
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------
     type, public, extends(equation_builder_t) :: euler
 
     contains
@@ -20,7 +20,7 @@ module eqn_euler
         procedure   :: build
 
     end type euler
-    !********************************************************************************************
+    !************************************************************************************
 
 
 
@@ -33,14 +33,14 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
     !!
-    !---------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     subroutine init(self)
         class(euler),   intent(inout)  :: self
 
         call self%set_name('Euler')
 
     end subroutine init
-    !*********************************************************************************************
+    !*************************************************************************************
 
 
 
@@ -50,7 +50,7 @@ contains
     !!  @date   8/30/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     function build(self,blueprint) result(euler_eqns)
         class(euler),   intent(in)  :: self
         character(*),   intent(in)  :: blueprint
@@ -79,8 +79,9 @@ contains
                 call euler_eqns%add_operator('Euler Volume Cylindrical Source')
                 !call euler_eqns%add_operator('Euler LaxFriedrichs Flux')
 
+
                 call euler_eqns%add_model('Ideal Gas')
-                call euler_eqns%add_pseudo_timestep(fluid_pseudo_time)
+!                call euler_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
 
 
@@ -93,7 +94,7 @@ contains
 
 
     end function build
-    !**********************************************************************************************
+    !**********************************************************************************
 
 
 

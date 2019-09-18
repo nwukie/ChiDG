@@ -55,6 +55,7 @@ contains
 
         ! Set operator type
         call self%set_operator_type("Volume Advective Flux")
+        !call self%set_operator_type("Volume Diffusive Flux")
 
         ! Set operator equations
         call self%add_primary_field("Density"   )
@@ -120,6 +121,7 @@ contains
         ! Compute pressure and total enthalpy
         !
         p = worker%get_field('Pressure', 'value', 'element')
+
         enthalpy = (energy + p)*invdensity
 
 

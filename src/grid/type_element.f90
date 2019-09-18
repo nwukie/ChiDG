@@ -3,15 +3,15 @@ module type_element
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN, &
                                       ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO,THIRD, &
-                                      DIR_1, DIR_2, DIR_3, DIR_THETA, XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      TWO_DIM, THREE_DIM, RKTOL, VALID_POINT, INVALID_POINT, NO_PMM_ASSIGNED, &
-                                      ZERO, TWO, CARTESIAN, CYLINDRICAL, DIR_R
-    use mod_grid,               only: get_element_mapping, face_corners
+                                      DIR_1, DIR_2, DIR_3, DIR_THETA, XI_DIR,   &
+                                      ETA_DIR, ZETA_DIR, TWO_DIM, THREE_DIM,    &
+                                      RKTOL, VALID_POINT, INVALID_POINT, NO_MM_ASSIGNED, &
+                                      ZERO, TWO, CARTESIAN, CYLINDRICAL, DIR_R, NO_ID
+    use mod_grid,               only: get_element_mapping, face_corners, element_vertex_indices
     use mod_reference_elements, only: get_reference_element, ref_elems
     use mod_polynomial,         only: polynomial_val, dpolynomial_val
     use mod_inv,                only: inv, inv_3x3
     use mod_determinant,        only: det_3x3
-    use mod_io,                 only: gq_rule
 
 
     use type_point,                 only: point_t
@@ -19,6 +19,8 @@ module type_element
     use type_function,              only: function_t
     use type_element_connectivity,  only: element_connectivity_t
     use type_reference_element,     only: reference_element_t
+    use type_ivector,               only: ivector_t
+    use type_rbf_address_book,      only: rbf_address_book_t
     use DNAD_D
     use ieee_arithmetic,            only: ieee_value, ieee_quiet_nan, ieee_is_nan
     implicit none
@@ -48,26 +50,34 @@ module type_element
     !!  @author Mayank Sharma
     !!  @date   11/12/2016
     !!
-    !-----------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     type, public :: element_t
 
         ! Element location
-        integer(ik)                 :: element_location(4)  ! [idomain_g, idomain_l, ielement_g, ielement_l], useful for nonblocking send
+        integer(ik)                 :: element_location(5)  ! [idomain_g, idomain_l, ielement_g, ielement_l, iproc], useful for nonblocking send
         integer(ik)                 :: idomain_g            ! Global index of parent domain
         integer(ik)                 :: idomain_l            ! Proc-local index of parent domain
         integer(ik)                 :: ielement_g           ! Domain-global index of element
         integer(ik)                 :: ielement_l           ! Proc-local index of the element
+        integer(ik)                 :: iproc                ! Processor the element is associated with.
 
         ! Element data
-        integer(ik)                 :: element_data(8)      ! [element_type, spacedim, coordinate_system, neqns, nterms_s, nterms_c, ntime, interpolation_level]
+        integer(ik)                 :: element_data(9)      ! [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level, dof_start]
         integer(ik)                 :: element_type         ! 1=linear, 2=quadratic, 3=cubic, 4=quartic, etc.
-        integer(ik)                 :: spacedim             ! Number of spatial dimensions for the element
-        integer(ik)                 :: coordinate_system    ! CARTESIAN, CYLINDRICAL. parameters from mod_constants
-        integer(ik)                 :: neqns                ! Number of equations being solved
+        integer(ik)                 :: spacedim             ! Number of spatial dimensions for the element.
+        integer(ik)                 :: coordinate_system    ! CARTESIAN, CYLINDRICAL. parameters from mod_constants.
+        integer(ik)                 :: eqn_ID = NO_ID       ! Equation set identifier the element is associated with.
+        integer(ik)                 :: nfields              ! Number of equations being solved.
         integer(ik)                 :: nterms_s             ! Number of terms in solution expansion.  
         integer(ik)                 :: nterms_c             ! Number of terms in coordinate expansion. 
-        integer(ik)                 :: ntime                ! Number of time levels in solution
-        integer(ik)                 :: interpolation_level  ! 1=lowest, 2-> are higher
+        integer(ik)                 :: ntime                ! Number of time levels in solution.
+        integer(ik)                 :: dof_start            ! Starting DOF index in ChiDG-global index
+        integer(ik)                 :: dof_local_start      ! Starting DOF index in ChiDG-local index
+        integer(ik)                 :: interpolation_level  ! 1=lowest, 2-> are higher.
+        integer(ik)                 :: recv_comm    = NO_ID ! chidg_vector access if element is initialized on another processor.
+        integer(ik)                 :: recv_domain  = NO_ID ! chidg_vector access if element is initialized on another processor.
+        integer(ik)                 :: recv_element = NO_ID ! chidg_vector access if element is initialized on another processor.
+        integer(ik)                 :: recv_dof     = NO_ID ! Starting DOF index in local petsc vector for parallel storage.
 
 
         ! Connectivty and linear transformation martrix for 
@@ -87,11 +97,14 @@ module type_element
         real(rk),       allocatable :: node_coords_def(:,:) ! Node coordinates, deformed element,   local element ordering
         real(rk),       allocatable :: node_coords_vel(:,:) ! Node velocities,  deformed element,   local element ordering
 
+        real(rk)                    :: vertex_indices(8)    ! Indices of the element vertices
+
+
         ! Element geometry at interpolation nodes
         real(rk),       allocatable :: interp_coords(:,:)       ! Undeformed coordinates at element interpolation nodes
         real(rk),       allocatable :: interp_coords_def(:,:)   ! Deformed coordinates at element interpolation nodes
         real(rk),       allocatable :: interp_coords_vel(:,:)   ! Coordinate velocities at element interpolation nodes
-        real(rk),       allocatable :: metric(:,:,:)            ! inverted jacobian matrix for each quadrature node (mat_i,mat_j,quad_pt)
+        real(rk),       allocatable :: metric(:,:,:)            ! inverted jacobian matrix for each volume node (mat_i,mat_j,volume_pt)
         real(rk),       allocatable :: jinv(:)                  ! Differential volume ratio: Undeformed Volume/Reference Volume
         real(rk),       allocatable :: jinv_def(:)              ! Differential volume ratio: Deformed Volume/Reference Volume
 
@@ -100,7 +113,7 @@ module type_element
         !   : This defines a mapping from some deformed element back to the original
         !   : undeformed element with the idea that the governing equations are transformed
         !   : and solved on the undeformed element.
-        integer(ik)                 :: pmm_ID = NO_PMM_ASSIGNED
+        integer(ik)                 :: mm_ID = NO_MM_ASSIGNED
         real(rk),       allocatable :: ale_Dinv(:,:,:)          ! Deformation gradient: deformed element/undeformed element
         real(rk),       allocatable :: ale_g(:)                 ! Differential volume ratio: Deformed Volume/Undeformed Volume
         real(rk),       allocatable :: ale_g_grad1(:)
@@ -117,6 +130,7 @@ module type_element
         real(rk),       allocatable :: grad2_trans(:,:)     ! transpose grad2
         real(rk),       allocatable :: grad3_trans(:,:)     ! transpose grad3
 
+
         ! Element-local mass, inverse mass matrices
         real(rk),       allocatable :: mass(:,:)        
         real(rk),       allocatable :: invmass(:,:)
@@ -124,8 +138,16 @@ module type_element
         ! Element volume, approx. size of bounding box
         real(rk)                    :: vol
         real(rk)                    :: vol_ale
-        real(rk)                    :: h(3)     
+        real(rk)                    :: h(3), centroid(3), bb_centroid(3)
+        real(rk)                    :: area_weighted_h(3)
+
         real(rk),       allocatable :: dtau(:)              ! a pseudo-timestep for each equation. Used in the nonlinear solver.
+
+        ! Smoothed h-field
+        real(rk),       allocatable :: h_smooth(:,:)        ! (ngq,3)
+        real(rk),       allocatable :: size_smooth(:)       ! (ngq)
+
+
 
         ! Reference element and interpolators
         type(reference_element_t),  pointer :: basis_s => null()  ! Pointer to solution basis and interpolator
@@ -133,14 +155,25 @@ module type_element
 
         ! Logical tests
         logical :: geom_initialized = .false.
-        logical :: numInitialized  = .false.
+        logical :: sol_initialized  = .false.
 
+        ! Tree box indicator
+        integer(ik), allocatable    :: node_box_ID(:)
+        type(ivector_t)               :: box_ID
+
+        ! RBF information
+        type(rbf_address_book_t)       :: rbf_address_book
+
+
+        real(rk),   allocatable :: bc(:,:)
+        logical                 :: bc_initialized = .false.
 
     contains
 
         ! Initialization procedures
         procedure, public   :: init_geom
         procedure, public   :: init_sol
+        procedure, public   :: init_eqn
 
 
         ! Undeformed element procedures
@@ -156,12 +189,11 @@ module type_element
         procedure, private  :: interpolate_coords_ale
         procedure, private  :: interpolate_metrics_ale
 
-
         ! Compute discrete value for a given xi,eta,zeta.
         procedure, public   :: x                      
         procedure, public   :: y                      
         procedure, public   :: z                      
-        procedure, public   :: grid_point           
+        procedure, public   :: physical_coordinate
         procedure, public   :: physical_point
         procedure, public   :: computational_point
         procedure, public   :: metric_point 
@@ -176,13 +208,15 @@ module type_element
         ! Get connected face
         procedure, public   :: get_face_from_corners
 
-
-
+        ! RBF Registration
+        procedure           :: init_rbf_address_book
+        procedure, public   :: register_rbf
+        procedure, public   :: get_rbf_indices
 
         final               :: destructor
 
     end type element_t
-    !******************************************************************************************
+    !*********************************************************************************
 
     private
 
@@ -211,13 +245,13 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !---------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     subroutine init_geom(self,nodes,connectivity,etype,location,coord_system)
         class(element_t),               intent(inout)   :: self
         real(rk),                       intent(in)      :: nodes(:,:)
         integer(ik),                    intent(in)      :: connectivity(:)
         integer(ik),                    intent(in)      :: etype
-        integer(ik),                    intent(in)      :: location(4)
+        integer(ik),                    intent(in)      :: location(5)
         character(*),                   intent(in)      :: coord_system
 
         character(:),   allocatable :: user_msg
@@ -243,6 +277,7 @@ contains
         self%idomain_l        = location(2)
         self%ielement_g       = location(3)
         self%ielement_l       = location(4)
+        self%iproc            = location(5)
         self%element_location = location
         self%connectivity     = connectivity
 
@@ -278,6 +313,16 @@ contains
         end do !ipt
 
 
+        !
+        ! Accumulate vertex indices
+        !
+        ! Corresponding (xi, eta, zeta) for each vertex:
+        ! 1: (-1,-1,-1), 2: (-1,-1,1), 3: (-1,1,-1), 4: (-1,1,1), 5: (1,-1,-1), 6: (1, -1, 1), 7: (1,1,-1), 8: (1,1,1)
+        !
+        do ipt = 1, 8
+            self%vertex_indices(ipt) = connectivity(element_vertex_indices(ipt, mapping))
+        end do
+
 
 
 
@@ -299,6 +344,15 @@ contains
         allocate(self%node_coords(self%nterms_c,3),stat=ierr)
         call self%coords%init(self%nterms_c,self%spacedim,self%ntime,self%idomain_g,self%idomain_l,self%ielement_g,self%ielement_l)
         self%node_coords = nodes_l
+
+
+        !
+        ! Compute element centroid
+        !
+        self%centroid(1) = sum(self%node_coords(:,1))/self%nterms_c
+        self%centroid(2) = sum(self%node_coords(:,2))/self%nterms_c
+        self%centroid(3) = sum(self%node_coords(:,3))/self%nterms_c
+
 
         
         !
@@ -332,6 +386,11 @@ contains
         self%h(1) = xwidth
         self%h(2) = ywidth
         self%h(3) = zwidth
+
+        self%bb_centroid(1) = 0.5_rk*(xmin+xmax)
+        self%bb_centroid(2) = 0.5_rk*(ymin+ymax)
+        self%bb_centroid(3) = 0.5_rk*(zmin+zmax)
+
 
 
 
@@ -368,14 +427,12 @@ contains
         call self%set_displacements_velocities(dnodes,vnodes)
 
 
+        ! Initialize RBF
+        call self%init_rbf_address_book(1)
+
+
     end subroutine init_geom
-    !******************************************************************************************
-
-
-
-
-
-
+    !***********************************************************************************
 
 
 
@@ -391,29 +448,33 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  nterms_s    Number of terms in the modal representation of the solution
-    !!  @param[in]  neqns       Number of equations contained in the element solution
+    !!  @param[in]  nfields     Number of equations contained in the element solution
     !!
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/12/2016
     !!
     !!
-    !-----------------------------------------------------------------------------------------
-    subroutine init_sol(self,interpolation,level,nterms_s,nfields,ntime)
-        class(element_t),   intent(inout) :: self
-        character(*),       intent(in)    :: interpolation
-        integer(ik),        intent(in)    :: level
-        integer(ik),        intent(in)    :: nterms_s
-        integer(ik),        intent(in)    :: nfields
-        integer(ik),        intent(in)    :: ntime
+    !----------------------------------------------------------------------------------
+    subroutine init_sol(self,interpolation,level,nterms_s,nfields,ntime,dof_start,dof_local_start)
+        class(element_t),   intent(inout)   :: self
+        character(*),       intent(in)      :: interpolation
+        integer(ik),        intent(in)      :: level
+        integer(ik),        intent(in)      :: nterms_s
+        integer(ik),        intent(in)      :: nfields
+        integer(ik),        intent(in)      :: ntime
+        integer(ik),        intent(in)      :: dof_start
+        integer(ik),        intent(in)      :: dof_local_start
 
         integer(ik) :: ierr
         integer(ik) :: nnodes
         integer(ik) :: ref_ID_s, ref_ID_c
         
 
-        self%nterms_s    = nterms_s     ! number of terms in solution expansion
-        self%neqns       = nfields      ! number of equations being solved
-        self%ntime       = ntime        ! number of time steps in solution
+        self%nterms_s        = nterms_s     ! number of terms in solution expansion
+        self%nfields         = nfields      ! number of equations being solved
+        self%ntime           = ntime        ! number of time steps in solution
+        self%dof_start       = dof_start
+        self%dof_local_start = dof_local_start
 
 
         !
@@ -442,12 +503,12 @@ contains
         !
         ! (Re)Allocate storage for element data structures
         !
-        if (allocated(self%jinv)) &
-            deallocate( self%jinv,                &
+        if (allocated(self%jinv))                       &
+            deallocate( self%jinv,                      &
                         self%jinv_def,                  &
                         self%metric,                    &
-                        self%interp_coords,                  &
-                        self%interp_coords_def,              &
+                        self%interp_coords,             &
+                        self%interp_coords_def,         &
                         self%grad1,                     &
                         self%grad2,                     &
                         self%grad3,                     &
@@ -456,38 +517,42 @@ contains
                         self%grad3_trans,               &
                         self%mass,                      &
                         self%invmass,                   &
-                        self%interp_coords_vel,              &
+                        self%interp_coords_vel,         &
                         self%ale_Dinv,                  &
                         self%ale_g,                     &
                         self%ale_g_grad1,               &
                         self%ale_g_grad2,               &
                         self%ale_g_grad3,               &
                         self%ale_g_modes,               &
+                        self%h_smooth,                  &
+                        self%size_smooth,               &
                         self%dtau                       &
                         )
             
 
-        nnodes = ref_elems(ref_ID_s)%nnodes_ie()
-        allocate(self%jinv(nnodes),               &
-                 self%jinv_def(nnodes),                 &
-                 self%grad1(nnodes,nterms_s),           &
-                 self%grad2(nnodes,nterms_s),           &
-                 self%grad3(nnodes,nterms_s),           &
-                 self%grad1_trans(nterms_s,nnodes),     &
-                 self%grad2_trans(nterms_s,nnodes),     &
-                 self%grad3_trans(nterms_s,nnodes),     &
-                 self%mass(nterms_s,nterms_s),          &
-                 self%invmass(nterms_s,nterms_s),       &
-                 self%interp_coords(nnodes,3),               &
-                 self%interp_coords_def(nnodes,3),           &
-                 self%interp_coords_vel(nnodes,3),           &
-                 self%metric(3,3,nnodes),               &
-                 self%ale_Dinv(3,3,nnodes),             &
-                 self%ale_g(nnodes),                    &
-                 self%ale_g_grad1(nnodes),              &
-                 self%ale_g_grad2(nnodes),              &
-                 self%ale_g_grad3(nnodes),              &
-                 self%ale_g_modes(nterms_s),            &
+        nnodes = ref_elems(ref_ID_s)%nnodes_elem()
+        allocate(self%jinv(nnodes),                         &
+                 self%jinv_def(nnodes),                     &
+                 self%grad1(nnodes,nterms_s),               &
+                 self%grad2(nnodes,nterms_s),               &
+                 self%grad3(nnodes,nterms_s),               &
+                 self%grad1_trans(nterms_s,nnodes),         &
+                 self%grad2_trans(nterms_s,nnodes),         &
+                 self%grad3_trans(nterms_s,nnodes),         &
+                 self%mass(nterms_s,nterms_s),              &
+                 self%invmass(nterms_s,nterms_s),           &
+                 self%interp_coords(nnodes,3),              & 
+                 self%interp_coords_def(nnodes,3),          &
+                 self%interp_coords_vel(nnodes,3),          &
+                 self%metric(3,3,nnodes),                   &
+                 self%ale_Dinv(3,3,nnodes),                 &
+                 self%ale_g(nnodes),                        &
+                 self%ale_g_grad1(nnodes),                  &
+                 self%ale_g_grad2(nnodes),                  &
+                 self%ale_g_grad3(nnodes),                  &
+                 self%ale_g_modes(nterms_s),                &
+                 self%h_smooth(nnodes,3),                   &
+                 self%size_smooth(nnodes),                  &
                  self%dtau(nfields), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -499,26 +564,48 @@ contains
         call self%update_interpolations()
         call self%update_interpolations_ale()
 
-        !
-        ! Confirm element numerics were initialized
-        !
-        self%numInitialized = .true.    
-
 
         !
         ! Store element_data(4-8)
         !
-        self%element_data(4) = self%neqns
+        self%element_data(4) = self%nfields
         self%element_data(5) = self%nterms_s
         self%element_data(6) = self%nterms_c
         self%element_data(7) = self%ntime
         self%element_data(8) = level
+        self%element_data(9) = self%dof_start
 
 
-
+        !
+        ! Confirm element numerics were initialized
+        !
+        self%sol_initialized = .true.    
 
     end subroutine init_sol
-    !*****************************************************************************************
+    !**********************************************************************************
+
+
+
+
+
+
+    !>  Assign equation_set_t instance association.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/24/2018
+    !!
+    !!  @param[in]  eqn_ID  Equation set index associated with the element.
+    !!                      chidg%data%eqnset(eqn_ID)
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init_eqn(self,eqn_ID)
+        class(element_t),   intent(inout)   :: self
+        integer(ik),        intent(in)      :: eqn_ID
+
+        self%eqn_ID = eqn_ID
+
+    end subroutine init_eqn
+    !********************************************************************************
 
 
 
@@ -536,7 +623,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------
     subroutine update_interpolations(self)
         class(element_t),   intent(inout)   :: self
 
@@ -562,7 +649,7 @@ contains
 
 
     end subroutine update_interpolations
-    !******************************************************************************************
+    !***********************************************************************************
 
 
 
@@ -582,7 +669,7 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !-----------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     subroutine interpolate_metrics(self)
         class(element_t),    intent(inout)   :: self
 
@@ -593,12 +680,12 @@ contains
         real(rk),   dimension(:,:),     allocatable :: val, ddxi, ddeta, ddzeta
         real(rk),   dimension(:,:,:),   allocatable :: jacobian
 
-        nnodes  = self%basis_c%nnodes_ie()
-        weights = self%basis_c%weights()
-        val     = self%basis_c%interpolator('Value')
-        ddxi    = self%basis_c%interpolator('ddxi')
-        ddeta   = self%basis_c%interpolator('ddeta')
-        ddzeta  = self%basis_c%interpolator('ddzeta')
+        nnodes  = self%basis_c%nnodes_elem()
+        weights = self%basis_c%weights_element()
+        val     = self%basis_c%interpolator_element('Value')
+        ddxi    = self%basis_c%interpolator_element('ddxi')
+        ddeta   = self%basis_c%interpolator_element('ddeta')
+        ddzeta  = self%basis_c%interpolator_element('ddzeta')
 
         !
         ! Compute coordinate jacobian matrix at interpolation nodes
@@ -659,7 +746,8 @@ contains
         !
         user_msg = "element%interpolate_metrics: Negative element &
                     volume detected. Check element quality and orientation."
-        if (any(self%jinv < ZERO)) call chidg_signal(FATAL,user_msg)
+        !if (any(self%jinv < ZERO)) call chidg_signal(FATAL,user_msg)
+        if (any(self%jinv < ZERO)) call chidg_signal_two(FATAL,user_msg,self%idomain_g,self%ielement_g)
 
 
         !
@@ -678,7 +766,9 @@ contains
 
 
     end subroutine interpolate_metrics
-    !******************************************************************************************
+    !************************************************************************************
+
+
 
 
 
@@ -704,10 +794,10 @@ contains
         integer(ik)                                 :: nnodes
         real(rk),   allocatable,    dimension(:,:)  :: ddxi, ddeta, ddzeta
 
-        nnodes = self%basis_s%nnodes_ie()
-        ddxi   = self%basis_s%interpolator('ddxi')
-        ddeta  = self%basis_s%interpolator('ddeta')
-        ddzeta = self%basis_s%interpolator('ddzeta')
+        nnodes = self%basis_s%nnodes_elem()
+        ddxi   = self%basis_s%interpolator_element('ddxi')
+        ddeta  = self%basis_s%interpolator_element('ddeta')
+        ddzeta = self%basis_s%interpolator_element('ddzeta')
 
         do iterm = 1,self%nterms_s
             do inode = 1,nnodes
@@ -731,9 +821,9 @@ contains
         if (any(ieee_is_nan(self%grad1)) .or. &
             any(ieee_is_nan(self%grad2)) .or. &
             any(ieee_is_nan(self%grad3)) ) then
-            user_msg = "element%compute_quadrature_gradients: Element failed to produce valid gradient information. &
-                        Element quality is likely not reasonable."
-            call chidg_signal(FATAL,"element%compute_quadrature_gradients: Element failed to produce valid gradient information. Element quality is likely not reasonable.")
+            user_msg = "element%interpolate_gradients: Element failed to produce valid &
+                        gradient information. Element quality is likely not reasonable."
+            call chidg_signal(FATAL,user_msg)
         end if
 
         self%grad1_trans = transpose(self%grad1)
@@ -742,6 +832,13 @@ contains
 
     end subroutine interpolate_gradients
     !******************************************************************************************
+
+
+
+
+
+
+
 
 
 
@@ -765,14 +862,14 @@ contains
         real(rk),   dimension(:),   allocatable :: coord1, coord2, coord3
         integer(ik)                             :: inode
 
-        nnodes = self%basis_c%nnodes_ie()
+        nnodes = self%basis_c%nnodes_elem()
 
         !
         ! compute coordinates associated with quadrature points
         !
-        coord1 = matmul(self%basis_c%interpolator('Value'),self%coords%getvar(1,itime = 1))
-        coord2 = matmul(self%basis_c%interpolator('Value'),self%coords%getvar(2,itime = 1))
-        coord3 = matmul(self%basis_c%interpolator('Value'),self%coords%getvar(3,itime = 1))
+        coord1 = matmul(self%basis_c%interpolator_element('Value'),self%coords%getvar(1,itime = 1))
+        coord2 = matmul(self%basis_c%interpolator_element('Value'),self%coords%getvar(2,itime = 1))
+        coord3 = matmul(self%basis_c%interpolator_element('Value'),self%coords%getvar(3,itime = 1))
 
 
         !
@@ -806,14 +903,14 @@ contains
         self%invmass = ZERO
         self%mass    = ZERO
 
-        temp = transpose(self%basis_s%interpolator('Value'))
+        temp = transpose(self%basis_s%interpolator_element('Value'))
 
 
         !
         ! Multiply rows by quadrature weights and cell jacobians
         !
         do iterm = 1,self%nterms_s
-            temp(iterm,:) = temp(iterm,:)*(self%basis_s%weights())*(self%jinv)
+            temp(iterm,:) = temp(iterm,:)*(self%basis_s%weights_element())*(self%jinv)
         end do
 
 
@@ -821,7 +918,7 @@ contains
         ! Perform the matrix multiplication of the transpose val matrix by
         ! the standard matrix. This produces the mass matrix. I think...
         !
-        self%mass = matmul(temp,self%basis_s%interpolator('Value'))
+        self%mass = matmul(temp,self%basis_s%interpolator_element('Value'))
 
 
         !
@@ -970,7 +1067,7 @@ contains
         !
         ! Retrieve interpolator
         !
-        val = self%basis_c%interpolator('Value')
+        val = self%basis_c%interpolator_element('Value')
 
         !
         ! compute cartesian coordinates associated with quadrature points
@@ -1034,19 +1131,19 @@ contains
         !
         ! Retrieve interpolators
         !
-        nnodes  = self%basis_c%nnodes_ie()
-        weights = self%basis_c%weights()
-        ddxi    = self%basis_c%interpolator('ddxi')
-        ddeta   = self%basis_c%interpolator('ddeta')
-        ddzeta  = self%basis_c%interpolator('ddzeta')
+        nnodes  = self%basis_c%nnodes_elem()
+        weights = self%basis_c%weights_element()
+        ddxi    = self%basis_c%interpolator_element('ddxi')
+        ddeta   = self%basis_c%interpolator_element('ddeta')
+        ddzeta  = self%basis_c%interpolator_element('ddzeta')
 
-        dxidxi     = self%basis_c%interpolator('dxidxi')
-        detadeta   = self%basis_c%interpolator('detadeta')
-        dzetadzeta = self%basis_c%interpolator('dzetadzeta')
+        dxidxi     = self%basis_c%interpolator_element('dxidxi')
+        detadeta   = self%basis_c%interpolator_element('detadeta')
+        dzetadzeta = self%basis_c%interpolator_element('dzetadzeta')
 
-        dxideta    = self%basis_c%interpolator('dxideta')
-        dxidzeta   = self%basis_c%interpolator('dxidzeta')
-        detadzeta  = self%basis_c%interpolator('detadzeta')
+        dxideta    = self%basis_c%interpolator_element('dxideta')
+        dxidzeta   = self%basis_c%interpolator_element('dxidzeta')
+        detadzeta  = self%basis_c%interpolator_element('detadzeta')
 
 
 
@@ -1139,7 +1236,7 @@ contains
         !
         ! Project ale_g to solution basis
         !
-        val  = self%basis_s%interpolator('Value')
+        val  = self%basis_s%interpolator_element('Value')
         fvals = self%ale_g * weights * self%jinv
         temp = matmul(transpose(val),fvals)
         self%ale_g_modes = matmul(self%invmass,temp)
@@ -1317,7 +1414,6 @@ contains
             polyvals(iterm)  = polynomial_val(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
         end do
 
-
         ! Evaluate x from dot product of modes and polynomial values
         yval = dot_product(self%coords%getvar(2,itime = 1),polyvals)
 
@@ -1363,48 +1459,48 @@ contains
 
 
 
-    !>  Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !!  @author Mayank Sharma + Matteo Ugolotti
-    !!  @date   11/5/2016
-    !!
-    !------------------------------------------------------------------------------------------
-    function physical_point(self,xi,eta,zeta) result(phys_point)
-        class(element_t),   intent(in)  :: self
-        real(rk),           intent(in)  :: xi,eta,zeta
-
-        real(rk)    :: val1, val2, val3
-        real(rk)    :: phys_point(3)
-        real(rk)    :: polyvals(self%nterms_c)
-        integer(ik) :: iterm
-
-        !
-        ! Evaluate polynomial modes at node location
-        !
-        do iterm = 1,self%nterms_c
-            polyvals(iterm) = polynomial_val(self%spacedim,self%nterms_c,iterm,[xi,eta,zeta])
-        end do
-
-        
-        !
-        ! Evaluate x from dot product of modes and polynomial values
-        !
-        val1 = dot_product(self%coords%getvar(1, itime=1),polyvals)
-        val2 = dot_product(self%coords%getvar(2, itime=1),polyvals)
-        val3 = dot_product(self%coords%getvar(3, itime=1),polyvals)
-
-
-        !
-        ! Set physical coordinates
-        !
-        phys_point = [val1,val2,val3]
-
-
-    end function physical_point
-    !******************************************************************************************
+!    !>  Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/1/2016
+!    !!
+!    !!  @author Mayank Sharma + Matteo Ugolotti
+!    !!  @date   11/5/2016
+!    !!
+!    !------------------------------------------------------------------------------------------
+!    function physical_point(self,xi,eta,zeta) result(phys_point)
+!        class(element_t),   intent(in)  :: self
+!        real(rk),           intent(in)  :: xi,eta,zeta
+!
+!        real(rk)    :: val1, val2, val3
+!        real(rk)    :: phys_point(3)
+!        real(rk)    :: polyvals(self%nterms_c)
+!        integer(ik) :: iterm
+!
+!        !
+!        ! Evaluate polynomial modes at node location
+!        !
+!        do iterm = 1,self%nterms_c
+!            polyvals(iterm) = polynomial_val(self%spacedim,self%nterms_c,iterm,[xi,eta,zeta])
+!        end do
+!
+!        
+!        !
+!        ! Evaluate x from dot product of modes and polynomial values
+!        !
+!        val1 = dot_product(self%coords%getvar(1, itime=1),polyvals)
+!        val2 = dot_product(self%coords%getvar(2, itime=1),polyvals)
+!        val3 = dot_product(self%coords%getvar(3, itime=1),polyvals)
+!
+!
+!        !
+!        ! Set physical coordinates
+!        !
+!        phys_point = [val1,val2,val3]
+!
+!
+!    end function physical_point
+!    !******************************************************************************************
 
 
 
@@ -1432,17 +1528,18 @@ contains
     !!  TODO: TEST type 'Reference' and 'ALE'
     !!
     !-----------------------------------------------------------------------------------------
-    function grid_point(self,coord_index,location,coordinate_frame) result(val)
+    !function grid_point(self,coord_index,location,coordinate_frame) result(val)
+    function physical_point(self,location,coordinate_frame) result(val)
         class(element_t),   intent(in)  :: self
-        integer(ik),        intent(in)  :: coord_index
+        !integer(ik),        intent(in)  :: coord_index
         real(rk),           intent(in)  :: location(3)
         character(*),       intent(in)  :: coordinate_frame
 
-        real(rk)    :: val, polyvals(self%nterms_c)
+        real(rk)    :: val(3), polyvals(self%nterms_c)
         integer(ik) :: iterm
 
-        if (coord_index > 3)             call chidg_signal(FATAL,"element%grid_point -- coord_index exceeded 3 physical coordinates")
-        if (.not. self%geom_initialized) call chidg_signal(FATAL,"element%grid_point: geometry not initialized")
+        !if (coord_index > 3)             call chidg_signal(FATAL,"element%physical_point -- coord_index exceeded 3 physical coordinates")
+        if (.not. self%geom_initialized) call chidg_signal(FATAL,"element%physical_point: geometry not initialized")
 
 
         ! Evaluate polynomial modes at node location
@@ -1454,16 +1551,86 @@ contains
         ! Evaluate mesh point from dot product of modes and polynomial values
         select case(trim(coordinate_frame))
             case('Undeformed')
-                val = dot_product(self%coords%getvar(coord_index,itime = 1), polyvals)
+                val(1) = dot_product(self%coords%getvar(1,itime=1), polyvals)
+                val(2) = dot_product(self%coords%getvar(2,itime=1), polyvals)
+                val(3) = dot_product(self%coords%getvar(3,itime=1), polyvals)
             case('Deformed')
-                val = dot_product(self%coords_def%getvar(coord_index,itime = 1), polyvals)
+                val(1) = dot_product(self%coords_def%getvar(1,itime=1), polyvals)
+                val(2) = dot_product(self%coords_def%getvar(2,itime=1), polyvals)
+                val(3) = dot_product(self%coords_def%getvar(3,itime=1), polyvals)
             case default
-                call chidg_signal(FATAL,"element%grid_point: Invalid input for coordinate_frame.")
+                call chidg_signal(FATAL,"element%physical_point: Invalid input for coordinate_frame.")
         end select
 
 
-    end function grid_point
+    end function physical_point
     !******************************************************************************************
+
+
+
+
+
+    !>  Compute a coordinate value, based on the location in reference space (xi, eta, zeta)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  elem    Element containing coordinate expansion
+    !!  @param[in]  type    'Reference' or 'ALE'
+    !!  @param[in]  icoord  Integer corresponding to coordinate index 1(x), 2(y), 3(z)
+    !!  @param[in]  xi      Real value for xi-coordinate
+    !!  @param[in]  eta     Real value for eta-coordinate
+    !!  @param[in]  zeta    Real value for zeta-coordinate
+    !!
+    !!  @author Mayank Sharma + MAtteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !!  TODO: TEST type 'Reference' and 'ALE'
+    !!
+    !-----------------------------------------------------------------------------------------
+    !function grid_point(self,coord_index,location,coordinate_frame) result(val)
+    function physical_coordinate(self,coord_index,location,coordinate_frame) result(val)
+        class(element_t),   intent(in)  :: self
+        integer(ik),        intent(in)  :: coord_index
+        real(rk),           intent(in)  :: location(3)
+        character(*),       intent(in)  :: coordinate_frame
+
+        real(rk)    :: val, polyvals(self%nterms_c)
+        integer(ik) :: iterm
+
+        if (coord_index > 3)             call chidg_signal(FATAL,"element%physical_coordinate -- coord_index exceeded 3 physical coordinates")
+        if (.not. self%geom_initialized) call chidg_signal(FATAL,"element%physical_coordinate: geometry not initialized")
+
+
+        ! Evaluate polynomial modes at node location
+        do iterm = 1,self%nterms_c
+            polyvals(iterm) = polynomial_val(self%spacedim,self%nterms_c,iterm,location)
+        end do
+
+
+        ! Evaluate mesh point from dot product of modes and polynomial values
+        select case(trim(coordinate_frame))
+            case('Undeformed')
+                val = dot_product(self%coords%getvar(coord_index,itime=1), polyvals)
+            case('Deformed')
+                val = dot_product(self%coords_def%getvar(coord_index,itime=1), polyvals)
+            case default
+                call chidg_signal(FATAL,"element%physical_coordinate: Invalid input for coordinate_frame.")
+        end select
+
+
+    end function physical_coordinate
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1503,15 +1670,10 @@ contains
 
 
         !
-        ! Set default values for optional inputs
-        !
-        frame_selector = 'Undeformed'
-        scale_metric   = .true.
-
-
-        !
         ! Overwrite optional values if inputs are present
         !
+        scale_metric   = .true.
+        frame_selector = 'Undeformed'
         if (present(coordinate_scaling)) scale_metric   = coordinate_scaling
         if (present(coordinate_frame)  ) frame_selector = coordinate_frame
 
@@ -1561,9 +1723,9 @@ contains
                 case(CYLINDRICAL) 
                     select case(frame_selector)
                         case('Undeformed')
-                            r = self%grid_point(DIR_R,coord,frame_selector)
+                            r = self%physical_coordinate(DIR_R,coord,frame_selector)
                         case('Deformed')
-                            r = self%grid_point(DIR_R,coord,frame_selector)
+                            r = self%physical_coordinate(DIR_R,coord,frame_selector)
                     end select
                     dXdxi(2,:) = dXdxi(2,:) * r
             end select
@@ -1767,28 +1929,47 @@ contains
     !!  @result     coord_comp  Coordinate in the element-local coordinate system[xi,eta,zeta]
     !!
     !-----------------------------------------------------------------------------------------
-    function computational_point(self,coord) result(coord_comp)
-        class(element_t),   intent(in)  :: self
-        real(rk),           intent(in)  :: coord(3)
+    function computational_point(self,coord,tol,rtol) result(coord_comp)
+        class(element_t),   intent(in)           :: self
+        real(rk),           intent(in)           :: coord(3)
+        real(rk),           intent(in), optional :: tol
+        real(rk),           intent(in), optional :: rtol
 
         integer(ik) :: inewton
-        real(rk)    :: coord_comp(3), coord_phys(3), minv(3,3), R(3), dcoord(3), res, tol
+        real(rk)    :: coord_comp(3), coord_phys(3), minv(3,3), R(3), dcoord(3), res, res0, user_tol, user_rtol
+        logical     :: absolute_convergence, relative_convergence
 
         !
         ! Newton iteration to find the donor local coordinates
         !
-        tol = 1000._rk*RKTOL
+        !tol = 1000000._rk*RKTOL
+        !tol = 100000._rk*RKTOL
+        !tol = 100._rk*RKTOL
+
+
+        user_tol = 1000._rk*RKTOL
+        if (present(tol)) user_tol = tol
+
+        user_rtol = 1.e-12_rk
+        if (present(rtol)) user_rtol = rtol
+
         coord_comp = ZERO
+        absolute_convergence = .false.
+        relative_convergence = .false.
         do inewton = 1,20
 
 
             ! Compute local physical coordinates as a function of xi,eta,zeta
             ! Return inverted jacobian matrix at that location.
-            coord_phys = self%physical_point(coord_comp(1),coord_comp(2),coord_comp(3))
+            !coord_phys = self%physical_point(coord_comp(1),coord_comp(2),coord_comp(3))
+            coord_phys = self%physical_point([coord_comp(1),coord_comp(2),coord_comp(3)],'Undeformed')
             minv       = self%metric_point(coord_comp, coordinate_frame='Undeformed', coordinate_scaling=.false.)
 
             ! Assemble residual vector
             R = -(coord_phys - coord)
+
+            ! Set initial residual
+            if (inewton == 1) res0 = norm2(R)
 
             ! Solve linear system for Newton update
             dcoord = matmul(minv,R)
@@ -1796,12 +1977,13 @@ contains
             ! Apply Newton update
             coord_comp = coord_comp + dcoord
 
-            ! Exit if converged
+            ! Measure residual
             res = norm2(R)
-            if ( res < tol ) then
-                exit
-            end if
 
+            !if ( res < user_tol ) exit
+            absolute_convergence  = (res < user_tol)
+            relative_convergence  = (res/res0 < user_rtol)
+            if ( absolute_convergence .or. relative_convergence ) exit
 
             !
             ! Limit computational coordinates, in case they go out of bounds.
@@ -1865,8 +2047,8 @@ contains
         !
         ! Compute inverse cell mapping jacobian
         !
-        jinv = ONE/det_3x3(metric)
-        jinv_def   = ONE/det_3x3(metric_ale)
+        jinv     = ONE/det_3x3(metric)
+        jinv_def = ONE/det_3x3(metric_ale)
 
 
         !
@@ -1938,11 +2120,11 @@ contains
 
         ! Call function for evaluation at quadrature nodes and multiply by quadrature weights
         time  = 0._rk
-        fvals = fcn%compute(time,point_t(self%interp_coords)) * self%basis_s%weights() * self%jinv
+        fvals = fcn%compute(time,point_t(self%interp_coords)) * self%basis_s%weights_element() * self%jinv
 
 
         ! Project
-        temp = matmul(transpose(self%basis_s%interpolator('Value')),fvals)
+        temp = matmul(transpose(self%basis_s%interpolator_element('Value')),fvals)
         fmodes = matmul(self%invmass,temp)
 
 
@@ -1982,28 +2164,22 @@ contains
         !   We want to find their element-local connectivity indices:
         !       corner_position = [1, 2, 5, 6]
         !   
-        !
         do cindex = 1,size(corner_indices)
             do eindex = 1,size(self%connectivity)
 
-
                 node_matches = (corner_indices(cindex) == self%connectivity(eindex))
-
                 if (node_matches) then
                     corner_position(cindex) = eindex
                     exit
                 end if
-
 
             end do
         end do
 
 
 
-        !
         ! Test corner positions against known face configurations 
         ! to determine face index:
-        !
         do iface_test = 1,NFACES
 
             face_indices = face_corners(iface_test,:,self%element_type)
@@ -2032,6 +2208,73 @@ contains
 
     end function get_face_from_corners
     !******************************************************************************************
+
+
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/20/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init_rbf_address_book(self, n_rbf_sets)
+        class(element_t),       intent(inout)   :: self
+        integer(ik),            intent(in)      :: n_rbf_sets
+
+        integer(ik) :: ierr
+
+        allocate(self%rbf_address_book%rbf_addresses(n_rbf_sets), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+    end subroutine init_rbf_address_book 
+    !********************************************************************************
+
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    09/14/2018 
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine register_rbf(self, rbf_set_ID, rbf_ID)
+        class(element_t),       intent(inout)   :: self
+        integer(ik),            intent(in)      :: rbf_set_ID, rbf_ID
+
+        call self%rbf_address_book%rbf_addresses(rbf_set_ID)%registered_rbf_indices%push_back_unique(rbf_ID)
+
+    end subroutine register_rbf 
+    !********************************************************************************
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/20/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_rbf_indices(self, rbf_set_ID) result(rbf_indices)
+        class(element_t),       intent(inout)   :: self
+        integer(ik),            intent(in)      :: rbf_set_ID
+
+        integer(ik), allocatable                :: rbf_indices(:)
+
+        rbf_indices = self%rbf_address_book%rbf_addresses(rbf_set_ID)%registered_rbf_indices%data()
+
+    end function get_rbf_indices
+    !********************************************************************************
+
+
+
+
+
 
 
 

@@ -1,5 +1,6 @@
 add_subdirectory(chidg_cache)
 
+
 add_lib_sources(
                 type_densematrix.f90
                 type_densematrix_vector.f90 
@@ -10,6 +11,7 @@ add_lib_sources(
                 operator_domain_dot.f90
                 type_rvector.f90
                 type_ivector.f90
+                type_mmvector.f90
                 type_mvector.f90
                 type_pvector.f90
                 type_evector.f90
@@ -19,7 +21,7 @@ add_lib_sources(
                 type_fcnvector.f90
                 type_mpi_request_vector.f90
                 type_svector.f90
-                #type_vector.f90
+                type_tivector.f90
                 type_chidg_matrix.f90
                 type_chidg_vector.f90
                 type_chidg_vector_send.f90
@@ -31,8 +33,19 @@ add_lib_sources(
                 type_solverdata.f90
                 type_element_info.f90
                 type_face_info.f90
+                type_edge_info.f90
                 type_function_info.f90
                 type_function_status.f90
                 type_function_status_data.f90
+                type_r3.f90
+                type_r3vector.f90
+                type_rbfvector.f90
+                type_rbf_mm_driver_vector.f90
+                type_rbf_node_vector.f90
+                type_rbf_source_vector.f90
+                type_petsc_vector_wrapper.f90
+                type_petsc_matrix_wrapper.f90
+                type_petsc_scatter_wrapper.f90
+                type_petsc_is_wrapper.f90
                 )
 

@@ -160,9 +160,9 @@ contains
 
                                     ! Get coordinate value at point
                                     if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
-                                        r_coord     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(1,[xi,eta,zeta],'Deformed'),rdouble)
-                                        theta_coord = real(data%mesh%domain(idom)%elems(ielem)%grid_point(2,[xi,eta,zeta],'Deformed'),rdouble)
-                                        z_coord     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(3,[xi,eta,zeta],'Deformed'),rdouble)
+                                        r_coord     = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(1,[xi,eta,zeta],'Deformed'),rdouble)
+                                        theta_coord = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(2,[xi,eta,zeta],'Deformed'),rdouble)
+                                        z_coord     = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(3,[xi,eta,zeta],'Deformed'),rdouble)
 
                                         if (icoord == 1) then
                                             val = r_coord*cos(theta_coord)
@@ -174,7 +174,7 @@ contains
 
                                     else
 
-                                        val = real(data%mesh%domain(idom)%elems(ielem)%grid_point(icoord,[xi,eta,zeta],'Deformed'),rdouble)
+                                        val = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(icoord,[xi,eta,zeta],'Deformed'),rdouble)
 
                                     end if
 
@@ -260,7 +260,7 @@ contains
         ! For each conservative variable in equation set, compute values pointwise and save in the conservative variable array
         !
         !do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
-        eqn_ID = data%mesh%domain(idom)%eqn_ID
+        eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID !assumes each element has the same eqn_ID
         do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
             !

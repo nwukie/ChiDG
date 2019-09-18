@@ -12,7 +12,7 @@
 subroutine test_linspace()
     use pfunit_mod
     use mod_kinds,          only: rk
-    use mod_constants,      only: ONE, TWO
+    use mod_constants,      only: ONE, TWO, IO_DESTINATION
     use type_chidg,         only: chidg_t
     use mod_gridspace,      only: linspace
     implicit none
@@ -20,11 +20,9 @@ subroutine test_linspace()
     type(chidg_t)                   :: chidg
     real(rk),   allocatable         :: vals(:), known_vals(:)
 
-    !
     ! Initialize log
-    !
+    IO_DESTINATION='file'
     call chidg%start_up('core')
-
 
     !
     ! Compute 5 linearly distributed points between 1 and 2.
@@ -37,9 +35,7 @@ subroutine test_linspace()
 
     @assertEqual(known_vals,vals)
 
-    !
     ! Close ChiDG
-    !
     call chidg%shut_down('core')
 
 

@@ -30,7 +30,6 @@ subroutine test_time_manager__init_steady()
     time_integrator = 'steady'
     dt              = 0.001_rk
     time_steps      = 100
-    ttol            = 1.e-8
     ntime_instances = 1
     frequencies     = ZERO
     nwrite          = 100
@@ -92,7 +91,6 @@ subroutine test_time_manager__init_unsteady()
     time_integrator = 'forward euler'
     dt              = 0.0005_rk
     time_steps      = 11
-    ttol            = 1.e-8
     ntime_instances = 1
     frequencies     = ZERO
     nwrite          = 105
@@ -162,7 +160,6 @@ subroutine test_time_manager__init_HB1()
     time_integrator = 'HB'
     dt              = 0.001_rk
     time_steps      = 10
-    ttol            = 1.e-8
     ntime_instances = 1
     frequencies(1)  = 10
     nwrite          = 100
@@ -248,7 +245,6 @@ subroutine test_time_manager__init_HB5()
     time_integrator = 'HB'
     dt              = 0.001_rk
     time_steps      = 10
-    ttol            = 1.e-8
     ntime_instances = 1
     frequencies(1)  = 1.1_rk
     frequencies(2)  = 15_rk
@@ -340,7 +336,6 @@ subroutine test_time_manager__init_HB25()
     time_integrator = 'HB'
     dt              = 0.001_rk
     time_steps      = 10
-    ttol            = 1.e-8
     ntime_instances = 1
     frequencies(1)  = 2.1_rk
     frequencies(2)  = 15_rk

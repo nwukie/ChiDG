@@ -217,7 +217,7 @@ contains
         tol              = 1.e-13_rk
         nterms_s         = 8
         IO_DESTINATION   = 'file'
-        time_integrator  = 'harmonic_balance'
+        time_integrator  = 'Harmonic Balance'
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres'
         preconditioner   = 'ILU0'
@@ -276,7 +276,7 @@ contains
         !
         ! Initialize the time integrator
         !
-        call chidg%time_integrator%init(chidg%data)
+        call chidg%time_integrator%init()
         
 
         associate ( q   => chidg%data%sdata%q, &

@@ -31,21 +31,21 @@ module type_densematrix_vector
         real (rk),              allocatable :: mass(:,:)
 
     contains
+
         ! Initializers
         procedure, public   :: init                 ! initialize with size and capacity = 0
-
 
         procedure, public   :: capacity             ! return the current allocated capacity
         procedure, public   :: loc                  ! return the location of a stored value
         procedure, public   :: size => data_size    ! return the number of stored elements.
                                                     ! Associate to avoid clash with intrinsic.
 
-
         ! Data modifiers
         procedure, public   :: push_back
         procedure, public   :: clear
         procedure, public   :: setzero
         procedure, public   :: store
+        procedure, public   :: store_element
         procedure, private  :: increase_capacity
 
         procedure, public   :: set_itranspose
@@ -66,6 +66,7 @@ module type_densematrix_vector
         procedure, public   :: eparent_g        ! return parent global element for the index position densematrix
         procedure, public   :: dparent_l        ! return parent local domain for the index position densematrix
         procedure, public   :: eparent_l        ! return parent local element for the index position densematrix
+        procedure, public   :: tparent          ! return parent time level for the index position densematrix
         procedure, public   :: parent_proc      ! return parent processor rank
         procedure, public   :: itranspose       ! return itranspose, imat index of densematrix in transposed location.
         procedure, public   :: get_diagonal     ! return index of densematrix representing the diagonal.
@@ -102,22 +103,15 @@ contains
         class(densematrix_vector_t),    intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g,ielement_g,idomain_l,ielement_l
         
-        !
         ! set domain and element index
-        !
-
         self%idomain_g  = idomain_g
         self%ielement_g = ielement_g
         self%idomain_l  = idomain_l
         self%ielement_l = ielement_l
 
-        !
         ! set size and capacity to zero
-        !
-        
         self%size_      = ZERO
         self%capacity_  = ZERO
-
 
     end subroutine init
     !*****************************************************************************************
@@ -137,10 +131,6 @@ contains
         class(densematrix_vector_t),    intent(inout)   :: self
         integer(ik)      :: res
         
-        !
-        ! retrieve the attribute
-        !
-
         res = self%idomain_g
 
     end function get_idomain_g
@@ -162,10 +152,6 @@ contains
         class(densematrix_vector_t),    intent(inout)   :: self
         integer(ik)      :: res
         
-        !
-        ! retrieve the attribute
-        !
-
         res = self%idomain_l
 
     end function get_idomain_l
@@ -187,10 +173,6 @@ contains
         class(densematrix_vector_t),    intent(inout)   :: self
         integer(ik)      :: res
         
-        !
-        ! retrieve the attribute
-        !
-
         res = self%ielement_g
 
     end function get_ielement_g
@@ -212,10 +194,6 @@ contains
         class(densematrix_vector_t),    intent(inout)   :: self
         integer(ik)      :: res
         
-        !
-        ! retrieve the attribute
-        !
-
         res = self%ielement_l
 
     end function get_ielement_l
@@ -274,37 +252,35 @@ contains
 
 
 
-
     !>  This function returns the location of a given value. If not found, returns 0
     !!
     !!  @author Mayank Sharma + Matteo Ugolotti + Nathan A. Wukie
     !!  @date   11/07/2016
     !!
     !------------------------------------------------------------------------------------------
-    function loc(self,idomain_g,ielem_g) result(res)
+    function loc(self,idomain_g,ielem_g,itime) result(res)
         class(densematrix_vector_t),    intent(in)  :: self
         integer(ik),                    intent(in)  :: idomain_g
         integer(ik),                    intent(in)  :: ielem_g
+        integer(ik),                    intent(in)  :: itime
 
-        type(densematrix_t)                        :: temp_mat
-        integer(ik) :: res,ival
+        type(densematrix_t) :: temp_mat
+        integer(ik)         :: res,ival
 
         res = 0
-
-
         do ival = 1,self%size()
-
             temp_mat = self%at(ival)
-            
-            if ( temp_mat%dparent_g() == idomain_g .and. temp_mat%eparent_g() == ielem_g ) then 
+            if ( temp_mat%dparent_g() == idomain_g .and. &
+                 temp_mat%eparent_g() == ielem_g   .and. &
+                 temp_mat%tparent() == itime ) then 
                 res = ival
                 exit
             end if
-
         end do
 
     end function loc
     !******************************************************************************************
+
 
 
 
@@ -325,39 +301,26 @@ contains
         integer(ik) :: size
         integer(ik) :: duplicate
 
-        !
         ! Test whether the densematrix we are pushing is already there
-        !
-        
-        duplicate = self%loc(element%dparent_g(),element%eparent_g())
+        duplicate = self%loc(element%dparent_g(),element%eparent_g(),element%tparent())
 
         if ( duplicate == 0 ) then
               
-            !
             ! Test if container has storage available. If not, then increase capacity
-            !
             capacity_reached = (self%size() == self%capacity())
             if (capacity_reached) then
                 call self%increase_capacity()
             end if
 
-
-            !
             ! Add element to end of vector
-            !
             size = self%size()
             self%data_(size + 1) = element
 
-
-            !
             ! Increment number of stored elements
-            !
             self%size_ = self%size_ + 1
 
         else 
-
            call chidg_signal_two(FATAL,"densematrix_vector_t%push_back: attempt to push the same densematrix twice,operation not allowed.", element%dparent_g(), element%eparent_g())
-
         end if
 
 
@@ -443,18 +406,13 @@ contains
         logical             :: out_of_bounds
         type(densematrix_t) :: res
 
-        !
         ! Check vector bounds
-        !
         out_of_bounds = (index > self%size())
         if (out_of_bounds) then
             call chidg_signal(FATAL,"densematrix_vector_t%at: out of bounds access")
         end if
 
-
-        !
         ! Allocate result
-        !
         res = self%data_(index)
 
     end function at
@@ -471,7 +429,6 @@ contains
     !!  @Matteo Ugolotti
     !!  @date   11/12/2016
     !!
-    !!
     !----------------------------------------------------------------------------------------
     function dmat(self,index) result (res)
         class(densematrix_vector_t),    intent(in)  :: self
@@ -480,14 +437,11 @@ contains
         real(rk),   allocatable     :: res(:,:)
         logical                     :: out_of_bounds
         
-        !
         ! Check vector bounds
-        !
         out_of_bounds = (index > self%size())
         if (out_of_bounds) then
             call chidg_signal(FATAL,"densematrix_vector_t%dmat: out of bounds access")
         end if
-
 
         res = self%data_(index)%mat
 
@@ -502,15 +456,12 @@ contains
     !!  @Mayank Sharma + Matteo Ugolotti
     !!  @date   2/13/2017
     !!
-    !!
     !----------------------------------------------------------------------------------------
     subroutine get_mass_matrix(self,elem)
         class(densematrix_vector_t),    intent(inout)   :: self
         class(element_t),               intent(in)      :: elem
 
-
         self%mass = elem%mass
-
 
     end subroutine get_mass_matrix
     !****************************************************************************************
@@ -609,6 +560,22 @@ contains
 
 
 
+    !>  Return tparent() function from a densematrix
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    function tparent(self,index) result (par)
+        class(densematrix_vector_t),    intent(in)  :: self
+        integer(ik),                    intent(in)  :: index
+
+        integer(ik) :: par
+        
+        par = self%data_(index)%tparent()
+
+    end function tparent
+    !****************************************************************************************
 
 
 
@@ -631,10 +598,6 @@ contains
 
     end function parent_proc
     !****************************************************************************************
-
-
-
-
 
 
 
@@ -764,8 +727,8 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     function get_recv_comm(self,index) result(recv_comm)
-        class(densematrix_vector_t),    intent(inout)   :: self
-        integer(ik),                    intent(in)      :: index
+        class(densematrix_vector_t),    intent(in)  :: self
+        integer(ik),                    intent(in)  :: index
 
         integer(ik) :: recv_comm
 
@@ -791,8 +754,8 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     function get_recv_domain(self,index) result(recv_domain)
-        class(densematrix_vector_t),    intent(inout)   :: self
-        integer(ik),                    intent(in)      :: index
+        class(densematrix_vector_t),    intent(in)  :: self
+        integer(ik),                    intent(in)  :: index
 
         integer(ik) :: recv_domain
 
@@ -819,8 +782,8 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     function get_recv_element(self,index) result(recv_element)
-        class(densematrix_vector_t),    intent(inout)   :: self
-        integer(ik),                    intent(in)      :: index
+        class(densematrix_vector_t),    intent(in)  :: self
+        integer(ik),                    intent(in)  :: index
 
         integer(ik) :: recv_element
 
@@ -889,31 +852,42 @@ contains
 
         integer(ik) :: iarray,irow,irow_start
 
-        !
-        ! Compute correct row offest for ivar
-        !
 
+        ! Compute correct row offest for ivar
         irow_start = ( (ivar-1) * nterms )
         
-        !
         ! Loop through integral values, for each value store its derivative.
         ! The integral values here should be components of the RHS vector. 
         ! An array of partial derivatives from an AD_A variable should be stored 
         ! as a row in the block matrix
-        !
         do iarray = 1,size(integral)
-
             ! Do a += operation to add derivaties to any that are currently stored
             irow = irow_start + iarray
             self%data_(index)%mat(irow,:) = self%data_(index)%mat(irow,:) + integral(iarray)%xp_ad_
-        
         end do
-
 
     end subroutine store
     !****************************************************************************************
 
 
+
+
+    !>  Direct matrix contribution instead of pulling derivatives out of AD
+    !!  data structures.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/19/2018
+    !!
+    !------------------------------------------------------------------------------
+    subroutine store_element(self,index,contribution)
+        class(densematrix_vector_t),    intent(inout)   :: self
+        integer(ik),                    intent(in)      :: index
+        real(rk),                       intent(in)      :: contribution(:,:)
+
+        self%data_(index)%mat = self%data_(index)%mat + contribution
+
+    end subroutine store_element
+    !*******************************************************************************
 
 
 

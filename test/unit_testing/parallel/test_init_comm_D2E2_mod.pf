@@ -231,6 +231,7 @@ contains
 
 
         call chidg%shut_down('core')
+        call chidg%shut_down('mpi')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(gridfile)

@@ -1,7 +1,8 @@
 module type_preconditioner
     use mod_kinds,          only: rk, ik
-    use type_chidg_matrix,   only: chidg_matrix_t
-    use type_chidg_vector,   only: chidg_vector_t
+    use mod_constants,      only: NO_ID
+    use type_chidg_matrix,  only: chidg_matrix_t
+    use type_chidg_vector,  only: chidg_vector_t
     use type_chidg_data,    only: chidg_data_t
     use type_timer,         only: timer_t
 
@@ -19,15 +20,15 @@ module type_preconditioner
     !-------------------------------------------------------------------
     type, public, abstract :: preconditioner_t
 
-        type(timer_t)       :: timer
-        logical             :: initialized = .false.
+        type(timer_t)   :: timer
+        logical         :: initialized = .false.
+        integer         :: stamp(8) = NO_ID                 ! Stamp from date_and_time that gets updated when store routines are called
 
     contains
         procedure   :: init
         procedure   :: update
         procedure   :: apply
-
-
+        procedure   :: tear_down
     end type preconditioner_t
 
 
@@ -89,17 +90,15 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------
-    function apply(self,A,v) result(z)
-        class(preconditioner_t),    intent(inout)   :: self
-        type(chidg_matrix_t),        intent(in)      :: A
-        type(chidg_vector_t),        intent(in)      :: v
+    function apply(self,A,v,z_old) result(z)
+        class(preconditioner_t),    intent(inout)           :: self
+        type(chidg_matrix_t),       intent(in)              :: A
+        type(chidg_vector_t),       intent(in)              :: v
+        type(chidg_vector_t),       intent(in), optional    :: z_old
 
         type(chidg_vector_t)     :: z
 
-
-        !
         ! Default - no preconditioning
-        !
         z = v
 
     end function apply
@@ -108,6 +107,19 @@ contains
 
 
 
+    !> Default empty initialization routine
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   2/26/2019
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine tear_down(self)
+        class(preconditioner_t),    intent(inout)   :: self
+
+        self%stamp = 0
+
+    end subroutine tear_down
+    !**************************************************************************************
 
 
 

@@ -57,17 +57,11 @@ contains
         type(equation_set_t)            :: rans_eqns
         type(fluid_pseudo_timestep_t)   :: fluid_pseudo_time
 
-        !
         ! Set equation set name
-        !
         call rans_eqns%set_name('RANS')
         
-
-        !
         ! Add spatial operators
-        !
         select case (trim(blueprint))
-
 
             case('default')
                 call rans_eqns%add_operator('Euler Volume Flux')
@@ -82,15 +76,10 @@ contains
                 call rans_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
 
                 call rans_eqns%add_model('Ideal Gas')
-                call rans_eqns%add_model('Sutherlands Law')
+                !call rans_eqns%add_model('Sutherlands Law')
+                call rans_eqns%add_model('Constant Viscosity')
                 call rans_eqns%add_model('Stokes Hypothesis')
                 call rans_eqns%add_model('Reynolds Analogy')
-                !call rans_eqns%add_model('Fluid Advection Velocity')
-                !call rans_eqns%add_model('Constant Viscosity')
-!                call rans_eqns%add_model('Zero Turbulent Model Fields')
-
-
-
 
 
                 call rans_eqns%add_operator('Spalart-Allmaras Source Operator')
@@ -110,6 +99,7 @@ contains
 
                 call rans_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
+                call rans_eqns%add_io_field('Wall Distance')
 
             case default
                 call chidg_signal_one(FATAL, "build_rans: I didn't recognize the &

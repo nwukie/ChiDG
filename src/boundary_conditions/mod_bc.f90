@@ -42,35 +42,70 @@ module mod_bc
 
 
     ! Fluid boundary conditions
-    use bc_state_wall,                          only: wall_t
-    use bc_state_moving_wall,                   only: moving_wall_t
-    use bc_state_inlet_total,                   only: inlet_total_t
-    use bc_state_outlet_constant_pressure,      only: outlet_constant_pressure_t
-    !use bc_state_outlet_point_pressure,         only: outlet_point_pressure_t
-    !use bc_state_outlet_LODI_pressure,          only: outlet_LODI_pressure_t
-    !use bc_state_outlet_LODI_z_pressure,        only: outlet_LODI_z_pressure_t
-    !use bc_state_outlet_wukie,                  only: outlet_wukie_t
-    use bc_state_fluid_extrapolate,             only: fluid_extrapolate_t
-    use bc_state_momentum_inlet,                only: momentum_inlet_t
-    use bc_state_symmetry,                      only: symmetry_t
-    use bc_state_farfield,                      only: farfield_t
+    use bc_state_wall,                                  only: wall_t
+    use bc_state_stationary_adiabatic_wall,             only: stationary_adiabatic_wall_t
+    use bc_state_moving_wall,                           only: moving_wall_t
+    use bc_state_inlet_total,                           only: inlet_total_t
+    use bc_state_inlet_characteristic,                  only: inlet_characteristic_t
+    use bc_state_outlet_constant_pressure,              only: outlet_constant_pressure_t
+    use bc_state_outlet_linear_pressure,                only: outlet_linear_pressure_t
+    use bc_state_outlet_auxiliary_equations,            only: outlet_auxiliary_equations_t
+    use bc_state_outlet_neumann_pressure_fd,            only: outlet_neumann_pressure_fd_t
+    use bc_state_outlet_neumann_pressure_localdg,       only: outlet_neumann_pressure_localdg_t
+    use bc_state_outlet_neumann_pressure_localdg_new,   only: outlet_neumann_pressure_localdg_new_t
+    use bc_state_outlet_neumann_pressure_globaldg,      only: outlet_neumann_pressure_globaldg_t
+    use bc_state_outlet_neumann_LODI_localdg,           only: outlet_neumann_LODI_localdg_t
+    !use bc_state_outlet_point_pressure,                 only: outlet_point_pressure_t
+    !use bc_state_outlet_LODI_pressure,                  only: outlet_LODI_pressure_t
+    !use bc_state_outlet_LODI_z_pressure,                only: outlet_LODI_z_pressure_t
+    use bc_state_outlet_steady_1dchar,              only: outlet_steady_1dchar_t
+    use bc_state_outlet_giles_quasi3d_steady,       only: outlet_giles_quasi3d_steady_t
+    use bc_state_outlet_giles_quasi3d_unsteady_HB,  only: outlet_giles_quasi3d_unsteady_HB_t
+    use bc_state_inlet_giles_quasi3d_unsteady_HB,   only: inlet_giles_quasi3d_unsteady_HB_t
+    use bc_state_turbo_interface_steady,            only: turbo_interface_steady_t
+    use bc_state_fluid_extrapolate,                 only: fluid_extrapolate_t
+    use bc_state_supersonic_inlet,                  only: supersonic_inlet_t
+    use bc_state_momentum_inlet,                    only: momentum_inlet_t
+    use bc_state_symmetry,                          only: symmetry_t
+    use bc_state_slipwall,                          only: slipwall_t
+    use bc_state_farfield,                          only: farfield_t
+
+    use bc_state_outlet_nrbc_lindblad,          only: outlet_nrbc_lindblad_t
+    use bc_state_inlet_nrbc_lindblad,           only: inlet_nrbc_lindblad_t
+    use bc_state_outlet_nrbc_giles,             only: outlet_nrbc_giles_t
+    use bc_state_inlet_nrbc_giles,              only: inlet_nrbc_giles_t
 
     ! Turbulence boundary conditions
-    use bc_state_spalart_allmaras_inlet,        only: spalart_allmaras_inlet_t
-    use bc_state_spalart_allmaras_outlet,       only: spalart_allmaras_outlet_t
-    use bc_state_spalart_allmaras_symmetry,     only: spalart_allmaras_symmetry_t
-    use bc_state_spalart_allmaras_farfield,     only: spalart_allmaras_farfield_t
-    use bc_state_spalart_allmaras_wall,         only: spalart_allmaras_wall_t
+    !! Spalart-Allmaras
+    use bc_state_spalart_allmaras_inlet,            only: spalart_allmaras_inlet_t
+    use bc_state_spalart_allmaras_outlet,           only: spalart_allmaras_outlet_t
+    use bc_state_spalart_allmaras_symmetry,         only: spalart_allmaras_symmetry_t
+    use bc_state_spalart_allmaras_farfield,         only: spalart_allmaras_farfield_t
+    use bc_state_spalart_allmaras_wall,             only: spalart_allmaras_wall_t
+    use bc_state_spalart_allmaras_interface_steady, only: spalart_allmaras_interface_steady_t
 
-    ! Artificial Viscosity boundary conditions
-    use bc_state_artificial_viscosity_wall,     only: artificial_viscosity_wall_t
-    use bc_state_artificial_viscosity_inlet,    only: artificial_viscosity_inlet_t
-    use bc_state_artificial_viscosity_outlet,   only: artificial_viscosity_outlet_t
-    use bc_state_artificial_viscosity_symmetry, only: artificial_viscosity_symmetry_t
+    !! SST
+    !use bc_state_sst_inlet,        only: sst_inlet_t
+    use bc_state_sst_outlet,       only: sst_outlet_t
+    use bc_state_sst_symmetry,     only: sst_symmetry_t
+    use bc_state_sst_farfield,     only: sst_farfield_t
+    use bc_state_sst_wall,         only: sst_wall_t
 
+    !! Reynolds-Stress
+    use bc_state_rstm_ssglrrw_outlet,       only: rstm_ssglrrw_outlet_t
+    use bc_state_rstm_ssglrrw_symmetry_x,   only: rstm_ssglrrw_symmetry_x_t
+    use bc_state_rstm_ssglrrw_symmetry_y,   only: rstm_ssglrrw_symmetry_y_t
+    use bc_state_rstm_ssglrrw_symmetry_z,   only: rstm_ssglrrw_symmetry_z_t
+    use bc_state_rstm_ssglrrw_farfield,     only: rstm_ssglrrw_farfield_t
+    use bc_state_rstm_ssglrrw_wall,         only: rstm_ssglrrw_wall_t
 
-!    use bc_kirchoff,                        only: kirchoff_t
+    ! Linearized Euler Eigen
+    use bc_primlineuler_extrapolate,    only: primlineuler_extrapolate_t
+    use bc_primlineuler_wall,           only: primlineuler_wall_t
 
+    ! Hyperbolized Poisson
+    use bc_state_HP_wall,               only: HP_wall_t
+    use bc_state_HP_extrapolate,        only: HP_extrapolate_t
     implicit none
 
 
@@ -121,30 +156,65 @@ contains
 
 
         type(wall_t)                            :: WALL
+        type(stationary_adiabatic_wall_t)       :: STATIONARY_ADIABATIC_WALL
         type(moving_wall_t)                     :: MOVING_WALL
         type(inlet_total_t)                     :: INLET_TOTAL
+        type(inlet_characteristic_t)            :: INLET_CHARACTERISTIC
         type(outlet_constant_pressure_t)        :: OUTLET_CONSTANT_PRESSURE
+        type(outlet_linear_pressure_t)          :: OUTLET_LINEAR_PRESSURE
+        type(outlet_auxiliary_equations_t)      :: OUTLET_AUXILIARY_EQUATIONS
+        type(outlet_neumann_pressure_fd_t)      :: OUTLET_NEUMANN_PRESSURE_FD
+        type(outlet_neumann_pressure_localdg_t) :: OUTLET_NEUMANN_PRESSURE_LOCALDG
+        type(outlet_neumann_pressure_localdg_new_t) :: OUTLET_NEUMANN_PRESSURE_LOCALDG_NEW
+        type(outlet_neumann_pressure_globaldg_t):: OUTLET_NEUMANN_PRESSURE_GLOBALDG
+        type(outlet_neumann_LODI_localdg_t)     :: OUTLET_NEUMANN_LODI_LOCALDG
         !type(outlet_point_pressure_t)           :: OUTLET_POINT_PRESSURE
         !type(outlet_LODI_pressure_t)            :: OUTLET_LODI_PRESSURE
         !type(outlet_LODI_z_pressure_t)          :: OUTLET_LODI_Z_PRESSURE
-        !type(outlet_wukie_t)                    :: OUTLET_WUKIE
+        type(outlet_steady_1dchar_t)            :: OUTLET_STEADY_1DCHAR
+        type(outlet_giles_quasi3d_steady_t)     :: OUTLET_GILES_QUASI3D_STEADY
+        type(outlet_giles_quasi3d_unsteady_HB_t):: OUTLET_GILES_QUASI3D_UNSTEADY_HB
+        type(inlet_giles_quasi3d_unsteady_HB_t) :: INLET_GILES_QUASI3D_UNSTEADY_HB
+        type(turbo_interface_steady_t)          :: TURBO_INTERFACE_STEADY
         type(fluid_extrapolate_t)               :: FLUID_EXTRAPOLATE
         type(momentum_inlet_t)                  :: MOMENTUM_INLET
+        type(supersonic_inlet_t)                :: SUPERSONIC_INLET
         type(symmetry_t)                        :: SYMMETRY
+        type(slipwall_t)                        :: SLIP_WALL
         type(farfield_t)                        :: FARFIELD
 
-        type(spalart_allmaras_inlet_t)          :: SPALART_ALLMARAS_INLET
-        type(spalart_allmaras_outlet_t)         :: SPALART_ALLMARAS_OUTLET
-        type(spalart_allmaras_symmetry_t)       :: SPALART_ALLMARAS_SYMMETRY
-        type(spalart_allmaras_farfield_t)       :: SPALART_ALLMARAS_FARFIELD
-        type(spalart_allmaras_wall_t)           :: SPALART_ALLMARAS_WALL
+        type(outlet_nrbc_lindblad_t)    ::  outlet_nrbc_lindblad
+        type(outlet_nrbc_giles_t)       ::  outlet_nrbc_giles
+        type(inlet_nrbc_lindblad_t)     ::  inlet_nrbc_lindblad
+        type(inlet_nrbc_giles_t)        ::  inlet_nrbc_giles
 
-        type(artificial_viscosity_wall_t)       :: ARTIFICIAL_VISCOSITY_WALL
-        type(artificial_viscosity_inlet_t)      :: ARTIFICIAL_VISCOSITY_INLET
-        type(artificial_viscosity_outlet_t)     :: ARTIFICIAL_VISCOSITY_OUTLET
-        type(artificial_viscosity_symmetry_t)   :: ARTIFICIAL_VISCOSITY_SYMMETRY
+        type(spalart_allmaras_inlet_t)              :: SPALART_ALLMARAS_INLET
+        type(spalart_allmaras_outlet_t)             :: SPALART_ALLMARAS_OUTLET
+        type(spalart_allmaras_symmetry_t)           :: SPALART_ALLMARAS_SYMMETRY
+        type(spalart_allmaras_farfield_t)           :: SPALART_ALLMARAS_FARFIELD
+        type(spalart_allmaras_wall_t)               :: SPALART_ALLMARAS_WALL
+        type(spalart_allmaras_interface_steady_t)   :: SPALART_ALLMARAS_INTERFACE_STEADY
 
+        !type(sst_inlet_t)          :: SST_INLET
+        type(sst_outlet_t)         :: SST_OUTLET
+        type(sst_symmetry_t)       :: SST_SYMMETRY
+        type(sst_farfield_t)       :: SST_FARFIELD
+        type(sst_wall_t)           :: SST_WALL
 
+        type(rstm_ssglrrw_outlet_t)             :: rstm_ssglrrw_OUTLET
+        type(rstm_ssglrrw_symmetry_x_t)         :: rstm_ssglrrw_SYMMETRY_x
+        type(rstm_ssglrrw_symmetry_y_t)         :: rstm_ssglrrw_SYMMETRY_y
+        type(rstm_ssglrrw_symmetry_z_t)         :: rstm_ssglrrw_SYMMETRY_z
+        type(rstm_ssglrrw_farfield_t)           :: rstm_ssglrrw_FARFIELD
+        type(rstm_ssglrrw_wall_t)               :: rstm_ssglrrw_WALL
+
+        ! Linearized Euler Eign
+        type(primlineuler_extrapolate_t)    :: PRIMLINEULER_EXTRAPOLATE
+        type(primlineuler_wall_t)           :: PRIMLINEULER_WALL
+
+        ! Hyperbolized Poisson
+        type(HP_wall_t)                     :: HP_WALL
+        type(HP_extrapolate_t)              :: HP_EXTRAPOLATE
 
         if ( .not. initialized ) then
             !
@@ -171,29 +241,63 @@ contains
 
 
             call registered_bcs%push_back(WALL)
+            call registered_bcs%push_back(STATIONARY_ADIABATIC_WALL)
             call registered_bcs%push_back(MOVING_WALL)
             call registered_bcs%push_back(INLET_TOTAL)
+            call registered_bcs%push_back(INLET_CHARACTERISTIC)
             call registered_bcs%push_back(OUTLET_CONSTANT_PRESSURE)
+            call registered_bcs%push_back(OUTLET_LINEAR_PRESSURE)
+            call registered_bcs%push_back(OUTLET_AUXILIARY_EQUATIONS)
+            call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_FD)
+            call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_LOCALDG)
+            call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_LOCALDG_NEW)
+            call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_GLOBALDG)
+            call registered_bcs%push_back(OUTLET_NEUMANN_LODI_LOCALDG)
+            call registered_bcs%push_back(OUTLET_STEADY_1DCHAR)
+            call registered_bcs%push_back(OUTLET_GILES_QUASI3D_STEADY)
+            call registered_bcs%push_back(OUTLET_GILES_QUASI3D_UNSTEADY_HB)
+            call registered_bcs%push_back(INLET_GILES_QUASI3D_UNSTEADY_HB)
+            call registered_bcs%push_back(TURBO_INTERFACE_STEADY)
             !call registered_bcs%push_back(OUTLET_POINT_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_Z_PRESSURE)
-            !call registered_bcs%push_back(OUTLET_WUKIE)
             call registered_bcs%push_back(FLUID_EXTRAPOLATE)
             call registered_bcs%push_back(MOMENTUM_INLET)
+            call registered_bcs%push_back(SUPERSONIC_INLET)
             call registered_bcs%push_back(SYMMETRY)
+            call registered_bcs%push_back(SLIP_WALL)
             call registered_bcs%push_back(FARFIELD)
+
+            call registered_bcs%push_back(OUTLET_NRBC_LINDBLAD)
+            call registered_bcs%push_back(OUTLET_NRBC_GILES)
+            call registered_bcs%push_back(INLET_NRBC_LINDBLAD)
+            call registered_bcs%push_back(INLET_NRBC_GILES)
 
             call registered_bcs%push_back(SPALART_ALLMARAS_INLET)
             call registered_bcs%push_back(SPALART_ALLMARAS_OUTLET)
             call registered_bcs%push_back(SPALART_ALLMARAS_SYMMETRY)
             call registered_bcs%push_back(SPALART_ALLMARAS_FARFIELD)
             call registered_bcs%push_back(SPALART_ALLMARAS_WALL)
+            call registered_bcs%push_back(SPALART_ALLMARAS_INTERFACE_STEADY)
 
-            call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_WALL)
-            call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_INLET)
-            call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_OUTLET)
-            call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_SYMMETRY)
+            !call registered_bcs%push_back(SST_INLET)
+            call registered_bcs%push_back(SST_OUTLET)
+            call registered_bcs%push_back(SST_SYMMETRY)
+            call registered_bcs%push_back(SST_FARFIELD)
+            call registered_bcs%push_back(SST_WALL)
 
+            call registered_bcs%push_back(rstm_ssglrrw_OUTLET)
+            call registered_bcs%push_back(rstm_ssglrrw_SYMMETRY_x)
+            call registered_bcs%push_back(rstm_ssglrrw_SYMMETRY_y)
+            call registered_bcs%push_back(rstm_ssglrrw_SYMMETRY_z)
+            call registered_bcs%push_back(rstm_ssglrrw_FARFIELD)
+            call registered_bcs%push_back(rstm_ssglrrw_WALL)
+
+            call registered_bcs%push_back(PRIMLINEULER_EXTRAPOLATE)
+            call registered_bcs%push_back(PRIMLINEULER_WALL)
+
+            call registered_bcs%push_back(HP_WALL)
+            call registered_bcs%push_back(HP_EXTRAPOLATE)
 
 
             !
@@ -201,14 +305,12 @@ contains
             !
             nbcs = registered_bcs%size()
             do ibc = 1,nbcs
-
                 call registered_bcs%data(ibc)%state%init()
-
             end do
 
-            !
+
+
             ! Confirm initialization
-            !
             initialized = .true.
 
         end if

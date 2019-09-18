@@ -4,7 +4,8 @@ module type_chidg_vector_send
     use type_ivector,                   only: ivector_t
     use type_mesh,                  only: mesh_t
     use type_chidg_vector_send_comm,    only: chidg_vector_send_comm_t
-    use mpi_f08,                        only: MPI_Request, MPI_STATUSES_IGNORE, MPI_Waitall
+    use mpi_f08,                        only: MPI_Request, MPI_STATUSES_IGNORE, MPI_Waitall, MPI_Barrier
+    use mod_chidg_mpi,                  only: ChiDG_COMM
     implicit none
 
 
@@ -81,14 +82,11 @@ contains
 
 
 
-
         !
         ! Get total number of procs we are sending to and allocate send info for each
         !
         allocate(self%comm(nprocs_send), stat=ierr)
         if (ierr /= 0) call AllocationError
-
-
 
 
         !
@@ -97,7 +95,6 @@ contains
         do iproc = 1,nprocs_send
             call self%comm(iproc)%init(mesh,send_procs_array(iproc))
         end do !iproc
-
 
 
         !
@@ -111,6 +108,7 @@ contains
 
         allocate(self%isend_handles(nsends), stat=ierr)
         if (ierr /= 0) call AllocationError
+
 
     end subroutine init
     !****************************************************************************************

@@ -4,7 +4,7 @@ subroutine testIO__read_pmm_hdf__nopmm__D1_E1_M1()
     use pfunit_mod
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, IO_DESTINATION, NO_PMM_ASSIGNED
+    use mod_constants,          only: ZERO, ONE, IO_DESTINATION, NO_MM_ASSIGNED
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
     use mod_grid,               only: compute_element_mappings
@@ -40,13 +40,13 @@ subroutine testIO__read_pmm_hdf__nopmm__D1_E1_M1()
     call chidg%read_mesh(filename)
 
     !  Test nelem
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%elems(1)%pmm_ID)
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,1)%pmm_ID)
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,2)%pmm_ID)
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,3)%pmm_ID)
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,4)%pmm_ID)
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,5)%pmm_ID)
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,6)%pmm_ID)
+    @assertEqual(NO_MM_ASSIGNED,chidg%data%mesh%domain(1)%elems(1)%mm_ID)
+    @assertEqual(NO_MM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,1)%mm_ID)
+    @assertEqual(NO_MM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,2)%mm_ID)
+    @assertEqual(NO_MM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,3)%mm_ID)
+    @assertEqual(NO_MM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,4)%mm_ID)
+    @assertEqual(NO_MM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,5)%mm_ID)
+    @assertEqual(NO_MM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,6)%mm_ID)
     
     
     !
@@ -66,7 +66,7 @@ subroutine testIO__read_pmm_hdf__staticpmm__D1_E1_M1()
     use pfunit_mod
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, IO_DESTINATION, NO_PMM_ASSIGNED
+    use mod_constants,          only: ZERO, ONE, IO_DESTINATION, NO_MM_ASSIGNED
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
     use mod_grid,               only: compute_element_mappings
@@ -99,19 +99,18 @@ subroutine testIO__read_pmm_hdf__staticpmm__D1_E1_M1()
     !
     call chidg%read_mesh(filename)
 
-    call chidg%read_prescribedmeshmotions(filename)
-
+    !call chidg%read_mesh_motions(filename)
 
     !  Test nelem
-    @assertEqual('static', chidg%data%pmm(1)%pmmf_name)
-    @assertEqual(1, chidg%data%pmm(1)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%elems(1)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,1)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,2)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,3)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,4)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,5)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,6)%pmm_ID)
+    !@assertEqual('static', chidg%data%mesh_motion(1)%mm%pmmf_name)
+    @assertEqual(1, chidg%data%mesh_motion(1)%mm%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%elems(1)%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,1)%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,2)%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,3)%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,4)%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,5)%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,6)%mm_ID)
     
     
     !
@@ -131,7 +130,7 @@ subroutine testIO__read_pmm_hdf__sinpmm__D1_E1_M1()
     use pfunit_mod
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, IO_DESTINATION, NO_PMM_ASSIGNED
+    use mod_constants,          only: ZERO, ONE, IO_DESTINATION, NO_MM_ASSIGNED
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
     use mod_grid,               only: compute_element_mappings
@@ -164,21 +163,21 @@ subroutine testIO__read_pmm_hdf__sinpmm__D1_E1_M1()
     !
     call chidg%read_mesh(filename)
 
-    call chidg%read_prescribedmeshmotions(filename)
+    call chidg%read_mesh_motions(filename)
 
 
     !  Test nelem
-    @assertEqual('sinusoidal', chidg%data%pmm(1)%pmmf_name)
-    @assertEqual('sin_pmm', chidg%data%pmm(1)%get_name())
-    @assertEqual(1.5_rk, chidg%data%pmm(1)%pmmf%get_option_value('L_X'))
-    @assertEqual(1, chidg%data%pmm(1)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%elems(1)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,1)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,2)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,3)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,4)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,5)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,6)%pmm_ID)
+   ! @assertEqual('sinusoidal', chidg%data%mesh_motion(1)%mm%pmmf_name)
+    !@assertEqual('sin_pmm', chidg%data%mesh_motion(1)%mm%get_name())
+    !@assertEqual(1.5_rk, chidg%data%mesh_motion(1)%mm%pmmf%get_option_value('L_X'))
+    @assertEqual(1, chidg%data%mesh_motion(1)%mm%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%elems(1)%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,1)%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,2)%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,3)%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,4)%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,5)%mm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,6)%mm_ID)
     
     
     !

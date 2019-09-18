@@ -75,7 +75,10 @@ contains
         type(AD_D), allocatable, dimension(:)   ::  &
             grad1_u, grad2_u, grad3_u, mu,          &
             flux_1, flux_2, flux_3
+            
+        real(rk),   allocatable, dimension(:)   :: r
 
+        r = worker%coordinate('1','element')
 
 
         !
@@ -84,7 +87,6 @@ contains
         grad1_u = worker%get_field('u', 'grad1', 'element')
         grad2_u = worker%get_field('u', 'grad2', 'element')
         grad3_u = worker%get_field('u', 'grad3', 'element')
-
 
 
         !

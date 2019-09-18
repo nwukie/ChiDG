@@ -1,0 +1,19 @@
+add_lib_sources(
+                mod_radial_basis_function.f90
+                mod_rbf_tools.f90
+                mod_k_means_clustering.f90
+                type_radial_basis_function.f90
+                type_radial_basis_function_wrapper.f90
+                type_rbf_interpolation.f90
+                type_rbf_interpolation_matrix.f90
+                type_rbf_info.f90
+                type_rbf_address.f90
+                type_rbf_address_book.f90
+                rbf_tps.f90
+                rbf_wc0.f90
+                rbf_wc2.f90
+                rbf_wc4.f90
+                rbf_wc6.f90
+                type_rbf_node.f90
+                type_rbf_node_patch.f90
+                )

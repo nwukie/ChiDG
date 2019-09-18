@@ -12,6 +12,8 @@ module mod_gridgen_convecting_vortex_pmm
 
     use type_bc_state,          only: bc_state_t
     use type_bc_state_group,    only: bc_state_group_t
+    use mod_prescribed_mesh_motion_function,    only: create_prescribed_mesh_motion_function   
+    use type_prescribed_mesh_motion_function,   only: prescribed_mesh_motion_function_t
     implicit none
 
 
@@ -59,7 +61,7 @@ contains
         type(bc_state_group_t), intent(in), optional    :: bc_state_groups(:)
 
         class(bc_state_t),  allocatable             :: bc_state
-        integer(HID_T)                              :: file_id, dom_id, bcface_id, bcgroup_id, patch_id
+        integer(HID_T)                              :: file_id, dom_id, bcface_id, bcgroup_id, patch_id, mmgroup_id
         integer(ik)                                 :: ierr, mapping, bcface, igroup, istate
         character(8)                                :: patch_names(6)
         real(rk),           allocatable             :: nodes(:,:)
@@ -71,6 +73,7 @@ contains
         character(len=8)                            :: bc_face_strings(6)
         character(:),   allocatable                 :: bc_face_string
 
+        class(prescribed_mesh_motion_function_t), allocatable    :: pmmf
         !
         ! Generate coordinates
         !
@@ -87,7 +90,7 @@ contains
         ! Get nodes/elements
         !
         nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
-        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping=4,idomain=1)
+        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,order=4,idomain=1)
 
 
 
@@ -218,28 +221,15 @@ contains
         !
         ! Define PMM
         !
-
-        call create_pmm_group_hdf(file_id,'sin_pmm')
-        call set_pmmf_name_hdf(file_id, 'sin_pmm','sinusoidal_2d')
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','L_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','L_X',20._rk)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','L_Y')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','L_Y',15._rk)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_FREQ_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_FREQ_X',TWO*PI)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_FREQ_Y')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_FREQ_Y',FOUR*PI)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_X',TWO)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Y')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_Y',1.5_rk)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Z')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_Z',ZERO)
-
+        !Add pmm group
+        call create_mm_group_hdf(file_id,'sin_cv','PMM')
+        mmgroup_id = open_mm_group_hdf(file_id, 'sin_cv')
+        call create_prescribed_mesh_motion_function(pmmf, 'sinusoidal_convecting_vortex')
+        call add_pmmf_hdf(mmgroup_id, pmmf)
+        call close_mm_group_hdf(mmgroup_id)
 
         !Assign pmm to domain
-        call set_pmm_domain_group_hdf(dom_id,'sin_pmm')
-
+        call set_mm_domain_group_hdf(dom_id,'sin_cv')
 
         call close_domain_hdf(dom_id)
 

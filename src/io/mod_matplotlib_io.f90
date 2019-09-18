@@ -98,9 +98,15 @@ contains
         ! Generate donor point coordinates
         !
         do ipt = 1,npts
-            receivers(ipt) = face_info(0_ik,0_ik,0_ik,0_ik,0_ik)
-            !call find_gq_donor(data%mesh,gq_nodes(ipt),receivers(ipt),donors(ipt),donor_coords(ipt))
-            call find_gq_donor(data%mesh,gq_nodes(ipt),receivers(ipt),donors(ipt),donor_coord, donor_found)
+            receivers(ipt) = face_info(0,0,0,0,0,0)
+            !call find_gq_donor(data%mesh,gq_nodes(ipt),point_t(0._rk,0._rk,0._rk),receivers(ipt),donors(ipt),donor_coord, donor_found)
+            call find_gq_donor(data%mesh,                                               &
+                               [gq_nodes(ipt)%c1_,gq_nodes(ipt)%c2_,gq_nodes(ipt)%c3_], &
+                               [0._rk,0._rk,0._rk],                                     &
+                               receivers(ipt),                                          &
+                               donors(ipt),                                             &
+                               donor_coord,                                             &
+                               donor_found)
             donor_coords(ipt)%c1_ = donor_coord(1)
             donor_coords(ipt)%c2_ = donor_coord(2)
             donor_coords(ipt)%c3_ = donor_coord(3)

@@ -2,199 +2,102 @@
 !!
 !!  This program is designed to solve partial differential equations,
 !!  and systems of partial differential equations, using the discontinuous
-!!  Galerkin method for spatial discretization using Chimera, overset grids to
+!!  Galerkin method for spatial discretization using overset grids to
 !!  represent the simulation domain.
 !!
 !!  @author Nathan A. Wukie
 !!  @date   1/31/2016
 !!
-!!
 !---------------------------------------------------------------------------------------------
 program driver
 #include <messenger.h>
-    use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: ZERO, ONE, TWO, FOUR, PI
     use type_chidg,                 only: chidg_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
-    use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM, IRANK
     use mod_file_utilities,         only: delete_file
+    use mpi_f08,                    only: MPI_AllReduce, MPI_INTEGER4, MPI_MAX, MPI_CHARACTER, MPI_LOGICAL
     use mod_io
-    use mod_hdf_utilities
 
     ! Actions
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
     use mod_chidg_post,         only: chidg_post, chidg_post_vtk, chidg_post_matplotlib
-    use mod_chidg_airfoil,      only: chidg_airfoil
+    use mod_chidg_forces,       only: chidg_forces
     use mod_chidg_clone,        only: chidg_clone
     use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec_new
     use mod_tutorials,          only: tutorial_driver
+    use mod_euler_eigenmodes,   only: compute_euler_eigenmodes
 
-    use mod_oscillating_cylinder_1, only: oscillating_cylinder
-    
-    !
     ! Variable declarations
-    !
     implicit none
     type(chidg_t)                               :: chidg
-
-
-    integer                                     :: iarg, narg, iorder, ierr, loc, ifield
-    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern, tutorial
+    integer                                     :: narg, ierr, ifield
+    integer(ik)                                 :: nfields, nfields_global
+    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern, tutorial, patch_group
     character(len=10)                           :: time_string
     character(:),                   allocatable :: command, tmp_file
-    class(function_t),              allocatable :: constant, monopole, fcn, polynomial
+    class(function_t),              allocatable :: fcn
+    logical                                     :: run_chidg_action, file_exists, exit_signal
 
 
-    integer(HID_T) :: file_id, dom_id
-
-    !VIV problem parameters
-    real(rk)    :: freq_ratio, reynolds_number, diam_cyl, mstar, freq_cyl(3), damping_coeff(3), stiffness_coeff(3), u_reduced, u_inf, rho_inf, mass
-
-
-    !
     ! Check for command-line arguments
-    !
     narg = command_argument_count()
 
+    ! Get potential 'action'
+    call get_command_argument(1,chidg_action)
 
-    !
+    run_chidg_action = .false.
+    if (trim(chidg_action) == '2tec'       .or. &
+        trim(chidg_action) == '2vtk'       .or. &
+        trim(chidg_action) == 'convert'    .or. &
+        trim(chidg_action) == 'edit'       .or. &
+        trim(chidg_action) == 'post'       .or. &
+        trim(chidg_action) == 'clone'      .or. &
+        trim(chidg_action) == 'forces'     .or. &
+        trim(chidg_action) == 'inputs'     .or. &
+        trim(chidg_action) == 'tutorial'   .or. &
+        trim(chidg_action) == 'matplotlib') run_chidg_action = .true.
+
+
     ! Execute ChiDG calculation
-    !
-    if ( narg == 0 ) then
+    if (.not. run_chidg_action) then
 
-
-
-        !
         ! Initialize ChiDG environment
-        !
         call chidg%start_up('mpi')
         call chidg%start_up('namelist')
         call chidg%start_up('core')
 
+        ! Check input files are valid
+        inquire(file=trim(gridfile), exist=file_exists)
+        if (.not. file_exists) call chidg_signal_one(FATAL,"open_file_hdf: Could not find file.",trim(gridfile))
+        if (trim(solutionfile_in) /= 'none') then
+            inquire(file=trim(solutionfile_in), exist=file_exists)
+            if (.not. file_exists) call chidg_signal_one(FATAL,"open_file_hdf: Could not find file.",trim(solutionfile_in))
+        end if
 
-        !
         ! Set ChiDG Algorithms, Accuracy
-        !
         call chidg%set('Time Integrator' , algorithm=time_integrator                   )
         call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call chidg%set('Linear Solver'   , algorithm=linear_solver,    options=loptions)
         call chidg%set('Preconditioner'  , algorithm=preconditioner                    )
         call chidg%set('Solution Order'  , integer_input=solution_order                )
 
-
-        !
-        ! Specify prescribed mesh motions by creating PMM entries in the grid file
-        !
-!        if (IRANK == GLOBAL_MASTER) then
-!            !
-!            ! Heaving and Pitching Airfoil
-!            !
-!
-!            file_id = open_file_hdf(gridfile)
-!            !Create PMM group
-!            call create_pmm_group_hdf(file_id,'hpaf_pmm')
-!            call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case3_blended')
-!            !call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case1')
-!
-!            !Assign PMMs to domains
-!            dom_id = open_domain_hdf(file_id,'01')
-!            call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
-!            call close_domain_hdf(dom_id)
-!
-!            dom_id = open_domain_hdf(file_id,'02')
-!            call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
-!            call close_domain_hdf(dom_id)
-!
-!            call close_file_hdf(file_id)
-!
-!            !
-!            ! VIV Cylinder with Rigid Body Mesh Motion
-!            !
-!
-!            ! VIV parameters
-!            !
-!            ! Reference: Wang et al, 2013, "Vortex Induced Vibration of Circular Cylinder with Two Degrees of Freedom:
-!            !                                   Computational Fluid Dynamics vs Reduced-Order Models", ASME
-!            !                               
-!            
-!            !
-!            ! NOTE: This reference considers an incompressible formulation. Check the Mach number in our simulation!
-!            !
-!            ! Prescribed quantities:
-!            ! Farfield density: rho_inf = 1.19 (for our simulation)
-!            ! Farfield velocity: u_inf = mom_1_inf/rho_inf
-!            ! Cylinder diameter: diam_cyl = 2.0 (for our simulation)
-!            ! Re = rho_inf*u_inf*diam_cyl/mu = 150
-!            ! Mass ratio: mstar = 2.55 (ratio of fluid to cylinder mass/density)
-!            ! Damping coefficient: damping_coeff = ZERO (to obtain maximal amplitude of oscillation)
-!            ! Reduced velocity: u_reduced = 4.0 ( = u_inf/(freq_cyl*diam_cyl)),
-!            !                       3.0 < u_reduced < 7.0, maximum oscillation amplitude at u_reduced = 4.0
-!
-!            ! Derived quantities:
-!            ! Cylinder mass: mass = mstar*rho_inf*PI*diam_cyl**TWO/FOUR
-!            ! Natural frequency of the cylinder: freq_cyl = u_inf/(u_reduced*diam_cyl)
-!            ! Stiffness coefficient: stiffness_coeff  = TWO*pi*freq_cyl**TWO
-!
-!            !
-!            ! Prescribed quantities: 
-!            
-!            !Fluid quantites: these must be consistent with the BC/IC and the viscosity parameter value.
-!            reynolds_number = 150.0_rk !Not used here - set viscosity properly in models.nml!
-!            rho_inf = 1.19_rk
-!            u_inf = 34.2997_rk
-!
-!            !Cylinder
-!            diam_cyl = 2.0_rk
-!            u_reduced = 4.0_rk
-!            mstar = 2.55_rk
-!            damping_coeff = ZERO
-!            freq_ratio = 0.0_rk
-!            
-!
-!            ! Derived quantities:
-!            mass = mstar*rho_inf*PI*diam_cyl**TWO/FOUR
-!            freq_cyl = ZERO
-!            freq_cyl(2) = u_inf/(u_reduced*diam_cyl)
-!            freq_cyl(1) = freq_ratio*freq_cyl(2)
-!            stiffness_coeff = TWO*PI*mass*freq_cyl**TWO
-!
-!            call create_pmm_group_hdf(file_id,'viv_rigid_body_pmm')
-!            call set_pmmf_name_hdf(file_id, 'viv_rigid_body_pmm','rigid_body_motion')
-!
-!            !Assign PMMs to domains
-!            dom_id = open_domain_hdf(file_id,'01')
-!            call set_pmm_domain_group_hdf(dom_id,'viv_rigid_body_pmm')
-!            call close_domain_hdf(dom_id)
-!
-!            call close_file_hdf(file_id)
-!
-!            !
-!            ! Initialize the oscillating cylinder model
-!            !
-!            call oscillating_cylinder%init()
-!        end if
-
-        call MPI_Barrier(ChiDG_COMM,ierr)
-
-
-        !
         ! Read grid and boundary condition data
-        !
         call chidg%read_mesh(gridfile)
 
-
-        !
         ! Initialize solution
         !   1: 'none', init fields with values from mod_io module variable initial_fields(:)
         !   2: read initial solution from ChiDG hdf5 file
-        !
         if (solutionfile_in == 'none') then
-            call create_function(constant,'constant')
-            do ifield = 1,chidg%data%mesh%domain(1)%neqns
-                call constant%set_option('val',initial_fields(ifield))
-                call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,ifield)
+            call create_function(fcn,'constant')
+            
+            nfields = 0
+            if (chidg%data%mesh%ndomains() > 0) nfields = chidg%data%mesh%domain(1)%nfields
+            call MPI_AllReduce(nfields,nfields_global,1,MPI_INTEGER4,MPI_MAX,ChiDG_COMM,ierr)
+
+            do ifield = 1,nfields_global
+                call fcn%set_option('val',initial_fields(ifield))
+                call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,ifield)
             end do
 
         else
@@ -202,35 +105,28 @@ program driver
         end if
 
 
-        !
         ! Run ChiDG simulation
-        !
-        call chidg%report('before')
-        call chidg%run(write_initial=initial_write, write_final=final_write)
-        call chidg%report('after')
+        call chidg%reporter('before')
+        call chidg%run(write_initial=initial_write, write_final=final_write, write_tecio=tecio_write, write_report=.true.)
+        call chidg%reporter('after')
 
 
-        !
         ! Close ChiDG
-        !
         call chidg%shut_down('core')
         call chidg%shut_down('mpi')
 
 
 
 
-    !
-    ! Check if executing 'action'
-    !
-    else if ( narg > 1 ) then
+
+    ! If not running calculation, try and run chidg 'action'
+    else 
 
         ! Get 'action'
         call get_command_argument(1,chidg_action)
-        call chidg%start_up('core')
+        !call chidg%start_up('core')
 
-        !
         ! Select 'action'
-        ! 
         select case (trim(chidg_action))
             !>  ChiDG:convert   src/actions/convert
             !!
@@ -250,6 +146,8 @@ program driver
             !!
             !----------------------------------------------------------------------------
             case ('convert')
+                call chidg%start_up('mpi')
+                call chidg%start_up('core',header=.false.)
                 if (narg /= 2) call chidg_signal(FATAL,"The 'convert' action expects: chidg convert filename.x")
                 call get_command_argument(2,filename)
                 call chidg_convert(trim(filename))
@@ -269,8 +167,11 @@ program driver
             !!
             !----------------------------------------------------------------------------
             case ('edit')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'edit' action expects to be called as: chidg edit filename.h5")
+                call chidg%start_up('mpi')
+                call chidg%start_up('core',header=.false.)
                 call get_command_argument(2,filename)
+                if (narg < 2) call chidg_signal(FATAL,"The 'edit' action was called with too few arguments. Try: chidg edit filename.h5")
+                if (narg > 2) call chidg_signal(FATAL,"The 'edit' action was called with too many arguments. Try: chidg edit filename.h5")
                 call chidg_edit(trim(filename))
 
             !*****************************************************************************
@@ -301,6 +202,8 @@ program driver
             !!                              myfile_0.3000.plt
             !!
             !!---------------------------------------------------------------------------
+                call chidg%start_up('mpi')
+                call chidg%start_up('core',header=.false.)
                 if (narg /= 2) call chidg_signal(FATAL,"The 'post' action expects: chidg post file.h5")
 
                 call date_and_time(time=time_string)
@@ -347,24 +250,60 @@ program driver
             !!                              myfile_0.3000.plt
             !!
             !!---------------------------------------------------------------------------
+                call chidg%start_up('mpi')
+                call chidg%start_up('core',header=.false.)
                 if (narg /= 2) call chidg_signal(FATAL,"The '2tec' action expects: chidg 2tec file.h5")
 
-                call date_and_time(time=time_string)
-                tmp_file = 'chidg_2tec_files'//time_string//'.txt'
-                call get_command_argument(2,pattern)
-                command = 'ls '//trim(pattern)//' > '//tmp_file
-                call system(command)
+                if (IRANK == GLOBAL_MASTER) then
+                    call date_and_time(time=time_string)
+                    tmp_file = 'chidg_2tec_files'//time_string//'.txt'
+                    call get_command_argument(2,pattern)
+                    command = 'ls '//trim(pattern)//' > '//tmp_file
+                    call system(command)
+
+                    ! Make sure file syncs with filesystem first
+                    file_exists = .false.
+                    do while (.not. file_exists)
+                        inquire(file=tmp_file,exist=file_exists)
+                        call sleep(1)
+                    end do
+
+                    open(7,file=tmp_file,action='read')
+                end if
             
 
-                open(7,file=tmp_file,action='read')
+                exit_signal = .false.
                 do
-                    read(7,fmt='(a)', iostat=ierr) solution_file
-                    if (ierr /= 0) exit
-                    call chidg_post_hdf2tec_new(trim(solution_file),trim(solution_file))
-                end do
-                close(7)
 
-                call delete_file(tmp_file)
+                    if (IRANK == GLOBAL_MASTER) then
+                        read(7,fmt='(a)', iostat=ierr) solution_file
+                        if (ierr /= 0) exit_signal = .true.
+                    end if
+
+                    call MPI_BCast(solution_file,1024,MPI_CHARACTER,GLOBAL_MASTER,ChiDG_COMM,ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,'chidg 2tec: error broadcasting solution file.')
+
+                    call MPI_BCast(exit_signal,1,MPI_LOGICAL,GLOBAL_MASTER,ChiDG_COMM,ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,'chidg 2tec: error broadcasting exit signal.')
+                        
+                    if (exit_signal) exit
+
+
+
+                    call chidg_post_hdf2tec_new(chidg,trim(solution_file),trim(solution_file))
+
+                    ! Release existing data
+                    call chidg%data%release()
+
+                end do
+
+
+                ! Clean up
+                if (IRANK == GLOBAL_MASTER) then
+                    close(7)
+                    call delete_file(tmp_file)
+                end if
+
             !*****************************************************************************
 
 
@@ -393,6 +332,8 @@ program driver
             !!                              myfile_0_0_3.vtu
             !!
             !!---------------------------------------------------------------------------
+                call chidg%start_up('mpi')
+                call chidg%start_up('core',header=.false.)
                 if (narg /= 2) call chidg_signal(FATAL,"The '2vtk' action expects: chidg 2vtk file.h5")
 
                 call date_and_time(time=time_string)
@@ -431,6 +372,8 @@ program driver
             !!
             !-----------------------------------------------------------------------------
             case ('clone')
+                call chidg%start_up('mpi')
+                call chidg%start_up('core',header=.false.)
                 if (narg /= 3) call chidg_signal(FATAL,"The 'clone' action expects: chidg clone source_file.h5 target_file.h5")
                 call get_command_argument(2,file_a)
                 call get_command_argument(3,file_b)
@@ -442,41 +385,72 @@ program driver
 
 
             case ('matplotlib')
+                call chidg%start_up('mpi')
+                call chidg%start_up('core',header=.false.)
                 if (narg /= 3) call chidg_signal(FATAL,"The 'matplotlib' action expects: chidg matplotlib gridfile.h5solutionfile.h5")
                 call get_command_argument(2,grid_file)
                 call get_command_argument(3,solution_file)
                 call chidg_post_matplotlib(trim(grid_file),trim(solution_file))
 
-            case ('airfoil')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'airfoil' action expects to be called as: chidg airfoil solutionfile.h5")
+            case ('forces')
+                call chidg%start_up('mpi')
+                call chidg%start_up('core',header=.false.)
+                if (narg /= 2) call chidg_signal(FATAL,"The 'forces' action expects to be called as: chidg forces solutionfile.h5")
                 call get_command_argument(2,solution_file)
-                call chidg_airfoil(trim(solution_file))
+                call write_line('Enter patch group to integrate: ')
+                read*, patch_group
+
+
+                call date_and_time(time=time_string)
+                tmp_file = 'chidg_forces_files'//time_string//'.txt'
+                call get_command_argument(2,pattern)
+                command = 'ls '//trim(pattern)//' > '//tmp_file
+                call system(command)
+            
+                open(7,file=tmp_file,action='read')
+                do
+                    read(7,fmt='(a)', iostat=ierr) solution_file
+                    if (ierr /= 0) exit
+                    call chidg_forces(trim(solution_file),trim(patch_group))
+                end do
+                close(7)
+
+                call delete_file(tmp_file)
+
+
+
+            case ('inputs')
+                call chidg%start_up('mpi')
+                call chidg%start_up('core',header=.false.)
+                if (narg > 2) call chidg_signal(FATAL,"The 'inputs' action expects to be called as: chidg inputs")
+                call write_namelist()
+
 
             case ('tutorial')
+                call chidg%start_up('mpi')
+                call chidg%start_up('core',header=.false.)
                 if (narg /= 2) call chidg_signal(FATAL,"The 'tutorial' action expects to be called as: chidg tutorial selected_tutorial.")
                 call get_command_argument(2,tutorial)
                 call tutorial_driver(trim(tutorial))
 
+            case ('eigen')
+                call chidg%start_up('mpi')
+                call chidg%start_up('core',header=.false.)
+                call compute_euler_eigenmodes()
+
             case default
-                call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")
+                call chidg%start_up('mpi')
+                call chidg%start_up('core',header=.false.)
+                call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' 'inputs' and 'forces'.")
         end select
 
+
         call chidg%shut_down('core')
+        call chidg%shut_down('mpi')
 
 
 
-
-
-    else
-        call chidg_signal(FATAL,"chidg: invalid number of arguments. Expecting (0) arguments: 'chidg'. or (2) arguments: 'chidg action file'.")
     end if
-
-
-
-
-
-
-
 
 
 

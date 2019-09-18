@@ -11,7 +11,7 @@ module mod_kinds
 
     ! generic type parameters
     public :: ibyte, ishort, ilong
-    public :: rsingle, rdouble
+    public :: rsingle, rdouble, rquad
     public :: ik, rk    ! (ik - integer kind), (rk - real kind)
 
     ! integer kinds

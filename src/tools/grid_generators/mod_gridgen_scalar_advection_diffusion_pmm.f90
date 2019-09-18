@@ -55,8 +55,8 @@ contains
         type(bc_state_group_t), intent(in), optional    :: bc_state_groups(:)
 
         class(bc_state_t),  allocatable             :: bc_state
-        integer(HID_T)                              :: file_id, dom_id, bcface_id, bcgroup_id, patch_id
-        integer(ik)                                 :: ierr, mapping, bcface, igroup, istate
+        integer(HID_T)                              :: file_id, dom_id, bcface_id, bcgroup_id, patch_id, mmgroup_id
+        integer(ik)                                 :: ierr, order, bcface, igroup, istate
         character(8)                                :: patch_names(6)
         real(rk),           allocatable             :: nodes(:,:)
         integer(ik),        allocatable             :: elements(:,:), faces(:,:)
@@ -65,6 +65,7 @@ contains
 
         character(len=8)                            :: bc_face_strings(6)
         character(:),   allocatable                 :: bc_face_string
+        class(prescribed_mesh_motion_function_t), allocatable   :: pmmf
 
 
         !
@@ -83,7 +84,7 @@ contains
         ! Get nodes/elements
         !
         nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
-        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping=1,idomain=1)
+        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,order=1,idomain=1)
 
 
 
@@ -214,23 +215,14 @@ contains
         !
         ! Define PMM
         !
-
-        call create_pmm_group_hdf(file_id,'sin_pmm')
-        call set_pmmf_name_hdf(file_id, 'sin_pmm','sinusoidal_1d')
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','L_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','L_X',1._rk)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_FREQ_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_FREQ_X',FOUR*PI)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_X',0.1_rk)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Y')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_Y',ZERO)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Z')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_Z',ZERO)
-
+        call create_mm_group_hdf(file_id,'sin_uf','PMM')
+        mmgroup_id = open_mm_group_hdf(file_id, 'sin_uf')
+        call create_prescribed_mesh_motion_function(pmmf, 'sinusoidal_uniform_flow')
+        call add_pmmf_hdf(mmgroup_id, pmmf)
+        call close_mm_group_hdf(mmgroup_id)
 
         !Assign pmm to domain
-        call set_pmm_domain_group_hdf(dom_id,'sin_pmm')
+        call set_mm_domain_group_hdf(dom_id,'sin_uf')
 
 
         call close_domain_hdf(dom_id)
@@ -269,8 +261,8 @@ contains
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(6)
         integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface1_id, bcface2_id, &
-                                                           bcgroup_id, patch1_id, patch2_id
-        integer(ik)                                     :: mapping, bcface, ierr, igroup, istate, &
+                                                           bcgroup_id, patch1_id, patch2_id, mmgroup_id
+        integer(ik)                                     :: order, bcface, ierr, igroup, istate, &
                                                            nxi_max, neta_max, nzeta_max,xi_mid
         real(rk),       allocatable                     :: nodes1(:,:), nodes2(:,:)
         integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
@@ -282,6 +274,7 @@ contains
                                                            zmax_current
         character(len=8)                                :: bc_face_strings(6)
         character(:),   allocatable                     :: bc_face_string
+        class(prescribed_mesh_motion_function_t), allocatable   :: pmmf
 
         !
         ! Create/initialize file
@@ -367,11 +360,11 @@ contains
         !
         ! Get nodes/elements
         !
-        mapping = 1
+        order = 1
         nodes1    = get_block_points_plot3d(xcoords1,ycoords1,zcoords1)
         nodes2    = get_block_points_plot3d(xcoords2,ycoords2,zcoords2)
-        elements1 = get_block_elements_plot3d(xcoords1,ycoords1,zcoords1,mapping,idomain=1)
-        elements2 = get_block_elements_plot3d(xcoords2,ycoords2,zcoords2,mapping,idomain=2)
+        elements1 = get_block_elements_plot3d(xcoords1,ycoords1,zcoords1,order,idomain=1)
+        elements2 = get_block_elements_plot3d(xcoords2,ycoords2,zcoords2,order,idomain=2)
 
 
         !
@@ -399,8 +392,8 @@ contains
         bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
         do bcface = 1,6
             ! Get face node indices for boundary 'bcface'
-            faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords1,zcoords1,mapping,bcface)
-            faces2 = get_block_boundary_faces_plot3d(xcoords2,ycoords2,zcoords2,mapping,bcface)
+            faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords1,zcoords1,order,bcface)
+            faces2 = get_block_boundary_faces_plot3d(xcoords2,ycoords2,zcoords2,order,bcface)
 
 
             ! Set bc patch face indices
@@ -478,25 +471,15 @@ contains
 !
         ! Define PMM
         !
-
-        call create_pmm_group_hdf(file_id,'sin_pmm')
-        call set_pmmf_name_hdf(file_id, 'sin_pmm','sinusoidal')
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','L_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','L_X',1._rk)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_FREQ_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_FREQ_X',FOUR*PI)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_X',0.1_rk)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Y')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_Y',ZERO)
-        call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Z')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_Z',ZERO)
-
+        call create_mm_group_hdf(file_id,'sin_uf','PMM')
+        mmgroup_id = open_mm_group_hdf(file_id, 'sin_uf')
+        call create_prescribed_mesh_motion_function(pmmf, 'sinusoidal_uniform_flow')
+        call add_pmmf_hdf(mmgroup_id, pmmf)
+        call close_mm_group_hdf(mmgroup_id)
 
         !Assign pmm to domain
-        call set_pmm_domain_group_hdf(dom1_id,'sin_pmm')
-        call set_pmm_domain_group_hdf(dom2_id,'sin_pmm')
-
+        call set_mm_domain_group_hdf(dom1_id,'sin_uf')
+        call set_mm_domain_group_hdf(dom2_id,'sin_uf')
 
 
 

@@ -2,12 +2,11 @@ module PRIMLINEULER_LaxFriedrichs_flux_real
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE,TWO,HALF,FOUR,ZERO,ME, NEIGHBOR
 
-    use type_boundary_flux,     only: boundary_flux_t
+    use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use DNAD_D
 
-    use PRIMLINEULER_properties,    only: PRIMLINEULER_properties_t
     use mod_primitive_linearized_euler
     implicit none
 
@@ -23,11 +22,12 @@ module PRIMLINEULER_LaxFriedrichs_flux_real
     !!
     !!
     !-------------------------------------------------------------------------------------
-    type, extends(boundary_flux_t), public :: PRIMLINEULER_LaxFriedrichs_flux_real_t
+    type, extends(operator_t), public :: PRIMLINEULER_LaxFriedrichs_flux_real_t
 
     contains
 
-        procedure  :: compute
+        procedure   :: init
+        procedure   :: compute
 
     end type PRIMLINEULER_LaxFriedrichs_flux_real_t
     !**************************************************************************************
@@ -38,31 +38,44 @@ module PRIMLINEULER_LaxFriedrichs_flux_real
 contains
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/22/2018
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine init(self)
+        class(PRIMLINEULER_LaxFriedrichs_flux_real_t),   intent(inout)  :: self
+
+        ! Set operator name
+        call self%set_name('PRIMLINEULER LaxFriedrichs Real')
+
+        ! Set operator type
+        call self%set_operator_type('Boundary Advective Operator')
+
+        ! Set operator equations
+        call self%add_primary_field("Density(real)"   )
+        call self%add_primary_field("Velocity-1(real)")
+        call self%add_primary_field("Velocity-2(real)")
+        call self%add_primary_field("Velocity-3(real)")
+        call self%add_primary_field("Pressure(real)"  )
+
+
+    end subroutine init
+    !*****************************************************************************************
+    
 
 
     !>  Real component of numerical flux dissipation
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   3/17/2016
-    !!
-    !!
+    !!  @date   1/22/2018
     !!
     !--------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
         class(PRIMLINEULER_LaxFriedrichs_flux_real_t),  intent(in)      :: self
         type(chidg_worker_t),                           intent(inout)   :: worker
         class(properties_t),                            intent(inout)   :: prop
-
-
-        ! Equation indices
-        integer(ik) :: irho
-        integer(ik) :: iu
-        integer(ik) :: iv
-        integer(ik) :: iw
-        integer(ik) :: ip
-
-        integer(ik) :: igq
-
 
 
 
@@ -73,58 +86,39 @@ contains
             v_m,     v_p,                           &
             w_m,     w_p,                           &
             p_m,     p_p,                           &
-            integrand,  upwind,                     &
-            wave
+            dissipation,  wave
 
 
         real(rk),   allocatable, dimension(:)   ::  &
-            un, wave_c, normx, normy, normz, unormx, unormy, unormz
-
-
-        irho = prop%get_eqn_index("rho_r")
-        iu   = prop%get_eqn_index("u_r")
-        iv   = prop%get_eqn_index("v_r")
-        iw   = prop%get_eqn_index("w_r")
-        ip   = prop%get_eqn_index("p_r")
+            un, wave_c, unorm_1, unorm_2, unorm_3
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m = worker%interpolate(irho, 'value', ME)
-        rho_p = worker%interpolate(irho, 'value', NEIGHBOR)
+        rho_m = worker%get_field('Density(real)',    'value', 'face interior')
+        rho_p = worker%get_field('Density(real)',    'value', 'face exterior')
 
-        u_m   = worker%interpolate(iu,   'value', ME)
-        u_p   = worker%interpolate(iu,   'value', NEIGHBOR)
+        u_m   = worker%get_field('Velocity-1(real)', 'value', 'face interior')
+        u_p   = worker%get_field('Velocity-1(real)', 'value', 'face exterior')
 
-        v_m   = worker%interpolate(iv,   'value', ME)
-        v_p   = worker%interpolate(iv,   'value', NEIGHBOR)
+        v_m   = worker%get_field('Velocity-2(real)', 'value', 'face interior')
+        v_p   = worker%get_field('Velocity-2(real)', 'value', 'face exterior')
 
-        w_m   = worker%interpolate(iw,   'value', ME)
-        w_p   = worker%interpolate(iw,   'value', NEIGHBOR)
+        w_m   = worker%get_field('Velocity-3(real)', 'value', 'face interior')
+        w_p   = worker%get_field('Velocity-3(real)', 'value', 'face exterior')
 
-        p_m   = worker%interpolate(ip,   'value', ME)
-        p_p   = worker%interpolate(ip,   'value', NEIGHBOR)
-
-
+        p_m   = worker%get_field('Pressure(real)',   'value', 'face interior')
+        p_p   = worker%get_field('Pressure(real)',   'value', 'face exterior')
 
 
 
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
-
-        unormx = worker%unit_normal(1)
-        unormy = worker%unit_normal(2)
-        unormz = worker%unit_normal(3)
+        unorm_1 = worker%unit_normal_ale(1)
+        unorm_2 = worker%unit_normal_ale(2)
+        unorm_3 = worker%unit_normal_ale(3)
 
 
 
-        wave = rho_m
-        do igq = 1,size(wave)
-            wave(igq)%x_ad_ = ZERO
-            wave(igq)%xp_ad_ = ZERO
-        end do
 
         !--------------------------------------
         !  Compute wave speeds
@@ -134,66 +128,81 @@ contains
         !
         ! Compute normal velocities: dot-product vector projection along unit-normal direction
         !
-        un = unormx*ubar + unormy*vbar + unormz*wbar
+        un = unorm_1*ubar + unorm_2*vbar + unorm_3*wbar
 
         !
         ! Compute wave speeds
         !
         wave_c = abs(un) + cbar
 
+
+        wave = rho_m
         wave = wave_c
 
 
         !================================
         !       MASS FLUX
         !================================
-        upwind = -wave*(rho_p - rho_m)
+        !upwind = -wave*(rho_p - rho_m)
+        !integrand = HALF * ( upwind*normx*unormx  +  upwind*normy*unormy  +  upwind*normz*unormz )
+        !call worker%integrate_boundary(irho,integrand)
 
-        integrand = HALF * ( upwind*normx*unormx  +  upwind*normy*unormy  +  upwind*normz*unormz )
+        dissipation = HALF*wave*(rho_m - rho_p)
 
-        call worker%integrate_boundary(irho,integrand)
+        call worker%integrate_boundary_upwind('Density(real)',dissipation)
 
 
         !================================
         !       X-MOMENTUM FLUX
         !================================
-        upwind = -wave*(u_p - u_m)
+        !upwind = -wave*(u_p - u_m)
+        !integrand = HALF * ( upwind*normx*unormx  +  upwind*normy*unormy  +  upwind*normz*unormz )
+        !call worker%integrate_boundary(iu,integrand)
 
-        integrand = HALF * ( upwind*normx*unormx  +  upwind*normy*unormy  +  upwind*normz*unormz )
+        dissipation = HALF*wave*(u_m - u_p)
 
-        call worker%integrate_boundary(iu,integrand)
-
+        call worker%integrate_boundary_upwind('Velocity-1(real)',dissipation)
 
         !================================
         !       Y-MOMENTUM FLUX
         !================================
-        upwind = -wave*(v_p - v_m)
+        !upwind = -wave*(v_p - v_m)
+        !integrand = HALF * ( upwind*normx*unormx  +  upwind*normy*unormy  +  upwind*normz*unormz )
+        !call worker%integrate_boundary(iv,integrand)
 
-        integrand = HALF * ( upwind*normx*unormx  +  upwind*normy*unormy  +  upwind*normz*unormz )
+        dissipation = HALF*wave*(v_m - v_p)
 
-        call worker%integrate_boundary(iv,integrand)
+        call worker%integrate_boundary_upwind('Velocity-2(real)',dissipation)
 
         !================================
         !       Z-MOMENTUM FLUX
         !================================
-        upwind = -wave*(w_p - w_m)
+        !upwind = -wave*(w_p - w_m)
+        !integrand = HALF * ( upwind*normx*unormx  +  upwind*normy*unormy  +  upwind*normz*unormz )
+        !call worker%integrate_boundary(iw,integrand)
 
-        integrand = HALF * ( upwind*normx*unormx  +  upwind*normy*unormy  +  upwind*normz*unormz )
+        dissipation = HALF*wave*(w_m - w_p)
 
-        call worker%integrate_boundary(iw,integrand)
+        call worker%integrate_boundary_upwind('Velocity-3(real)',dissipation)
+
 
         !================================
         !          ENERGY FLUX
         !================================
-        upwind = -wave*(p_p - p_m)
+        !upwind = -wave*(p_p - p_m)
+        !integrand = HALF * ( upwind*normx*unormx  +  upwind*normy*unormy  +  upwind*normz*unormz )
+        !call worker%integrate_boundary(ip,integrand)
 
-        integrand = HALF * ( upwind*normx*unormx  +  upwind*normy*unormy  +  upwind*normz*unormz )
 
-        call worker%integrate_boundary(ip,integrand)
+        dissipation = HALF*wave*(w_m - w_p)
+
+        call worker%integrate_boundary_upwind('Pressure(real)',dissipation)
+
+
 
 
     end subroutine compute
-    !***************************************************************************************************************************************
+    !***************************************************************************************
 
 
 

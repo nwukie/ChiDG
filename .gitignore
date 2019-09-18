@@ -9,5 +9,5 @@ testrun
 *.out
 *.bak
 tags
-tags.*
+DirList.txt
 .DS_Store

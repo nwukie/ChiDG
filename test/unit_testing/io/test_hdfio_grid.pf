@@ -48,7 +48,7 @@ subroutine testIO__read_mesh_hdf__D1_E1_M1()
     
     ! Test points
     ! This is for element with center at zero
-    x = [ZERO, ONE,  ZERO, ONE,  ZERO, ONE,  ZERO, ONE]
+    x = [ZERO, ONE,  ONE, ZERO,  ZERO, ONE,  ONE, ZERO]
     y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE,  ONE]
     z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE,  ONE]
 
@@ -129,7 +129,7 @@ subroutine testIO__read_mesh_hdf__D1_E27_M1()
 
     
     ! Test points
-    x = [ZERO, THIRD, ZERO,  THIRD, ZERO,  THIRD, ZERO,  THIRD]
+    x = [ZERO, THIRD, THIRD,  ZERO, ZERO,  THIRD, THIRD, ZERO]
     y = [ZERO, ZERO,  THIRD, THIRD, ZERO,  ZERO,  THIRD, THIRD]
     z = [ZERO, ZERO,  ZERO,  ZERO,  THIRD, THIRD, THIRD, THIRD]
     @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%node_coords(:,1),tol)
@@ -224,7 +224,7 @@ subroutine testIO__read_mesh_hdf__D2_E1_M1()
 
 
     ! Test points
-    x = [ZERO, HALF, ZERO, HALF, ZERO, HALF, ZERO, HALF]
+    x = [ZERO, HALF, HALF, ZERO, ZERO, HALF, HALF, ZERO]
     y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE,  ONE ]
     z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE,  ONE ]
     @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%node_coords(:,1),tol)
@@ -318,7 +318,7 @@ subroutine testIO__read_mesh_hdf__D2_E27_M1()
 
 
     ! Test points
-    x = [ZERO, SIXTH, ZERO, SIXTH, ZERO,  SIXTH, ZERO,  SIXTH]
+    x = [ZERO, SIXTH, SIXTH, ZERO, ZERO,  SIXTH, SIXTH,  ZERO]
     y = [ZERO, ZERO, THIRD, THIRD, ZERO,  ZERO,  THIRD, THIRD]
     z = [ZERO, ZERO, ZERO,  ZERO,  THIRD, THIRD, THIRD, THIRD]
     @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%node_coords(:,1),tol)

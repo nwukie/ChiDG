@@ -1,7 +1,7 @@
 module SD_boundary_operator
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ZERO,ONE,TWO,HALF
+    use mod_constants,              only: ZERO,ONE,TWO,HALF,INTERIOR,CHIMERA
     use type_operator,              only: operator_t
     use type_chidg_worker,          only: chidg_worker_t
     use type_properties,            only: properties_t
@@ -95,6 +95,12 @@ contains
             flux_1_p, flux_2_p, flux_3_p,           &
             mu_m, mu_p
 
+        real(rk),   allocatable, dimension(:)   :: r
+
+        integer(ik) :: ChiID, idonor
+
+        r = worker%coordinate('1','face interior')
+    
 
         !
         ! Interpolate solution to quadrature nodes
@@ -122,6 +128,7 @@ contains
         flux_1_p = -mu_p*grad1_u_p
         flux_2_p = -mu_p*grad2_u_p
         flux_3_p = -mu_p*grad3_u_p
+
 
 
         !

@@ -88,7 +88,6 @@ contains
         mom3    = worker%get_field('Momentum-3', 'value')
         energy  = worker%get_field('Energy',     'value')
 
-
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !

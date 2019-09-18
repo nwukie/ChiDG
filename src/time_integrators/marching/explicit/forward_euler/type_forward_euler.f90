@@ -1,7 +1,7 @@
 module type_forward_euler
     use mod_kinds,              only: rk,ik
     use mod_spatial,            only: update_space
-    use mod_update_grid,        only: update_grid
+!    use mod_update_grid,        only: update_grid
 
     use type_time_integrator_marching,  only: time_integrator_marching_t
     use type_chidg_data,                only: chidg_data_t
@@ -51,12 +51,30 @@ module type_forward_euler
 
     contains
 
+        procedure   :: init
         procedure   :: step
 
     end type forward_euler_t
     !----------------------------------------------------------------------------------------
 
 contains
+
+    !>  Initialize the forward_euler_t time integrator
+    !!
+    !!  Create the assembler and atatch it to the time_integrator object so it can 
+    !!  be passed to the nonlinear solver
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine init(self)
+        class(forward_euler_t),          intent(inout)   :: self
+
+        call self%set_name('Forward Euler')
+
+    end subroutine init
+    !***********************************************************************************
+
+
+
 
 
 
@@ -89,7 +107,8 @@ contains
             !
             ! Update equation Residual (rhs)
             !
-            call update_grid(data)
+            !call update_grid(data)
+            call data%update_grid()
             call update_space(data, differentiate=.false.)
             call self%residual_norm%push_back(rhs%norm(ChiDG_COMM))
 
@@ -121,12 +140,16 @@ contains
             !
             q  = q + dq
 
-            data%time_manager%t = data%time_manager%t + dt
+!            data%time_manager%t = data%time_manager%t + dt
 
             !
             ! Clear working vector
             !
             call rhs%clear()
+
+
+            data%time_manager%t = data%time_manager%t + data%time_manager%dt
+
 
         end associate
 

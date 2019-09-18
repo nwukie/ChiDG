@@ -130,7 +130,7 @@ subroutine test_chidg_matrix_operator_mv()
     !
     ielem = 1
     itime = 1
-    idiag = A%dom(1)%lblks(ielem,itime)%loc(1,1)
+    idiag = A%dom(1)%lblks(ielem,itime)%loc(1,1,itime)
     A%dom(1)%lblks(ielem,itime)%data_(idiag)%mat = ONE
 
 

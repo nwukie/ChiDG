@@ -4,6 +4,7 @@ module type_time_integrator_spectral
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
     use type_chidg_data,        only: chidg_data_t
     use type_time_integrator,   only: time_integrator_t
+    use type_element_info,      only: element_info_t
     use mod_HB_post,            only: get_post_processing_data
     use mod_hdf_utilities
     use hdf5
@@ -55,8 +56,9 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
 
         integer(ik)                 :: ntime_q, ntime_q_in, itime, idom, & 
-                                       ielem, ivar, ierr, eqn_ID
+                                       ielem, ifield, ierr
         real(rk),   allocatable     :: temp(:)
+        type(element_info_t)        :: elem_info
 
     
         associate( q => data%sdata%q, q_in => data%sdata%q_in)
@@ -71,19 +73,21 @@ contains
                 do itime = 1,ntime_q
                     do idom = 1,data%mesh%ndomains()
 
-                        eqn_ID = data%mesh%domain(idom)%eqn_ID
 
                         if (allocated(temp)) deallocate(temp)
                         allocate(temp(data%mesh%domain(idom)%nterms_s), stat = ierr)
                         if (ierr /= 0) call AllocationError
 
                         do ielem = 1,data%mesh%domain(idom)%nelem
-                            do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
+                            elem_info = data%mesh%get_element_info(idom,ielem)
+                            do ifield = 1,data%eqnset(elem_info%eqn_ID)%prop%nprimary_fields()
 
-                                temp = q_in%dom(idom)%vecs(ielem)%getvar(ivar,1)
-                                call q%dom(idom)%vecs(ielem)%setvar(ivar,itime,temp)
+                                !temp = q_in%dom(idom)%vecs(ielem)%getvar(ifield,1)
+                                !call q%dom(idom)%vecs(ielem)%setvar(ifield,itime,temp)
+                                temp = q_in%get_field(elem_info,ifield,1)
+                                call q%set_field(temp,elem_info,ifield,itime)
 
-                            end do  ! ivar
+                            end do  ! ifield
                         end do  ! ielem
                     end do  ! idom
                 end do  ! itime
@@ -115,26 +119,19 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(HID_T)          :: fid
-        integer                 :: ierr, iwrite
+        integer(HID_T)  :: fid
+        integer(ik)     :: ierr, iwrite
 
 
-        do iwrite = 0,NRANK - 1
+        do iwrite = 0,NRANK-1
             if (iwrite == IRANK) then
                 
-                ! Assuming that the file exists, open the hdf file
                 fid = open_file_hdf(filename)
-
-                
-                ! Write nsteps, nwrite, frequencies and time levels to hdf file
-                call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()))
-                call set_nsteps_hdf(     fid,data%time_manager%nsteps)
-                call set_nwrite_hdf(     fid,data%time_manager%nwrite)        
-                call set_frequencies_hdf(fid,data%time_manager%freqs )
-                print*, 'setting: ', data%time_manager%times
-                call set_times_hdf(      fid,data%time_manager%times )
-
-                
+                call set_time_integrator_hdf(fid, trim(data%time_manager%get_name()))
+                call set_times_hdf(          fid, data%time_manager%times           )
+                call set_frequencies_hdf(    fid, data%time_manager%freqs           )
+                call set_nsteps_hdf(         fid, data%time_manager%nsteps          )
+                call set_nwrite_hdf(         fid, data%time_manager%nwrite          )        
                 call close_file_hdf(fid)
 
             end if
@@ -215,7 +212,9 @@ contains
         !call data%sdata%q_out%set_ntime(data%time_manager%ntime)
         !call data%sdata%q_out%clear()
 
-        data%sdata%q_out = data%sdata%q_in
+        associate (q_out => data%sdata%q_out, q_in => data%sdata%q_in)
+            q_out = q_in
+        end associate
 
 
 

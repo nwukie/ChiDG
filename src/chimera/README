@@ -1,0 +1,59 @@
+#----------------------------------------------------------------
+#
+#
+#
+#              Description of Chimera infrastructure
+#
+#
+#
+#----------------------------------------------------------------
+
+    Utilities
+    --------------------------
+        mod_chimera.f90
+            # Mark all CHIMERA receiver faces
+            detect_chimera_faces    
+
+            # Detect donor elements contributing to receiver faces
+            detect_chimera_donors           
+
+            # Compute interpolation data from donor to receiver
+            compute_chimera_interpolators   
+
+            # Search for donor for a node
+            find_gq_donor
+            
+
+    Data Abstractions
+    --------------------------
+        type_chimera(chimera_t)
+        type_chimera_donor(chimera_donor_t)
+        type_chimera_receiver(chimera_receiver_t)
+        type_chimera_send(chimera_send_t)
+
+
+    Type Hierarchy
+    --------------------------
+    # A single mesh object exists in chidg%chidg_data%mesh
+    #   - A mesh contains an array of domain's
+    mesh_t
+        domain_t(:)
+            # Each domain contains a chimera instance that describes
+            #   1: a chimera_receiver description for every CHIMERA face
+            #   2: a chimera_send description for every element in the current 
+            #      domain that needs sent to another processor to facilitate
+            #      the Chimera communication. Each instance contains a list of
+            #      each processor that it needs sent to.
+            chimera_t
+                chimera_receiver_t(:)
+                    chimera_donor_t(:)
+                chimera_send_t(:)
+
+
+
+
+
+
+
+
+

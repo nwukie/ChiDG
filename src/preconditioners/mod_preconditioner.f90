@@ -6,19 +6,33 @@ module mod_preconditioner
 
 
     ! Import preconditioner types
-    use precon_identity,            only: precon_identity_t
-    use precon_jacobi,              only: precon_jacobi_t
-    use precon_ILU0,                only: precon_ILU0_t
-    use precon_RASILU0,             only: precon_RASILU0_t
+    use precon_identity,        only: precon_identity_t
+    use precon_jacobi,          only: precon_jacobi_t
+    use precon_ILU0,            only: precon_ILU0_t
+    use precon_ILU0_MDF,        only: precon_ILU0_MDF_T
+    use precon_ILU0_overset,    only: precon_ILU0_overset_t
+    use precon_HB,              only: precon_HB_t
+    use precon_RASILU0,         only: precon_RASILU0_t
+    use precon_RASILU0_overset, only: precon_RASILU0_overset_t
+    use precon_line,            only: precon_line_t
+    use precon_schur_element,   only: precon_schur_element_t
+    use precon_petsc,           only: precon_petsc_t
     implicit none
 
 
 
     ! Instantiate preconditioner types for sourcing
-    type(precon_identity_t)             :: IDENTITY
-    type(precon_jacobi_t)               :: BLOCKJACOBI
-    type(precon_ILU0_t)                 :: ILU0
-    type(precon_RASILU0_t)              :: RASILU0
+    type(precon_identity_t)         :: P_IDENTITY
+    type(precon_jacobi_t)           :: P_BLOCKJACOBI
+    type(precon_ILU0_t)             :: P_ILU0
+    type(precon_ILU0_MDF_t)         :: P_ILU0_MDF
+    type(precon_ILU0_overset_t)     :: P_ILU0_OVERSET
+    type(precon_HB_t)               :: P_HB
+    type(precon_RASILU0_t)          :: P_RASILU0
+    type(precon_RASILU0_overset_t)  :: P_RASILU0_OVERSET
+    type(precon_line_t)             :: P_LINE
+    type(precon_schur_element_t)    :: P_SCHUR_ELEMENT
+    type(precon_petsc_t)            :: P_PETSC
 
 
 
@@ -40,17 +54,38 @@ contains
 
         select case (trim(precon_string))
             case ('identity','Identity','IDENTITY')
-                allocate(instance, source=IDENTITY)
+                allocate(instance, source=P_IDENTITY)
 
 
             case ('jacobi','Jacobi','blockjacobi','BlockJacobi')
-                allocate(instance, source=BLOCKJACOBI)
+                allocate(instance, source=P_BLOCKJACOBI)
 
             case('ilu0','ILU0')
-                allocate(instance, source=ILU0)
+                allocate(instance, source=P_ILU0)
+
+            case('ilu0_mdf','ILU0_MDF')
+                allocate(instance, source=P_ILU0_MDF)
+
+            case('ilu0_overset','ILU0_OVERSET')
+                allocate(instance, source=P_ILU0_OVERSET)
+
+            case('HB','hb')
+                allocate(instance, source=P_HB)
 
             case('rasilu0','RASILU0', 'ras-ilu0', 'RAS-ILU0', 'RAS+ILU0', 'ras+ilu0', 'RAS ILU0', 'ras ilu0')
-                allocate(instance, source=RASILU0)
+                allocate(instance, source=P_RASILU0)
+
+            case('rasilu0_overset','RASILU0_OVERSET')
+                allocate(instance, source=P_RASILU0_OVERSET)
+
+            case('line','Line', 'LINE')
+                allocate(instance, source=P_LINE)
+
+            case('Schur Element')
+                allocate(instance, source=P_SCHUR_ELEMENT)
+
+            case('petsc','PETSC')
+                allocate(instance, source=P_PETSC)
 
             case default
                 user_msg = "create_preconditioner: It seems like we can't find the preconditioner &

@@ -1,11 +1,11 @@
 module euler_roe_operator
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
+    use mod_fluid,              only: gam
     use type_operator,          only: operator_t
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
-    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
 
@@ -205,10 +205,7 @@ contains
 
         vmagtil = util*unorm_1_ale + vtil*unorm_2_ale + wtil*unorm_3_ale   ! Magnitude of Roe-averaged velocity in the face normal direction
         qtil2   = util**TWO + vtil**TWO + wtil**TWO
-
-
-        !& HARDCODED GAMMA
-        ctil = sqrt((1.4_rk - ONE)*(Htil - HALF*qtil2))                   ! Roe-averaged speed of sound
+        ctil = sqrt((gam - ONE)*(Htil - HALF*qtil2))                   ! Roe-averaged speed of sound
         ctil2 = ctil**TWO
 
 

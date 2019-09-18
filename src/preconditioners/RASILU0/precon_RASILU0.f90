@@ -54,18 +54,23 @@
 !-----------------------------------------------------------------------------------------------
 module precon_RASILU0
 #include <messenger.h>
+#include "petsc/finclude/petscksp.h"
+#include "petsc/finclude/petscpc.h"
+    use petscksp,                   only: tPC, PCCreate, PCApply, PCDestroy, PCSetUp, PCReset, tKSP, KSPGetPC
+    use petscmat,                   only: PETSC_NULL_MAT, PETSC_NULL_INTEGER
+
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: DIAG, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, &
                                           ETA_MAX, ZETA_MAX, ONE
     use mod_inv,                    only: inv
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
-    use mod_io,                     only: verbosity
+    use mod_io,                     only: verbosity, backend
 
     use type_RASILU0_send,          only: RASILU0_send_t
     use type_RASILU0_recv,          only: RASILU0_recv_t
     use type_preconditioner,        only: preconditioner_t
     use type_chidg_data,            only: chidg_data_t
-    use type_chidg_matrix,          only: chidg_matrix_t
+    use type_chidg_matrix,          only: chidg_matrix_t, chidg_matrix
     use type_chidg_vector,          only: chidg_vector_t
 
     use type_mpi_request_vector,    only: mpi_request_vector_t
@@ -85,6 +90,7 @@ module precon_RASILU0
     !------------------------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_RASILU0_t
 
+        ! chidg
         type(chidg_matrix_t)        :: LD       !< Lower-Diagonal matrix for local problems
 
         type(RASILU0_send_t)        :: send     !< Overlapping data to send to other processors
@@ -92,11 +98,20 @@ module precon_RASILU0
 
         type(mpi_request_vector_t)  :: mpi_requests
 
+
+        ! petsc
+        PetscInt    :: asm_overlap = 1
+        PetscInt    :: ilu_levels = 0
+        PC          :: pc
+        logical     :: petsc_initialized = .false.
+
+
     contains
     
         procedure   :: init
         procedure   :: update
         procedure   :: apply
+        procedure   :: tear_down
 
         procedure   :: comm_send
         procedure   :: comm_recv
@@ -125,35 +140,44 @@ contains
         class(precon_RASILU0_t),    intent(inout)   :: self
         type(chidg_data_t),         intent(in)      :: data
 
-        integer :: ierr
-
-        integer(ik) :: iread, ielem, iblk, diag
+        PetscErrorCode  :: perr
 
         call write_line('   Restricted Additive Schwarz(RAS) preconditioner: ', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
-        !
-        ! Initialize Lower-Diagonal matrix for processor-local data
-        !
-        call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
+        select case (trim(backend))
+            case('native')
+
+                ! Initialize Lower-Diagonal matrix for processor-local data
+                self%LD = chidg_matrix(trim(backend))
+                call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
+
+                ! Initialize the overlap data
+                call write_line('       RAS: initializing send pattern...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+                call self%send%init(data%mesh, data%sdata%lhs)
+                call write_line('       RAS: initializing receive pattern...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+                call self%recv%init(data%mesh, data%sdata%lhs, data%sdata%rhs)
+
+                ! Release nonblocking send buffers
+                call write_line('       RAS: waiting on remaining communication buffers ...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+                call self%send%init_wait()
+                call write_line('       RAS: initialization complete!', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+
+
+            case('petsc')
+
+                call PCCreate(ChiDG_COMM%mpi_val,self%pc,perr)
+                if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCCreate.')
+                call PCSetType(self%pc,PCASM,perr)
+                if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCSetType.')
+
+                self%petsc_initialized = .true.
+
+            case default
+                call chidg_signal_one(FATAL,"precon_rasilu0%init: invalid input for 'backend'.", trim(backend))
+
+        end select
+            
         self%initialized = .true.
-
- 
-        !
-        ! Initialize the overlap data
-        !
-        call write_line('       RAS: initializing send pattern...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
-        call self%send%init(data%mesh, data%sdata%lhs)
-        call write_line('       RAS: initializing receive pattern...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
-        call self%recv%init(data%mesh, data%sdata%lhs, data%sdata%rhs)
-
-
-        !
-        ! Release nonblocking send buffers
-        !
-        call write_line('       RAS: waiting on remaining communication buffers ...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
-        call self%send%init_wait()
-        call write_line('       RAS: initialization complete!', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
-
 
     end subroutine init
     !******************************************************************************************
@@ -184,190 +208,207 @@ contains
         type(chidg_vector_t),       intent(in)      :: b
 
 
+        PetscErrorCode              :: perr
         character(:),   allocatable :: user_msg
         integer(ik)                 :: ielem, irow, icol, eparent_l, idom, ndom, ilower, ilowerA, ilowerLD,    &
                                        trans_elem, trans_blk, itranspose, nrowsA, ncolsA, ncolsB,      &
                                        iblk_diag_parent, iblk_diag, iblk, icomm,            &
                                        parent_proc, ierr, iproc, idiagLD, idiagA, dparent_g_lower, eparent_g_lower, itime
 
+        PC              :: sub_pc
+        KSP             :: ksp(1)
 
-        call write_line('   RAS: Computing ILU0 factorization', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        if (self%petsc_initialized) then
+        !******  petsc  implementation  ******!
 
-
-
-        !
-        ! Communicate matrix overlapping components
-        !
-        call self%mpi_requests%clear()
-
-        call self%comm_send(A)
-        call self%comm_recv()
-        call self%comm_wait()
+            call PCASMSetOverlap(self%pc, self%asm_overlap, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCASMSetOverlap.')
 
 
+        
+            call PCSetOperators(self%pc, PETSC_NULL_MAT, PETSC_NULL_MAT, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCSetOperators with NULL.')
+            call PCSetOperators(self%pc, A%wrapped_petsc_matrix%petsc_matrix, A%wrapped_petsc_matrix%petsc_matrix, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCSetOperators.')
+            call PCSetUp(self%pc, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCSetUp.')
 
 
-        !
-        ! Test preconditioner initialization
-        !
-        user_msg = 'RAS-ILU0%update: preconditioner has not yet been initialized.'
-        if ( .not. self%initialized ) call chidg_signal(FATAL,user_msg)
 
-
-        !
-        ! For each domain
-        !
-        ndom = size(A%dom)
-        do idom = 1,ndom
-
-
-            !
-            ! Store diagonal blocks of A
-            !
-            do ielem = 1,size(A%dom(idom)%lblks,1)
-                idiagA  =       A%dom(idom)%lblks(ielem,1)%get_diagonal()
-                idiagLD = self%LD%dom(idom)%lblks(ielem,1)%get_diagonal()
-                self%LD%dom(idom)%lblks(ielem,1)%data_(idiagLD)%mat = A%dom(idom)%lblks(ielem,1)%data_(idiagA)%mat
-            end do
-
-
-            !
-            ! Invert first diagonal block
-            !
-            idiagLD = self%LD%dom(idom)%lblks(1,1)%get_diagonal()
-            self%LD%dom(idom)%lblks(1,1)%data_(idiagLD)%mat = inv(self%LD%dom(idom)%lblks(1,1)%data_(idiagLD)%mat)
-
-
-            !
-            ! Loop through all Proc-Local rows
-            !
-            itime = 1
-            do irow = 2,size(A%dom(idom)%lblks,1)
-
-
-                ! Operate on all the L blocks for the current row
-                do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
-
-                    ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
-
-                    dparent_g_lower = A%dom(idom)%lblks(irow,1)%dparent_g(ilowerA)
-                    eparent_g_lower = A%dom(idom)%lblks(irow,1)%eparent_g(ilowerA)
-
-                    ilowerLD = self%LD%dom(idom)%lblks(irow,1)%loc(dparent_g_lower,eparent_g_lower)
-
-                    if (A%dom(idom)%lblks(irow,1)%parent_proc(ilowerA) == IRANK) then
-
-                        ! Get parent index and transpose block
-                        eparent_l   = A%dom(idom)%lblks(irow,1)%eparent_l(ilowerA)
-
-                        ! Compute and store the contribution to the lower-triangular part of LD
-                        idiagLD = self%LD%dom(idom)%lblks(eparent_l,1)%get_diagonal()
-                        self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat = matmul(A%dom(idom)%lblks(irow,1)%data_(ilowerA)%mat,self%LD%dom(idom)%lblks(eparent_l,1)%data_(idiagLD)%mat)
-
-                        ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. (The component in the transposed position)
-                        itranspose  = A%dom(idom)%lblks(irow,1)%itranspose(ilowerA)
-                        idiagLD = self%LD%dom(idom)%lblks(irow,1)%get_diagonal()
-                        self%LD%dom(idom)%lblks(irow,1)%data_(idiagLD)%mat = self%LD%dom(idom)%lblks(irow,1)%data_(idiagLD)%mat  -  &
-                                    matmul(self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat,  A%dom(idom)%lblks(eparent_l,1)%data_(itranspose)%mat)
-
-
-                    end if
-
-                end do ! icol
-
-
-                ! Pre-Invert current diagonal block and store
-                idiagLD = self%LD%dom(idom)%lblks(irow,1)%get_diagonal()
-                self%LD%dom(idom)%lblks(irow,1)%data_(idiagLD)%mat = inv(self%LD%dom(idom)%lblks(irow,1)%data_(idiagLD)%mat)
-
-
-            end do !irow
-
-        end do ! idom
+            ! Procedure for setting subdomain ILU solver fill levels
+            call PCASMGetSubKSP(self%pc, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ksp, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCGetSubKSP.')
+            call KSPGetPC(ksp(1), sub_pc, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling KSPGetPC.')
+            call PCFactorSetLevels(sub_pc, self%ilu_levels, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCFactorSetLevels.')
 
 
 
 
-        !
-        ! Loop through all Proc-overlap lower blocks
-        !
-        do idom = 1,size(self%recv%dom)
-            do icomm = 1,size(self%recv%dom(idom)%comm)
-                do ielem = 1,size(self%recv%dom(idom)%comm(icomm)%elem)
-                    do iblk = 1,self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%size()
-
-                        iblk_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
-                        ilower    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%at(iblk)
 
 
-                        parent_proc = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%parent_proc()
-                        eparent_l   = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%eparent_l()
-                        trans_elem  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%trans_elem(ilower)
-                        trans_blk   = self%recv%dom(idom)%comm(icomm)%elem(ielem)%trans_blk(ilower)
+        else
+        !******  ChiDG native implementation    ******!
+
+            call write_line('   RAS: Computing ILU0 factorization', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
 
+            ! Communicate matrix overlapping components
+            call self%mpi_requests%clear()
+            call self%comm_send(A)
+            call self%comm_recv()
+            call self%comm_wait()
 
-                        ! Compute and store the contribution to the lower-triangular part of A comm, since A comm shouldn't 
-                        ! get used anywhere else
-                        if ( parent_proc /= IRANK ) then
-                            ! If lower block is coupled with another block in the overlap, get DIAGONAL component 
-                            ! sent from A since overlap data is stored there
-                            iblk_diag_parent = self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%diag%at(1)
 
-                            associate ( lower      => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  &
-                                        upper_diag => self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%blks(iblk_diag_parent)%mat )
-                                lower = matmul(lower,upper_diag)
-                            end associate
+            ! Test preconditioner initialization
+            user_msg = 'RAS-ILU0%update: preconditioner has not yet been initialized.'
+            if ( .not. self%initialized ) call chidg_signal(FATAL,user_msg)
 
-                        else
-                            iblk_diag_parent = self%LD%dom(idom)%lblks(eparent_l,1)%get_diagonal()
-                            ! If lower block is coupled with an interior block, get DIAGONAL component from LD, since we 
-                            ! don't want to overwrite these entries in A as that would blow away data we need for the MV product
-                            associate( lower      => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  &
-                                       upper_diag => self%LD%dom(idom)%lblks(eparent_l,1)%data_(iblk_diag_parent)%mat )
-                                lower = matmul(lower,upper_diag)
-                            end associate
+            ! For each domain
+            ndom = size(A%dom)
+            do idom = 1,ndom
+
+                ! Store diagonal blocks of A
+                do ielem = 1,size(A%dom(idom)%lblks,1)
+                    idiagA  =       A%dom(idom)%lblks(ielem,1)%get_diagonal()
+                    idiagLD = self%LD%dom(idom)%lblks(ielem,1)%get_diagonal()
+                    self%LD%dom(idom)%lblks(ielem,1)%data_(idiagLD)%mat = A%dom(idom)%lblks(ielem,1)%data_(idiagA)%mat
+                end do
+
+                ! Invert first diagonal block
+                idiagLD = self%LD%dom(idom)%lblks(1,1)%get_diagonal()
+                self%LD%dom(idom)%lblks(1,1)%data_(idiagLD)%mat = inv(self%LD%dom(idom)%lblks(1,1)%data_(idiagLD)%mat)
+
+
+                ! Loop through all Proc-Local rows
+                itime = 1
+                do irow = 2,size(A%dom(idom)%lblks,1)
+
+
+                    ! Operate on all the L blocks for the current row
+                    do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
+
+                        ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
+
+                        dparent_g_lower = A%dom(idom)%lblks(irow,1)%dparent_g(ilowerA)
+                        eparent_g_lower = A%dom(idom)%lblks(irow,1)%eparent_g(ilowerA)
+
+                        ilowerLD = self%LD%dom(idom)%lblks(irow,1)%loc(dparent_g_lower,eparent_g_lower,itime)
+
+                        if (A%dom(idom)%lblks(irow,1)%parent_proc(ilowerA) == IRANK) then
+
+                            ! Get parent index and transpose block
+                            eparent_l   = A%dom(idom)%lblks(irow,1)%eparent_l(ilowerA)
+
+                            ! Compute and store the contribution to the lower-triangular part of LD
+                            idiagLD = self%LD%dom(idom)%lblks(eparent_l,1)%get_diagonal()
+                            self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat = matmul(A%dom(idom)%lblks(irow,1)%data_(ilowerA)%mat,self%LD%dom(idom)%lblks(eparent_l,1)%data_(idiagLD)%mat)
+
+                            ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. (The component in the transposed position)
+                            itranspose  = A%dom(idom)%lblks(irow,1)%itranspose(ilowerA)
+                            idiagLD = self%LD%dom(idom)%lblks(irow,1)%get_diagonal()
+                            self%LD%dom(idom)%lblks(irow,1)%data_(idiagLD)%mat = self%LD%dom(idom)%lblks(irow,1)%data_(idiagLD)%mat  -  &
+                                        matmul(self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat,  A%dom(idom)%lblks(eparent_l,1)%data_(itranspose)%mat)
+
+
                         end if
 
-
-
-
-                        ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. 
-                        ! (The component in the transposed position)
-                        if ( parent_proc /= IRANK ) then
-
-                            associate ( diag  => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat,   &
-                                        lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,      &
-                                        trans => self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%blks(trans_blk)%mat )
-                                diag = diag - matmul(lower,trans)
-                            end associate
-
-                        else
-                            associate ( diag  => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat,   &
-                                        lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,      &
-                                        trans => A%dom(idom)%lblks(eparent_l,1)%data_(trans_blk)%mat )
-                                diag = diag - matmul(lower,trans)
-                            end associate
-                        end if
-
-
-
-                    end do !iblk
+                    end do ! icol
 
 
                     ! Pre-Invert current diagonal block and store
-                    iblk_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
-                    self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat = inv(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat)
+                    idiagLD = self%LD%dom(idom)%lblks(irow,1)%get_diagonal()
+                    self%LD%dom(idom)%lblks(irow,1)%data_(idiagLD)%mat = inv(self%LD%dom(idom)%lblks(irow,1)%data_(idiagLD)%mat)
 
 
-                end do !ielem
-            end do !icomm
-        end do !idom
+                end do !irow
+
+            end do ! idom
 
 
 
-        call write_line(' Done Computing RAS-ILU0 factorization', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+            ! Loop through all Proc-overlap lower blocks
+            do idom = 1,size(self%recv%dom)
+                do icomm = 1,size(self%recv%dom(idom)%comm)
+                    do ielem = 1,size(self%recv%dom(idom)%comm(icomm)%elem)
+                        do iblk = 1,self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%size()
 
+                            iblk_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
+                            ilower    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%at(iblk)
+
+
+                            parent_proc = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%parent_proc()
+                            eparent_l   = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%eparent_l()
+                            trans_elem  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%trans_elem(ilower)
+                            trans_blk   = self%recv%dom(idom)%comm(icomm)%elem(ielem)%trans_blk(ilower)
+
+
+
+                            ! Compute and store the contribution to the lower-triangular part of A comm, since A comm shouldn't 
+                            ! get used anywhere else
+                            if ( parent_proc /= IRANK ) then
+                                ! If lower block is coupled with another block in the overlap, get DIAGONAL component 
+                                ! sent from A since overlap data is stored there
+                                iblk_diag_parent = self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%diag%at(1)
+
+                                associate ( lower      => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  &
+                                            upper_diag => self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%blks(iblk_diag_parent)%mat )
+                                    lower = matmul(lower,upper_diag)
+                                end associate
+
+                            else
+                                iblk_diag_parent = self%LD%dom(idom)%lblks(eparent_l,1)%get_diagonal()
+                                ! If lower block is coupled with an interior block, get DIAGONAL component from LD, since we 
+                                ! don't want to overwrite these entries in A as that would blow away data we need for the MV product
+                                associate( lower      => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  &
+                                           upper_diag => self%LD%dom(idom)%lblks(eparent_l,1)%data_(iblk_diag_parent)%mat )
+                                    lower = matmul(lower,upper_diag)
+                                end associate
+                            end if
+
+
+
+
+                            ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. 
+                            ! (The component in the transposed position)
+                            if ( parent_proc /= IRANK ) then
+
+                                associate ( diag  => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat,   &
+                                            lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,      &
+                                            trans => self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%blks(trans_blk)%mat )
+                                    diag = diag - matmul(lower,trans)
+                                end associate
+
+                            else
+                                associate ( diag  => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat,   &
+                                            lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,      &
+                                            trans => A%dom(idom)%lblks(eparent_l,1)%data_(trans_blk)%mat )
+                                    diag = diag - matmul(lower,trans)
+                                end associate
+                            end if
+
+
+
+                        end do !iblk
+
+
+                        ! Pre-Invert current diagonal block and store
+                        iblk_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
+                        self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat = inv(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat)
+
+
+                    end do !ielem
+                end do !icomm
+            end do !idom
+
+            call write_line(' Done Computing RAS-ILU0 factorization', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+
+
+        end if ! native/petsc
+
+        ! Update stamp
+        self%stamp = A%stamp
 
     end subroutine update
     !*****************************************************************************************
@@ -408,10 +449,11 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    function apply(self,A,v) result(z)
-        class(precon_RASILU0_t),   intent(inout)   :: self
-        type(chidg_matrix_t),    intent(in)      :: A
-        type(chidg_vector_t),    intent(in)      :: v
+    function apply(self,A,v,z_old) result(z)
+        class(precon_RASILU0_t),    intent(inout)        :: self
+        type(chidg_matrix_t),       intent(in)           :: A
+        type(chidg_vector_t),       intent(in)           :: v
+        type(chidg_vector_t),       intent(in), optional :: z_old
 
         type(chidg_vector_t) :: z
 
@@ -422,230 +464,154 @@ contains
                                eparent_g_lower, ilowerA, ilowerLD, itime
         logical             :: interior_block
 
+        PetscErrorCode      :: perr
+
 
         call self%timer%start()
 
 
-
-        !
         ! Initialize z for preconditioning
-        !
         z = v
 
 
+        if (self%petsc_initialized) then
+        !******  petsc  implementation  ******!
 
-        !
-        ! Exchange boundary vector data
-        !
-        call z%comm_send()
-        call z%comm_recv()
-        call z%comm_wait()
-
+            call PCApply(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%apply: error calling PCApply.')
+            z%petsc_needs_assembled = .true.
 
 
-
-        !
-        ! For each domain
-        !
-        ndom = size(A%dom)
-        itime = 1
-        do idom = 1,ndom
+        else
+        !******  chidg implementation  ******!
 
 
-            !
-            ! Forward Solve - Local
-            !
-            do irow = 1,size(self%LD%dom(idom)%lblks,1)
-
-
-                !
-                ! Lower-Triangular blocks
-                !
-                do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
-
-                    ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
-
-                    dparent_g_lower = A%dom(idom)%lblks(irow,1)%dparent_g(ilowerA)
-                    eparent_g_lower = A%dom(idom)%lblks(irow,1)%eparent_g(ilowerA)
-
-                    ilowerLD = self%LD%dom(idom)%lblks(irow,1)%loc(dparent_g_lower,eparent_g_lower)
-
-                    if ( A%dom(idom)%lblks(irow,1)%parent_proc(ilowerA) == IRANK) then
-                            ! Get associated parent block index
-                            eparent_l = self%LD%dom(idom)%lblks(irow,1)%eparent_l(ilowerLD)
-                            !z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(self%LD%dom(idom)%lblks(irow,ilower)%mat, z%dom(idom)%vecs(eparent_l)%vec)
-
-                            nrows = size(self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat,1)
-                            ncols = size(self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat,2)
-                            call DGEMV('N', nrows, ncols, -ONE, self%LD%dom(idom)%lblks(irow,1)%data_(ilowerLD)%mat, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
+            ! Exchange boundary vector data
+            call z%comm_send()
+            call z%comm_recv()
+            call z%comm_wait() 
 
 
 
-                    end if
-                end do
+            ! For each domain
+            ndom = size(A%dom)
+            itime = 1
+            do idom = 1,ndom
 
-            end do ! irow
+                ! Forward Solve - Local
+                do irow = 1,size(self%LD%dom(idom)%lblks,itime)
+
+                    ! Lower-Triangular blocks
+                    do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
+
+                        ilowerA         = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
+                        dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
+                        eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
+                        ilowerLD        = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower,itime)
+
+                        if ( A%dom(idom)%lblks(irow,itime)%parent_proc(ilowerA) == IRANK) then
+                            eparent_l = self%LD%dom(idom)%lblks(irow,itime)%eparent_l(ilowerLD)
+                            z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(self%LD%dom(idom)%lblks(irow,itime)%data_(ilowerLD)%mat, z%dom(idom)%vecs(eparent_l)%vec)
+                        end if
+                    end do
+
+                end do ! irow
 
 
-            !
-            ! Forward Solve - Overlap
-            !
-            do icomm = 1,size(self%recv%dom(idom)%comm)
+                ! Forward Solve - Overlap
+                do icomm = 1,size(self%recv%dom(idom)%comm)
 
-                do ielem = 1,size(self%recv%dom(idom)%comm(icomm)%elem)
-                    iblk_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
+                    do ielem = 1,size(self%recv%dom(idom)%comm(icomm)%elem)
+                        iblk_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
 
-                    ! Location in comm vector
-                    recv_comm_diag    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_comm
-                    recv_domain_diag  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_domain
-                    recv_element_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_element
+                        ! Location in comm vector
+                        recv_comm_diag    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_comm
+                        recv_domain_diag  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_domain
+                        recv_element_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_element
+
+                        do iblk = 1,self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%size()
+
+                            ilower      = self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%at(iblk)
+                            parent_proc = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%parent_proc()
+                            eparent_l   = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%eparent_l()
+                        
+                            if ( parent_proc == IRANK ) then
+                                z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec = z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec - matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,z%dom(idom)%vecs(eparent_l)%vec)
+                             else
+                                 recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_comm
+                                 recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_domain
+                                 recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_element
+     
+                                 z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec = z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec - matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
+                             end if                        
+
+                        end do !icol
+                    end do !irow
+
+                end do !icomm
 
 
-                    do iblk = 1,self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%size()
-                        ilower = self%recv%dom(idom)%comm(icomm)%elem(ielem)%lower%at(iblk)
 
-                        parent_proc = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%parent_proc()
-                        eparent_l   = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%eparent_l()
-                    
-                        associate ( zvec_diag => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
-                                    lower     => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat )
 
-                        if ( parent_proc == IRANK ) then
 
-                            !zvec_diag = zvec_diag - matmul(lower,z%dom(idom)%vecs(eparent_l)%vec)
-                            nrows = size(lower,1)
-                            ncols = size(lower,2)
-                            call DGEMV('N', nrows, ncols, -ONE, lower, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, zvec_diag, 1)
+                ! Backward solve - Overlap
+                do icomm = size(self%recv%dom(idom)%comm),1,-1
+                    do ielem = size(self%recv%dom(idom)%comm(icomm)%elem),1,-1
 
+                        iblk_diag         = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
+                        recv_comm_diag    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_comm
+                        recv_domain_diag  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_domain
+                        recv_element_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_element
+
+                        do iblk = 1,self%recv%dom(idom)%comm(icomm)%elem(ielem)%upper%size()
+                            iupper       = self%recv%dom(idom)%comm(icomm)%elem(ielem)%upper%at(iblk)
+                            recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_comm
+                            recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_domain
+                            recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_element
+
+                            z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec = z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec - matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%mat,z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
+
+                        end do !iblk
+
+                        ! Diagonal block
+                        z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec = matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat,z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec)
+
+                    end do !ielem
+                end do !icomm
+
+
+
+                ! Backward Solve - Local
+                itime = 1
+                do irow = size(A%dom(idom)%lblks,1),1,-1
+
+                    ! Upper-Triangular blocks
+                    do icol = 1,A%dom(idom)%local_upper_blocks(irow,itime)%size()
+
+                        iupper         = A%dom(idom)%local_upper_blocks(irow,itime)%at(icol)
+                        interior_block = (A%dom(idom)%lblks(irow,1)%parent_proc(iupper) == IRANK)
+
+                        if (interior_block) then
+                            eparent_l = A%dom(idom)%lblks(irow,1)%eparent_l(iupper)
+                            z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, z%dom(idom)%vecs(eparent_l)%vec)
                         else
-                            recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_comm
-                            recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_domain
-                            recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%recv_element
-
-                            !zvec_diag = zvec_diag - matmul(lower,z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
-                            nrows = size(lower,1)
-                            ncols = size(lower,2)
-                            call DGEMV('N', nrows, ncols, -ONE, lower, nrows, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, zvec_diag, 1)
+                            recv_comm    = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_comm
+                            recv_domain  = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_domain
+                            recv_element = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_element
+                            z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
                         end if
 
-                        end associate
+                    end do
 
-
-                    end do !icol
-                end do !irow
-
-            end do !icomm
-
-
-
-
-
-
-            !
-            ! Backward solve - Overlap
-            !
-            do icomm = size(self%recv%dom(idom)%comm),1,-1
-                do ielem = size(self%recv%dom(idom)%comm(icomm)%elem),1,-1
-
-                    iblk_diag         = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
-                    recv_comm_diag    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_comm
-                    recv_domain_diag  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_domain
-                    recv_element_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%recv_element
-
-
-                    do iblk = 1,self%recv%dom(idom)%comm(icomm)%elem(ielem)%upper%size()
-                        iupper = self%recv%dom(idom)%comm(icomm)%elem(ielem)%upper%at(iblk)
-
-                        recv_comm    = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_comm
-                        recv_domain  = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_domain
-                        recv_element = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%recv_element
-
-                        associate ( zvec_diag  => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
-                                    upper      => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iupper)%mat,                  &
-                                    zvec_upper => z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec )
-
-
-                            !zvec_diag = zvec_diag - matmul(upper, zvec_upper)
-                            nrows = size(upper,1)
-                            ncols = size(upper,2)
-                            call DGEMV('N', nrows, ncols, -ONE, upper, nrows, zvec_upper, 1, ONE, zvec_diag, 1)
-
-                        end associate
-
-                    end do !iblk
-
-
-                    !
                     ! Diagonal block
-                    !
-                    associate ( zvec_diag  => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec )
-                        zvec_diag = matmul(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat, zvec_diag)
-                    end associate
+                    diag_irow = self%LD%dom(idom)%lblks(irow,1)%get_diagonal()
+                    z%dom(idom)%vecs(irow)%vec = matmul(self%LD%dom(idom)%lblks(irow,1)%data_(diag_irow)%mat, z%dom(idom)%vecs(irow)%vec)
 
+                end do ! irow
 
-                end do !ielem
-            end do !icomm
+            end do ! idom
 
-
-
-
-            !
-            ! Backward Solve - Local
-            !
-            itime = 1
-            do irow = size(A%dom(idom)%lblks,1),1,-1
-
-                !
-                ! Upper-Triangular blocks
-                !
-                do icol = 1,A%dom(idom)%local_upper_blocks(irow,itime)%size()
-
-                    iupper = A%dom(idom)%local_upper_blocks(irow,itime)%at(icol)
-
-
-                    interior_block = (A%dom(idom)%lblks(irow,1)%parent_proc(iupper) == IRANK)
-
-                    if (interior_block) then
-
-                        ! Get associated parent block index
-                        eparent_l = A%dom(idom)%lblks(irow,1)%eparent_l(iupper)
-                        !z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,iupper)%mat, z%dom(idom)%vecs(eparent_l)%vec)
-                        nrows = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,1)
-                        ncols = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,2)
-                        call DGEMV('N', nrows, ncols, -ONE, A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
-
-                    else
-
-                        ! Get associated parent block index
-                        recv_comm    = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_comm
-                        recv_domain  = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_domain
-                        recv_element = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_element
-                        !z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,iupper)%mat, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
-
-                        nrows = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,1)
-                        ncols = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,2)
-                        call DGEMV('N', nrows, ncols, -ONE, A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, nrows, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
-
-                    end if
-
-
-                end do
-
-
-                !
-                ! Diagonal block
-                !
-                diag_irow = self%LD%dom(idom)%lblks(irow,1)%get_diagonal()
-                z%dom(idom)%vecs(irow)%vec = matmul(self%LD%dom(idom)%lblks(irow,1)%data_(diag_irow)%mat, z%dom(idom)%vecs(irow)%vec)
-
-            end do ! irow
-
-
-
-
-        end do ! idom
-
-
+        end if ! native/petsc
 
         call self%timer%stop()
 
@@ -719,11 +685,8 @@ contains
                 end do !ielem
 
 
-
             end do !idom_send
         end do !icomm
-
-
 
 
     end subroutine comm_send
@@ -755,29 +718,20 @@ contains
         call write_line('       RAS: receiving...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
         do idom_recv = 1,size(self%recv%dom)
-
             do icomm = 1,size(self%recv%dom(idom_recv)%comm)
                 proc = self%recv%dom(idom_recv)%comm(icomm)%proc
-
                 do ielem_recv = 1,size(self%recv%dom(idom_recv)%comm(icomm)%elem)
-                
                     do iblk_recv = 1,size(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks)
+
                         nrows     = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%nrows_
                         ncols     = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%ncols_
                         idomain_g = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%dparent_g_
-
                         call MPI_Recv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                        !call MPI_IRecv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, request, ierr)
-                        !call self%mpi_requests%push_back(request)
 
                     end do !iblk_recv
-
                 end do !ielem_recv
-
             end do !icomm
-
         end do !idom_recv
-
 
 
     end subroutine comm_recv
@@ -795,9 +749,6 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/10/2016
     !!
-    !!
-    !!
-    !!
     !------------------------------------------------------------------------------------------
     subroutine comm_wait(self)
         class(precon_RASILU0_t),    intent(inout)   :: self
@@ -814,7 +765,6 @@ contains
 
         end if
 
-
     end subroutine comm_wait
     !******************************************************************************************
 
@@ -822,19 +772,34 @@ contains
 
 
 
+    !>  Tear down. Deallocate, etc. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/24/2016
+    !!
+    !-----------------------------------------------------------------------------
+    subroutine tear_down(self)
+        class(precon_RASILU0_t), intent(inout)   :: self
 
+        PetscErrorCode :: perr
+        
+        if (self%petsc_initialized) then
+            call PCDestroy(self%pc, perr)
+            if (perr /= 0) call chidg_signal(FATAL,'precon_RASILU0%tear_down: error calling PCDestroy.')
+            self%initialized = .false.
+            self%petsc_initialized = .false.
 
+        else
+            call self%LD%release()
+            self%initialized = .false.
 
+        end if
 
+        ! Remove correspondense to matrix stamp
+        self%stamp = 0
 
-
-
-
-
-
-
-
-
+    end subroutine tear_down
+    !***************************************************************************************
 
 
 

@@ -18,7 +18,7 @@
 !   @author Mayank Sharma
 !   @date   2/26/2017
 !
-!-----------------------------------------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------------
 @Test
 subroutine test_chidg_matrix_operator_HB_mv()
 #include<messenger.h>
@@ -36,6 +36,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
     use mod_time,           only: time_manager_global
+    use mod_string
 
     use operator_chidg_mv,  only: chidg_mv
     implicit none
@@ -57,103 +58,89 @@ subroutine test_chidg_matrix_operator_HB_mv()
     tol             = 1.e-13_rk
     nterms_s        = 8
     IO_DESTINATION  = 'file'
-    time_integrator = 'harmonic_balance'
+    time_integrator = 'Harmonic Balance'
     frequencies(1)  = 2.0_rk*PI
 
-    
     ! Initialize ChiDG
     ! Also initializes time_manager
-    !
     call chidg%start_up('core')
     call chidg%set('Solution Order', integer_input=2)
     call chidg%set('Time Integrator', algorithm = time_integrator)
 
-
-    !
     ! Create grid file
-    !
     filename = "D1_2x2x2_singleblock.h5"
-    call create_mesh_file("D1 NxNxN", filename, nelem_xi = 2, nelem_eta = 2, nelem_zeta = 2)
-
-
-    !
-    ! Get grid points
-    !
+    call create_mesh_file("D1 NxNxN",filename,nelem_xi=2,nelem_eta=2,nelem_zeta=2,equation_sets=[string_t('Empty')])
     call chidg%read_mesh(filename)
 
 
-    !
     ! Initialize data containers
-    !
-    call A%init(chidg%data%mesh, mtype = 'full')
+    !call A%init(chidg%data%mesh, mtype = 'full')
     call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
     call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
 
 
-    !
+    ! Contribute harmonic balance terms
+    call chidg%time_integrator%system%assemble(chidg%data,.true.)
+
+
     ! Initialize chidg_matrix and corresponding chidg_vector data
     ! TODO: All matrices are residual linearizations wrt the element
     !       itself, for convenience. Can be changed.
-    !
     ! There are 3 time levels here since there is 1 HB frequency
-    !
     ielem = 1
     itime = 1
-    imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
-    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = ONE
+    imat  = chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%get_diagonal()
+    chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = ONE
     vals  = 0.1_rk
     call x%dom(1)%vecs(ielem)%setvar(1,2,vals)
 
 
     ielem = 3
     itime = 2
-    imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
-    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = TWO
+    imat  = chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%get_diagonal()
+    chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = TWO
     vals  = 0.2_rk
     call x%dom(1)%vecs(ielem)%setvar(1,3,vals)
 
 
     ielem = 7
     itime = 2
-    imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
-    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = THREE
+    imat  = chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%get_diagonal()
+    chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = THREE
     vals  = 0.4_rk
     call x%dom(1)%vecs(ielem)%setvar(1,2,vals)
 
 
     ielem = 6
     itime = 3
-    imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
-    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = FOUR
+    imat  = chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%get_diagonal()
+    chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = FOUR
 
     vals  = 0.5_rk
     call x%dom(1)%vecs(8)%setvar(1,3,vals)
 
 
-    !
     ! Perform matrx-vector multiplication. THIS IS BEING TESTED
-    !
-    b = chidg_mv(A,x)
+    b = chidg_mv(chidg%data%sdata%lhs,x)
 
    
     associate ( D => time_manager_global%D )
 
         bref_1 = (THREE*0.4_rk)*nterms_s    ! Residual linearization at ielem = 7, itime = 2 \times (densevector)
-        vals = 0.1_rk; bref_HB_1 = D(1,2)*matmul(A%dom(1)%lblks(1,2)%mass,vals)
-        vals = 0.1_rk; bref_HB_2 = D(3,2)*matmul(A%dom(1)%lblks(1,2)%mass,vals)
-        vals = 0.4_rk; bref_HB_3 = D(1,2)*matmul(A%dom(1)%lblks(7,2)%mass,vals)
-        vals = 0.4_rk; bref_HB_4 = D(3,2)*matmul(A%dom(1)%lblks(7,2)%mass,vals)
-        vals = 0.2_rk; bref_HB_5 = D(1,3)*matmul(A%dom(1)%lblks(3,3)%mass,vals)
-        vals = 0.2_rk; bref_HB_6 = D(2,3)*matmul(A%dom(1)%lblks(3,3)%mass,vals)
-        vals = 0.5_rk; bref_HB_7 = D(1,3)*matmul(A%dom(1)%lblks(8,3)%mass,vals)
-        vals = 0.5_rk; bref_HB_8 = D(2,3)*matmul(A%dom(1)%lblks(8,3)%mass,vals)
+        vals = 0.1_rk; bref_HB_1 = D(1,2)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(1,2)%mass,vals)
+        vals = 0.1_rk; bref_HB_2 = D(3,2)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(1,2)%mass,vals)
+        vals = 0.4_rk; bref_HB_3 = D(1,2)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(7,2)%mass,vals)
+        vals = 0.4_rk; bref_HB_4 = D(3,2)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(7,2)%mass,vals)
+        vals = 0.2_rk; bref_HB_5 = D(1,3)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(3,3)%mass,vals)
+        vals = 0.2_rk; bref_HB_6 = D(2,3)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(3,3)%mass,vals)
+        vals = 0.5_rk; bref_HB_7 = D(1,3)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(8,3)%mass,vals)
+        vals = 0.5_rk; bref_HB_8 = D(2,3)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(8,3)%mass,vals)
 
     end associate
 
-    !
+
     ! Test MV operation
-    !
-    @assertEqual(bref_1,b%dom(1)%vecs(7)%getvar(1,2),tol)
+    @assertEqual(bref_1,   b%dom(1)%vecs(7)%getvar(1,2),tol)
     @assertEqual(bref_HB_1,b%dom(1)%vecs(1)%getvar(1,1),tol)
     @assertEqual(bref_HB_2,b%dom(1)%vecs(1)%getvar(1,3),tol)
     @assertEqual(bref_HB_3,b%dom(1)%vecs(7)%getvar(1,1),tol)
@@ -163,25 +150,18 @@ subroutine test_chidg_matrix_operator_HB_mv()
     @assertEqual(bref_HB_7,b%dom(1)%vecs(8)%getvar(1,1),tol)
     @assertEqual(bref_HB_8,b%dom(1)%vecs(8)%getvar(1,2),tol)
 
-    !
     ! Close ChiDG interface
-    !
     call chidg%shut_down('core')
 
-    !
     ! Reset mod_io variables to default values
-    !
     time_integrator = 'steady'
     frequencies     = ZERO
 
-    !
     ! Clean up
-    !
     call delete_file(filename)
 
-
 end subroutine test_chidg_matrix_operator_HB_mv
-!*****************************************************************************************************************
+!*****************************************************************************************
 
 
 
@@ -214,6 +194,7 @@ subroutine test_chidg_matrix_operator_chimera_HB_mv()
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
     use mod_time,               only: time_manager_global
+    use mod_string
 
     use operator_chidg_mv,      only: chidg_mv
     implicit none
@@ -239,7 +220,7 @@ subroutine test_chidg_matrix_operator_chimera_HB_mv()
     tol             = 1.e-13_rk
     nterms_s        = 8
     IO_DESTINATION  = 'file'
-    time_integrator = 'Harmonic_Balance'
+    time_integrator = 'Harmonic Balance'
     frequencies(1)  = TWO*PI
 
 
@@ -256,22 +237,19 @@ subroutine test_chidg_matrix_operator_chimera_HB_mv()
     ! Create grid_file
     !
     filename = 'D2_E8_M1_Abutting_Matching.h5'
-    call create_mesh_file("D2 E8 M1 : Abutting : Matching", filename)
+    call create_mesh_file("D2 E8 M1 : Abutting : Matching", filename, equation_sets=[string_t('Empty'),string_t('Empty')])
 
-
-    !
     ! Get grid points
-    !
     call chidg%read_mesh(filename)
 
 
-    !
     ! Initialize data containers
-    !
-    call A%init(chidg%data%mesh, mtype = 'full')
     call x%init(chidg%data%mesh, chidg%data%mesh%domain(1)%ntime)
     call b%init(chidg%data%mesh, chidg%data%mesh%domain(1)%ntime)
 
+
+    ! Contribute harmonic balance terms
+    call chidg%time_integrator%system%assemble(chidg%data,.true.)
 
     !
     ! Initialize chidg_matrix and corresponding chidg_vector data
@@ -281,101 +259,96 @@ subroutine test_chidg_matrix_operator_chimera_HB_mv()
     ! Initialize domain_1
     ielem = 1
     itime = 1
-    imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
-    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = ONE
+    imat  = chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%get_diagonal()
+    chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = ONE
     vals  = 0.1_rk
     call x%dom(1)%vecs(ielem)%setvar(1,2,vals)
 
 
     ielem = 3
     itime = 2
-    imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
-    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = TWO
+    imat  = chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%get_diagonal()
+    chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = TWO
     vals  = 0.2_rk
     call x%dom(1)%vecs(ielem)%setvar(1,3,vals)
 
 
     ielem = 7
     itime = 2
-    imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
-    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = THREE
+    imat  = chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%get_diagonal()
+    chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = THREE
     vals  = 0.4_rk
     call x%dom(1)%vecs(ielem)%setvar(1,2,vals)
 
 
     ielem = 6
     itime = 3
-    imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
-    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = FOUR
+    imat  = chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%get_diagonal()
+    chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = FOUR
     vals  = 0.5_rk
     call x%dom(1)%vecs(8)%setvar(1,3, vals)
 
     ! Initialize domain_2
     ielem = 1
     itime = 1
-    imat  = A%dom(2)%lblks(ielem,itime)%get_diagonal()
-    A%dom(2)%lblks(ielem,itime)%data_(imat)%mat = FIVE
+    imat  = chidg%data%sdata%lhs%dom(2)%lblks(ielem,itime)%get_diagonal()
+    chidg%data%sdata%lhs%dom(2)%lblks(ielem,itime)%data_(imat)%mat = FIVE
     vals  = 0.6_rk
     call x%dom(2)%vecs(ielem)%setvar(1,2,vals)
 
 
     ielem = 3
     itime = 2
-    imat  = A%dom(2)%lblks(ielem,itime)%get_diagonal()
-    A%dom(2)%lblks(ielem,itime)%data_(imat)%mat = SIX
+    imat  = chidg%data%sdata%lhs%dom(2)%lblks(ielem,itime)%get_diagonal()
+    chidg%data%sdata%lhs%dom(2)%lblks(ielem,itime)%data_(imat)%mat = SIX
     vals  = 0.8_rk
     call x%dom(2)%vecs(ielem)%setvar(1,3,vals)
 
 
     ielem = 7
     itime = 2
-    imat  = A%dom(2)%lblks(ielem,itime)%get_diagonal()
-    A%dom(2)%lblks(ielem,itime)%data_(imat)%mat = SEVEN
+    imat  = chidg%data%sdata%lhs%dom(2)%lblks(ielem,itime)%get_diagonal()
+    chidg%data%sdata%lhs%dom(2)%lblks(ielem,itime)%data_(imat)%mat = SEVEN
     vals  = 1.0_rk
     call x%dom(2)%vecs(ielem)%setvar(1,2,vals)
 
 
     ielem = 6
     itime = 3
-    imat = A%dom(2)%lblks(ielem,itime)%get_diagonal()
-    A%dom(2)%lblks(ielem,itime)%data_(imat)%mat = EIGHT
+    imat = chidg%data%sdata%lhs%dom(2)%lblks(ielem,itime)%get_diagonal()
+    chidg%data%sdata%lhs%dom(2)%lblks(ielem,itime)%data_(imat)%mat = EIGHT
 
     vals = 1.1_rk
     call x%dom(2)%vecs(8)%setvar(1,3,vals)
 
 
-    !
     ! Perform matrix-vector multiplication. THIS IS BEING TESTED
-    !
-    b = chidg_mv(A,x)
+    b = chidg_mv(chidg%data%sdata%lhs,x)
 
-
-    ! 
     ! Compute values to compare with the mv product results
-    !
     associate ( D => time_manager_global%D )
 
         ! Domain_1
         bref_1  = (THREE*0.4_rk)*nterms_s
-        vals    = 0.1_rk;   bref_HB_1  = D(1,2)*matmul(A%dom(1)%lblks(1,2)%mass, vals)
-        vals    = 0.1_rk;   bref_HB_2  = D(3,2)*matmul(A%dom(1)%lblks(1,2)%mass, vals)
-        vals    = 0.4_rk;   bref_HB_3  = D(1,2)*matmul(A%dom(1)%lblks(7,2)%mass, vals)
-        vals    = 0.4_rk;   bref_HB_4  = D(3,2)*matmul(A%dom(1)%lblks(7,2)%mass, vals)
-        vals    = 0.2_rk;   bref_HB_5  = D(1,3)*matmul(A%dom(1)%lblks(3,3)%mass, vals)
-        vals    = 0.2_rk;   bref_HB_6  = D(2,3)*matmul(A%dom(1)%lblks(3,3)%mass, vals)
-        vals    = 0.5_rk;   bref_HB_7  = D(1,3)*matmul(A%dom(1)%lblks(8,3)%mass, vals)
-        vals    = 0.5_rk;   bref_HB_8  = D(2,3)*matmul(A%dom(1)%lblks(8,3)%mass, vals)
+        vals    = 0.1_rk;   bref_HB_1  = D(1,2)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(1,2)%mass, vals)
+        vals    = 0.1_rk;   bref_HB_2  = D(3,2)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(1,2)%mass, vals)
+        vals    = 0.4_rk;   bref_HB_3  = D(1,2)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(7,2)%mass, vals)
+        vals    = 0.4_rk;   bref_HB_4  = D(3,2)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(7,2)%mass, vals)
+        vals    = 0.2_rk;   bref_HB_5  = D(1,3)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(3,3)%mass, vals)
+        vals    = 0.2_rk;   bref_HB_6  = D(2,3)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(3,3)%mass, vals)
+        vals    = 0.5_rk;   bref_HB_7  = D(1,3)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(8,3)%mass, vals)
+        vals    = 0.5_rk;   bref_HB_8  = D(2,3)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(8,3)%mass, vals)
 
         ! Domain_2
         bref_2  = (SEVEN*1.0_rk)*nterms_s
-        vals    = 0.6_rk;   bref_HB_9  = D(1,2)*matmul(A%dom(2)%lblks(1,2)%mass, vals)
-        vals    = 0.6_rk;   bref_HB_10 = D(3,2)*matmul(A%dom(2)%lblks(1,2)%mass, vals)
-        vals    = 1.0_rk;   bref_HB_11 = D(1,2)*matmul(A%dom(2)%lblks(7,2)%mass, vals)
-        vals    = 1.0_rk;   bref_HB_12 = D(3,2)*matmul(A%dom(2)%lblks(7,2)%mass, vals)
-        vals    = 0.8_rk;   bref_HB_13 = D(1,3)*matmul(A%dom(2)%lblks(3,3)%mass, vals)
-        vals    = 0.8_rk;   bref_HB_14 = D(2,3)*matmul(A%dom(2)%lblks(3,3)%mass, vals)
-        vals    = 1.1_rk;   bref_HB_15 = D(1,3)*matmul(A%dom(2)%lblks(8,3)%mass, vals)
-        vals    = 1.1_rk;   bref_HB_16 = D(2,3)*matmul(A%dom(2)%lblks(8,3)%mass, vals)
+        vals    = 0.6_rk;   bref_HB_9  = D(1,2)*matmul(chidg%data%sdata%lhs%dom(2)%lblks(1,2)%mass, vals)
+        vals    = 0.6_rk;   bref_HB_10 = D(3,2)*matmul(chidg%data%sdata%lhs%dom(2)%lblks(1,2)%mass, vals)
+        vals    = 1.0_rk;   bref_HB_11 = D(1,2)*matmul(chidg%data%sdata%lhs%dom(2)%lblks(7,2)%mass, vals)
+        vals    = 1.0_rk;   bref_HB_12 = D(3,2)*matmul(chidg%data%sdata%lhs%dom(2)%lblks(7,2)%mass, vals)
+        vals    = 0.8_rk;   bref_HB_13 = D(1,3)*matmul(chidg%data%sdata%lhs%dom(2)%lblks(3,3)%mass, vals)
+        vals    = 0.8_rk;   bref_HB_14 = D(2,3)*matmul(chidg%data%sdata%lhs%dom(2)%lblks(3,3)%mass, vals)
+        vals    = 1.1_rk;   bref_HB_15 = D(1,3)*matmul(chidg%data%sdata%lhs%dom(2)%lblks(8,3)%mass, vals)
+        vals    = 1.1_rk;   bref_HB_16 = D(2,3)*matmul(chidg%data%sdata%lhs%dom(2)%lblks(8,3)%mass, vals)
 
     end associate
 
@@ -425,4 +398,180 @@ subroutine test_chidg_matrix_operator_chimera_HB_mv()
 
 
 end subroutine test_chidg_matrix_operator_chimera_HB_mv
-!*****************************************************************************************************************
+!*****************************************************************************************
+
+
+
+
+
+
+
+
+!!   Compute a matrix-vector multiplication between chidg_matrix and chidg_vector
+!!   instances that have been initialized with a single block geometry
+!!
+!!   Block is 2x2x2
+!!
+!!           * ------- * ------- *    
+!!         /         /         / |
+!!        * ------- * ------- *  |    
+!!      /         /         / |  *         
+!!     * ------- * ------- *  | /|
+!!     |         |         |  *  |
+!!     |         |         | /|  *
+!!     * ------- * ------- *  | /
+!!     |         |         |  *
+!!     |         |         | /
+!!     * ------- * ------- *      
+!! 
+!!
+!!---------------------------------------------------------------------------------------
+!@Test
+!subroutine test_chidg_matrix_operator_HB_globalbc_mv()
+!#include<messenger.h>
+!    use pfunit_mod
+!    use mod_kinds,          only: rk,ik
+!    use mod_constants,      only: ZERO,ONE,TWO,THREE,PI,FOUR,FIVE,SIX,SEVEN, &
+!                                  EIGHT,NINE,TEN,XI_MIN,XI_MAX,ETA_MIN, &
+!                                  ZETA_MIN,ZETA_MAX,IO_DESTINATION
+!    use mod_io,             only: time_integrator,frequencies
+!    use type_chidg,         only: chidg_t
+!    use type_chidg_matrix,  only: chidg_matrix_t
+!    use type_chidg_vector,  only: chidg_vector_t
+!    use type_meshdata,      only: meshdata_t
+!    use mod_bc,             only: create_bc
+!    use mod_test_utilities, only: create_mesh_file
+!    use mod_file_utilities, only: delete_file
+!    use mod_time,           only: time_manager_global
+!    use mod_string
+!
+!    use operator_chidg_mv,  only: chidg_mv
+!    implicit none
+!
+!
+!    type(chidg_t)                       :: chidg
+!    type(meshdata_t),   allocatable     :: meshdata(:)
+!    integer(ik)                         :: idom, nterms_s, idiag, idom_d, ielem_d, itime, ielem, imat
+!    real(rk),           dimension(8)    :: bref_1, bref_HB_1, bref_HB_2, bref_HB_3, bref_HB_4, &
+!                                           bref_HB_5, bref_HB_6, bref_HB_7, bref_HB_8
+!    real(rk),           dimension(1)    :: vals
+!    real(rk)                            :: tol
+!    character(:),       allocatable     :: filename
+!
+!    type(chidg_matrix_t)                :: A
+!    type(chidg_vector_t)                :: x, b
+!
+!
+!    tol             = 1.e-13_rk
+!    nterms_s        = 8
+!    IO_DESTINATION  = 'file'
+!    time_integrator = 'Harmonic Balance'
+!    frequencies(1)  = 2.0_rk*PI
+!
+!    ! Initialize ChiDG
+!    ! Also initializes time_manager
+!    call chidg%start_up('core')
+!    call chidg%set('Solution Order', integer_input=1)
+!    call chidg%set('Time Integrator', algorithm = time_integrator)
+!
+!    ! Create grid file
+!    filename = "D1_2x2x2_singleblock.h5"
+!    call create_mesh_file("D1 NxNxN",filename,nelem_xi=2,nelem_eta=2,nelem_zeta=2,equation_sets=[string_t('Empty')])
+!    call chidg%read_mesh(filename)
+!
+!
+!    ! Initialize data containers
+!    !call A%init(chidg%data%mesh, mtype = 'full')
+!    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+!    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+!
+!
+!    ! Contribute harmonic balance terms
+!    call chidg%time_integrator%system%assemble(chidg%data,.true.)
+!
+!
+!    ! Initialize chidg_matrix and corresponding chidg_vector data
+!    ! TODO: All matrices are residual linearizations wrt the element
+!    !       itself, for convenience. Can be changed.
+!    ! There are 3 time levels here since there is 1 HB frequency
+!    ielem = 1
+!    itime = 1
+!    imat  = chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%get_diagonal()
+!    chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = ONE
+!    vals  = 0.1_rk
+!    call x%dom(1)%vecs(ielem)%setvar(1,2,vals)
+!
+!    ! Initialize element 2 solution at timelevels=1,2,3
+!    ielem = 2
+!    chidg%data%sdata%q%dom(1)%vecs(ielem)%setvar(1,1,[1._rk])
+!    chidg%data%sdata%q%dom(1)%vecs(ielem)%setvar(1,2,[5._rk])
+!    chidg%data%sdata%q%dom(1)%vecs(ielem)%setvar(1,3,[9._rk])
+!
+!
+!    ielem = 3
+!    itime = 2
+!    imat  = chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%get_diagonal()
+!    chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = TWO
+!    vals  = 0.2_rk
+!    call x%dom(1)%vecs(ielem)%setvar(1,3,vals)
+!
+!
+!    ielem = 7
+!    itime = 2
+!    imat  = chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%get_diagonal()
+!    chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = THREE
+!    vals  = 0.4_rk
+!    call x%dom(1)%vecs(ielem)%setvar(1,2,vals)
+!
+!
+!    ielem = 6
+!    itime = 3
+!    imat  = chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%get_diagonal()
+!    chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = FOUR
+!
+!    vals  = 0.5_rk
+!    call x%dom(1)%vecs(8)%setvar(1,3,vals)
+!
+!
+!    ! Perform matrx-vector multiplication. THIS IS BEING TESTED
+!    b = chidg_mv(chidg%data%sdata%lhs,x)
+!
+!   
+!    associate ( D => time_manager_global%D )
+!
+!        bref_1 = (THREE*0.4_rk)*nterms_s    ! Residual linearization at ielem = 7, itime = 2 \times (densevector)
+!        vals = 0.1_rk; bref_HB_1 = D(1,2)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(1,2)%mass,vals)
+!        vals = 0.1_rk; bref_HB_2 = D(3,2)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(1,2)%mass,vals)
+!        vals = 0.4_rk; bref_HB_3 = D(1,2)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(7,2)%mass,vals)
+!        vals = 0.4_rk; bref_HB_4 = D(3,2)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(7,2)%mass,vals)
+!        vals = 0.2_rk; bref_HB_5 = D(1,3)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(3,3)%mass,vals)
+!        vals = 0.2_rk; bref_HB_6 = D(2,3)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(3,3)%mass,vals)
+!        vals = 0.5_rk; bref_HB_7 = D(1,3)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(8,3)%mass,vals)
+!        vals = 0.5_rk; bref_HB_8 = D(2,3)*matmul(chidg%data%sdata%lhs%dom(1)%lblks(8,3)%mass,vals)
+!
+!    end associate
+!
+!
+!    ! Test MV operation
+!    @assertEqual(bref_1,   b%dom(1)%vecs(7)%getvar(1,2),tol)
+!    @assertEqual(bref_HB_1,b%dom(1)%vecs(1)%getvar(1,1),tol)
+!    @assertEqual(bref_HB_2,b%dom(1)%vecs(1)%getvar(1,3),tol)
+!    @assertEqual(bref_HB_3,b%dom(1)%vecs(7)%getvar(1,1),tol)
+!    @assertEqual(bref_HB_4,b%dom(1)%vecs(7)%getvar(1,3),tol)
+!    @assertEqual(bref_HB_5,b%dom(1)%vecs(3)%getvar(1,1),tol)
+!    @assertEqual(bref_HB_6,b%dom(1)%vecs(3)%getvar(1,2),tol)
+!    @assertEqual(bref_HB_7,b%dom(1)%vecs(8)%getvar(1,1),tol)
+!    @assertEqual(bref_HB_8,b%dom(1)%vecs(8)%getvar(1,2),tol)
+!
+!    ! Close ChiDG interface
+!    call chidg%shut_down('core')
+!
+!    ! Reset mod_io variables to default values
+!    time_integrator = 'steady'
+!    frequencies     = ZERO
+!
+!    ! Clean up
+!    call delete_file(filename)
+!
+!end subroutine test_chidg_matrix_operator_HB_globalbc_mv
+!!*****************************************************************************************

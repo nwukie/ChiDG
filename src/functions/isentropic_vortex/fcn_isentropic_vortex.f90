@@ -14,30 +14,18 @@ module fcn_isentropic_vortex
 
 
 
-    !>  @TODO NEEDS FIXED
+    !>  This function defines an analytical solution to the 2D Euler equations.
+    !!  It may be used to provide initial conditions for an unsteady simulation,
+    !!  as well as to compute numerical errors.
     !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
+    !!  This solution is implemented as in Fidkowski 2016
+    !!
+    !!  @author Eric Wolf
+    !!  @date   2/15/2017
     !!
     !!
     !-------------------------------------------------------------------------------
     type, extends(function_t), public :: isentropic_vortex_f
-        private
-
-
-        real(rk)    :: rho = ONE
-        real(rk)    :: p   = ONE
-
-
-        real(rk)    :: gam  = 1.4_rk
-        real(rk)    :: beta = FIVE
-        real(rk)    :: xo
-        real(rk)    :: yo
-        real(rk)    :: zo
-
-        real(rk)    :: uinf = ONE
-        real(rk)    :: vinf = ONE
-        real(rk)    :: winf = ZERO
 
         integer(ik) :: ivar
 
@@ -68,20 +56,9 @@ contains
         !
         ! Set function name
         !
-        !self%name = "isentropic vortex  ::  weeeee!"
-        call self%set_name("isentropic vortex  ::  weeeee!")
+        call self%set_name("isentropic_vortex")
 
-
-        !
-        ! Set function options to default settings
-        !
-        call self%dict%set('uinf',1._rk)
-        call self%dict%set('vinf',0._rk)
-        call self%dict%set('winf',0._rk)
-        call self%dict%set('beta',0._rk)
-        call self%dict%set('xo',1._rk)
-        call self%dict%set('yo',1._rk)
-        call self%dict%set('zo',1._rk)
+        call self%add_option('ivar', 1._rk)
 
 
     end subroutine init
@@ -100,55 +77,74 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    elemental function compute(self,time,coord) result(val)
-        class(isentropic_vortex_f),     intent(in)  :: self
+    impure elemental function compute(self,time,coord) result(val)
+        class(isentropic_vortex_f),     intent(inout)  :: self
         real(rk),                       intent(in)  :: time
         type(point_t),                  intent(in)  :: coord
 
         real(rk)                                    :: val
+        integer(ik)                                 :: ivar
 
-        real(rk)    :: x,   y,   z, &
-                       du, dv, u, v, w, &
-                       gam, beta, r, T, rho, p
+        real(rk)    :: x, y, z, r, &
+                       u, v, w, &
+                       b, rho, p, drho, dp, gam, theta, uinf, vinf, dumax, du, dv
 
-        x = coord%c1_
-        y = coord%c2_
-        z = coord%c3_
-
-        gam = self%gam
-        beta = self%beta
-
-        r = sqrt((x - self%xo)**TWO + (y - self%yo)**TWO)
-        T = ONE - ((gam - ONE)*(beta**TWO)/(EIGHT*gam*PI**TWO))*exp(ONE - r**TWO)
-        rho = T**(ONE/(gam-ONE))
-        p   = rho*T
-
-        du = (beta/(TWO*PI))*exp((ONE-r**TWO)/TWO)*(-(y-self%yo))
-        dv = (beta/(TWO*PI))*exp((ONE-r**TWO)/TWO)*((x-self%xo))
-        u  = self%uinf + du
-        v  = self%vinf + dv
-        w  = ZERO
+        x     = coord%c1_
+        y     = coord%c2_
+        z     = coord%c3_
+        r     = sqrt(x*x + y*y)
+        theta = atan2(y,x)
 
 
 
+        !
+        ! Base parameters
+        !
+        gam = 1.4_rk
+        uinf = 0.5_rk
+        vinf = 0._rk
+        dumax = 0.5_rk*uinf
+        b = 0.2_rk
+
+        
+        !
+        ! Perturbations
+        !
+        drho = (ONE - HALF*(gam - ONE)*dumax*dumax*exp(ONE - (r*r/(b*b))))**(ONE/(gam-ONE))
+        dp   = (ONE/gam)*drho**(gam)
+        du   = -(dumax/b)*r*exp(HALF*(ONE - (r*r/(b*b)))) * sin(theta)
+        dv   =  (dumax/b)*r*exp(HALF*(ONE - (r*r/(b*b)))) * cos(theta)
 
 
-        select case (self%ivar)
+        !
+        ! Total quantities
+        !
+        rho = drho
+        p   = dp
+        u   = uinf + du
+        v   = vinf + dv
+        w   = ZERO
+
+
+
+
+        ivar = nint(self%get_option_value('ivar'))
+        select case (ivar)
             ! RHO
             case (1)
                 val = rho
 
             ! RHO-U
             case (2)
-                val = rho*u
+                val = rho * u
 
             ! RHO-V
             case (3)
-                val = rho*v
+                val = rho * v
 
             ! RHO-W
             case (4)
-                val = rho*w
+                val = rho * w
 
             ! RHO-E
             case (5)

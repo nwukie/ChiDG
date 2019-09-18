@@ -1,7 +1,7 @@
 module fluid_viscous_bc_operator
 #include <messenger.h>
     use mod_kinds,          only: ik, rk
-    use mod_constants,      only: HALF, ONE, TWO
+    use mod_constants,      only: ZERO, HALF, ONE, TWO
     use type_operator,      only: operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -98,9 +98,11 @@ contains
             k,       k_l,     k_t,                  &
             tau_11, tau_22, tau_33,                 &
             tau_12, tau_13, tau_23,                 &
-            flux_1, flux_2, flux_3, integrand
+            flux_1, flux_2, flux_3
 
         real(rk),   allocatable, dimension(:)   ::  r
+
+        integer(ik) :: idomain_l, ielement_l, iface, group_ID
 
 
         !
@@ -190,7 +192,9 @@ contains
 
         ! Convert to tangential to angular momentum flux
         if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * r
+            flux_1 = flux_1 * r
+            flux_2 = flux_2 * r
+            flux_3 = flux_3 * r
         end if
 
         call worker%integrate_boundary_condition('Momentum-2','Diffusion',flux_1,flux_2,flux_3)

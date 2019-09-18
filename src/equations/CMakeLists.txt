@@ -3,12 +3,9 @@ add_subdirectory(fluid)
 add_subdirectory(dual_linear_advection)
 add_subdirectory(wall_distance)
 add_subdirectory(mesh_motion)
-add_subdirectory(artificial_viscosity)
 add_subdirectory(HB_test_cases)
-
-
-#add_subdirectory(PrimitiveLinearizedEuler)
-#add_subdirectory(Acoustics)
+add_subdirectory(linearized_euler_eigen)
+add_subdirectory(hyperbolized_poisson)
 
 
 
@@ -29,5 +26,6 @@ add_lib_sources(type_field.f90
                 type_model.f90
                 type_model_wrapper.f90
                 mock_model.f90
+                eqn_empty.f90
                 )
 

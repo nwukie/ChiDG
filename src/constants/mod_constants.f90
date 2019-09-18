@@ -64,6 +64,7 @@ module mod_constants
     integer(ik), parameter :: TWO_DIM   = 2
     integer(ik), parameter :: THREE_DIM = 3
     integer(ik), parameter :: NFACES    = 6
+    integer(ik), parameter :: NEDGES    = 12
 
 
 
@@ -188,6 +189,7 @@ module mod_constants
     integer(ik),    parameter   :: NO_PARTITION = -1
     integer(ik),    parameter   :: NO_PROC      = -2
     integer(ik),    parameter   :: NO_ID        = -1
+    integer(ik),    parameter   :: NO_DATA      =  0
 
 
 
@@ -196,6 +198,7 @@ module mod_constants
     !
     integer(ik),   parameter    :: MAXBLOCKS        = 200
     character(6)                :: IO_DESTINATION   = 'both'
+    !integer(ik)                 :: OUTPUT_RES       = 20
     integer(ik)                 :: OUTPUT_RES       = 5
 
 
@@ -212,11 +215,29 @@ module mod_constants
     !
     real(rk),   parameter :: RKTOL = 20._rk * epsilon(1._rk)    ! Real-Kind Tolerance. Floating-point tolerance, one order of magnitude larger than machine precision.
     
-    integer(ik),    parameter   :: NO_EQUATION_SET = 0
+    !integer(ik),    parameter   :: NO_EQUATION_SET = 0
+
+!    !
+!    !   Prescribed mesh Motion
+!    !
+!    integer(ik), parameter         :: NO_PMM_ASSIGNED = -1
+
 
     !
     !   Prescribed mesh Motion
     !
 
-    integer(ik), parameter         :: NO_PMM_ASSIGNED = -1
+    integer(ik), parameter         :: NO_MM_ASSIGNED = -1
+
+
+    !
+    ! Node-Element registration
+    !
+    
+    integer(ik), parameter          :: MAX_ELEMENTS_PER_NODE = 8
+    integer(ik), parameter          :: NO_ELEMENT = -1
+
+
+
+
 end module mod_constants

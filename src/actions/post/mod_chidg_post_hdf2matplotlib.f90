@@ -95,7 +95,7 @@ contains
         !
         ! Write solution for matplotlib
         !
-        coord              = 'y'
+        coord              = 'x'
         file_prefix        = get_file_prefix(solution_file,'.h5')
         matplotlib_file    = file_prefix//'_matplotlib.dat'
         call write_matplotlib_file(chidg%data,1,coord,matplotlib_file)

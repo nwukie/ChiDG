@@ -101,9 +101,9 @@ contains
 
 
             case('element')
-                nnodes      = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_ie()
-                nnodes_vol  = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_ie()
-                nnodes_face = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_if()
+                nnodes      = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_elem()
+                nnodes_vol  = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_elem()
+                nnodes_face = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_face()
 
                 ! Interior element
                 !ndepend_value = 1
@@ -123,9 +123,9 @@ contains
 
             case('face interior')
 
-                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_if()
-                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_ie()
-                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_if()
+                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_face()
+                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_elem()
+                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_face()
 
                 ! Interior element + Face Exterior Elements
                 !ndepend_value = 1
@@ -138,9 +138,9 @@ contains
 
             case('face exterior')
 
-                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_if()
-                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_ie()
-                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_if()
+                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_face()
+                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_elem()
+                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_face()
 
                 ! Exterior Elements
                 ndepend_value = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
@@ -166,7 +166,6 @@ contains
                 ndepend_deriv = 1
             end if
         end if
-
 
 
         !
@@ -260,8 +259,11 @@ contains
                 seed_location = 0
                 seed_found = .false.
                 do iseed = 1,size(self%value_seeds)
+                    !seed_found = ( (seed%idomain_g  == self%value_seeds(iseed)%idomain_g) .and. &
+                    !               (seed%ielement_g == self%value_seeds(iseed)%ielement_g) )
                     seed_found = ( (seed%idomain_g  == self%value_seeds(iseed)%idomain_g) .and. &
-                                   (seed%ielement_g == self%value_seeds(iseed)%ielement_g) )
+                                   (seed%ielement_g == self%value_seeds(iseed)%ielement_g) .and. &
+                                   (seed%itime      == self%value_seeds(iseed)%itime) )
 
                     if (seed_found) then
                         seed_location = iseed
@@ -301,8 +303,11 @@ contains
                 seed_location = 0
                 seed_found = .false.
                 do iseed = 1,size(self%gradient_seeds)
+                    !seed_found = ( (seed%idomain_g  == self%gradient_seeds(iseed)%idomain_g) .and. &
+                    !               (seed%ielement_g == self%gradient_seeds(iseed)%ielement_g) )
                     seed_found = ( (seed%idomain_g  == self%gradient_seeds(iseed)%idomain_g) .and. &
-                                   (seed%ielement_g == self%gradient_seeds(iseed)%ielement_g) )
+                                   (seed%ielement_g == self%gradient_seeds(iseed)%ielement_g) .and. &
+                                   (seed%itime      == self%gradient_seeds(iseed)%itime) )
 
                     if (seed_found) then
                         seed_location = iseed
@@ -342,8 +347,11 @@ contains
                 seed_location = 0
                 seed_found = .false.
                 do iseed = 1,size(self%lift_seeds)
+                    !seed_found = ( (seed%idomain_g  == self%lift_seeds(iseed)%idomain_g) .and. &
+                    !               (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) )
                     seed_found = ( (seed%idomain_g  == self%lift_seeds(iseed)%idomain_g) .and. &
-                                   (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) )
+                                   (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) .and. &
+                                   (seed%itime      == self%lift_seeds(iseed)%itime) )
 
                     if (seed_found) then
                         seed_location = iseed
@@ -381,8 +389,11 @@ contains
                 seed_location = 0
                 seed_found = .false.
                 do iseed = 1,size(self%lift_seeds)
+                    !seed_found = ( (seed%idomain_g  == self%lift_seeds(iseed)%idomain_g) .and. &
+                    !               (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) )
                     seed_found = ( (seed%idomain_g  == self%lift_seeds(iseed)%idomain_g) .and. &
-                                   (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) )
+                                   (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) .and. &
+                                   (seed%itime      == self%lift_seeds(iseed)%itime) )
 
                     if (seed_found) then
                         seed_location = iseed
@@ -475,9 +486,14 @@ contains
             face_ID  = mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
             ndepend  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
 
+            ! Additional storage for multiple time-levels if boundary requires global time-level coupling
+            if (mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling == 'Global') then
+                ndepend = ndepend * mesh%domain(idomain_l)%ntime
+            end if
+
         else
             user_msg = "cache_data_field%get_ndepend_face_exterior: Invalid face type detected."
-            call chidg_signal(FATAL,user_msg)
+            call chidg_signal_one(FATAL,user_msg,mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype)
 
         end if
 

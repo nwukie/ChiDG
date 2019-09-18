@@ -5,7 +5,6 @@ module euler_bc_operator
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
     use DNAD_D
-    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
 
@@ -119,9 +118,6 @@ contains
         end if
 
 
-
-
-
         !
         ! Compute gamma
         !
@@ -141,7 +137,6 @@ contains
         ! Compute boundary condition energy and enthalpy
         !
         H_bc = (energy_bc + p_bc)/density_bc
-
 
 
 
@@ -198,7 +193,7 @@ contains
         call worker%integrate_boundary_condition('Energy','Advection',flux_1,flux_2,flux_3)
 
     end subroutine compute
-    !**********************************************************************************************
+    !*******************************************************************************************
 
 
 

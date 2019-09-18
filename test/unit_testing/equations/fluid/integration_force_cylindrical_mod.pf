@@ -128,7 +128,7 @@ module integration_force_cylindrical_mod
     use pfunit_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, HALF, ONE, THREE, IO_DESTINATION
-    use mod_force,                  only: report_aerodynamics
+    use mod_force,                  only: report_forces
     use type_chidg,                 only: chidg_t
     use type_chidg_worker,          only: chidg_worker_t
     use type_model,                 only: model_t
@@ -193,8 +193,6 @@ module integration_force_cylindrical_mod
 
         character(100)  :: gridfile
         integer(ik)     :: order
-
-        type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
 
     contains
@@ -274,6 +272,8 @@ module integration_force_cylindrical_mod
 
 
 
+    type(chidg_t)   :: chidg
+
 
 
 contains
@@ -293,9 +293,7 @@ contains
     subroutine init_initial_solution(self)
         class(initial_solution_f),  intent(inout)  :: self
 
-        !
         ! Set function name
-        !
         call self%set_name("Test Compute Force Initial Solution")
 
         call self%add_option('ivar', ZERO)
@@ -307,13 +305,10 @@ contains
 
 
 
-
-
     !>
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
-    !!
     !!
     !-----------------------------------------------------------------------------------------
     impure elemental function compute_initial_solution(self,time,coord) result(val)
@@ -474,18 +469,13 @@ contains
     subroutine init_constant_viscosity(self)   
         class(test_force_constant_viscosity_t), intent(inout)   :: self
 
-        !
         ! Initialize model object
-        !
         call self%set_name('Test Force Constant Viscosity')
         call self%set_dependency('f(Q-)')
         call self%add_model_field('Laminar Viscosity')
 
-
     end subroutine init_constant_viscosity
     !***************************************************************************************
-
-
 
 
 
@@ -502,23 +492,17 @@ contains
 
         type(AD_D), dimension(:),   allocatable :: viscosity, T
 
-        !
         ! Interpolate solution to quadrature nodes
-        !
         T = worker%get_field('Temperature','value')
     
 
-        !
         ! Constant Viscosity for Laminar Viscosity
         !   - initialize derivatives first...
-        !
         viscosity = T
         viscosity = ONE
 
 
-        !
         ! Contribute laminar viscosity
-        !
         call worker%store_model_field('Laminar Viscosity', 'value', viscosity)
 
 
@@ -529,22 +513,11 @@ contains
 
 
 
-
-
-
-
-
-
     !----------------------------------------------------------------------------------------
     !                           pFUnit test infrastructure
     !----------------------------------------------------------------------------------------
 
-
-
-
-
     !> Parameter constructors
-    !!
     !!
     !!
     !------------------------------------------------------------------------------
@@ -562,7 +535,6 @@ contains
     !> Parameter initialization
     !!
     !!
-    !!
     !------------------------------------------------------------------------------
     function getParameters() result(params)
         type(case_grid_order), allocatable :: params(:)
@@ -571,12 +543,10 @@ contains
         integer(ik),        allocatable :: orders(:)
         integer(ik) :: icase
 
-
         files = [  string_t('file.h5'), &
                    string_t('file.h5') ]
 
         orders = [ 3, 4 ]
-
 
         !Initialize the test case container with the parameter
         allocate(params(size(files)))
@@ -634,24 +604,18 @@ contains
         type(bc_state_group_t)          :: bc_state_groups(3)
         type(string_t)                  :: group_names(1,6)
         class(function_t),  allocatable :: fcn
-        real(rk)                        :: tol, entropy_error
+        real(rk)                        :: entropy_error
 
-        !
         ! Get MPI communicator information from pFUnit
-        !
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+        chidg_COMM%mpi_val = this%getMpiCommunicator()
 
 
-        !
         ! Initialize ChiDG environment
-        !
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
-
-
-
+        IO_DESTINATION   = 'file'
+        call chidg%start_up('mpi',chidg_COMM)
+        call chidg%start_up('core')
 
 
         !-------------------------------------------!
@@ -659,7 +623,6 @@ contains
         !-------------------------------------------!
         call initial_solution%init()
         call registered_fcns%push_back(initial_solution)
-
 
 
         !-------------------------------------------!
@@ -676,9 +639,6 @@ contains
         call equation_set_factory%register(test_force_equation_builder%build('default'))
 
 
-        
-        tol = 1.e-6_rk
-
         !------------------------------------------------------------------------------
         !
         ! Define input data here that is normally read through the namelist input file
@@ -689,22 +649,11 @@ contains
         basis            = 'legendre'
         gq_rule          = 3
         time_integrator  = 'steady'
-        nonlinear_solver = 'quasi_newton'
-        linear_solver    = 'fgmres_cgs'
+        nonlinear_solver = 'newton'
+        linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
-        IO_DESTINATION   = 'file'
-        !------------------------------------------------------------------------------
 
-
-
-
-
-        ! Set timescheme options to pass during initialization
-        !call toptions%set('dt', 0.1_rk) ! means nothing here
-        !call toptions%set('nsteps',100)
-        !call toptions%set('nwrite',0)
-
-        call this%chidg%data%time_manager%init()
+        call chidg%data%time_manager%init()
 
         ! Set linear solver options to pass during initialization
         call loptions%set('tol',1.e-9_rk)
@@ -713,19 +662,15 @@ contains
         call noptions%set('tol',3.e-5_rk)
         call noptions%set('cfl0',1.0_rk)
         call noptions%set('nsteps',100)
+        !------------------------------------------------------------------------------
 
 
 
-
-
-        !
         ! Create mesh
-        !
         if (IRANK == GLOBAL_MASTER) then
             bc_state_groups(1)%name = 'Farfield'
             bc_state_groups(2)%name = 'Symmetry'
             bc_state_groups(3)%name = 'Walls'
-
 
             call create_bc('Farfield', bc_state)
             call bc_state%set_fcn('Density',    'Test Compute Force Initial Solution')
@@ -747,7 +692,6 @@ contains
             call bc_state_groups(3)%add_bc_state(bc_state)
 
 
-
             ! Define patch group names
             group_names(1,:) = [string_t('Farfield'), &
                                 string_t('Farfield'), &
@@ -766,39 +710,31 @@ contains
         end if
 
 
-        !
         ! Set ChiDG components
-        !
-        call this%chidg%set('Solution Order',   integer_input=this%order)
-        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+        call chidg%set('Solution Order',   integer_input=this%order)
+        call chidg%set('Time Integrator',  algorithm=time_integrator)
+        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call chidg%set('Preconditioner',   algorithm=preconditioner)
 
 
-        !
         ! Read grid
-        !
-        call this%chidg%read_mesh(this%gridfile)
+        call chidg%read_mesh(this%gridfile)
 
 
-
-
-        !
         ! Initialize solution
-        !
         call create_function(fcn,'Test Compute Force Initial Solution')
 
         call fcn%set_option('ivar',1._rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
+        call chidg%data%sdata%q%project(chidg%data%mesh,fcn,1)
         call fcn%set_option('ivar',2._rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,2)
+        call chidg%data%sdata%q%project(chidg%data%mesh,fcn,2)
         call fcn%set_option('ivar',3._rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,3)
+        call chidg%data%sdata%q%project(chidg%data%mesh,fcn,3)
         call fcn%set_option('ivar',4._rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,4)
+        call chidg%data%sdata%q%project(chidg%data%mesh,fcn,4)
         call fcn%set_option('ivar',5._rk)
-       call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,5)
+        call chidg%data%sdata%q%project(chidg%data%mesh,fcn,5)
 
 
 
@@ -815,7 +751,8 @@ contains
         class(force),  intent(inout)   :: this
 
         ! Close ChiDG
-        call this%chidg%shut_down('core')
+        call chidg%shut_down('core')
+        call chidg%shut_down('mpi')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -846,21 +783,14 @@ contains
 
         real(rk)    :: tol, force_computed(3), force_expected(3)
 
-
-        !
         ! Compute force: THIS IS BEING TESTED
-        !
-        call report_aerodynamics(self%chidg%data, 'Walls', force=force_computed)
+        call report_forces(chidg%data, 'Walls', force=force_computed)
 
 
-
-        !
         ! Test that computed entropy error is the expected value
-        !
         force_expected = [100._rk, -100000._rk, ZERO]
         tol = 1.e-6_rk
         @assertEqual(force_expected,force_computed,tol)
-
 
     end subroutine test_compute_force
     !*******************************************************************************************

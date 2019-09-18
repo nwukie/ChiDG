@@ -3,12 +3,12 @@ subroutine test_integrate_boundary_constant()
     use pfunit_mod
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ONE, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  BOUNDARY_ADVECTIVE_FLUX, IO_DESTINATION
+                                  BOUNDARY_ADVECTIVE_FLUX, IO_DESTINATION, NO_ID
     use mod_integrate,      only: integrate_boundary_scalar_flux
 
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
-    use type_face_info,             only: face_info_t
+    use type_element_info,          only: element_info_t, element_info
     use type_function_info,         only: function_info_t
     use type_seed,                  only: seed_t
 
@@ -23,59 +23,45 @@ subroutine test_integrate_boundary_constant()
 
 
     type(chidg_t)                       :: chidg
-    integer(ik)                         :: igq, ngq, ieqn, itime, ifcn
-    integer(ik)                         :: idomain, iblk, idonor
+    integer(ik)                         :: igq, ngq, ieqn, itime, ifcn, iface
+    integer(ik)                         :: idomain, idonor
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
     character(:),       allocatable     :: file_name
     real(rk)                            :: integral, ref_integral
-    type(face_info_t)                   :: face
-    type(function_info_t)               :: flux
+    type(element_info_t)                :: elem_info
+    type(function_info_t)               :: fcn_info
     type(seed_t)                        :: seed
 
     IO_DESTINATION = 'file'
 
-    !
     ! Initialize chidg environment
-    !
     call chidg%start_up('core')
     
     
-
-    !
     ! Create a 1-element grid
-    !
     file_name = 'D1_1x1x1.h5'
     call create_mesh_file('D1 NxNxN', file_name, equation_sets=[string_t('Scalar Advection')], &
                                                  nelem_xi=1, nelem_eta=1, nelem_zeta=1)
 
 
-    !
     ! Set the accuracy for the solution expansion
-    !
     call chidg%set('Solution Order', integer_input=1)
 
 
-    !
     ! Read grid
-    !
     call chidg%read_mesh(file_name)
 
 
-
-    !
     ! Initialize solution to constant value
-    !
     call create_function(constant,'constant')
     call constant%set_option('val',1._rk)
     call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
     
-    !
-    ! Allocate flux array
-    !
+    ! Allocate fcn_info array
     associate ( faces => chidg%data%mesh%domain(1)%faces, sdata => chidg%data%sdata )
-    ngq = faces(1,1)%basis_s%nnodes_if()
+    ngq = faces(1,1)%basis_s%nnodes_face()
     allocate(integrand(ngq))
     
     do igq = 1,size(integrand)
@@ -83,52 +69,71 @@ subroutine test_integrate_boundary_constant()
     end do
 
 
-    !
-    ! Compute constant flux on the face and dot with face normals
-    !
+    ! Compute constant fcn_info on the face and dot with face normals
     integrand = ONE*faces(1,1)%norm(:,1)
 
     !
     ! Set seed. Doesn't really matter what, since we are just checking the values here
     !
-    seed%idomain_g  = 1
-    seed%idomain_l  = 1
-    seed%ielement_g = 1
-    seed%ielement_l = 1
+    !call seed%init(1,1,1,1,1,1,0,1,1,1,1)
+    call seed%init(idomain_g=1,         &
+                   idomain_l=1,         &
+                   ielement_g=1,        &
+                   ielement_l=1,        &
+                   nfields=1,           &
+                   nterms_s=1,          &
+                   iproc=0,             &
+                   itime=1,             &
+                   dof_start=0,         &
+                   recv_comm=NO_ID,     &
+                   recv_domain=NO_ID,   &
+                   recv_element=NO_ID)
+
     
-    face%idomain_g  = 1
-    face%idomain_l  = 1
-    face%ielement_g = 1
-    face%ielement_l = 1
-    face%iface      = XI_MIN
+    elem_info = element_info(idomain_g=1,       &
+                             idomain_l=1,       &
+                             ielement_g=1,      &
+                             ielement_l=1,      &
+                             iproc=0,           &
+                             pelem_ID=NO_ID,    &
+                             eqn_ID=1,          &
+                             nfields=1,         &
+                             ntime=1,           &
+                             nterms_s=8,        &
+                             nterms_c=8,        &
+                             dof_start=1,       &
+                             dof_local_start=1, &
+                             recv_comm=NO_ID,   &
+                             recv_domain=NO_ID, &
+                             recv_element=NO_ID,&
+                             recv_dof=NO_ID)
+
+
 
     idomain = 1
     ieqn    = 1
     itime   = 1
-    !iblk    = 7
-    iblk    = face%iface
     idonor  = 1
     ifcn    = 1
 
 
 
-    flux%type    = BOUNDARY_ADVECTIVE_FLUX
-    flux%ifcn    = ifcn
-    flux%idepend = idonor
-    flux%idiff   = iblk
-    flux%seed    = seed
+    fcn_info%type    = BOUNDARY_ADVECTIVE_FLUX
+    fcn_info%ifcn    = ifcn
+    fcn_info%idepend = idonor
+    fcn_info%seed    = seed
 
 
 
     !!!!!!!!!!!!!!!!!!!!!!!
     ! Test Face XI_MIN
     !!!!!!!!!!!!!!!!!!!!!!!
-    face%iface = XI_MIN
-    flux%idiff = XI_MIN
+    iface          = XI_MIN
+    fcn_info%idiff = XI_MIN
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,elem_info,fcn_info,iface,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
@@ -144,13 +149,13 @@ subroutine test_integrate_boundary_constant()
     !!!!!!!!!!!!!!!!!!!!!!!
     ! Test Face XI_MAX
     !!!!!!!!!!!!!!!!!!!!!!!
-    face%iface = XI_MAX
-    flux%idiff = XI_MAX
+    iface = XI_MAX
+    fcn_info%idiff = XI_MAX
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
     integrand = ONE*faces(1,XI_MAX)%norm(:,1)
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,elem_info,fcn_info,iface,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
@@ -168,13 +173,13 @@ subroutine test_integrate_boundary_constant()
     !!!!!!!!!!!!!!!!!!!!!!!
     ! Test Face ETA_MIN
     !!!!!!!!!!!!!!!!!!!!!!!
-    face%iface = ETA_MIN
-    flux%idiff = ETA_MIN
+    iface = ETA_MIN
+    fcn_info%idiff = ETA_MIN
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
     integrand = ONE*faces(1,ETA_MIN)%norm(:,2)
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,elem_info,fcn_info,iface,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
@@ -194,13 +199,13 @@ subroutine test_integrate_boundary_constant()
     !!!!!!!!!!!!!!!!!!!!!!!
     ! Test Face ETA_MAX
     !!!!!!!!!!!!!!!!!!!!!!!
-    face%iface = ETA_MAX
-    flux%idiff = ETA_MAX
+    iface = ETA_MAX
+    fcn_info%idiff = ETA_MAX
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
     integrand = ONE*faces(1,ETA_MAX)%norm(:,2)
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,elem_info,fcn_info,iface,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
@@ -219,13 +224,13 @@ subroutine test_integrate_boundary_constant()
     !!!!!!!!!!!!!!!!!!!!!!!
     ! Test Face ZETA_MIN
     !!!!!!!!!!!!!!!!!!!!!!!
-    face%iface = ZETA_MIN
-    flux%idiff = ZETA_MIN
+    iface = ZETA_MIN
+    fcn_info%idiff = ZETA_MIN
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
     integrand = ONE*faces(1,ZETA_MIN)%norm(:,3)
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,elem_info,fcn_info,iface,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
@@ -244,13 +249,13 @@ subroutine test_integrate_boundary_constant()
     !!!!!!!!!!!!!!!!!!!!!!!
     ! Test Face ZETA_MAX
     !!!!!!!!!!!!!!!!!!!!!!!
-    face%iface = ZETA_MAX
-    flux%idiff = ZETA_MAX
+    iface = ZETA_MAX
+    fcn_info%idiff = ZETA_MAX
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
     integrand = ONE*faces(1,ZETA_MAX)%norm(:,3)
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,elem_info,fcn_info,iface,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)

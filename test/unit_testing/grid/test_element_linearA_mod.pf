@@ -2,13 +2,14 @@ module test_element_linearA_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
     use type_chidg,                 only: chidg_t
     use type_element,               only: element_t
     use type_face,                  only: face_t
     use type_element_connectivity,  only: element_connectivity_t
     use type_point,                 only: point_t
     use mod_io,                     only: gq_rule
+    use mod_chidg_mpi,              only: IRANK
     implicit none
 
     public  :: test_element_linearA
@@ -52,17 +53,21 @@ contains
         integer(ik), parameter          :: npt = 8
         real(rk)                        :: nodes(npt,3)
         integer(ik)                     :: ftype, ielem, idomain,                       &
-                                           ntime, neqns, nterms_s,                      &
+                                           ntime, nfields, nterms_s,                    & 
+                                           dof_start, dof_local_start,                  &
                                            ineighbor_domain_g,  ineighbor_domain_l,     &
                                            ineighbor_element_g, ineighbor_element_l,    &
                                            ineighbor_face, ineighbor_proc,              &
-                                           ineighbor_neqns, ineighbor_nterms_s
+                                           ineighbor_nfields, ineighbor_ntime,          &
+                                           ineighbor_nterms_s, ineighbor_dof_start,     &
+                                           ineighbor_dof_local_start
         
         
         ! Set collocation quadrature for testing coordinates at quadrature nodes
         gq_rule = 1
         
         
+        IO_DESTINATION='file'
         call this%chidg%start_up('core')
         allocate(this%faces(6))
         
@@ -79,12 +84,12 @@ contains
         !
         nodes(1,:) = [0._rk, 0._rk, 0._rk]
         nodes(2,:) = [5._rk, 0._rk, 0._rk]
-        nodes(3,:) = [0._rk, 1._rk, 0._rk]
-        nodes(4,:) = [5._rk, 1._rk, 0._rk]
+        nodes(3,:) = [5._rk, 1._rk, 0._rk]
+        nodes(4,:) = [0._rk, 1._rk, 0._rk]
         nodes(5,:) = [0._rk, 0._rk, 1._rk]
         nodes(6,:) = [5._rk, 0._rk, 1._rk]
-        nodes(7,:) = [0._rk, 1._rk, 1._rk]
-        nodes(8,:) = [5._rk, 1._rk, 1._rk]
+        nodes(7,:) = [5._rk, 1._rk, 1._rk]
+        nodes(8,:) = [0._rk, 1._rk, 1._rk]
         this%nodes = nodes
 
 
@@ -92,17 +97,19 @@ contains
         !
         ! Initialize Element geometry and Numerics
         !
-        idomain  = 1
-        ielem    = 1
-        neqns    = 2
-        nterms_s = 8
-        ntime    = 1
-        call this%elem%init_geom(nodes        = nodes,                          &
-                                 connectivity = [1, 2, 3, 4, 5, 6, 7, 8],       &
-                                 etype        = 1,                              &
-                                 location     = [idomain,idomain,ielem,ielem],  &
+        idomain         = 1
+        ielem           = 1
+        nfields         = 2
+        nterms_s        = 8
+        ntime           = 1
+        dof_start       = 1
+        dof_local_start = 1
+        call this%elem%init_geom(nodes        = nodes,                                  &
+                                 connectivity = [1, 2, 3, 4, 5, 6, 7, 8],               &
+                                 etype        = 1,                                      &
+                                 location     = [idomain,idomain,ielem,ielem,IRANK],    &
                                  coord_system = 'Cartesian')
-        call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime)
+        call this%elem%init_sol('Quadrature',1,nterms_s,nfields,ntime,dof_start,dof_local_start)
         
         
         !
@@ -121,38 +128,47 @@ contains
         ! Initialize face neighbors
         !
         ftype = 0
-        ineighbor_domain_g  = 0
-        ineighbor_domain_l  = 0
-        ineighbor_element_g = 0
-        ineighbor_element_l = 0
-        ineighbor_face      = 0
-        ineighbor_neqns     = 2
-        ineighbor_nterms_s  = 8
-        ineighbor_proc      = 0
-        call this%faces(XI_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
-                                                   ineighbor_element_g,ineighbor_element_l,    &
-                                                   ineighbor_face,ineighbor_neqns,             &
-                                                   ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(XI_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
-                                                   ineighbor_element_g,ineighbor_element_l,    &
-                                                   ineighbor_face,ineighbor_neqns,             &
-                                                   ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
-                                                    ineighbor_element_g,ineighbor_element_l,   &
-                                                    ineighbor_face,ineighbor_neqns,            &
-                                                    ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
-                                                    ineighbor_element_g,ineighbor_element_l,   &
-                                                    ineighbor_face,ineighbor_neqns,            &
-                                                    ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ZETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,           &
-                                                     ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ZETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,           &
-                                                     ineighbor_nterms_s,ineighbor_proc)
+        ineighbor_domain_g        = 0
+        ineighbor_domain_l        = 0
+        ineighbor_element_g       = 0
+        ineighbor_element_l       = 0
+        ineighbor_face            = 0
+        ineighbor_nfields         = 2
+        ineighbor_ntime           = 1
+        ineighbor_nterms_s        = 8
+        ineighbor_proc            = 0
+        ineighbor_dof_start       = 1
+        ineighbor_dof_local_start = 1
+        call this%faces(XI_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,               &
+                                                   ineighbor_element_g,ineighbor_element_l,             &
+                                                   ineighbor_face,ineighbor_nfields,ineighbor_ntime,    &
+                                                   ineighbor_nterms_s,ineighbor_proc,                   &
+                                                   ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(XI_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,               &
+                                                   ineighbor_element_g,ineighbor_element_l,             &
+                                                   ineighbor_face,ineighbor_nfields,ineighbor_ntime,    &
+                                                   ineighbor_nterms_s,ineighbor_proc,                   &
+                                                   ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,              &
+                                                    ineighbor_element_g,ineighbor_element_l,            &
+                                                    ineighbor_face,ineighbor_nfields,ineighbor_ntime,   &
+                                                    ineighbor_nterms_s,ineighbor_proc,                  &
+                                                    ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,              &
+                                                    ineighbor_element_g,ineighbor_element_l,            &
+                                                    ineighbor_face,ineighbor_nfields,ineighbor_ntime,   &
+                                                    ineighbor_nterms_s,ineighbor_proc,                  &
+                                                    ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ZETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ZETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
 
         
         call this%faces(XI_MIN)%init_sol(this%elem)
@@ -194,7 +210,7 @@ contains
     subroutine testElement_metric(self)
         class(test_element_linearA),    intent(inout)   :: self
 
-        real(rk)    :: test_metric(3,3,self%elem%basis_s%nnodes_ie())
+        real(rk)    :: test_metric(3,3,self%elem%basis_s%nnodes_elem())
         
         test_metric(1,1,:) = 0.25_rk / 0.625
         test_metric(2,1,:) = 0._rk   / 0.625
@@ -221,7 +237,7 @@ contains
     @Test
     subroutine testElement_jinv(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk)    :: test_jinv(self%elem%basis_s%nnodes_ie())
+        real(rk)    :: test_jinv(self%elem%basis_s%nnodes_elem())
         
         test_jinv = 0.625_rk
         @assertEqual(test_jinv,self%elem%jinv)
@@ -325,18 +341,15 @@ contains
     @Test
     subroutine testElement_grad1(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8) :: test
-        real(rk), dimension(self%elem%basis_s%nnodes_ie())    :: xi, eta, zeta
+        real(rk), dimension(self%elem%basis_s%nnodes_elem(), 8) :: test
+        real(rk), dimension(self%elem%basis_s%nnodes_elem())    :: xi, eta, zeta
         
         real(rk) :: tol
         real(rk),   allocatable :: nodes(:,:)
         
         tol = 1.e-14_rk
         
-        !xi   = self%elem%gq%vol%nodes(:)%c1_
-        !eta  = self%elem%gq%vol%nodes(:)%c2_
-        !zeta = self%elem%gq%vol%nodes(:)%c3_
-        nodes = self%elem%basis_s%nodes()
+        nodes = self%elem%basis_s%nodes_element()
         xi   = nodes(:,1)
         eta  = nodes(:,2)
         zeta = nodes(:,3)
@@ -368,21 +381,18 @@ contains
     @Test
     subroutine testElement_grad2(self)
        class(test_element_linearA),    intent(inout)   :: self
-       real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8) :: test
-       real(rk), dimension(self%elem%basis_s%nnodes_ie())    :: xi, eta, zeta
+       real(rk), dimension(self%elem%basis_s%nnodes_elem(), 8) :: test
+       real(rk), dimension(self%elem%basis_s%nnodes_elem())    :: xi, eta, zeta
        
        real(rk)                 :: tol
        real(rk),    allocatable :: nodes(:,:)
        
        tol = 1.e-14_rk
        
-       nodes = self%elem%basis_s%nodes()
+       nodes = self%elem%basis_s%nodes_element()
        xi   = nodes(:,1)
        eta  = nodes(:,2)
        zeta = nodes(:,3)
-       !xi   = self%elem%gq%vol%nodes(:)%c1_
-       !eta  = self%elem%gq%vol%nodes(:)%c2_
-       !zeta = self%elem%gq%vol%nodes(:)%c3_
        
        
        test(:,1) = ZERO                ! Mode 1
@@ -410,21 +420,18 @@ contains
     @Test
     subroutine testElement_grad3(self)
        class(test_element_linearA),    intent(inout)   :: self
-       real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8) :: test
-       real(rk), dimension(self%elem%basis_s%nnodes_ie())    :: xi, eta, zeta
+       real(rk), dimension(self%elem%basis_s%nnodes_elem(), 8) :: test
+       real(rk), dimension(self%elem%basis_s%nnodes_elem())    :: xi, eta, zeta
        
        real(rk)                 :: tol
        real(rk),    allocatable :: nodes(:,:)
        
        tol = 1.e-14_rk
        
-       nodes = self%elem%basis_s%nodes()
+       nodes = self%elem%basis_s%nodes_element()
        xi    = nodes(:,1)
        eta   = nodes(:,2)
        zeta  = nodes(:,3)
-       !xi   = self%elem%gq%vol%nodes(:)%c1_
-       !eta  = self%elem%gq%vol%nodes(:)%c2_
-       !zeta = self%elem%gq%vol%nodes(:)%c3_
        
        
        
@@ -465,7 +472,7 @@ contains
     @Test
     subroutine testElement_face_metrics(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk)    :: test_metric(3,3,self%faces(XI_MAX)%basis_s%nnodes_if())
+        real(rk)    :: test_metric(3,3,self%faces(XI_MAX)%basis_s%nnodes_face())
         real(rk)    :: tol
         
         tol = 1.e-14_rk
@@ -505,7 +512,7 @@ contains
     subroutine testelement_face_normals(self)
         class(test_element_lineara),    intent(inout)   :: self
 
-        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_if()) :: &
+        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_face()) :: &
                 test_norm_x, test_norm_y, test_norm_z
 
         real(rk)    :: tol
@@ -585,7 +592,7 @@ contains
     @Test
     subroutine testElement_face_unit_normals(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_if()) :: test_norm_x, test_norm_y, test_norm_z
+        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_face()) :: test_norm_x, test_norm_y, test_norm_z
         real(rk)    :: tol
         
         tol = 1.e-15_rk
@@ -737,7 +744,7 @@ contains
 
         icoord = 1 ! Check x-coordinates
         do ipt = 1,5
-            check_coords(ipt) = self%elem%grid_point(icoord, [xi(ipt),eta(ipt),zeta(ipt)], 'Undeformed')
+            check_coords(ipt) = self%elem%physical_coordinate(icoord, [xi(ipt),eta(ipt),zeta(ipt)], 'Undeformed')
         end do
 
         @assertEqual(ref_coords,check_coords)
@@ -770,7 +777,7 @@ contains
 
         icoord = 2 ! Check y-coordinates
         do ipt = 1,5
-            check_coords(ipt) = self%elem%grid_point(icoord, [xi(ipt),eta(ipt),zeta(ipt)], 'Undeformed')
+            check_coords(ipt) = self%elem%physical_coordinate(icoord, [xi(ipt),eta(ipt),zeta(ipt)], 'Undeformed')
         end do
 
         @assertEqual(ref_coords,check_coords)
@@ -803,7 +810,7 @@ contains
 
         icoord = 3 ! Check z-coordinates
         do ipt = 1,5
-            check_coords(ipt) = self%elem%grid_point(icoord, [xi(ipt), eta(ipt), zeta(ipt)],'Undeformed')
+            check_coords(ipt) = self%elem%physical_coordinate(icoord, [xi(ipt), eta(ipt), zeta(ipt)],'Undeformed')
         end do
 
         @assertEqual(ref_coords,check_coords)
@@ -834,11 +841,9 @@ contains
         real(rk)                :: x, y, z
         integer(ik)             :: ipt
                         
-
-
-        ref_xi   = [-ONE,  ONE, -ONE,  ONE, -ONE,  ONE, -ONE, ONE]
-        ref_eta  = [-ONE, -ONE,  ONE,  ONE, -ONE, -ONE,  ONE, ONE]
-        ref_zeta = [-ONE, -ONE, -ONE, -ONE,  ONE,  ONE,  ONE, ONE]
+        ref_xi   = [-ONE,  ONE,  ONE, -ONE, -ONE,  ONE,  ONE, -ONE]
+        ref_eta  = [-ONE, -ONE,  ONE,  ONE, -ONE, -ONE,  ONE,  ONE]
+        ref_zeta = [-ONE, -ONE, -ONE, -ONE,  ONE,  ONE,  ONE,  ONE]
 
 
         do ipt = 1,size(self%nodes,1)

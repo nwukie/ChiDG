@@ -13,9 +13,10 @@
 !---------------------------------------------------------------------------------------------
 module mod_gauss_legendre
 #include <messenger.h>
-    use mod_kinds,          only: rk,ik
+    use mod_kinds,          only: rk,ik,rquad
     use mod_constants,      only: PI, ONE, TWO, THREE, FOUR, EIGHT, ZERO
-    use mod_legendre,       only: legendre_val1D, dlegendre_val1D
+    use mod_legendre,       only: legendre_val1D, dlegendre_val1D, &
+                                  legendre_val1D_quad, dlegendre_val1D_quad
     implicit none
 
 contains
@@ -41,9 +42,10 @@ contains
         ! Level for quadrature nodes corresponds to the number of nodes
         ! in the 1D tensor construction of the node set.
         real(rk),   allocatable, dimension(:)   :: xi_nodes, eta_nodes, zeta_nodes
-        integer(ik)                             :: ixi, ieta, izeta, inode, nnodes, ierr, nterms1d, nnodes1d
-        integer(ik)                             :: nnodes_xi, nnodes_eta, nnodes_zeta
-        real(rk),   allocatable, dimension(:)   :: nodes_(:,:)
+        real(rk),   allocatable, dimension(:,:) :: nodes_
+        integer(ik)     :: ixi, ieta, izeta, inode, nnodes, &
+                           ierr, nterms1d, nnodes1d,        &
+                           nnodes_xi, nnodes_eta, nnodes_zeta
 
 
         !
@@ -162,8 +164,9 @@ contains
         ! Level for quadrature weights corresponds to the number of weights
         ! in the 1D tensor construction of the node set.
         real(rk),   allocatable, dimension(:)   :: xi_weights, eta_weights, zeta_weights, weights
-        integer(ik)                             :: ixi, ieta, izeta, inode, nweights, ierr, nnodes1d, nterms1d
-        integer(ik)                             :: nweights_xi, nweights_eta, nweights_zeta
+        integer(ik)                             :: ixi, ieta, izeta, inode, nweights,   &
+                                                   ierr, nnodes1d, nterms1d,            &
+                                                   nweights_xi, nweights_eta, nweights_zeta
 
 
         !
@@ -279,14 +282,9 @@ contains
 
         real(rk)    :: nodes(nnodes)
         integer(ik) :: i,j,polyterm
-        real(rk)    :: resid,tol,x,xnew,theta,n
-
-
-        !
-        ! Tolerance tested up to 10th order
-        !
-        !tol = 1.2e-16_rk
-        tol = 1.1_rk * epsilon(1._rk)
+        !real(rk)    :: resid,tol,x,xnew,theta,n
+        real(rk)    :: tol,theta,n
+        real(rquad) :: xnew, x, resid
 
         !
         ! compute Legendre term used to generate the correct number of nodes
@@ -314,19 +312,39 @@ contains
             !
             n = real(nnodes,rk)
             theta = PI*(FOUR*real(i,rk) - ONE)/(FOUR*n + TWO)
-            x = (ONE  + (n-ONE)/(EIGHT*n*n*n) - (ONE/(384._rk*n*n*n*n))*( &
-                39._rk - 28._rk/(sin(theta)**(TWO))))*cos(theta)
+            !x = (ONE  + (n-ONE)/(EIGHT*n*n*n) - (ONE/(384._rk*n*n*n*n))*( &
+            !    39._rk - 28._rk/(sin(theta)**(TWO))))*cos(theta)
+            x = real( (ONE  + (ONE-n)/(EIGHT*n*n*n) - (ONE/(384._rk*n*n*n*n))*( &
+                      39._rk - 28._rk/(sin(theta)**(TWO))))*cos(theta), rquad)
 
 
             !
             ! Newton iteration to desired tolerance
             !
+
+!            ! Double-precision
+!            tol = 7.0_rk * epsilon(1._rk)
+!            do while (resid > tol)
+!                xnew = x - legendre_val1D(polyterm,x)/dlegendre_val1D(polyterm,x)
+!                !resid = abs(xnew-x)
+!                resid = abs(legendre_val1D(polyterm,x))
+!                print*, 'resid: ', resid, tol
+!                x = xnew
+!            end do
+!            nodes(j) = x
+
+            ! Quad-precision iteration: helps in some cases for different quadrature
+            ! rules and node sets. This way we can enforce accuracy down to 
+            ! machine-precision
+            tol = 1.0e-16_rk
             do while (resid > tol)
-                xnew = x - legendre_val1D(polyterm,x)/dlegendre_val1D(polyterm,x)
-                resid = abs(xnew-x)
+                xnew = x - legendre_val1D_quad(polyterm,x)/dlegendre_val1D_quad(polyterm,x)
+                resid = abs(legendre_val1D_quad(polyterm,x))
                 x = xnew
             end do
-            nodes(j) = x
+            nodes(j) = real(x,rk)
+
+
             j=j+1 ! storage location for correct ordering
 
         end do

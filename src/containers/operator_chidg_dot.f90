@@ -1,4 +1,8 @@
 module operator_chidg_dot
+#include <messenger.h>
+#include "petsc/finclude/petscvec.h"
+    use petscvec,               only: tVec, VecDot, VecGetLocalVector, VecCreate, VecSetType
+
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
     
@@ -32,10 +36,16 @@ contains
 
         res = ZERO
 
-        ! Compute vector dot-product
-        do idom = 1,size(a%dom)
-            res = res + domain_dot(a%dom(idom),b%dom(idom))
-        end do
+        if (allocated(a%wrapped_petsc_vector)) then
+            call chidg_signal(FATAL,'dot_local: processor-local dot-product not yet implemented for petsc.')
+        else
+
+            ! Compute vector dot-product
+            do idom = 1,size(a%dom)
+                res = res + domain_dot(a%dom(idom),b%dom(idom))
+            end do
+
+        end if
 
     end function dot_local
     !******************************************************************************
@@ -52,20 +62,29 @@ contains
     !!
     !-----------------------------------------------------------------------------
     function dot_comm(a,b,comm) result(comm_dot)
-        type(chidg_vector_t),    intent(in)  :: a
-        type(chidg_vector_t),    intent(in)  :: b
+        type(chidg_vector_t),   intent(in)  :: a
+        type(chidg_vector_t),   intent(in)  :: b
         type(mpi_comm),         intent(in)  :: comm
 
         real(rk)    :: local_dot, comm_dot
         integer     :: ierr
 
+        PetscErrorCode :: perr
 
-        ! Compute the local vector dot-product
-        local_dot = dot_local(a,b)
+        if (allocated(a%wrapped_petsc_vector)) then
+            
+            call VecDot(a%wrapped_petsc_vector%petsc_vector,b%wrapped_petsc_vector%petsc_vector,comm_dot,perr)
+            if (perr /= 0) call chidg_signal(FATAL,'dot_comm: error calling petsc VecDot.')
 
-        ! Reduce local dot-product values across processors, distribute result back to all
-        call MPI_AllReduce(local_dot,comm_dot,1,MPI_REAL8,MPI_SUM,comm,ierr)
+        else
 
+            ! Compute the local vector dot-product
+            local_dot = dot_local(a,b)
+
+            ! Reduce local dot-product values across processors, distribute result back to all
+            call MPI_AllReduce(local_dot,comm_dot,1,MPI_REAL8,MPI_SUM,comm,ierr)
+
+        end if
 
     end function dot_comm
     !******************************************************************************

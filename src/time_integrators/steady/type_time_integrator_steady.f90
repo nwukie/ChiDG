@@ -52,11 +52,13 @@ contains
         class(time_integrator_steady_t),    intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
 
+!        data%sdata%q = data%sdata%q_in
+
         associate( q => data%sdata%q, q_in => data%sdata%q_in)
-
             q = q_in
-
+            call q%assemble()
         end associate
+
 
     end subroutine initialize_state
     !*******************************************************************************
@@ -74,29 +76,19 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(kind = 8)   :: fid
-        integer(ik)         :: ierr, iwrite
+        integer(HID_T)  :: fid
+        integer(ik)     :: ierr, iwrite
 
 
-        do iwrite = 0,NRANK - 1
+        do iwrite = 0,NRANK-1
             if (iwrite == IRANK) then
                 
-                !
-                ! Assuming file exists, open hdf file
-                !
                 fid = open_file_hdf(filename)
-
-
-                !
-                ! Write nsteps and nwrite
-                ! 
-                call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()) )
-                call set_times_hdf(          fid,[ZERO]                             )
+                call set_time_integrator_hdf(fid, trim(data%time_manager%get_name()))
+                call set_times_hdf(          fid, [ZERO]                            )
                 call set_time_step_hdf(      fid, ZERO                              )
                 call set_nsteps_hdf(         fid, data%time_manager%nsteps          )
                 call set_nwrite_hdf(         fid, data%time_manager%nwrite          )
-
-
                 call close_file_hdf(fid)
 
             end if
@@ -167,14 +159,11 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
 
 
-        !
-        ! Set q_out: for steady runs no time_specific modifications are necessary
-        !
-        call data%sdata%q_out%init(data%mesh,data%time_manager%ntime)
-        call data%sdata%q_out%set_ntime(data%time_manager%ntime)
-        call data%sdata%q_out%clear()
+        associate( q_out => data%sdata%q_out, q_in => data%sdata%q_in)
 
-        data%sdata%q_out = data%sdata%q_in
+        q_out = q_in
+
+        end associate
 
 
     end subroutine process_data_for_output

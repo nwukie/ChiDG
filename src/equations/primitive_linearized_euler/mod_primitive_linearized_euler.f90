@@ -60,35 +60,35 @@ module mod_primitive_linearized_euler
     !
     ! X-Matrix
     !
-    real(rk), parameter :: rho_x_rho = ubar
-    real(rk), parameter :: rho_x_u   = rhobar
-    real(rk), parameter :: rho_x_v   = ZERO
-    real(rk), parameter :: rho_x_w   = ZERO
-    real(rk), parameter :: rho_x_p   = ZERO
+    real(rk), parameter :: rho_1_rho = ubar
+    real(rk), parameter :: rho_1_u   = rhobar
+    real(rk), parameter :: rho_1_v   = ZERO
+    real(rk), parameter :: rho_1_w   = ZERO
+    real(rk), parameter :: rho_1_p   = ZERO
 
-    real(rk), parameter :: u_x_rho   = ZERO
-    real(rk), parameter :: u_x_u     = ubar
-    real(rk), parameter :: u_x_v     = ZERO
-    real(rk), parameter :: u_x_w     = ZERO
-    real(rk), parameter :: u_x_p     = ONE/rhobar
+    real(rk), parameter :: u_1_rho   = ZERO
+    real(rk), parameter :: u_1_u     = ubar
+    real(rk), parameter :: u_1_v     = ZERO
+    real(rk), parameter :: u_1_w     = ZERO
+    real(rk), parameter :: u_1_p     = ONE/rhobar
 
-    real(rk), parameter :: v_x_rho   = ZERO
-    real(rk), parameter :: v_x_u     = ZERO
-    real(rk), parameter :: v_x_v     = ubar
-    real(rk), parameter :: v_x_w     = ZERO
-    real(rk), parameter :: v_x_p     = ZERO
+    real(rk), parameter :: v_1_rho   = ZERO
+    real(rk), parameter :: v_1_u     = ZERO
+    real(rk), parameter :: v_1_v     = ubar
+    real(rk), parameter :: v_1_w     = ZERO
+    real(rk), parameter :: v_1_p     = ZERO
 
-    real(rk), parameter :: w_x_rho   = ZERO
-    real(rk), parameter :: w_x_u     = ZERO
-    real(rk), parameter :: w_x_v     = ZERO
-    real(rk), parameter :: w_x_w     = ubar
-    real(rk), parameter :: w_x_p     = ZERO
+    real(rk), parameter :: w_1_rho   = ZERO
+    real(rk), parameter :: w_1_u     = ZERO
+    real(rk), parameter :: w_1_v     = ZERO
+    real(rk), parameter :: w_1_w     = ubar
+    real(rk), parameter :: w_1_p     = ZERO
 
-    real(rk), parameter :: p_x_rho   = ZERO
-    real(rk), parameter :: p_x_u     = gam*pbar
-    real(rk), parameter :: p_x_v     = ZERO
-    real(rk), parameter :: p_x_w     = ZERO
-    real(rk), parameter :: p_x_p     = ubar
+    real(rk), parameter :: p_1_rho   = ZERO
+    real(rk), parameter :: p_1_u     = gam*pbar
+    real(rk), parameter :: p_1_v     = ZERO
+    real(rk), parameter :: p_1_w     = ZERO
+    real(rk), parameter :: p_1_p     = ubar
 
 
 
@@ -98,35 +98,35 @@ module mod_primitive_linearized_euler
     !
     ! Y-Matrix
     !
-    real(rk), parameter :: rho_y_rho = vbar
-    real(rk), parameter :: rho_y_u   = ZERO
-    real(rk), parameter :: rho_y_v   = rhobar
-    real(rk), parameter :: rho_y_w   = ZERO
-    real(rk), parameter :: rho_y_p   = ZERO
+    real(rk), parameter :: rho_2_rho = vbar
+    real(rk), parameter :: rho_2_u   = ZERO
+    real(rk), parameter :: rho_2_v   = rhobar
+    real(rk), parameter :: rho_2_w   = ZERO
+    real(rk), parameter :: rho_2_p   = ZERO
 
-    real(rk), parameter :: u_y_rho   = ZERO
-    real(rk), parameter :: u_y_u     = vbar
-    real(rk), parameter :: u_y_v     = ZERO
-    real(rk), parameter :: u_y_w     = ZERO
-    real(rk), parameter :: u_y_p     = ZERO
+    real(rk), parameter :: u_2_rho   = ZERO
+    real(rk), parameter :: u_2_u     = vbar
+    real(rk), parameter :: u_2_v     = ZERO
+    real(rk), parameter :: u_2_w     = ZERO
+    real(rk), parameter :: u_2_p     = ZERO
 
-    real(rk), parameter :: v_y_rho   = ZERO
-    real(rk), parameter :: v_y_u     = ZERO
-    real(rk), parameter :: v_y_v     = vbar
-    real(rk), parameter :: v_y_w     = ZERO
-    real(rk), parameter :: v_y_p     = ONE/rhobar
+    real(rk), parameter :: v_2_rho   = ZERO
+    real(rk), parameter :: v_2_u     = ZERO
+    real(rk), parameter :: v_2_v     = vbar
+    real(rk), parameter :: v_2_w     = ZERO
+    real(rk), parameter :: v_2_p     = ONE/rhobar
 
-    real(rk), parameter :: w_y_rho   = ZERO
-    real(rk), parameter :: w_y_u     = ZERO
-    real(rk), parameter :: w_y_v     = ZERO
-    real(rk), parameter :: w_y_w     = vbar
-    real(rk), parameter :: w_y_p     = ZERO
+    real(rk), parameter :: w_2_rho   = ZERO
+    real(rk), parameter :: w_2_u     = ZERO
+    real(rk), parameter :: w_2_v     = ZERO
+    real(rk), parameter :: w_2_w     = vbar
+    real(rk), parameter :: w_2_p     = ZERO
 
-    real(rk), parameter :: p_y_rho   = ZERO
-    real(rk), parameter :: p_y_u     = ZERO
-    real(rk), parameter :: p_y_v     = gam*pbar
-    real(rk), parameter :: p_y_w     = ZERO
-    real(rk), parameter :: p_y_p     = vbar
+    real(rk), parameter :: p_2_rho   = ZERO
+    real(rk), parameter :: p_2_u     = ZERO
+    real(rk), parameter :: p_2_v     = gam*pbar
+    real(rk), parameter :: p_2_w     = ZERO
+    real(rk), parameter :: p_2_p     = vbar
 
 
 
@@ -134,35 +134,35 @@ module mod_primitive_linearized_euler
     !
     ! Z-Matrix
     !
-    real(rk), parameter :: rho_z_rho = wbar
-    real(rk), parameter :: rho_z_u   = ZERO
-    real(rk), parameter :: rho_z_v   = ZERO
-    real(rk), parameter :: rho_z_w   = rhobar
-    real(rk), parameter :: rho_z_p   = ZERO
+    real(rk), parameter :: rho_3_rho = wbar
+    real(rk), parameter :: rho_3_u   = ZERO
+    real(rk), parameter :: rho_3_v   = ZERO
+    real(rk), parameter :: rho_3_w   = rhobar
+    real(rk), parameter :: rho_3_p   = ZERO
 
-    real(rk), parameter :: u_z_rho   = ZERO
-    real(rk), parameter :: u_z_u     = wbar
-    real(rk), parameter :: u_z_v     = ZERO
-    real(rk), parameter :: u_z_w     = ZERO
-    real(rk), parameter :: u_z_p     = ZERO
+    real(rk), parameter :: u_3_rho   = ZERO
+    real(rk), parameter :: u_3_u     = wbar
+    real(rk), parameter :: u_3_v     = ZERO
+    real(rk), parameter :: u_3_w     = ZERO
+    real(rk), parameter :: u_3_p     = ZERO
 
-    real(rk), parameter :: v_z_rho   = ZERO
-    real(rk), parameter :: v_z_u     = ZERO
-    real(rk), parameter :: v_z_v     = wbar
-    real(rk), parameter :: v_z_w     = ZERO
-    real(rk), parameter :: v_z_p     = ZERO
+    real(rk), parameter :: v_3_rho   = ZERO
+    real(rk), parameter :: v_3_u     = ZERO
+    real(rk), parameter :: v_3_v     = wbar
+    real(rk), parameter :: v_3_w     = ZERO
+    real(rk), parameter :: v_3_p     = ZERO
 
-    real(rk), parameter :: w_z_rho   = ZERO
-    real(rk), parameter :: w_z_u     = ZERO
-    real(rk), parameter :: w_z_v     = ZERO
-    real(rk), parameter :: w_z_w     = wbar
-    real(rk), parameter :: w_z_p     = ONE/rhobar
+    real(rk), parameter :: w_3_rho   = ZERO
+    real(rk), parameter :: w_3_u     = ZERO
+    real(rk), parameter :: w_3_v     = ZERO
+    real(rk), parameter :: w_3_w     = wbar
+    real(rk), parameter :: w_3_p     = ONE/rhobar
 
-    real(rk), parameter :: p_z_rho   = ZERO
-    real(rk), parameter :: p_z_u     = ZERO
-    real(rk), parameter :: p_z_v     = ZERO
-    real(rk), parameter :: p_z_w     = gam*pbar
-    real(rk), parameter :: p_z_p     = wbar
+    real(rk), parameter :: p_3_rho   = ZERO
+    real(rk), parameter :: p_3_u     = ZERO
+    real(rk), parameter :: p_3_v     = ZERO
+    real(rk), parameter :: p_3_w     = gam*pbar
+    real(rk), parameter :: p_3_p     = wbar
 
 
 

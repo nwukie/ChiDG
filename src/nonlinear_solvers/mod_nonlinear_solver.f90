@@ -4,21 +4,23 @@ module mod_nonlinear_solver
     use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_dict,              only: dict_t
 
-
-
-
     ! Import solverdata types
     use type_newton,            only: newton_t
-    use type_quasi_newton,      only: quasi_newton_t
+    use type_newton_subiter,    only: newton_subiter_t
+    use type_petsc_nonlinear,   only: petsc_nonlinear_t
+    use type_jfnk,              only: jfnk_t
+    use type_quasi_newton_sst,  only: quasi_newton_sst_t
+    use type_quasi_newton_rs,   only: quasi_newton_rs_t
     implicit none
 
 
-
     ! Instantiate solver types for sourcing
-    type(newton_t)                      :: NEWTON
-    type(quasi_newton_t)                :: QUASI_NEWTON
-
-
+    type(newton_t)              :: NEWTON
+    type(newton_subiter_t)      :: NEWTON_SUBITER
+    type(petsc_nonlinear_t)     :: PETSC_NONLINEAR
+    type(jfnk_t)                :: JFNK 
+    type(quasi_newton_sst_t)    :: QUASI_NEWTON_SST
+    type(quasi_newton_rs_t)     :: QUASI_NEWTON_RS
 
     logical :: initialized = .false.
 
@@ -41,18 +43,27 @@ contains
         class(nonlinear_solver_t), allocatable, intent(inout)   :: instance
         type(dict_t), optional,                 intent(inout)   :: options
 
-        character(len=:), allocatable   :: user_msg, dev_msg
-
-
-
+        character(:),   allocatable :: user_msg, dev_msg
 
         select case (trim(string))
 
             case ('newton','Newton','NEWTON')
                 allocate(instance, source=NEWTON)
 
-            case ('quasi_newton','Quasi_Newton','quasi-newton','Quasi-Newton')
-                allocate(instance, source=QUASI_NEWTON)
+            case ('newton_subiter','Newton Subiter','NEWTON SUBITER')
+                allocate(instance, source=NEWTON_SUBITER)
+
+            case ('petsc','PETSC')
+                allocate(instance, source=PETSC_NONLINEAR)
+
+            case ('jfnk','Jfnk','JFNK')
+                allocate(instance, source=JFNK)
+
+            case ('quasi_newton_sst','Quasi_Newton_SST','quasi-newton-sst','Quasi-Newton-SST')
+                allocate(instance, source=QUASI_NEWTON_SST)
+
+            case ('quasi_newton_rs','Quasi_Newton_RS','quasi-newton-rs','Quasi-Newton-RS')
+                allocate(instance, source=QUASI_NEWTON_RS)
 
             case default
                 user_msg = "We can't seem to find a nonlinear solver that matches the input &
@@ -65,19 +76,11 @@ contains
         end select
 
 
-
-
-
-        !
         ! Call options initialization if present
-        !
         if (present(options)) call instance%set(options)
 
 
-
-        !
         ! Make sure the solver was allocated
-        !
         user_msg = "create_nonlinear_solver: solver was not allocated. Check that the &
                     desired solver was registered and instantiated in the &
                     mod_nonlinear_solver module"

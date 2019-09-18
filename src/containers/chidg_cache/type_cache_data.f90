@@ -1,7 +1,7 @@
 module type_cache_data
 #include <messenger.h>
     use mod_kinds,                  only: ik, rk
-    use mod_constants,              only: INTERIOR, BOUNDARY, CHIMERA, ZERO
+    use mod_constants,              only: INTERIOR, BOUNDARY, CHIMERA, ZERO, NO_ID
     use type_cache_data_field,      only: cache_data_field_t
     use type_mesh,              only: mesh_t
     use type_properties,            only: properties_t
@@ -69,7 +69,26 @@ contains
         !
         ! Get equation set index
         !
-        eqn_ID = mesh%domain(idomain_l)%eqn_ID
+        if (present(iface)) then
+            if (trim(cache_component) == 'face interior') then
+                eqn_ID = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+            else if (trim(cache_component) == 'face exterior') then
+                if ( (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR) .or. &
+                     (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY) ) then
+                    eqn_ID = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+                else if (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA) then
+                    ChiID = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
+                    eqn_ID = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%elem_info%eqn_ID
+                else
+                    call chidg_signal(FATAL,'cache_data%resize: Bad logic in determining eqn_ID.')
+                end if
+            end if
+        else
+            eqn_ID = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+        end if
+
+
+
 
         !
         ! Check if iface was provided for face-type caches
@@ -113,7 +132,7 @@ contains
                     ! we can query them here. For now, just use the source domain
                     ! and assume they have the same fields.
                     !nprimary_fields   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_neqns%at(1)
-                    nprimary_fields   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%nfields
+                    nprimary_fields   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%elem_info%nfields
                     nauxiliary_fields = prop(eqn_ID)%nauxiliary_fields()
                     nmodel_fields     = prop(eqn_ID)%nmodel_fields()
                 else
@@ -217,7 +236,7 @@ contains
                     was not found. Check that the field being stored is included in &
                     an operator_t or model_t with something like &
                     model%add_model_field('My Field')."
-        if (field_index == 0) call chidg_signal_one(FATAL,user_msg,trim(field))
+        if (field_index == NO_ID) call chidg_signal_one(FATAL,user_msg,trim(field))
 
         
         !
@@ -261,7 +280,8 @@ contains
         ! Get field index
         field_index = self%get_field_index(field)
         user_msg = "cache_data%get_data: We didn't find the field in the chidg cache."
-        if (field_index == 0) call chidg_signal_one(FATAL,user_msg,field)
+        if (field_index == NO_ID) call chidg_signal_one(FATAL,user_msg,field)
+
 
 
         !
@@ -275,8 +295,11 @@ contains
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%value_seeds)
                     
+                    !has_seed = (self%fields(field_index)%value_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                    !           (self%fields(field_index)%value_seeds(iseed)%ielement_g == seed%ielement_g)
                     has_seed = (self%fields(field_index)%value_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                               (self%fields(field_index)%value_seeds(iseed)%ielement_g == seed%ielement_g)
+                               (self%fields(field_index)%value_seeds(iseed)%ielement_g == seed%ielement_g) .and. &
+                               (self%fields(field_index)%value_seeds(iseed)%itime      == seed%itime)
 
                     if (has_seed) then
             
@@ -286,6 +309,7 @@ contains
                     end if
 
                 end do
+
 
                 ! If the current component doesn't have a linearization wrt seed, just take any
                 ! values and zero out autodiff
@@ -307,8 +331,11 @@ contains
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%gradient_seeds)
                     
+                    !has_seed = (self%fields(field_index)%gradient_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                    !           (self%fields(field_index)%gradient_seeds(iseed)%ielement_g == seed%ielement_g)
                     has_seed = (self%fields(field_index)%gradient_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                               (self%fields(field_index)%gradient_seeds(iseed)%ielement_g == seed%ielement_g)
+                               (self%fields(field_index)%gradient_seeds(iseed)%ielement_g == seed%ielement_g) .and. &
+                               (self%fields(field_index)%gradient_seeds(iseed)%itime      == seed%itime)
 
                     if (has_seed) then
                         cache_data = self%fields(field_index)%gradient(:,idirection,iseed)
@@ -317,6 +344,7 @@ contains
                     end if
 
                 end do
+
 
                 ! If the current component doesn't have a linearization wrt seed, just take any
                 ! gradient and zero out autodiff
@@ -336,8 +364,11 @@ contains
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%lift_seeds)
                     
+                    !has_seed = (self%fields(field_index)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                    !           (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
                     has_seed = (self%fields(field_index)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                               (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
+                               (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g) .and. &
+                               (self%fields(field_index)%lift_seeds(iseed)%itime      == seed%itime)
 
                     if (has_seed) then
                         cache_data = self%fields(field_index)%lift_face(:,idirection,iseed)
@@ -364,8 +395,11 @@ contains
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%lift_seeds)
                     
+                    !has_seed = (self%fields(field_index)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                    !           (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
                     has_seed = (self%fields(field_index)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                               (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
+                               (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g) .and. &
+                               (self%fields(field_index)%lift_seeds(iseed)%itime      == seed%itime)
 
                     if (has_seed) then
                         cache_data = self%fields(field_index)%lift_element(:,idirection,iseed)
@@ -424,7 +458,7 @@ contains
 
         integer(ik) :: ifield, field_index
 
-        field_index = 0
+        field_index = NO_ID
         do ifield = 1,size(self%fields)
             if (trim(self%fields(ifield)%name) == trim(field)) then
                 field_index = ifield

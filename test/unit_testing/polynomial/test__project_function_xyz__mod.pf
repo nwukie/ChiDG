@@ -65,12 +65,12 @@ contains
         !!
         nodes(1,:) = [0._rk, 0._rk, 0._rk]
         nodes(2,:) = [5._rk, 0._rk, 0._rk]
-        nodes(3,:) = [0._rk, 1._rk, 0._rk]
-        nodes(4,:) = [5._rk, 1._rk, 0._rk]
+        nodes(3,:) = [5._rk, 1._rk, 0._rk]
+        nodes(4,:) = [0._rk, 1._rk, 0._rk]
         nodes(5,:) = [0._rk, 0._rk, 1._rk]
         nodes(6,:) = [5._rk, 0._rk, 1._rk]
-        nodes(7,:) = [0._rk, 1._rk, 1._rk]
-        nodes(8,:) = [5._rk, 1._rk, 1._rk]
+        nodes(7,:) = [5._rk, 1._rk, 1._rk]
+        nodes(8,:) = [0._rk, 1._rk, 1._rk]
         dnodes = ZERO
         vnodes = ZERO
         
@@ -194,7 +194,7 @@ contains
             !
             ! Compute integral of function
             !
-            fintegral = sum(matmul(elem%basis_s%interpolator('Value'), fmodes)  *  elem%basis_s%weights()  *  elem%jinv)
+            fintegral = sum(matmul(elem%basis_s%interpolator_element('Value'), fmodes)  *  elem%basis_s%weights_element()  *  elem%jinv)
             
         end associate
 
@@ -286,7 +286,7 @@ contains
         !
         ! Compute integral of function
         !
-        fintegral = sum(matmul(elem%basis_s%interpolator('Value'), fmodes)  *  elem%basis_s%weights()  *  elem%jinv)
+        fintegral = sum(matmul(elem%basis_s%interpolator_element('Value'), fmodes)  *  elem%basis_s%weights_element()  *  elem%jinv)
         
         end associate
 
@@ -377,7 +377,7 @@ contains
         !
         ! Compute integral of function
         !
-        fintegral = sum(matmul(elem%basis_s%interpolator('Value'), fmodes)  *  elem%basis_s%weights()  *  elem%jinv)
+        fintegral = sum(matmul(elem%basis_s%interpolator_element('Value'), fmodes)  *  elem%basis_s%weights_element()  *  elem%jinv)
         
         end associate
 
@@ -478,7 +478,7 @@ contains
         !
         ! Compute integral of function
         !
-        fintegral = sum(matmul(elem%basis_s%interpolator('Value'), fmodes)  *  elem%basis_s%weights()  *  elem%jinv)
+        fintegral = sum(matmul(elem%basis_s%interpolator_element('Value'), fmodes)  *  elem%basis_s%weights_element()  *  elem%jinv)
         
         end associate
 

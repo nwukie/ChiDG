@@ -77,7 +77,7 @@ contains
         class(properties_t),                                intent(inout)   :: prop
 
         type(AD_D), allocatable, dimension(:) :: tau_22, source 
-        real(rk),   allocatable               :: r(:), ale_g(:), grid_vel(:,:), ale_Dinv(:,:,:)
+        real(rk),   allocatable               :: r(:), ale_g(:), ale_Dinv(:,:,:)
 
 
         !=================================================
@@ -94,7 +94,6 @@ contains
             ! Get grid data
             !
             r = worker%coordinate('1','volume')
-            grid_vel = worker%get_grid_velocity_element()
             ale_g    = worker%get_det_jacobian_grid_element('value')
             ale_Dinv = worker%get_inv_jacobian_grid_element()
 

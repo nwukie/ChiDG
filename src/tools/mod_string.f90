@@ -13,6 +13,11 @@ module mod_string
     end type string_t
 
 
+!    interface string
+!        module procedure new_string
+!    end interface
+    
+
 
 contains
 

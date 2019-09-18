@@ -73,16 +73,16 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function compute_pos(self,time,node) result(val)
-        class(hpaf_case1_pmmf),     intent(inout)  :: self
-        real(rk),                       intent(in)  :: time
-        real(rk),                  intent(in)  :: node(3)
+        class(hpaf_case1_pmmf),     intent(inout)   :: self
+        real(rk),                   intent(in)      :: time
+        real(rk),                   intent(in)      :: node(3)
 
-        integer(ik)                                 :: ivar
-        real(rk)                                    :: val(3)
+        integer(ik) :: ivar
+        real(rk)    :: val(3)
 
-        real(rk)                                    :: b1, b2, b3, &
-                                                        A2, A3, x0, y0, x_ale, y_ale, &
-                                                        xc, yc, height, theta
+        real(rk)    :: b1, b2, b3, &
+                       A2, A3, x0, y0, x_ale, y_ale, &
+                       xc, yc, height, theta
 
         b1 = time**TWO*(time**TWO-4._rk*time+4._rk)
         b2 = time**TWO*(3._rk-time)/4._rk

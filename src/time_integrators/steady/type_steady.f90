@@ -3,6 +3,7 @@ module type_steady
     use mod_kinds,                      only: rk,ik
     use mod_constants,                  only: ZERO
     use mod_spatial,                    only: update_space
+!    use mod_update_grid,                only: update_grid
     use mod_chidg_mpi,                  only: GLOBAL_MASTER
 
     use type_time_integrator_steady,    only: time_integrator_steady_t
@@ -79,17 +80,19 @@ contains
     !!  @date   2/8/2017
     !!
     !----------------------------------------------------------------------------------------
-    subroutine init(self,data)
+    subroutine init(self)
         class(steady_t),    intent(inout)   :: self
-        type(chidg_data_t), intent(in)      :: data
 
         integer(ik)             :: ierr
         type(assemble_steady_t) :: assemble_steady
 
+        ! Set name
+        call self%set_name('Steady')
+
+        ! Allocate assembler
         if (allocated(self%system)) deallocate(self%system)
         allocate(self%system, source=assemble_steady, stat=ierr)
         if (ierr /= 0) call AllocationError
-
 
     end subroutine init
     !*****************************************************************************************
@@ -113,18 +116,11 @@ contains
         class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
-
-        !
         ! Simply solve the nonlinear system. No iteration in time.
-        !
         call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner)
 
-
-        !
         ! Store end residual from nonlinear solver.
-        !
         call self%residual_norm%push_back(nonlinear_solver%residual_norm%at(nonlinear_solver%residual_norm%size()))
-
 
     end subroutine step
     !******************************************************************************************
@@ -148,16 +144,18 @@ contains
         logical,                    intent(in)                  :: differentiate
         real(rk),                   intent(inout),  optional    :: timing
 
+        integer(ik) :: eqn_ID, idom, ielem, itime, imat, ifield, irow_start, icol_start, nterms, nfields, ifield_row, ifield_col
+        real(rk),   allocatable     :: elem_field(:), elem_res(:)
+
         call data%sdata%rhs%clear()
         if (differentiate) call data%sdata%lhs%clear()
 
-        !
         ! Steady equation, so we only need the spatial operators computed.
-        !
         data%time_manager%itime = 1
-        data%time_manager%t     = ZERO
-        call update_space(data,differentiate,timing)
+        call data%update_grid()
+        !call update_grid(data)
 
+        call update_space(data,differentiate,timing)
 
     end subroutine assemble
     !******************************************************************************************

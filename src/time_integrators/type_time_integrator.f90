@@ -21,6 +21,7 @@ module type_time_integrator
     !---------------------------------------------------------------------------------------
     type, abstract, public  :: time_integrator_t
 
+        character(:),   allocatable :: name_
 
 
         ! OPTIONS
@@ -46,10 +47,11 @@ module type_time_integrator
 
     contains
 
-        procedure   :: init             ! General initialization procedure. Should get 
-                                        ! called automatically.
+        procedure   :: init
         procedure   :: set
         procedure   :: report
+        procedure   :: set_name
+        procedure   :: get_name
 
 
         ! Must define this procedure in any extended type
@@ -60,7 +62,7 @@ module type_time_integrator
         procedure(post_interface),   deferred   :: process_data_for_output   
 
     end type time_integrator_t
-    !*****************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -152,22 +154,48 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
     !!
-    !-----------------------------------------------------------------------------------------
-    subroutine init(self,data)
+    !---------------------------------------------------------------------------------
+    subroutine init(self)
         class(time_integrator_t),   intent(inout)   :: self
-        type(chidg_data_t),         intent(in)      :: data
 
         self%solverInitialized = .true.
 
     end subroutine init
-    !*****************************************************************************************
+    !*********************************************************************************
+
+
+    !>  Set name
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/4/2017
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine set_name(self,name_)
+        class(time_integrator_t),   intent(inout)   :: self
+        character(*),               intent(in)      :: name_
+
+        self%name_ = trim(name_)
+
+    end subroutine set_name
+    !*********************************************************************************
 
 
 
+    !>  Return self%name_
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/4/2017
+    !!
+    !---------------------------------------------------------------------------------
+    function get_name(self) result(name_)
+        class(time_integrator_t),   intent(in)  :: self
 
+        character(:),   allocatable :: name_
 
+        name_ = trim(self%name_)
 
-
+    end function get_name
+    !*********************************************************************************
 
 
 
@@ -181,7 +209,7 @@ contains
     !! NOTE: time options (toptions) are not used anymore and time info are stored 
     !!       by time_manager
     !!
-    !------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     subroutine set(self,options)
         class(time_integrator_t),   intent(inout)   :: self
         type(dict_t),               intent(inout)   :: options
@@ -251,9 +279,7 @@ contains
         integer(ik) :: matrix_iterations
 
 
-        !
         ! Time integrator header
-        !
         call write_line(' ')
         call write_line('---------------------------------   Time Integrator Report  ----------------------------------')
         call write_line('Newton iterations: ', self%newton_iterations%at(1), columns=.True., column_width=20)
@@ -262,16 +288,10 @@ contains
         call write_line('------------------------------------------------------------------------------------------')
 
 
-
-        !
         ! Print per-iteration report
-        !
         call write_line('Residual time', 'Norm[R]', 'Matrix time', 'Matrix iterations', columns=.True., column_width=20)
 
-
-        !
         ! Loop through stored data and print for each newton iteration
-        !
         do i = 1,self%residual_time%size()
             residual_time     = self%residual_time%at(i)
             residual_norm     = self%residual_norm%at(i)
@@ -282,9 +302,7 @@ contains
         end do
 
 
-        !
         ! Accumulate total residual and matrix solver compute times
-        !
         total_residual = 0._rk
         total_matrix   = 0._rk
         do i = 1,self%residual_time%size()

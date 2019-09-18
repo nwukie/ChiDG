@@ -74,14 +74,11 @@ module integration_scalar_advection_pmm_mod
     ! to test the nonlinear convergence between a case running on
     ! a different number of procs.
     !
-    ! Procs: 1, 2, 4, 7, 10
-    !
+    ! Procs: 1, 2, 3, 5, 8
     type(rvector_t) :: nonlinear_convergence(1,2,4) ! nprocs, ngrids, norders
-    real(rk)        :: error(1,2,4)                         ! nprocs, ngrids, norders
-
+    real(rk)        :: error(1,2,4)                 ! nprocs, ngrids, norders
 
     public  :: scalar_advection_pmm
-
 
 
 
@@ -105,10 +102,6 @@ module integration_scalar_advection_pmm_mod
 
 
 
-
-
-
-
     !>  Main testing fixture with test components that get initialized for each test
     !!
     !!  @author Nathan A. Wukie 
@@ -122,7 +115,6 @@ module integration_scalar_advection_pmm_mod
         character(100)  :: gridfile
         integer(ik)     :: order
 
-        type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
 
     contains
@@ -133,14 +125,13 @@ module integration_scalar_advection_pmm_mod
 
 
 
+    type(chidg_t)   :: chidg
 
 
 contains
 
 
     !> Parameter constructors
-    !!
-    !!
     !!
     !------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
@@ -156,8 +147,6 @@ contains
 
 
     !> Parameter initialization
-    !!
-    !!
     !!
     !------------------------------------------------------------------------------
     function getParameters() result(params)
@@ -201,7 +190,6 @@ contains
 
     !>  Reporting the parameters of the test
     !!
-    !!
     !-------------------------------------------------------------------------------------------
     function toString(this) result(string)
         class (case_grid_order),    intent(in)  :: this
@@ -219,8 +207,6 @@ contains
 
 
 
-
-
     !>  Set up test routine.
     !!
     !!  This routine reads the grid file, sets up boundary conditions, initializes storage
@@ -230,7 +216,6 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
-    !!
     !!
     !--------------------------------------------------------------------------------------------
     subroutine setUp(this)
@@ -245,8 +230,6 @@ contains
         !Note: mesh motion period is 1 time unit. Use at least ??240?? time steps per period?
         sim_time = 0.125
 
-        
-        
         tol = 1.e-6_rk
 
         !------------------------------------------------------------------------------
@@ -260,7 +243,7 @@ contains
         gq_rule          = 3 
         time_integrator  = 'DIRK'
         nonlinear_solver = 'newton'
-        linear_solver    = 'fgmres_cgs'
+        linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'both'
         time_steps       = 40
@@ -271,44 +254,33 @@ contains
         !------------------------------------------------------------------------------
 
 
-        !
         ! Get MPI communicator information from pFUnit
-        !
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+        chidg_COMM%mpi_val = this%getMpiCommunicator()
 
 
 
-        ! Set timescheme options to pass during initialization
-        !call toptions%set('dt', 0.1_rk) ! means nothing here
-        !call toptions%set('nsteps',100)
-        !call toptions%set('nwrite',0)
-
-        call this%chidg%data%time_manager%init()
+        call chidg%data%time_manager%init()
 
         ! Set linear solver options to pass during initialization
         call loptions%set('tol',1.e-10_rk)
+        call loptions%set('inner_fgmres',.true.)
 
         ! Set nonlinear solver options
         call noptions%set('tol',1.e-9_rk)
         call noptions%set('cfl0',2.0_rk)
         call noptions%set('nsteps',20)
+        call noptions%set('pts',.false.)
+        call noptions%set('search','Backtrack')
 
 
-
-        !
         ! Initialize ChiDG environment
-        !
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
+        call chidg%start_up('mpi',chidg_COMM)
+        call chidg%start_up('core')
 
 
-
-
-        !
         ! Create mesh
-        !
         if (IRANK == GLOBAL_MASTER) then
             bc_state_groups(1)%name = 'Value'
             bc_state_groups(2)%name = 'Extrapolate'
@@ -352,34 +324,22 @@ contains
         end if
 
 
-        !
         ! Set ChiDG components
-        !
-        call this%chidg%set('Solution Order',   integer_input=this%order)
-        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+        call chidg%set('Solution Order',   integer_input=this%order)
+        call chidg%set('Time Integrator',  algorithm=time_integrator)
+        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call chidg%set('Preconditioner',   algorithm=preconditioner)
 
 
-        !
         ! Read grid
-        !
-
-        call this%chidg%read_mesh(this%gridfile)
+        call chidg%read_mesh(this%gridfile)
 
 
-
-
-        !
         ! Initialize solution
-        !
         call create_function(fcn,'constant')
-
         call fcn%set_option('val',1.0_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
-
-
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
 
     end subroutine SetUp
     !*******************************************************************************************
@@ -388,13 +348,12 @@ contains
     !>
     !!
     !!
-    !!
     !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(scalar_advection_pmm),  intent(inout)   :: this
 
         ! Close ChiDG
-        call this%chidg%shut_down('core')
+        call chidg%shut_down('core')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -402,12 +361,6 @@ contains
 
     end subroutine tearDown
     !******************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -423,7 +376,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    @Test(npes=[10])
+    @Test(npes=[8])
     subroutine test_entropy_error_rate(self)
         class(scalar_advection_pmm),  intent(inout)   :: self
 
@@ -439,28 +392,24 @@ contains
 
         print *, 'order'
         print *, self%order
-        !
         ! Run ChiDG simulation
-        !
-        call self%chidg%run(write_initial=.false., write_final=.false.)
+        call chidg%run(write_initial=.false., write_final=.false.)
 
         print *, 'chidg run complete'
         !
         ! Store the nonlinear convergence of the calculation
         !
-        !nonlinear_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%residual_norm
+        !nonlinear_convergence(npes_index,grid_index,order_index) = chidg%nonlinear_solver%residual_norm
 
         print *, 'computing error'
-        computed_error = compute_scalar_advection_pmm_error(self%chidg%data,self%ChiDG_COMM)
+        computed_error = compute_scalar_advection_pmm_error(chidg%data,chidg_COMM)
 
 
         print *, 'computed error'
         print *, computed_error
 
-        !
         ! Store the computed error for the current case
-        !
-        error(npes_index,grid_index,order_index)         = computed_error
+        error(npes_index,grid_index,order_index) = computed_error
 
 
     end subroutine test_entropy_error_rate
@@ -496,10 +445,7 @@ contains
                     mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
                     mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
 
-                    
-                    !
                     ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
                     convergence_rate = (log10(error_previous)-log10(error_current)) / &
                                        (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
 
@@ -552,69 +498,42 @@ contains
                    eqnset => data%eqnset,   &
                    prop   => data%eqnset(1)%prop)
 
-
-            !
             ! Get equation indices
-            !
             iu = prop%get_primary_field_index("u")
 
-            !
             ! Zero error accumulator
-            !
             error_squared_sum = ZERO
 
-
-
-            !
             ! Loop over elements and accumulate error
-            !
             itime = 1
             do idom = 1,data%mesh%ndomains()
                 do ielem = 1,data%mesh%domain(idom)%nelem
 
-
-                    !
                     ! Compute the analytical solution at the quadrature nodes
-                    !
                     x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     ale_g_gq = mesh%domain(idom)%elems(ielem)%ale_g
                     u_analytical = ZERO*x_gq
                     u_analytical = 1.0_rk
 
-                    !
                     ! Interpolate DG numerical solution
-                    !
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,itime,'value')
-
-
                     u_dg = u_dg/ale_g_gq
-                    !
+
                     ! Compute error
-                    !                    
                     gq_error_squared = (u_analytical - u_dg)**TWO
 
-        
-
-                    !
                     ! Integrate error
-                    !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_def * mesh%domain(idom)%elems(ielem)%basis_s%weights())
-
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_def * mesh%domain(idom)%elems(ielem)%basis_s%weights_element())
 
                     print *, 'density error squared'
                     print *, element_error_squared
-                    !
                     ! Accumulate error from each element
-                    !
                     error_squared_sum = error_squared_sum + element_error_squared
 
                 end do ! ielem
             end do ! idom
 
-
         end associate
-
-
 
         ! Reduce the total error across processors
         call MPI_AllReduce(error_squared_sum,error_squared_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
@@ -721,13 +640,6 @@ contains
 
 
 
-
-
-
-
-
-
-
     ! Utility for returning the index associated with a certain number of procs
     !------------------------------------------------------------------------------
     function get_npes_index(numproc) result(inpes)
@@ -739,11 +651,11 @@ contains
 !                inpes = 1
 !            case(2)
 !                inpes = 2
-!            case(4)
+!            case(3)
 !                inpes = 3
-!            case(7)
+!            case(5)
 !                inpes = 4
-            case(10)
+            case(8)
                 inpes = 1 
 
         end select

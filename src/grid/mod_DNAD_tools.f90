@@ -45,26 +45,15 @@ contains
 
         chimera_face = (mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA)
 
-
         if ( chimera_face ) then
-
             ChiID  = mesh%domain(idom)%faces(ielem,iface)%ChiID
-            !idom_n = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(idonor)
-            idom_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
-
+            idom_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_l
         else
             idom_n = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_l
         end if
 
     end function compute_neighbor_domain_l
     !************************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -95,24 +84,15 @@ contains
 
         chimera_face = (mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA)
 
-
         if ( chimera_face ) then
-
             ChiID  = mesh%domain(idom)%faces(ielem,iface)%ChiID
-            !idom_n = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(idonor)
-            idom_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
-
+            idom_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_g
         else
             idom_n = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_g
         end if
 
     end function compute_neighbor_domain_g
     !************************************************************************************************
-
-
-
-
-
 
 
 
@@ -146,21 +126,14 @@ contains
         chimera_face = (mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA)
         
         if ( chimera_face ) then
-
             ChiID   = mesh%domain(idom)%faces(ielem,iface)%ChiID
-            !ielem_n = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(idonor)
-            ielem_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
-
+            ielem_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_l
         else
             ielem_n = mesh%domain(idom)%faces(ielem,iface)%get_neighbor_element_l()
         end if
 
-
     end function compute_neighbor_element_l
     !************************************************************************************************
-
-
-
 
 
 
@@ -191,25 +164,14 @@ contains
         chimera_face = (mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA)
         
         if ( chimera_face ) then
-
             ChiID   = mesh%domain(idom)%faces(ielem,iface)%ChiID
-            !ielem_n = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(idonor)
-            ielem_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
-
+            ielem_n = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_g
         else
             ielem_n = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_g
         end if
 
-
     end function compute_neighbor_element_g
     !************************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -228,10 +190,10 @@ contains
     !---------------------------------------------------------------------------------------------------------
     function compute_neighbor_face(mesh,idom,ielem,iface,idonor) result(iface_n)
         type(mesh_t),   intent(in)  :: mesh
-        integer(ik),        intent(in)  :: idom
-        integer(ik),        intent(in)  :: ielem
-        integer(ik),        intent(in)  :: iface
-        integer(ik),        intent(in)  :: idonor
+        integer(ik),    intent(in)  :: idom
+        integer(ik),    intent(in)  :: ielem
+        integer(ik),    intent(in)  :: iface
+        integer(ik),    intent(in)  :: idonor
 
         integer(ik) :: iface_n
         logical     :: chimera_face
@@ -241,7 +203,6 @@ contains
         if ( chimera_face ) then
             iface_n = CHIMERA
         else
-
             if (iface == XI_MIN) then
                 iface_n = XI_MAX
             else if (iface == XI_MAX) then
@@ -255,16 +216,10 @@ contains
             else if (iface == ZETA_MAX) then
                 iface_n = ZETA_MIN
             end if
-
         end if
 
     end function compute_neighbor_face
     !**********************************************************************************************************
-
-
-
-
-
 
 
 
@@ -290,13 +245,14 @@ contains
     !!  @param[in]  idiff   Linearization index
     !!
     !-------------------------------------------------------------------------------------------------------------------------
-    function face_compute_seed(mesh,idomain_l,ielement_l,iface,idepend,idiff) result(seed)
+    function face_compute_seed(mesh,idomain_l,ielement_l,iface,idepend,idiff,itime) result(seed)
         type(mesh_t),   intent(in)  :: mesh
         integer(ik),    intent(in)  :: idomain_l
         integer(ik),    intent(in)  :: ielement_l
         integer(ik),    intent(in)  :: iface
         integer(ik),    intent(in)  :: idepend
         integer(ik),    intent(in)  :: idiff
+        integer(ik),    intent(in)  :: itime
 
 
         type(seed_t)    :: seed
@@ -311,84 +267,65 @@ contains
                                idiff == ETA_MIN  .or. idiff == ETA_MAX  .or. &
                                idiff == ZETA_MIN .or. idiff == ZETA_MAX )
 
-
         if (linearize) then
 
-            !
             ! Check for linearization of current element (ielem)
-            !
             if ( linearize_interior ) then
 
                 call seed%init(idomain_g    = mesh%domain(idomain_l)%elems(ielement_l)%idomain_g,   &
                                idomain_l    = mesh%domain(idomain_l)%elems(ielement_l)%idomain_l,   &
                                ielement_g   = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g,  &
                                ielement_l   = mesh%domain(idomain_l)%elems(ielement_l)%ielement_l,  &
-                               neqns        = mesh%domain(idomain_l)%elems(ielement_l)%neqns,       &
+                               nfields      = mesh%domain(idomain_l)%elems(ielement_l)%nfields,     &
                                nterms_s     = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,    &
                                iproc        = IRANK,                                                &
+                               itime        = itime,                                                &
+                               dof_start    = mesh%domain(idomain_l)%elems(ielement_l)%dof_start,   &
                                recv_comm    = 0,                                                    &
                                recv_domain  = 0,                                                    &
                                recv_element = 0)
 
 
-            !
             ! Check for linearization of neighbor element (neighbor of face(ielem,iface) )
-            !
             elseif ( linearize_exterior ) then
 
-
-
-                !
                 ! Check if linearization direction (iface) is a Interior or Chimera face
-                !
                 chimera_face  = ( mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA  )
                 interior_face = ( mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR )
                 boundary_face = ( mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY )
 
-
-                !
                 ! Linearize wrt Standard Interior Neighbor
-                !
                 if ( interior_face ) then
 
-                    call seed%init(idomain_g    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,   &
-                                   idomain_l    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,   &
-                                   ielement_g   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,  &
-                                   ielement_l   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,  &
-                                   neqns        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,      &
-                                   nterms_s     = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,   &
-                                   iproc        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,       &
-                                   recv_comm    = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,            &
-                                   recv_domain  = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,          &
+                    call seed%init(idomain_g    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,    &
+                                   idomain_l    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,    &
+                                   ielement_g   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,   &
+                                   ielement_l   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,   &
+                                   nfields      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nfields,     &
+                                   nterms_s     = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,    &
+                                   iproc        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,        &
+                                   itime        = itime,                                                                &
+                                   dof_start    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start,   &
+                                   recv_comm    = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,             &
+                                   recv_domain  = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,           &
                                    recv_element = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_element)
 
-
-                !
                 ! Linearize wrt Chimera Interior Neighbor
-                !
                 elseif ( chimera_face ) then
                     ChiID = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
 
-                    !call seed%init(idomain_g    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_domain_g%at(idepend),       &
-                    !               idomain_l    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_domain_l%at(idepend),       &
-                    !               ielement_g   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_element_g%at(idepend),      &
-                    !               ielement_l   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_element_l%at(idepend),      &
-                    !               neqns        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_neqns%at(idepend),          &
-                    !               nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_nterms_s%at(idepend),       &
-                    !               iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_proc%at(idepend),           &
-                    !               recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_recv_comm%at(idepend),      &
-                    !               recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_recv_domain%at(idepend),    &
-                    !               recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_recv_element%at(idepend) )
-                    call seed%init(idomain_g    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%idomain_g,     &
-                                   idomain_l    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%idomain_l,     &
-                                   ielement_g   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%ielement_g,    &
-                                   ielement_l   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%ielement_l,    &
-                                   neqns        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nfields,        &
-                                   nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nterms_s,       &
-                                   iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%iproc,          &
-                                   recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_comm,      &
-                                   recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_domain,    &
-                                   recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_element )
+                    call seed%init(idomain_g    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%idomain_g,      &
+                                   idomain_l    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%idomain_l,      &
+                                   ielement_g   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%ielement_g,     &
+                                   ielement_l   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%ielement_l,     &
+                                   nfields      = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%nfields,        &
+                                   nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%nterms_s,       &
+                                   iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%iproc,          &
+                                   itime        = itime,                                                                              &
+                                   dof_start    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%dof_start,      &
+                                   recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_comm,      &
+                                   recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_domain,    &
+                                   recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_element )
 
 
 
@@ -405,9 +342,11 @@ contains
                                    idomain_l    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l( idepend),  &
                                    ielement_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend),  &
                                    ielement_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend),  &
-                                   neqns        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%neqns(idepend),       &
+                                   nfields      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nfields(idepend),     &
                                    nterms_s     = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(idepend),    &
                                    iproc        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend),        &
+                                   itime        = itime,                                                                                &
+                                   dof_start    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(idepend),   &
                                    recv_comm    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(idepend),   &
                                    recv_domain  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(idepend), &
                                    recv_element = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(idepend) )
@@ -429,15 +368,17 @@ contains
         else
 
             ! no linearization. 
-            call seed%init(idomain_g    = 0, &
-                           idomain_l    = 0, &
-                           ielement_g   = 0, &
-                           ielement_l   = 0, &
-                           neqns        = 0, &
-                           nterms_s     = 0, &
-                           iproc        = 0, &
-                           recv_comm    = 0, &
-                           recv_domain  = 0, &
+            call seed%init(idomain_g    = 0,            &
+                           idomain_l    = 0,            &
+                           ielement_g   = 0,            &
+                           ielement_l   = 0,            &
+                           nfields      = 0,            &
+                           nterms_s     = 0,            &
+                           iproc        = 0,            &
+                           itime        = itime,        &  ! need itime here because the residual storage relies on it
+                           dof_start    = 0,            &
+                           recv_comm    = 0,            &
+                           recv_domain  = 0,            &
                            recv_element = 0)
 
 
@@ -479,12 +420,13 @@ contains
     !!  @param[in]  idiff   Linearization index
     !!
     !-----------------------------------------------------------------------------------------------------------
-    function element_compute_seed(mesh,idomain_l,ielement_l,idepend,idiff) result(seed)
+    function element_compute_seed(mesh,idomain_l,ielement_l,idepend,idiff,itime_couple) result(seed)
         type(mesh_t),   intent(in)  :: mesh
         integer(ik),        intent(in)  :: idomain_l
         integer(ik),        intent(in)  :: ielement_l
         integer(ik),        intent(in)  :: idepend
         integer(ik),        intent(in)  :: idiff
+        integer(ik),        intent(in)  :: itime_couple
 
 
         type(seed_t)    :: seed
@@ -507,15 +449,17 @@ contains
             !
             if ( linearize_interior ) then
 
-                call seed%init(idomain_g    = mesh%domain(idomain_l)%elems(ielement_l)%idomain_g,  &
-                               idomain_l    = mesh%domain(idomain_l)%elems(ielement_l)%idomain_l,  &
-                               ielement_g   = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g, &
-                               ielement_l   = mesh%domain(idomain_l)%elems(ielement_l)%ielement_l, &
-                               neqns        = mesh%domain(idomain_l)%elems(ielement_l)%neqns,      &
-                               nterms_s     = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,   &
-                               iproc        = IRANK,                                               &
-                               recv_comm    = 0,                                                   &
-                               recv_domain  = 0,                                                   &
+                call seed%init(idomain_g    = mesh%domain(idomain_l)%elems(ielement_l)%idomain_g,   &
+                               idomain_l    = mesh%domain(idomain_l)%elems(ielement_l)%idomain_l,   &
+                               ielement_g   = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g,  &
+                               ielement_l   = mesh%domain(idomain_l)%elems(ielement_l)%ielement_l,  &
+                               nfields      = mesh%domain(idomain_l)%elems(ielement_l)%nfields,     &
+                               nterms_s     = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,    &
+                               iproc        = IRANK,                                                &
+                               itime        = itime_couple,                                         &
+                               dof_start    = mesh%get_dof_start(idomain_l,ielement_l),             &
+                               recv_comm    = 0,                                                    &
+                               recv_domain  = 0,                                                    &
                                recv_element = 0)
 
 
@@ -542,15 +486,17 @@ contains
                 !
                 if ( interior_face ) then
 
-                    call seed%init(idomain_g    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,   &
-                                   idomain_l    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,   &
-                                   ielement_g   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,  &
-                                   ielement_l   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,  &
-                                   neqns        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,      &
-                                   nterms_s     = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,   &
-                                   iproc        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,       &
-                                   recv_comm    = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,            &
-                                   recv_domain  = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,          &
+                    call seed%init(idomain_g    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,    &
+                                   idomain_l    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,    &
+                                   ielement_g   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,   &
+                                   ielement_l   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,   &
+                                   nfields      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nfields,     &
+                                   nterms_s     = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,    &
+                                   iproc        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,        &
+                                   itime        = itime_couple,                                                         &
+                                   dof_start    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start,   &
+                                   recv_comm    = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,             &
+                                   recv_domain  = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,           &
                                    recv_element = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_element)
 
 
@@ -560,26 +506,18 @@ contains
                 elseif ( chimera_face ) then
                     ChiID = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
 
-                    !call seed%init(idomain_g    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_domain_g%at(idepend),       &
-                    !               idomain_l    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_domain_l%at(idepend),       &
-                    !               ielement_g   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_element_g%at(idepend),      &
-                    !               ielement_l   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_element_l%at(idepend),      &
-                    !               neqns        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_neqns%at(idepend),          &
-                    !               nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_nterms_s%at(idepend),       &
-                    !               iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_proc%at(idepend),           &
-                    !               recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_recv_comm%at(idepend),      &
-                    !               recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_recv_domain%at(idepend),    &
-                    !               recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_recv_element%at(idepend) )
-                    call seed%init(idomain_g    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%idomain_g,      &
-                                   idomain_l    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%idomain_l,      &
-                                   ielement_g   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%ielement_g,     &
-                                   ielement_l   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%ielement_l,     &
-                                   neqns        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nfields,        &
-                                   nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%nterms_s,       &
-                                   iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%iproc,          &
-                                   recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_comm,      &
-                                   recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_domain,    &
-                                   recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%recv_element )
+                    call seed%init(idomain_g    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%idomain_g,      &
+                                   idomain_l    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%idomain_l,      &
+                                   ielement_g   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%ielement_g,     &
+                                   ielement_l   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%ielement_l,     &
+                                   nfields      = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%nfields,        &
+                                   nterms_s     = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%nterms_s,       &
+                                   iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%iproc,          &
+                                   itime        = itime_couple,                                                                       &
+                                   dof_start    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%dof_start,      &
+                                   recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_comm,      &
+                                   recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_domain,    &
+                                   recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_element )
 
 
                 !
@@ -595,22 +533,20 @@ contains
                                    idomain_l    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l( idepend),  &
                                    ielement_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend),  &
                                    ielement_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend),  &
-                                   neqns        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%neqns(idepend),       &
+                                   nfields      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nfields(idepend),     &
                                    nterms_s     = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(idepend),    &
                                    iproc        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend),        &
+                                   itime        = itime_couple,                                                                         &
+                                   dof_start    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(idepend),   &
                                    recv_comm    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(idepend),   &
                                    recv_domain  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(idepend), &
                                    recv_element = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(idepend) )
 
 
-
-                !
                 ! Invalid Case
-                !
                 else
                     call chidg_signal(FATAL,"element_compute_seed: invalid face type - face(ielem,iface)%ftype")
                 end if
-
 
             else
                 call chidg_signal(FATAL,"element_compute_seed: invalid value for iface")
@@ -623,17 +559,16 @@ contains
                            idomain_l    = 0, &
                            ielement_g   = 0, &
                            ielement_l   = 0, &
-                           neqns        = 0, &
+                           nfields      = 0, &
                            nterms_s     = 0, &
                            iproc        = 0, &
+                           itime        = 0, &
+                           dof_start    = 0, &
                            recv_comm    = 0, &
                            recv_domain  = 0, &
                            recv_element = 0)
 
-
         end if
-
-
 
 
     end function element_compute_seed

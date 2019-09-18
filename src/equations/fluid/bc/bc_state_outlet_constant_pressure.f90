@@ -1,8 +1,8 @@
 module bc_state_outlet_constant_pressure
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, HALF
-    use mod_fluid,              only: gam
+    use mod_constants,          only: ZERO, ONE, HALF, TWO, FOUR
+    use mod_fluid,              only: gam, Rgas
 
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -25,8 +25,8 @@ module bc_state_outlet_constant_pressure
 
     contains
 
-        procedure   :: init                 !< Set-up bc state with options/name etc.
-        procedure   :: compute_bc_state     !< boundary condition function implementation
+        procedure   :: init                 ! Set-up bc state with options/name etc.
+        procedure   :: compute_bc_state     ! boundary condition function implementation
 
     end type outlet_constant_pressure_t
     !****************************************************************************************
@@ -58,6 +58,7 @@ contains
         ! Add functions
         !
         call self%bcproperties%add('Static Pressure','Required')
+        call self%set_fcn_option('Static Pressure', 'val', 100000._rk)
 
 
     end subroutine init
@@ -75,7 +76,7 @@ contains
     !!  @param[in]      worker  Interface for geometry, cache, integration, etc.
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !!
-    !-------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(outlet_constant_pressure_t),  intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
@@ -90,26 +91,33 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            u_bc,   v_bc,    w_bc
+            u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc, mom_norm
             
 
-        real(rk),       allocatable, dimension(:)   ::  p_bc, r
+        real(rk),   allocatable, dimension(:) :: r, unorm1, unorm2, unorm3
+        real(rk),   allocatable, dimension(:) :: p_input
+
+        real(rk)    :: rho0, K0
+        integer :: igq
+
+
 
 
         !
         ! Get back pressure from function.
         !
-        p_bc = self%bcproperties%compute('Static Pressure',worker%time(),worker%coords())
+        p_input = self%bcproperties%compute('Static Pressure',worker%time(),worker%coords())
 
 
         !
         ! Interpolate interior solution to face quadrature nodes
         !
-        density_m = worker%get_field('Density'   , 'value', 'face interior')
-        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
-        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
-        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
-        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
+        density_m = worker%get_field('Density'    , 'value', 'face interior')
+        mom1_m    = worker%get_field('Momentum-1' , 'value', 'face interior')
+        mom2_m    = worker%get_field('Momentum-2' , 'value', 'face interior')
+        mom3_m    = worker%get_field('Momentum-3' , 'value', 'face interior')
+        energy_m  = worker%get_field('Energy'     , 'value', 'face interior')
+        T_m       = worker%get_field('Temperature', 'value', 'face interior')
 
 
 
@@ -146,28 +154,32 @@ contains
 
 
 
-        !
-        ! Extrapolate density and momentum
-        !
-        density_bc = density_m
-        mom1_bc    = mom1_m
-        mom2_bc    = mom2_m
-        mom3_bc    = mom3_m
+!        K0   = 100._rk
+!        rho0 = 1.2_rk
+!        p_input = p_input(1)  +  0.5_rk*rho0*K0*K0*(ONE/(FOUR*FOUR)  -  ONE/(r*r))
 
 
-        !
-        ! Compute velocities
-        !
-        u_bc = mom1_bc/density_bc
-        v_bc = mom2_bc/density_bc
-        w_bc = mom3_bc/density_bc
 
 
-        !
-        ! Compute boundary condition energy and enthalpy
-        !
-        energy_bc = p_bc/(gam - ONE) + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
+        ! Extrapolate temperature and velocity
+        T_bc = T_m
+        u_bc = mom1_m/density_m
+        v_bc = mom2_m/density_m
+        w_bc = mom3_m/density_m
 
+
+        ! Set user-specified constant pressure
+        p_bc = density_m
+        p_bc = p_input
+
+
+
+        ! Compute density, momentum, energy
+        density_bc = p_bc/(Rgas*T_bc)
+        mom1_bc    = u_bc*density_bc
+        mom2_bc    = v_bc*density_bc
+        mom3_bc    = w_bc*density_bc
+        energy_bc  = p_bc/(gam - ONE) + HALF*(mom1_bc*mom1_bc + mom2_bc*mom2_bc + mom3_bc*mom3_bc)/density_bc
 
 
         !
@@ -176,6 +188,7 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
+
 
 
         !
@@ -218,7 +231,7 @@ contains
 
 
     end subroutine compute_bc_state
-    !**********************************************************************************************
+    !**************************************************************************************
 
 
 

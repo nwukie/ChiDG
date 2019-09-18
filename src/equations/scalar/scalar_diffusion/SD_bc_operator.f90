@@ -100,6 +100,12 @@ contains
         grad2_u = worker%get_field('u','grad2', 'boundary')
         grad3_u = worker%get_field('u','grad3', 'boundary')
 
+!        if (worker%element_info%idomain_g == 1 .and. worker%element_info%ielement_g == 1) then
+!            print*, 'grad1: ', grad1_u(:)%x_ad_
+!            print*, 'grad2: ', grad2_u(:)%x_ad_
+!            print*, 'grad3: ', grad3_u(:)%x_ad_
+!        end if
+
 
         !
         ! Compute scalar coefficient

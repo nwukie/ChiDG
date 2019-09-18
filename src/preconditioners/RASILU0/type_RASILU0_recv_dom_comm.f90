@@ -70,13 +70,15 @@ contains
                                        eparent_l_diag_loop, eparent_l_offdiag_loop,             &
                                        iblk_diag_loop, eparent_g_diag, eparent_g_diag_loop,     &
                                        eparent_g_offdiag_loop, test_elem, test_blk,             &
-                                       idomain_g_recv, ielement_g_recv
+                                       idomain_g_recv, ielement_g_recv, itime
         integer(ik)                 :: block_data(7)
         integer(ik), allocatable    :: blk_indices(:)
         logical                     :: lower_block, upper_block, overlap_element, transpose_found, diagonal
 
         self%proc = proc
 
+        ! WARNING: assuming single time-level! Not applicable for Harmonic Balance
+        itime = 1
 
         !
         ! Get global index of the local domain
@@ -140,8 +142,7 @@ contains
 
                 ! Initialize densematrix
                 if ( (nterms == 0) .or. (nfields == 0) ) call chidg_signal(FATAL, "nrows/ncols == 0")
-                !call self%elem(ielem_recv)%blks(iblk)%init(nrows,ncols,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
-                call self%elem(ielem_recv)%blks(iblk)%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+                call self%elem(ielem_recv)%blks(iblk)%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
 
                
                 ! Detect diagonal block

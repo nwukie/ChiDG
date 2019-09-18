@@ -1,0 +1,12 @@
+add_lib_sources(
+                rans_volume_advection.f90
+                rans_volume_diffusion.f90
+                rans_boundary_average_advection.f90
+                rans_boundary_average_diffusion.f90
+                rans_bc_advection.f90
+                rans_bc_diffusion.f90
+                rans_volume_source.f90
+                rans_upwind_operator.f90
+                mod_rans_efficient.f90
+                eqn_rans_efficient.f90
+                )

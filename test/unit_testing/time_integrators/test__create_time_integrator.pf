@@ -1,21 +1,30 @@
 !> Test that solverdata_t was returned 'allocated'
 @Test
 subroutine test__create_time_integrator__allocated()
+#include <messenger.h>
     use pfunit_mod
     use mod_kinds,              only: rk,ik
-    use mod_time_integrators,   only: create_time_integrator
+    use mod_time_integrators,   only: time_integrator_factory
     use type_time_integrator,   only: time_integrator_t
+    use type_chidg,             only: chidg_t
     
     implicit none
-    class(time_integrator_t),    allocatable :: time
+    type(chidg_t)                           :: chidg
+    integer(ik)                             :: ierr
+    class(time_integrator_t),   allocatable :: time
     
+    call chidg%start_up('core')
     
     ! PROCEDURE BEING TESTED
-    call create_time_integrator('steady',time)
+    allocate(time, source=time_integrator_factory%produce('Steady'), stat=ierr)
+    if (ierr /= 0) call AllocationError
+    !call create_time_integrator('steady',time)
     
     
     ! Test allocated
     @assertTrue(allocated(time))
+
+    call chidg%shut_down('core')
     
 end subroutine test__create_time_integrator__allocated
 
@@ -27,19 +36,27 @@ end subroutine test__create_time_integrator__allocated
 !> Test that allocated type is returned with expected type
 @Test
 subroutine test__create_time_integrator__type()
+#include <messenger.h>
     use pfunit_mod
     use mod_kinds,              only: rk,ik
-    use mod_time_integrators,   only: create_time_integrator
+    use mod_time_integrators,   only: time_integrator_factory
     use type_time_integrator,   only: time_integrator_t
     use type_steady,            only: steady_t
+    use type_chidg,             only: chidg_t
     
     implicit none
-    class(time_integrator_t),     allocatable :: time
+    type(chidg_t)                           :: chidg
+    integer(ik)                             :: ierr
+    class(time_integrator_t),   allocatable :: time
     
+
+    call chidg%start_up('core')
     
         
     ! PROCEDURE BEING TESTED
-    call create_time_integrator('steady',time)
+    allocate(time, source=time_integrator_factory%produce('Steady'), stat=ierr)
+    if (ierr /= 0) call AllocationError
+    !call create_time_integrator('steady',time)
     
     
     ! Test for correct type
@@ -53,6 +70,7 @@ subroutine test__create_time_integrator__type()
             @assertTrue(.false.) 
     end select
             
-    
+    call chidg%shut_down('core')
+
 end subroutine test__create_time_integrator__type
 

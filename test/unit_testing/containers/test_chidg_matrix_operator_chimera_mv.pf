@@ -83,11 +83,11 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     ! Donor 1, Set some chimera matrix and vector values
     !
     idonor = 1
-    idom_d  = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
-    ielem_d = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
+    idom_d  = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_l
+    ielem_d = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_l
 
     ! Set matrix values corresponding to first donor
-    imat = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%loc(idom_d,ielem_d)
+    imat = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%loc(idom_d,ielem_d,itime)
     chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = ONE
 
     ! Set vector values for first donor
@@ -100,11 +100,11 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     ! Donor 2, Set some chimera matrix and vector values
     !
     idonor = 2
-    idom_d = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
-    ielem_d = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
+    idom_d = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_l
+    ielem_d = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%ielement_l
 
     ! Set matrix values corresponding to first donor
-    imat = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%loc(idom_d,ielem_d)
+    imat = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%loc(idom_d,ielem_d,itime)
     chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = TWO
 
     ! Set vector values for first donor
@@ -210,7 +210,7 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     ! XI_MAX
     idom_p = 4
     ielem_p = 20
-    imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%loc(idom_p,ielem_p)
+    imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%loc(idom_p,ielem_p,itime)
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat, &
                              chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
@@ -218,7 +218,7 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     ! ETA_MIN
     idom_p = 4
     ielem_p = 13
-    imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%loc(idom_p,ielem_p)
+    imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%loc(idom_p,ielem_p,itime)
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat, &
                              chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
@@ -226,7 +226,7 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     ! ETA_MAX
     idom_p = 4
     ielem_p = 25
-    imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%loc(idom_p,ielem_p)
+    imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%loc(idom_p,ielem_p,itime)
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat, &
                              chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
@@ -234,7 +234,7 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     ! DIAG
     idom_p = 4
     ielem_p = 19
-    imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%loc(idom_p,ielem_p)
+    imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%loc(idom_p,ielem_p,itime)
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat, &
                              chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 

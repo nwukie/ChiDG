@@ -4,117 +4,56 @@ module mod_linear_solver
     use type_linear_solver, only: linear_solver_t
     use type_dict,          only: dict_t
 
+    use type_fgmres,                only: fgmres_t
+    use type_petsc_linear,          only: petsc_linear_t
+    use type_fgmres_cgs_mg_correct, only: fgmres_cgs_mg_correct_t
+    implicit none
 
-    ! IMPORT MATRIX SOLVERS
-!    use type_directsolver,  only: directsolver_t
-!    use type_blockjacobi,   only: blockjacobi_t
-!    use type_gaussseidel,   only: gaussseidel_t
-!    use type_sor,           only: sor_t
-!    use type_gmres,         only: gmres_t
-    use type_fgmres,            only: fgmres_t
-    use type_fgmres_cgs,        only: fgmres_cgs_t
-    use type_fgmres_cgs_boost,  only: fgmres_cgs_boost_t
-    use type_fgmres_cgs_mg,     only: fgmres_cgs_mg_t
-    use type_jacobi,            only: jacobi_t
-    
-
-    
-
-
-
-!    type(directsolver_t)    :: DIRECT
-!    type(blockjacobi_t)     :: BLOCKJACOBI
-!    type(gaussseidel_t)     :: GAUSSSEIDEL
-!    type(sor_t)             :: SOR
-!    type(gmres_t)           :: GMRES
-    type(fgmres_t)              :: FGMRES
-    type(fgmres_cgs_t)          :: FGMRES_CGS
-    type(fgmres_cgs_boost_t)    :: FGMRES_CGS_BOOST
-    type(fgmres_cgs_mg_t)       :: FGMRES_CGS_MG
-    type(jacobi_t)              :: JACOBI
-
-
-
-
-
+    type(fgmres_t)                  :: FGMRES
+    type(petsc_linear_t)            :: PETSC_LINEAR
+    type(fgmres_cgs_mg_correct_t)   :: FGMRES_CGS_MG_CORRECT
 
 contains
 
-
-
-
-
-    !>  Factory method for creating matrixsolver objects
+    !>  Factory method for creating linear_solver objects
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/17/2016
     !!
-    !!  @param[in]      mstring     Character string used to select the appropriate matrixsolver for allocation
-    !!  @param[inout]   msolver     matrixsolver_t that will be allocated to a concrete type.
+    !!  @param[in]      mstring     Character string used to select the appropriate linear_solver for allocation
+    !!  @param[inout]   msolver     linear_solver_t that will be allocated to a concrete type.
     !!
     !---------------------------------------------------------------------------------------------------------------------
     subroutine create_linear_solver(lstring,lsolver,options)
-        character(len=*),                    intent(in)      :: lstring
+        character(*),                        intent(in)      :: lstring
         class(linear_solver_t), allocatable, intent(inout)   :: lsolver
         type(dict_t), optional,              intent(inout)   :: options
 
         integer(ik) :: ierr
 
-
         select case (trim(lstring))
-!            case ('direct','Direct')
-!                allocate(msolver, source=DIRECT, stat=ierr)
-!
-!            case ('blockjacobi','BlockJacobi')
-!                allocate(msolver, source=BLOCKJACOBI, stat=ierr)
-!
-!            case ('gaussseidel','GaussSeidel')
-!                allocate(msolver, source=GAUSSSEIDEL, stat=ierr)
-!
-!            case ('sor','SOR')
-!                allocate(msolver, source=SOR, stat=ierr)
-!
-!            case ('gmres','GMRES')
-!                allocate(msolver, source=GMRES, stat=ierr)
-!
             case ('fgmres','FGMRES')
                 allocate(lsolver, source=FGMRES, stat=ierr)
 
-            case ('fgmres_cgs', 'FGMRES_CGS')
-                allocate(lsolver, source=FGMRES_CGS, stat=ierr)
+            case ('petsc','PETSC')
+                allocate(lsolver, source=PETSC_LINEAR, stat=ierr)
 
-            case ('fgmres_cgs_mg', 'FGMRES_CGS_MG')
-                allocate(lsolver, source=FGMRES_CGS_MG, stat=ierr)
-
-            case ('fgmres_cgs_boost', 'FGMRES_CGS_BOOST')
-                allocate(lsolver, source=FGMRES_CGS_BOOST, stat=ierr)
-
-            case ('jacobi', 'Jacobi')
-                allocate(lsolver, source=JACOBI, stat=ierr)
+            case ('fgmres_cgs_mg_correct', 'FGMRES_CGS_MG_CORRECT')
+                allocate(lsolver, source=FGMRES_CGS_MG_CORRECT, stat=ierr)
 
             case default
-                call chidg_signal(FATAL,"create_matrixsolver: matrix solver string did not match any valid type")
+                call chidg_signal_one(FATAL,"create_linear_solver: linear solver string did not match any valid type",trim(lstring))
 
         end select
         if (ierr /= 0) call AllocationError
 
 
-
-
-        !
         ! Call options initialization if present
-        !
         if (present(options)) call lsolver%set(options)
 
         
-
-
-        !
         ! Make sure the solver was allocated
-        !
-        if (.not. allocated(lsolver)) call chidg_signal(FATAL,"create_matrixsolver: solver was not allocated. Check that the desired solver was registered and instantiated in the mod_matrixsolver module")
-
-
+        if (.not. allocated(lsolver)) call chidg_signal(FATAL,"create_linear_solver: solver was not allocated. Check that the desired solver was registered and instantiated in the mod_linear_solver module")
 
     end subroutine create_linear_solver
     !*********************************************************************************************************************

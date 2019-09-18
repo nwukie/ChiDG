@@ -3,6 +3,7 @@ module type_bc_patch_group
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: NO_ID, BOUNDARY, ORPHAN, NFACES, NO_FACE
     use mod_grid,                   only: FACE_CORNERS
+    use mpi_f08,                    only: mpi_integer4, mpi_comm, mpi_sum
     use type_point,                 only: point_t
     use type_bc_patch,              only: bc_patch_t
     use type_domain,                only: domain_t
@@ -31,17 +32,21 @@ module type_bc_patch_group
     type, public :: bc_patch_group_t
 
         character(:),       allocatable :: name
-
         type(bc_patch_t),   allocatable :: patch(:)
-
         integer(ik)                     :: group_ID
+
+        ! Global meta-data
+        integer(ik)                     :: nfaces_g
+        integer(ik)                     :: igroup_g
 
     contains
 
         ! Patch routines
         procedure           :: add_bc_patch
         procedure           :: npatches
-        procedure           :: nfaces => get_nfaces
+        procedure           :: nfaces => get_nfaces_local
+        procedure           :: get_nfaces_local
+        procedure           :: get_nfaces_global
         procedure,  private :: new_bc_patch
 
         ! Parallel communication patterns
@@ -384,19 +389,39 @@ contains
     !!  @date   4/18/2017
     !!
     !----------------------------------------------------------------------
-    function get_nfaces(self) result(n)
+    function get_nfaces_local(self) result(n_local)
         class(bc_patch_group_t),    intent(in)  :: self
 
-        integer(ik) :: n, patch_ID
+        integer(ik) :: n_local, patch_ID
 
-        n = 0
+        n_local = 0
         do patch_ID = 1,self%npatches()
-            n = n + self%patch(patch_ID)%nfaces()
+            n_local = n_local + self%patch(patch_ID)%nfaces()
         end do
 
-    end function get_nfaces
+    end function get_nfaces_local
     !**********************************************************************
 
+
+    !>  Return the number of faces in the group contributed from all patches.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2017
+    !!
+    !----------------------------------------------------------------------
+    function get_nfaces_global(self,bc_COMM) result(n_global)
+        class(bc_patch_group_t),    intent(in)  :: self
+        type(mpi_comm),             intent(in)  :: bc_COMM
+
+        integer(ik) :: n_local, n_global, ierr
+
+        n_local = self%get_nfaces_local()
+
+        call MPI_AllReduce(n_local,n_global,1,MPI_INTEGER4,MPI_SUM,bc_COMM,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'bc_patch_group%get_nfaces_global: error in MPI_AllReduce.')
+
+    end function get_nfaces_global
+    !**********************************************************************
 
 
 

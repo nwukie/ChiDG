@@ -41,7 +41,7 @@ module integration_2D_linear_diffusion_mod
     use mod_bc,                 only: create_bc
     use mod_string,             only: string_t
     use type_bc_state,          only: bc_state_t
-    use type_bc_state_group,          only: bc_state_group_t
+    use type_bc_state_group,    only: bc_state_group_t
     use type_function,          only: function_t
     use type_ivector,           only: ivector_t
     use mod_function,           only: create_function
@@ -64,9 +64,9 @@ module integration_2D_linear_diffusion_mod
     use type_model,             only: model_t
 
     ! Imports for defining a new equation builder
-    use mod_equations,                  only: equation_set_factory
-    use type_equation_builder,          only: equation_builder_t
-    use type_equation_set,              only: equation_set_t
+    use mod_equations,          only: equation_set_factory
+    use type_equation_builder,  only: equation_builder_t
+    use type_equation_set,      only: equation_set_t
     implicit none
 
 
@@ -76,8 +76,8 @@ module integration_2D_linear_diffusion_mod
     !
     ! Procs: 1, 2, 3
     !
-    type(ivector_t) :: nsteps_convergence(3,2,4)    ! nprocs, ngrids, norders
-    real(rk)        :: error(3,2,4)                 ! nprocs, ngrids, norders
+    type(ivector_t) :: nsteps_convergence(3,2,4,2)    ! nprocs, ngrids, norders, (native,petsc)
+    real(rk)        :: error(3,2,4,2)                 ! nprocs, ngrids, norders, (native,petsc)
 
 
     public  :: linear_diffusion_2D
@@ -162,11 +162,11 @@ module integration_2D_linear_diffusion_mod
     !-------------------------------------------------------------------------------
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
-        
         integer(ik)                 :: nelem_xi
         integer(ik)                 :: nelem_eta
-        character(:),   allocatable :: gridfile
         integer(ik)                 :: order
+        character(:),   allocatable :: gridfile
+        character(:),   allocatable :: backend
     contains
         procedure   :: toString
     end type case_grid_order
@@ -186,14 +186,15 @@ module integration_2D_linear_diffusion_mod
     !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: linear_diffusion_2D
+
+        type(chidg_t)   :: chidg
         
         integer(ik)                 :: nelem_xi
         integer(ik)                 :: nelem_eta
-        character(:),   allocatable :: gridfile
         integer(ik)                 :: order
+        character(:),   allocatable :: gridfile
+        character(:),   allocatable :: backend
 
-        type(chidg_t)   :: chidg
-        type(mpi_comm)  :: ChiDG_COMM
     contains
         procedure   :: setUp
         procedure   :: tearDown
@@ -248,29 +249,19 @@ contains
         type(AD_D), allocatable, dimension(:)   :: source
         real(rk),   allocatable, dimension(:)   :: x,y
 
-        !
         ! Interpolate solution to quadrature nodes
-        !
         source = worker%get_field('u','grad1','element')
 
         x = worker%x('volume')
         y = worker%y('volume')
-
         source = TWO*PI*PI*dsin(PI*x)*dsin(PI*y)
 
 
-
-        !
         ! Integrate volume flux
-        !
         call worker%integrate_volume_source('u',source)
-
 
     end subroutine compute
     !****************************************************************************************
-
-
-
 
 
 
@@ -311,10 +302,7 @@ contains
 
         type(AD_D), allocatable, dimension(:)   :: u, mu
 
-
         u = worker%get_field('u', 'value')
-
-        ! mu(u) = 1.0
         mu = u
         mu = 1._rk
 
@@ -322,10 +310,6 @@ contains
 
     end subroutine compute_model
     !****************************************************************************************
-
-
-
-
 
 
 
@@ -368,34 +352,20 @@ contains
 
         type(equation_set_t)    :: linear_diffusion_eqn
         
-
-        !
         ! Set equationset name.
-        !
         call linear_diffusion_eqn%set_name("Test 2D Linear Diffusion")
 
-
-        !
         ! Add spatial operators
-        !
         call linear_diffusion_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
         call linear_diffusion_eqn%add_operator("Scalar Diffusion Volume Operator")
         call linear_diffusion_eqn%add_operator("Scalar Diffusion BC Operator")
         call linear_diffusion_eqn%add_operator("Test 2D Linear Diffusion Volume Source")
 
-        !
         ! Add model for 'compute_mu' scalar coefficient
-        !
         call linear_diffusion_eqn%add_model('Testing 2D Linear Diffusion :: Coefficient Model')
-
 
     end function build
     !*****************************************************************************************
-
-
-
-
-
 
 
 
@@ -413,13 +383,15 @@ contains
     !!
     !------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
-        type(case_grid_order),  intent(in)          :: test_parameter
-        type(linear_diffusion_2D)    :: test
+        type(case_grid_order),  intent(in)  :: test_parameter
 
-        test%nelem_xi    = test_parameter%nelem_xi
-        test%nelem_eta   = test_parameter%nelem_eta
-        test%gridfile    = test_parameter%gridfile
-        test%order       = test_parameter%order
+        type(linear_diffusion_2D)   :: test
+
+        test%nelem_xi  = test_parameter%nelem_xi
+        test%nelem_eta = test_parameter%nelem_eta
+        test%order     = test_parameter%order
+        test%gridfile  = test_parameter%gridfile
+        test%backend   = test_parameter%backend
 
     end function newTest
     !******************************************************************************
@@ -435,36 +407,36 @@ contains
     
         integer(ik),        allocatable :: nelem_xi(:)
         integer(ik),        allocatable :: nelem_eta(:)
-        type(string_t),     allocatable :: files(:)
         integer(ik),        allocatable :: orders(:)
-        integer(ik) :: icase
-
-        nelem_xi  = [ 16, 16, 16,  &
-                      32, 32, 32  ]
-
-        nelem_eta = [ 16, 16, 16,  &
-                      32, 32, 32  ]
-
-        files = [ string_t('2D_linear_diffusion_16x16x1.h5'), &
-                  string_t('2D_linear_diffusion_16x16x1.h5'), &
-                  string_t('2D_linear_diffusion_16x16x1.h5'), &
-                  string_t('2D_linear_diffusion_32x32x1.h5'), &
-                  string_t('2D_linear_diffusion_32x32x1.h5'), &
-                  string_t('2D_linear_diffusion_32x32x1.h5')  &
-                  ]
+        type(string_t),     allocatable :: backend(:)
+        integer(ik) :: icase, imesh, iorder, ibackend, ncases
 
 
-        orders = [ 2, 3, 4, &
-                   2, 3, 4 ]
+        nelem_xi  = [16, 32]
+        nelem_eta = [16, 32]
+        orders    = [2, 3, 4]
+        backend   = [ string_t("native"), string_t("petsc")   ]
 
 
         !Initialize the test case container with the parameter
-        allocate(params(size(files)))
-        do icase = 1,size(files)
-            params(icase)%nelem_xi  = nelem_xi(icase)
-            params(icase)%nelem_eta = nelem_eta(icase)
-            params(icase)%gridfile  = files(icase)%str
-            params(icase)%order     = orders(icase)
+        ncases = size(nelem_xi)*size(orders)*size(backend)
+        if (allocated(params)) deallocate(params)
+        allocate(params(ncases))
+
+        icase = 1
+        do imesh = 1,size(nelem_xi)
+            do iorder = 1,size(orders)
+                do ibackend = 1,size(backend)
+
+                    params(icase)%nelem_xi  = nelem_xi(imesh)
+                    params(icase)%nelem_eta = nelem_eta(imesh)
+                    params(icase)%order     = orders(iorder)
+                    params(icase)%gridfile  = 'grid.h5'
+                    params(icase)%backend   = backend(ibackend)%str
+                    icase = icase + 1
+
+                end do
+            end do
         end do
 
     end function getParameters
@@ -480,9 +452,9 @@ contains
         class (case_grid_order),    intent(in)  :: this
         character(:), allocatable   :: string
 
-        character(len=200) :: buffer
+        character(200) :: buffer
 
-        write(buffer,'( "(nelem_xi, nelem_eta, order)=","(", I2,",", I2,",", I1, ")" )') this%nelem_xi,this%nelem_eta,this%order
+        write(buffer,'( "(nelem_xi, nelem_eta, order, backend)=","(", I2,",", I2,",", I1,",", A5, ")" )') this%nelem_xi, this%nelem_eta, this%order, this%backend
         string = trim(buffer)
 
     end function toString
@@ -511,7 +483,7 @@ contains
 
         class(function_t),  allocatable :: fcn
         class(bc_state_t),  allocatable :: bc_state
-        type(bc_state_group_t)                :: bc_state_groups(2)
+        type(bc_state_group_t)          :: bc_state_groups(2)
         type(string_t)                  :: group_names(1,6)
 
         
@@ -520,19 +492,45 @@ contains
         type(test_2D_linear_diffusion_builder_t)   :: builder_test_linear_diffusion
 
 
-        !
         ! Get MPI communicator information from pFUnit
-        !
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+        IRANK              = this%getProcessRank()
+        NRANK              = this%getNumProcessesRequested()
+        ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
-        !
         ! Initialize ChiDG environment
-        !
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('mpi',ChiDG_COMM)
         call this%chidg%start_up('core')
+
+
+        !------------------------------------------------------------------------------
+        !
+        ! Define input data here that is normally read through the namelist input file
+        !
+        ! As a result, we don't call chidg%init('io')
+        !
+        !------------------------------------------------------------------------------
+        basis            = 'legendre'
+        gq_rule          = 1
+        backend          = trim(this%backend)
+        time_integrator  = 'steady'
+        nonlinear_solver = 'newton'
+        linear_solver    = 'fgmres'
+        preconditioner   = 'RASILU0'
+        IO_DESTINATION   = 'file'
+
+        ! Set linear solver options to pass during initialization
+        call loptions%set("tol",1.e-14_rk)
+        call loptions%set("rtol",1.e-14_rk)
+
+        ! Set nonlinear solver options
+        call noptions%set("tol",5.e-10_rk)
+        call noptions%set("rtol",1.e-14_rk)
+        call noptions%set("cfl0",1.0_rk)
+        call noptions%set("nsteps",100)
+        call noptions%set("ptc",.false.)
+        !------------------------------------------------------------------------------
+
 
 
 
@@ -541,7 +539,6 @@ contains
         !-------------------------------------------------------------------------------
         call diffusion_coefficient_model%init()
         call model_factory%register(diffusion_coefficient_model)
-
 
 
         !-------------------------------------------------------------------------------
@@ -556,7 +553,6 @@ contains
         call operator_factory%register(source_test_linear_diffusion)
 
 
-
         !-------------------------------------------------------------------------------
         !
         !                 Initialize and register equation set builder
@@ -567,41 +563,7 @@ contains
 
 
 
-
-
-
-        !------------------------------------------------------------------------------
-        !
-        ! Define input data here that is normally read through the namelist input file
-        !
-        ! As a result, we don't call chidg%init('io')
-        !
-        !------------------------------------------------------------------------------
-        basis            = "legendre"
-        gq_rule          = 1
-        time_integrator  = "steady"
-        nonlinear_solver = "newton"
-        linear_solver    = "fgmres"
-        preconditioner   = "ILU0"
-        IO_DESTINATION   = "file"
-
-
-        ! Set linear solver options to pass during initialization
-        call loptions%set("tol",1.e-14_rk)
-
-        ! Set nonlinear solver options
-        call noptions%set("tol",5.e-10_rk)
-        call noptions%set("cfl0",1.0_rk)
-        call noptions%set("nsteps",100)
-        !------------------------------------------------------------------------------
-
-
-
-
-
-        !
         ! Create mesh
-        !
         if (IRANK == GLOBAL_MASTER) then
             bc_state_groups(1)%name = "XY Boundaries"
             bc_state_groups(2)%name = "Z Boundaries"
@@ -633,9 +595,7 @@ contains
         end if
 
 
-        !
         ! Set ChiDG components
-        !
         call this%chidg%set('Solution Order', integer_input=this%order)
         call this%chidg%set("Time Integrator",  algorithm=time_integrator)
         call this%chidg%set("Nonlinear Solver", algorithm=nonlinear_solver, options=noptions)
@@ -643,15 +603,11 @@ contains
         call this%chidg%set("Preconditioner",   algorithm=preconditioner)
 
 
-        !
         ! Read grid
-        !
         call this%chidg%read_mesh(this%gridfile)
 
 
-        !
         ! Initialize solution
-        !
         call create_function(fcn,'constant')
         call fcn%set_option('val',0.1_rk)
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
@@ -672,6 +628,7 @@ contains
 
         ! Close ChiDG
         call this%chidg%shut_down('core')
+        call this%chidg%shut_down('mpi')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -679,11 +636,6 @@ contains
 
     end subroutine tearDown
     !*****************************************************************************************
-
-
-
-
-
 
 
 
@@ -701,49 +653,36 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     @Test(npes=[1,2,3])
-    subroutine run_calculations(self)
-        class(linear_diffusion_2D),  intent(inout)   :: self
+    subroutine run_calculations(this)
+        class(linear_diffusion_2D),  intent(inout)   :: this 
 
         real(rk)    :: computed_error
-        integer(ik) :: npes_index, grid_index, order_index
+        integer(ik) :: npes_index, grid_index, order_index, backend_index
+
+        npes_index    = get_npes_index(NRANK)
+        grid_index    = get_grid_index(this%nelem_xi)
+        order_index   = get_order_index(this%order)
+        backend_index = get_backend_index(this%backend)
 
 
-        npes_index  = get_npes_index(NRANK)
-        grid_index  = get_grid_index(self%gridfile)
-        order_index = get_order_index(self%order)
-
-
-        !
         ! Run ChiDG simulation
-        !
-        call self%chidg%run(write_initial=.false., write_final=.false.)
+        call this%chidg%run(write_initial=.false., write_final=.false.)
 
 
-        !
         ! Store the number of nonlinear iterations that the solution converged in. 
         ! Problem is linear so it should converge in 1 Newton Step. Really, just the 
         ! solution of 1 linear system of equations.
-        !
-        nsteps_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations           !conforming grids
+        nsteps_convergence(npes_index,grid_index,order_index,backend_index) = this%chidg%nonlinear_solver%newton_iterations           !conforming grids
 
 
-        !
         ! Compute error
-        !
-        computed_error = compute_2D_linear_diffusion_error(self%chidg%data,self%ChiDG_COMM)
+        computed_error = compute_2D_linear_diffusion_error(this%chidg%data,ChiDG_COMM)
 
-
-        !
         ! Store the computed error for the current case
-        !
-        error(npes_index,grid_index,order_index) = computed_error   ! conforming grids
-
+        error(npes_index,grid_index,order_index,backend_index) = computed_error   ! conforming grids
 
     end subroutine run_calculations
     !****************************************************************************************
-
-
-
 
 
 
@@ -762,20 +701,21 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     @Test(npes=[1])
-    subroutine test_conv_conform(self)
-        class(linear_diffusion_2D),  intent(inout)   :: self
+    subroutine test_conv_conform(this)
+        class(linear_diffusion_2D),  intent(inout)   :: this 
 
-        integer(ik)             :: inpes, igrid, iorder, nsteps
+        integer(ik) :: inpes, igrid, iorder, ibackend, nsteps
 
         do inpes = 1,3
             do igrid = 1,2
                 do iorder = 1,3
+                    do ibackend = 1,2
 
-                    ! Test that the current convergence for the processor count matches the serial convergence
-                    nsteps = nsteps_convergence(inpes,igrid,iorder)%size()
+                        ! Test that the current convergence for the processor count matches the serial convergence
+                        nsteps = nsteps_convergence(inpes,igrid,iorder,ibackend)%size()
+                        @assertEqual(1, nsteps)
 
-                    @assertEqual(1, nsteps)
-
+                    end do
                 end do
             end do
         end do
@@ -793,50 +733,42 @@ contains
     !!
     !!  Error Rate = log10(error_previous)-log10(error_current) / log10(mesh_previous)-log10(mesh_current)
     !!
-    !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/16/2016
     !!
-    !!
     !----------------------------------------------------------------------------------------
     @Test(npes=[1])
-    subroutine test_err_conform(self)
-        class(linear_diffusion_2D),  intent(inout)   :: self
+    subroutine test_err_conform(this)
+        class(linear_diffusion_2D),  intent(inout)   :: this
 
-        integer(ik) :: inpes, igrid, iorder
+        integer(ik) :: inpes, igrid, iorder, ibackend
         real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
 
         tol = 0.1_rk
 
-
         do inpes = 1,3
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,3
+                    do ibackend = 1,2
 
-                    error_previous = error(inpes,igrid-1,iorder)
-                    error_current  = error(inpes,igrid  ,iorder)
+                        error_previous = error(inpes,igrid-1,iorder,ibackend)
+                        error_current  = error(inpes,igrid  ,iorder,ibackend)
 
-                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
-                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
+                        mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
+                        mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
 
+                        ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                        convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
                     
-                    !
-                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
-                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+                        @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
 
-                
-                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
-
+                    end do
                 end do
             end do
         end do
 
-
     end subroutine test_err_conform
     !*****************************************************************************************
-
-
 
 
 
@@ -850,7 +782,6 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/16/2016
     !!
-    !!
     !------------------------------------------------------------------------------------
     function compute_2D_linear_diffusion_error(data,ChiDG_COMM) result(error)
         type(chidg_data_t), intent(inout)   :: data
@@ -859,74 +790,46 @@ contains
         real(rk), allocatable, dimension(:) :: &
             u_dg, u_analytical, x_gq, y_gq, gq_error_squared
 
-
         integer(ik) :: iu
         integer(ik) :: ielem, idom, ierr, itime
         real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, &
                        error
 
-
         associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, &
                    prop => data%eqnset(1)%prop)
 
-
-            !
             ! Get equation indices
-            !
             iu = prop%get_primary_field_index("u")
 
-
-            !
             ! Zero error accumulator
-            !
             error_squared_sum = ZERO
 
-
-            !
             ! Loop over elements and accumulate error
-            !
             itime = 1
             do idom = 1,data%mesh%ndomains()
                 do ielem = 1,data%mesh%domain(idom)%nelem
 
-
-                    !
                     ! Compute the analytical solution at the quadrature nodes
-                    !
                     x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     y_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,2)
                     u_analytical = dsin(PI*x_gq)*dsin(PI*y_gq)
 
-                    !
                     ! Interpolate DG numerical solution
-                    !
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,itime,'value')
 
-                    !
                     ! Compute error at GQ nodes
-                    !                    
                     gq_error_squared = (u_analytical - u_dg)**TWO
 
-
-                    !
                     ! Integrate error
-                    !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights_element())
 
-
-                    !
                     ! Accumulate error from each element
-                    !
                     error_squared_sum = error_squared_sum + element_error_squared
-
 
                 end do ! ielem
             end do ! idom
 
-
         end associate
-
-
 
         ! Reduce the total error across processors
         call MPI_AllReduce(error_squared_sum,error_squared_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
@@ -941,22 +844,10 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/16/2016
-    !!
-    !!
     !!
     !-----------------------------------------------------------------------------
     function mesh_parameter(igrid,iorder) result(param)
@@ -1000,12 +891,6 @@ contains
 
 
 
-
-
-
-
-
-
     ! Utility for returning the index associated with a certain number of procs
     !------------------------------------------------------------------------------
     function get_npes_index(numproc) result(inpes)
@@ -1029,15 +914,15 @@ contains
 
     ! Utility for returning the index associated with a certain grid file
     !------------------------------------------------------------------------------
-    function get_grid_index(grid) result(igrid)
-        character(len=*), intent(in)    :: grid
+    function get_grid_index(nelem_1d) result(igrid)
+        integer(ik),    intent(in)  :: nelem_1d
 
         integer(ik) :: igrid
 
-        select case (trim(grid))
-            case('2D_linear_diffusion_16x16x1.h5')
+        select case (nelem_1d)
+            case(16)
                 igrid = 1
-            case('2D_linear_diffusion_32x32x1.h5')
+            case(32)
                 igrid = 2
         end select
 
@@ -1067,6 +952,27 @@ contains
     end function get_order_index
     !******************************************************************************
 
+
+
+
+    ! Utility for returning the index associated with a certain number of procs
+    !------------------------------------------------------------------------------
+    function get_backend_index(backend) result(ibackend)
+        character(*),   intent(in)  :: backend
+
+        integer(ik) :: ibackend
+
+        select case (trim(backend))
+            case('native')
+                ibackend = 1
+            case('petsc')
+                ibackend = 2
+            case default
+                call chidg_signal_one(FATAL,'Invalid backend.', trim(backend))
+        end select
+
+    end function get_backend_index
+    !******************************************************************************
 
 
 

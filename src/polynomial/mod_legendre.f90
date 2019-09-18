@@ -1,5 +1,5 @@
 module mod_legendre
-    use mod_kinds,      only: rk,ik
+    use mod_kinds,      only: rk,ik,rquad
     use mod_constants,  only: XI_DIR,ETA_DIR,ZETA_DIR, &
                               ZERO, ONE, TWO, THREE, FOUR, FIVE, EIGHTH, HALF
     use mod_ordering,   only: xi_order_2d, eta_order_2d, &
@@ -88,6 +88,39 @@ contains
     !****************************************************************************************
 
 
+    !>  Quad-precision version.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/20/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    recursive function legendre_val1D_quad(nterm,pos) result(polyval)
+    !   Compute the value of the nterm
+    !   legendre polynomial at the location pos
+    !   between -1 and 1
+    !   Edit list:  Nathan A. Wukie - 2/11/2015
+        integer(ik),    intent(in) :: nterm
+        real(rquad),       intent(in) :: pos
+
+        real(rquad)                   :: polyval, polyval_nm1, polyval_nm2
+
+        select case (nterm)
+            ! Start recursion terms
+            case (1)
+                polyval = 1._rquad
+            case (2)
+                polyval = pos
+            case (3 :)
+                ! Recursive definition for norder >= 2
+                polyval_nm1=legendre_val1D_quad(nterm-1,pos)
+                polyval_nm2=legendre_val1D_quad(nterm-2,pos)
+                polyval = ((2._rquad*real(nterm-1,rquad)-1._rquad)*pos*polyval_nm1 - &
+                          ((real(nterm-1,rquad)-1._rquad))*polyval_nm2)/real(nterm-1,rquad)
+        end select
+
+
+    end function legendre_val1D_quad
+    !****************************************************************************************
 
 
 
@@ -248,6 +281,35 @@ contains
     !*****************************************************************************************
 
 
+    !>  Compute the first derivative of the nterm Legendre polynomial at the location 
+    !!  'pos' between -1 and 1.
+    !!
+    !!  Quad-precision version.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/20/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    recursive function dlegendre_val1D_quad(nterm,pos) result(dpolyval)
+        integer(ik), intent(in)    :: nterm
+        real(rquad),    intent(in)    :: pos
+
+        real(rquad)                   :: dpolyval
+
+        select case (nterm)
+            ! Trivial evaluations
+            case (1)
+                dpolyval = 0._rquad
+            case (2)
+                dpolyval = 1._rquad
+            case (3 :)
+                ! Recursive definition
+                dpolyval = real(nterm-1,rquad)*legendre_val1D_quad(nterm-1,pos) + pos*dlegendre_val1D_quad(nterm-1,pos)
+
+        end select
+
+    end function dlegendre_val1D_quad
+    !*****************************************************************************************
 
 
 
@@ -458,8 +520,10 @@ contains
                 res = (105_rk/TWO)*pos*(THREE*pos*pos - ONE)
             case(7)
                 res = (105_rk/EIGHT)*(33._rk*pos*pos*pos*pos - 18._rk*pos*pos + ONE)
+            case(8)
+                res = (63._rk/EIGHT)*pos*(143._rk*pos*pos*pos*pos - 110._rk*pos*pos + 15._rk)
             case default
-                print*, "Error: ddlegendre_val1d is only defined through order 6"
+                print*, "Error: ddlegendre_val1d is only defined through order 8"
                 stop
         end select
 

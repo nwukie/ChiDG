@@ -57,15 +57,10 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    !subroutine compute(self,mesh,sdata,prop,elem_info,function_info)
     subroutine compute(self,worker,prop)
         class(PRIMLINEULER_volume_advective_sourceterms_real_t),    intent(in)      :: self
         type(chidg_worker_t),                                       intent(inout)   :: worker
         class(properties_t),                                        intent(inout)   :: prop
-!        type(mesh_t),                                               intent(in)      :: mesh(:)
-!        type(solverdata_t),                                         intent(inout)   :: sdata
-!        type(element_info_t),                                       intent(in)      :: elem_info
-!        type(function_info_t),                                      intent(in)      :: function_info
 
         ! Equation indices
         integer(ik)    :: irho_r,  irho_i
@@ -80,13 +75,10 @@ contains
 
 
 
-        !type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)      ::  &
         type(AD_D), allocatable, dimension(:)   ::  &
                     rho_r, u_r, v_r, w_r, p_r, H,   &
                     flux
 
-!        idom  = elem_info%idomain_l
-!        ielem = elem_info%ielement_l
 
 
 

@@ -1,7 +1,7 @@
 module type_chidg_cache
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: NFACES, CACHE_FACE_INTERIOR, CACHE_FACE_EXTERIOR
+    use mod_constants,      only: NFACES, CACHE_FACE_INTERIOR, CACHE_FACE_EXTERIOR, NO_ID
     use type_mesh,      only: mesh_t
     use type_properties,    only: properties_t
     use type_seed,          only: seed_t
@@ -42,6 +42,8 @@ module type_chidg_cache
         procedure   :: set_data
         procedure   :: get_data
 
+        procedure   :: check_field_exists
+
     end type chidg_cache_t
     !**************************************************************************************
 
@@ -68,41 +70,25 @@ contains
         integer(ik) :: iface, ierr
 
 
-        !
         ! Store logical indicating if lift is stored
-        !
         self%lift = lift
 
-
-
-        !
         ! Allocate face cache's. Fixes SegFault that occurs when these are declared as static 
         ! arrays at compile time (faces(NFACES,2)) because gfortran doesn't have complete
         ! finalization procedures implemented yet.
-        !
         if (.not. allocated(self%faces)) then
             allocate(self%faces(NFACES,2), stat=ierr)
             if (ierr /= 0) call AllocationError
         end if
 
-
-        !
         ! Allocate storage for element cache
-        !
         call self%element%resize('element',mesh,prop,idomain_l,ielement_l,differentiate=differentiate)
 
-
-
-        !
         ! Allocate storage for faces cache
-        !
         do iface = 1,size(self%faces,1)
-
             call self%faces(iface,CACHE_FACE_INTERIOR)%resize('face interior',mesh,prop,idomain_l,ielement_l,iface,differentiate=differentiate)
             call self%faces(iface,CACHE_FACE_EXTERIOR)%resize('face exterior',mesh,prop,idomain_l,ielement_l,iface,differentiate=differentiate)
-
         end do
-
 
     end subroutine resize
     !**************************************************************************************
@@ -128,13 +114,9 @@ contains
         type(seed_t),           intent(in)              :: seed
         integer(ik),            intent(in), optional    :: iface
 
-
         character(:),   allocatable :: user_msg
 
-
-        !
         ! Check if iface was provided for face-type caches
-        !
         if ((trim(cache_component) == 'face interior') .or. &
             (trim(cache_component) == 'face exterior')) then
             if (.not. present(iface)) then
@@ -145,11 +127,7 @@ contains
         end if
 
 
-
-
-        !
         ! Call accept routine on correct data component
-        !
         select case(cache_component)
             case('element')
                 call self%element%set_data(field,cache_data,data_type,idirection,seed)
@@ -165,11 +143,7 @@ contains
                             Valid values are either 'element', 'face interior', or 'face exterior' to indicate &
                             the cache type where the data is to be stored."
                 call chidg_signal_one(FATAL,user_msg,cache_component)
-
         end select
-
-
-
 
     end subroutine set_data
     !****************************************************************************************
@@ -198,10 +172,7 @@ contains
         type(seed_t),           intent(in)              :: seed
         integer(ik),            intent(in), optional    :: iface
 
-
         type(AD_D), allocatable, dimension(:) :: cache_data
-
-
 
         select case (trim(cache_component))
             case ('element')
@@ -217,8 +188,6 @@ contains
                 call chidg_signal(FATAL,'chidg_cache%get_data: Error in cache_component string')
         end select
 
-
-
     end function get_data
     !*****************************************************************************************
 
@@ -228,10 +197,35 @@ contains
 
 
 
+    !>  Check if field exists in cache.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/8/2016
+    !!
+    !!  TODO: test
+    !!
+    !----------------------------------------------------------------------------------------
+    function check_field_exists(self,field,cache_component,iface) result(exists)
+        class(chidg_cache_t),   intent(inout)           :: self
+        character(*),           intent(in)              :: field
+        character(*),           intent(in)              :: cache_component
+        integer(ik),            intent(in), optional    :: iface
 
+        logical :: exists
 
+        select case (trim(cache_component))
+            case ('element')
+                exists = (self%element%get_field_index(field) /= NO_ID)
+            case ('face interior')
+                exists = (self%faces(iface,1)%get_field_index(field) /= NO_ID)
+            case ('face exterior')
+                exists = (self%faces(iface,2)%get_field_index(field) /= NO_ID)
+            case default
+                call chidg_signal(FATAL,'chidg_cache%check_field_exists: Error in cache_component string')
+        end select
 
-
+    end function check_field_exists
+    !*****************************************************************************************
 
 
 

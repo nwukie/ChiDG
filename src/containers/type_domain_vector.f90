@@ -126,7 +126,7 @@ contains
         class(domain_vector_t),   intent(inout) :: self
         type(domain_t),         intent(in)    :: domain
 
-        integer(ik) :: nelem, ierr, ielem, nterms, neqns, ntime
+        integer(ik) :: nelem, ierr, ielem, nterms, nfields, ntime
         integer(ik) :: dparent_g, dparent_l, eparent_g, eparent_l
         logical     :: new_elements
 
@@ -170,11 +170,11 @@ contains
             eparent_g = domain%elems(ielem)%ielement_g
             eparent_l = domain%elems(ielem)%ielement_l
             nterms    = domain%elems(ielem)%nterms_s
-            neqns     = domain%elems(ielem)%neqns
+            nfields   = domain%elems(ielem)%nfields
             ntime     = domain%elems(ielem)%ntime
 
             ! Call densevector initialization routine
-            call self%vecs(ielem)%init(nterms,neqns,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
+            call self%vecs(ielem)%init(nterms,nfields,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
 
         end do
 
@@ -214,37 +214,22 @@ contains
 
         type(ivector_t) :: recv_elems
         integer(ik)     :: nelem_recv, ielem_recv, ierr, ielem, iface, nterms,  &
-                           neqns, loc, recv_element, idomain_g, idomain_l,      &
-                           ielement_g, ielement_l, ntime
+                           nfields, loc, recv_element, idomain_g, idomain_l,      &
+                           ielement_g, ielement_l, ntime, element_location(5),  &
+                           element_data(8)
         logical         :: new_elements, proc_element, already_added, comm_element
 
-
-
-        !
-        ! Get the domain index we are receiving
-        !
-        call MPI_Recv(idomain_g, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-        call MPI_Recv(idomain_l, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-
-
-        !
         ! Get the number of elements being received from domain
-        !
         call MPI_Recv(nelem_recv, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
         
 
-
-        
-
-        !
         ! Allocate densevector size. If vector was already allocated, deallocate and then reallocate vector size
         ! Reallocation would take place if the number of elements were changed
         if (allocated(self%vecs)) then
-            !
+
             ! If the size is already allocated, check if the number of elements has changed.
             ! If so (new_elements), then reallocate matrix size.
             ! If not, do nothing
-            !
             new_elements = (nelem_recv /= size(self%vecs))
             if (new_elements) then
                 deallocate(self%vecs)
@@ -253,7 +238,6 @@ contains
             end if
 
         else
-
             allocate(self%vecs(nelem_recv), stat=ierr)
             if (ierr /= 0) call AllocationError
 
@@ -261,27 +245,25 @@ contains
 
 
 
-
-        !
         ! Loop through and recv element information from sending proc and call initialization on densevector storage
-        !
         do ielem_recv = 1,nelem_recv
 
+            call MPI_Recv(element_location, 5, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(element_data,     8, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            
+            ! Interpret information that has been received
+            idomain_g  = element_location(1)
+            idomain_l  = element_location(2)
+            ielement_g = element_location(3)
+            ielement_l = element_location(4)
+            nterms     = element_data(5)
+            nfields    = element_data(4)
+            ntime      = element_data(7)
 
-            call MPI_Recv(ielement_g, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(ielement_l, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(nterms,     1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(neqns,      1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(ntime,      1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-
-            !
             ! Call densevector initialization routine
-            !
-            call self%vecs(ielem_recv)%init(nterms,neqns,ntime,idomain_g,idomain_l,ielement_g,ielement_l)
+            call self%vecs(ielem_recv)%init(nterms,nfields,ntime,idomain_g,idomain_l,ielement_g,ielement_l)
 
         end do
-
-
 
 
     end subroutine init_recv
@@ -440,6 +422,11 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !! !$OMP PARALLEL num_threads(2)
+    !! !$OMP  PARALLEL DO 
+    !! !$OMP& DEFAULT(SHARED) PRIVATE(ielem) 
+    !! !$OMP& SCHEDULE(STATIC,CHUNK) 
+    !! !$OMP& REDUCTION(+:res)
     !!
     !----------------------------------------------------------------------------------------
     function sumsqr(self) result(res)
@@ -450,12 +437,17 @@ contains
 
         res = ZERO
 
+! !$OMP PARALLEL num_threads(2)
+! !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(ielem) SCHEDULE(STATIC,CHUNK) REDUCTION(+:res)
+! !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(ielem) REDUCTION(+:res)
+
         ! Loop through block vectors and compute contribution to sum of squared entries
         do ielem = 1,size(self%vecs)
             ! Square vector values and sum
             res = res + sum( self%vecs(ielem)%vec ** TWO )
         end do
 
+! !$OMP END PARALLEL DO
 
     end function sumsqr
     !*****************************************************************************************

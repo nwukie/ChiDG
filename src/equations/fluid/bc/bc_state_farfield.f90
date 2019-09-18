@@ -128,6 +128,7 @@ contains
         v_input   = self%bcproperties%compute('Velocity-2', worker%time(), worker%coords())
         w_input   = self%bcproperties%compute('Velocity-3', worker%time(), worker%coords())
         T_input   = p_input/(rho_input*Rgas)
+        c_input   = T_input ! allocate to silence error on DEBUG build
         c_input   = sqrt(gam*Rgas*T_input)
 
 
@@ -202,11 +203,9 @@ contains
         !
         ! Get unit normal vector
         !
-        unorm_1 = worker%unit_normal(1)
-        unorm_2 = worker%unit_normal(2)
-        unorm_3 = worker%unit_normal(3)
-
-
+        unorm_1 = worker%unit_normal_ale(1)
+        unorm_2 = worker%unit_normal_ale(2)
+        unorm_3 = worker%unit_normal_ale(3)
 
 
         !
@@ -292,6 +291,7 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
+
 
 
         !

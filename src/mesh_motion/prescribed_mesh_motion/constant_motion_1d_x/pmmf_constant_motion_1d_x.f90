@@ -58,7 +58,7 @@ contains
         !
         ! Set function options to default settings
         !
-        call self%add_option('grid_advection_velocity',ZERO)
+        call self%add_option('grid_advection_velocity',ONE)
         
     end subroutine init
     !*************************************************************************

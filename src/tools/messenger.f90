@@ -2,7 +2,7 @@ module messenger
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: IO_DESTINATION
     use mod_version,    only: get_git_hash
-    use mod_chidg_mpi,  only: IRANK, GLOBAL_MASTER, ChiDG_COMM
+    use mod_chidg_mpi,  only: IRANK, NRANK, GLOBAL_MASTER, ChiDG_COMM
     implicit none
 
 
@@ -11,7 +11,7 @@ module messenger
     character(2), parameter     :: default_delimiter = '  '     ! Delimiter of line parameters
     character(:), allocatable   :: current_delimiter            ! Delimiter of line parameters
     integer                     :: default_column_width = 20    ! Default column width
-    integer                     :: unit                         ! Unit of log file
+    integer                     :: log_unit                         ! Unit of log file
     integer, parameter          :: max_msg_length = 300         ! Maximum width of message line
     integer                     :: msg_length = max_msg_length  ! Default msg_length
     logical                     :: log_initialized = .false.    ! Status of log file
@@ -23,47 +23,60 @@ contains
 
     !> Log initialization
     !!
-    !!  Gets new available file unit and opens log file. 'unit' is a module 
+    !!  Gets new available file unit and opens log file. 'log_unit' is a module 
     !!  variable that can be used throughout the module to access the log file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
     !!
     !!-----------------------------------------------------------------------------------------
-    subroutine log_init()
+    subroutine log_init(header)
+        logical, optional :: header
 
         logical         :: file_opened = .false.
+        logical         :: print_header
         character(8)    :: date
         character(10)   :: time
+        integer         :: ierr, iproc
 
-        !
         ! Open file
-        !
-        inquire(file='chidg.log', opened=file_opened)
+        do iproc = 0,NRANK
+            if (iproc == IRANK) then
+                inquire(file='chidg.log', opened=file_opened)
+                if (.not. file_opened ) then
+                    open(newunit=log_unit, file='chidg.log', form='formatted', access='sequential', iostat=ierr)
+                    if (ierr /= 0) then
+                        print*, '************** WARNING ****************'
+                        print*, 'log_init: error opening log file.', ' iostat = ', ierr
+                        print*, '***************************************'
+                    end if
+                end if
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
 
-        if ( .not. file_opened ) then
-            open(newunit=unit, file='chidg.log')
-        end if
 
-
-        !
         ! Confirm log initialized
-        !
         log_initialized = .true.
 
 
         !
         ! Write log header
         !
-        call date_and_time(date,time)
+        print_header = .true.
+        if (present(header)) print_header = header
 
-        call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
-        call write_line(' ', io_proc=GLOBAL_MASTER)
-        call write_line('Date:      ', date(:4)//" "//date(5:6)//" "//date(7:8), ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_line('Time:      ', time(:2)//":"//time(3:4)//":"//time(5:6), ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_line('Git commit: ', get_git_hash(), io_proc=GLOBAL_MASTER)
-        call write_line(' ', io_proc=GLOBAL_MASTER)
-        call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
+        if (print_header) then
+            call date_and_time(date,time)
+
+            call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
+            call write_line(' ', io_proc=GLOBAL_MASTER)
+            call write_line('Date:      ', date(:4)//" "//date(5:6)//" "//date(7:8), ltrim=.false., io_proc=GLOBAL_MASTER)
+            call write_line('Time:      ', time(:2)//":"//time(3:4)//":"//time(5:6), ltrim=.false., io_proc=GLOBAL_MASTER)
+            call write_line('Git commit: ', get_git_hash(), io_proc=GLOBAL_MASTER)
+            call write_line(' ', io_proc=GLOBAL_MASTER)
+            call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
+        end if
 
 
 
@@ -84,15 +97,31 @@ contains
     subroutine log_finalize()
 
         logical :: file_opened = .false.
+        logical :: file_exists = .false.
+        integer :: ierr, iproc
 
         !
         ! Close file
         !
-        inquire(file='chidg.log', opened=file_opened)
 
-        if ( file_opened ) then
-            close(unit)
-        end if
+        do iproc = 0,NRANK
+            if (iproc == IRANK) then
+
+                inquire(log_unit, exist=file_exists, opened=file_opened, iostat=ierr)
+                !if (ierr /= 0) then
+                !    print*, "************** WARNING ****************"
+                !    print*, "Error inquiring about log 'chidg.log'. ", " ierr: ", ierr, " File exists: ", file_exists, " File opened: ", file_opened
+                !    print*, "***************************************"
+                !end if
+
+                if (file_opened) then
+                    close(log_unit)
+                    log_initialized = .false.
+                end if
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
 
     end subroutine log_finalize
     !******************************************************************************************
@@ -347,7 +376,7 @@ contains
     !!  @param[in]  io_proc         Integer specifying MPI Rank responsible for outputing a message
     !!
     !------------------------------------------------------------------------------------------
-    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,width,color,ltrim,bold,silence,io_proc)
+    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,width,color,ltrim,bold,silence,io_proc,handle)
         class(*),           intent(in), target, optional        :: a
         class(*),           intent(in), target, optional        :: b
         class(*),           intent(in), target, optional        :: c
@@ -365,6 +394,7 @@ contains
         logical,            intent(in),         optional        :: bold
         logical,            intent(in),         optional        :: silence
         integer(ik),        intent(in),         optional        :: io_proc
+        integer(ik),        intent(in),         optional        :: handle
 
         class(*), pointer   :: auxdata => null()
 
@@ -448,7 +478,7 @@ contains
 
 
             ! Send line to output
-            call send_line()
+            call send_line(handle=handle)
 
         end if ! proc_write
 
@@ -562,7 +592,7 @@ contains
             type is(real(8))
                 if (abs(linedata) < 0.1) then
                     write(write_internal, '(E24.14)') linedata
-                else if ( (abs(linedata) > 0.1) .and. (abs(linedata) < 1.e10) ) then
+                else if ( (abs(linedata) > 0.1) .and. (abs(linedata) < 1.e9) ) then
                     write(write_internal, '(F24.14)') linedata
                 else
                     write(write_internal, '(E24.14)') linedata
@@ -702,8 +732,9 @@ contains
     !!  @date   2/3/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine send_line(silent)
-        logical,    intent(in), optional  :: silent
+    subroutine send_line(silent,handle)
+        logical,        intent(in), optional    :: silent
+        integer(ik),    intent(in), optional    :: handle
 
         integer :: delimiter_size
         integer :: line_size
@@ -713,6 +744,15 @@ contains
         character(:),   allocatable :: writeline, file_line
         integer                     :: section_length
         logical                     :: send
+        integer(ik) :: write_handle
+
+
+        !
+        ! Handle optional input
+        !
+        write_handle = log_unit
+        if (present(handle)) write_handle = handle
+
 
         !
         ! Detect silent or not
@@ -827,7 +867,7 @@ contains
                 else if ( trim(IO_DESTINATION) == 'file' ) then
                     if (log_initialized) then
                         file_line = remove_formatting(writeline)
-                        write(unit,*) file_line
+                        write(write_handle,*) file_line
                     else
                         stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
                     end if
@@ -839,7 +879,7 @@ contains
                         print*, writeline
 
                         file_line = remove_formatting(writeline)
-                        write(unit,*) file_line
+                        write(write_handle,*) file_line
 
                     else
                         stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
@@ -1057,15 +1097,12 @@ contains
     subroutine chidg_abort()
         integer(ik) :: ierr
 
-        !
         ! Abort MPI library
-        !
         call MPI_Abort(ChiDG_COMM,ierr)
 
         ! Send error signal to unix process.
         ! Important for tests that fail because of setup problems. 
         ! This returns an error status to the ctest runner in 'make test'
-        ! 
         call exit(-1)
 
 

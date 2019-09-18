@@ -1,6 +1,8 @@
 module spalart_allmaras_source
+#include<messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,SIX,HALF,PI
+    use mod_chidg_mpi,          only: GLOBAL_MASTER
     use mod_spalart_allmaras,   only: SA_c_b1, SA_c_b2, SA_kappa, SA_sigma,         &
                                       SA_c_w1, SA_c_w2, SA_c_w3, SA_c_v1, SA_c_v2,  &
                                       SA_c_v3, SA_c_t3, SA_c_t4, SA_c_n1,           &
@@ -10,6 +12,7 @@ module spalart_allmaras_source
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
+    use ieee_arithmetic
     implicit none
 
     private
@@ -103,7 +106,6 @@ contains
         real(rk)    :: const, epsilon_vorticity, eps
 
 
-
         !
         ! Interpolate solution to quadrature nodes
         !
@@ -128,10 +130,11 @@ contains
         !
         ! Interpolate auxiliary field, Wall Distance
         !
-        eps = 1.e-6_rk
+        !eps = 1.e-10_rk
+        eps = 1.e-11_rk
+        !eps = ZERO
         dwall = worker%get_field('Wall Distance', 'value', 'element')
-
-
+        if (any(ieee_is_nan(dwall(:)%x_ad_))) call write_line('dwall is nan')
 
         !
         ! Divide by density
@@ -148,13 +151,11 @@ contains
         nu  = mu*invrho
 
 
-
         !
         ! Compute turbulence viscosity
         !
         chi  = nutilde/nu
         f_v1 = (chi*chi*chi)/(chi*chi*chi + SA_c_v1*SA_c_v1*SA_c_v1)
-
 
         mu_t = rho_nutilde
         mu_t = ZERO
@@ -162,7 +163,6 @@ contains
             mu_t = rho_nutilde * f_v1
         end where
         
-
 
         !
         ! Compute f_n1
@@ -174,7 +174,6 @@ contains
         end where
 
 
-
         !
         ! Compute vorticity and modified vorticity
         !
@@ -182,9 +181,8 @@ contains
         vorticity_2 = worker%get_field('Vorticity-2', 'value', 'element')
         vorticity_3 = worker%get_field('Vorticity-3', 'value', 'element')
 
-        !vorticity2 =  (dw_dy - dv_dz)**TWO  +  (du_dz - dw_dx)**TWO  +  (dv_dx - du_dy)**TWO 
+
         vorticity2 =  vorticity_1**TWO  +  vorticity_2**TWO  +  vorticity_3**TWO 
-        
         epsilon_vorticity = 1.e-6_rk
         vorticity = vorticity2
         where(vorticity2 < epsilon_vorticity)
@@ -204,8 +202,6 @@ contains
         else where
             vorticity_mod = vorticity + vorticity*(SA_c_v2*SA_c_v2*vorticity + SA_c_v3*vorticity_bar)/( (SA_c_v3 - TWO*SA_c_v2)*vorticity - vorticity_bar ) 
         end where
-
-
 
 
         !
@@ -260,7 +256,6 @@ contains
         grad3_nutilde = dnutilde_drho*grad3_rho  +  dnutilde_drho_nutilde*grad3_rho_nutilde
 
 
-
         !========================================================================
         !                       Spalart-Allmaras Source Term
         !========================================================================
@@ -269,6 +264,7 @@ contains
                     -(SA_c_b2/SA_sigma)*rho*(grad1_nutilde*grad1_nutilde + grad2_nutilde*grad2_nutilde + grad3_nutilde*grad3_nutilde)   &
                     +(ONE/SA_sigma)*(nu + f_n1*nutilde)*(grad1_rho*grad1_nutilde + grad2_rho*grad2_nutilde + grad3_rho*grad3_nutilde)   &
                   )
+
 
         call worker%integrate_volume_source('Density * NuTilde',source)
 

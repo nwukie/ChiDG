@@ -61,7 +61,7 @@ contains
                                                     bc_state_groups,                    &
                                                     nelem_xi,  nelem_eta,  nelem_zeta,  &
                                                     clusterx, save_intermediate_files,  &
-                                                    x_max_in, x_min_in)
+                                                    x_max_in, x_min_in, y_max_in, y_min_in, z_max_in, z_min_in)
         character(*),                           intent(in)  :: selector
         character(*),                           intent(in)  :: filename
         type(string_t),             optional,   intent(in)  :: equation_sets(:)
@@ -73,6 +73,10 @@ contains
         integer(ik),                optional,   intent(in)  :: clusterx
         real(rk),                   optional,   intent(in)  :: x_max_in
         real(rk),                   optional,   intent(in)  :: x_min_in
+        real(rk),                   optional,   intent(in)  :: y_max_in
+        real(rk),                   optional,   intent(in)  :: y_min_in
+        real(rk),                   optional,   intent(in)  :: z_max_in
+        real(rk),                   optional,   intent(in)  :: z_min_in
         logical,                    optional,   intent(in)  :: save_intermediate_files
 
         character(:),   allocatable :: user_msg
@@ -92,7 +96,7 @@ contains
                                                              group_names,                       &
                                                              bc_state_groups,                   &
                                                              nelem_xi, nelem_eta, nelem_zeta,   &
-                                                             clusterx, x_max_in, x_min_in)
+                                                             clusterx, x_max_in, x_min_in, y_max_in, y_min_in, z_max_in, z_min_in)
 
             case("D2 NxNxN M1")
                 call create_mesh_file__multiblock(filename, equation_sets,                      &
@@ -153,15 +157,15 @@ contains
             ! PMM
             !
             case("D1 NxNxN PMM")
-                call create_mesh_file__pmm__singleblock(filename, equation_sets,                     &
+                call create_mesh_file__pmm__singleblock(filename, equation_sets,                &
                                                              group_names,                       &
-                                                             bc_state_groups,                         &
+                                                             bc_state_groups,                   &
                                                              nelem_xi, nelem_eta, nelem_zeta,   &
                                                              clusterx)
             case("D1 NxNxN PMM_SIN")
-                call create_mesh_file__pmm__sinusoidal__singleblock(filename, equation_sets,                     &
+                call create_mesh_file__pmm__sinusoidal__singleblock(filename, equation_sets,    &
                                                              group_names,                       &
-                                                             bc_state_groups,                         &
+                                                             bc_state_groups,                   &
                                                              nelem_xi, nelem_eta, nelem_zeta,   &
                                                              clusterx)
 
@@ -170,18 +174,18 @@ contains
             ! Uniform Flow PMM (regression test) 
             !
             case("Uniform Flow PMM")
-                call create_mesh_file__uniform_flow_pmm(filename,nelem_xi        = nelem_xi,        &
-                                                           nelem_eta       = nelem_eta,       &
-                                                           nelem_zeta      = nelem_zeta,      &
-                                                           equation_sets   = equation_sets,   &
-                                                           group_names     = group_names,     &
+                call create_mesh_file__uniform_flow_pmm(filename,nelem_xi  = nelem_xi,          &
+                                                           nelem_eta       = nelem_eta,         &
+                                                           nelem_zeta      = nelem_zeta,        &
+                                                           equation_sets   = equation_sets,     &
+                                                           group_names     = group_names,       &
                                                            bc_state_groups = bc_state_groups)
             case("Convecting Vortex PMM")
-                call create_mesh_file__convecting_vortex_pmm(filename,nelem_xi        = nelem_xi,        &
-                                                           nelem_eta       = nelem_eta,       &
-                                                           nelem_zeta      = nelem_zeta,      &
-                                                           equation_sets   = equation_sets,   &
-                                                           group_names     = group_names,     &
+                call create_mesh_file__convecting_vortex_pmm(filename,nelem_xi = nelem_xi,      &
+                                                           nelem_eta       = nelem_eta,         &
+                                                           nelem_zeta      = nelem_zeta,        &
+                                                           equation_sets   = equation_sets,     &
+                                                           group_names     = group_names,       &
                                                            bc_state_groups = bc_state_groups)
 
 

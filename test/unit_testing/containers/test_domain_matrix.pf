@@ -14,14 +14,14 @@
 subroutine test_domain_matrix__store_1eq_8terms()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NO_ID
     use mod_string,                 only: string_t
     use type_chidg,                 only: chidg_t
     use type_domain,                only: domain_t
     use type_point,                 only: point_t
     use type_domain_matrix,         only: domain_matrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use type_face_info,             only: face_info_t, face_info
+    use type_element_info,          only: element_info_t, element_info 
     use type_seed,                  only: seed_t
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
@@ -34,9 +34,9 @@ subroutine test_domain_matrix__store_1eq_8terms()
     type(domain_connectivity_t) :: connectivity
     type(domain_matrix_t)       :: bmat
     type(AD_D)                  :: integral(8)
-    type(face_info_t)           :: face_location
+    type(element_info_t)        :: elem_info 
     type(seed_t)                :: seed
-    integer(ik)                 :: ielement_l, ivar, nderiv, i, neqns, imat,  &
+    integer(ik)                 :: ielement_l, ivar, nderiv, i, nfields, imat,  &
                                    nterms_c, idomain, spacedim, itime, ntime, &
                                    nelements_g, nterms_s
     real(rk),   allocatable     :: mat(:,:)
@@ -54,7 +54,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
                                       nelem_eta  = 3,                                   &
                                       nelem_zeta = 3 )
 
-    neqns    = 1
+    nfields  = 1
     nterms_s = 8
     call chidg%set('Solution Order', integer_input=2)
     call chidg%set('Time Integrator' , algorithm='Steady')
@@ -76,7 +76,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
     !
     ! Initialize AD variables with allocated derivative arrays
     !
-    nderiv = neqns*nterms_s
+    nderiv = nfields*nterms_s
     do i = 1,8
         integral(i) = AD_D(nderiv)
     end do
@@ -123,17 +123,44 @@ subroutine test_domain_matrix__store_1eq_8terms()
     ielement_l = 14
     ivar       = 1
     itime      = 1
-    face_location = face_info(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
-    call seed%init(     idomain_g=1,idomain_l=1,ielement_g=13,ielement_l=13, &
-                        neqns=neqns,nterms_s=nterms_s,iproc=0,recv_comm=0,recv_domain=0,recv_element=0)
-    call bmat%store(integral,face_location,seed,ivar,itime)
+    elem_info  = element_info(idomain_g=1,          &
+                              idomain_l=1,          &
+                              ielement_g=14,        &
+                              ielement_l=14,        &
+                              iproc=0,              &
+                              pelem_ID=NO_ID,       &
+                              eqn_ID=1,             &
+                              nfields=1,            &
+                              ntime=1,              &
+                              nterms_s=8,           &
+                              nterms_c=8,           &
+                              dof_start=104,        &
+                              dof_local_start=104,  &
+                              recv_comm=NO_ID,      &
+                              recv_domain=NO_ID,    &
+                              recv_element=NO_ID,   &
+                              recv_dof=NO_ID)
+
+    call seed%init(idomain_g=1,         &
+                   idomain_l=1,         &
+                   ielement_g=13,       &
+                   ielement_l=13,       &
+                   nfields=nfields,     &
+                   nterms_s=nterms_s,   &
+                   iproc=0,             &
+                   itime=itime,         &
+                   dof_start=96,        &
+                   recv_comm=0,         &
+                   recv_domain=0,       &
+                   recv_element=0)
+    call bmat%store(integral,elem_info,seed,ivar,itime)
 
 
     !
     ! Check that the derivatives were assigned to their correct locations in the domain matrix.
     ! The xp_ad_ arrays should be stored as rows of the domain matrix.
     !
-    imat = bmat%lblks(ielement_l,itime)%loc(idomain_g=1,ielem_g=13)
+    imat = bmat%lblks(ielement_l,itime)%loc(idomain_g=1,ielem_g=13,itime=itime)
     mat  = bmat%lblks(ielement_l,itime)%dmat(imat)
 
     @assertEqual(integral(1)%xp_ad_, mat(1,:) )
@@ -168,14 +195,14 @@ end subroutine test_domain_matrix__store_1eq_8terms
 subroutine test_domain_matrix__store_2eq_8terms()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use mod_constants,              only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NO_ID
     use mod_string,                 only: string_t
     use type_chidg,                 only: chidg_t
     use type_domain,                only: domain_t
     use type_point,                 only: point_t
     use type_domain_matrix,         only: domain_matrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use type_face_info,             only: face_info_t, face_info
+    use type_element_info,          only: element_info_t, element_info
     use type_seed,                  only: seed_t
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
@@ -186,11 +213,11 @@ subroutine test_domain_matrix__store_2eq_8terms()
     type(domain_t)              :: domain
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
-    type(domain_matrix_t)         :: bmat
-    type(face_info_t)           :: face_location
+    type(domain_matrix_t)       :: bmat
+    type(element_info_t)        :: elem_info
     type(seed_t)                :: seed
     type(AD_D)                  :: integral(8)
-    integer(ik)                 :: ivar, nderiv, i, neqns, imat, idomain, ielem, &
+    integer(ik)                 :: ivar, nderiv, i, nfields, imat, idomain, ielem, &
                                    nterms_c, spacedim, itime, ntime, nelements_g, nterms_s
     real(rk),   allocatable     :: mat(:,:)
     
@@ -207,7 +234,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
                                       nelem_zeta = 3 )
 
 
-    neqns    = 2
+    nfields  = 2
     nterms_s = 8
     call chidg%set('Solution Order', integer_input=2)
     call chidg%set('Time Integrator' , algorithm='Steady')
@@ -227,7 +254,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
     !
     ! Initialize AD variables with allocated derivative arrays
     !
-    nderiv = neqns*nterms_s
+    nderiv = nfields*nterms_s
     do i = 1,8
         integral(i) = AD_D(nderiv)
     end do
@@ -268,21 +295,49 @@ subroutine test_domain_matrix__store_2eq_8terms()
     !
     ! PROCEDURE BEING TESTED, bmat%store
     !
-    face_location = face_info(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
-    call seed%init(idomain_g=1,idomain_l=1,ielement_g=13,ielement_l=13, &
-                   neqns=neqns,nterms_s=nterms_s,iproc=0,recv_comm=0,recv_domain=0,recv_element=0)
+    elem_info = element_info(idomain_g=1,         &
+                             idomain_l=1,         &
+                             ielement_g=14,       &
+                             ielement_l=14,       &
+                             iproc=0,             &
+                             pelem_ID=NO_ID,      &
+                             eqn_ID=1,            &
+                             nfields=nfields,     &
+                             ntime=1,             &
+                             nterms_s=8,          &
+                             nterms_c=8,          &
+                             dof_start=104,       &
+                             dof_local_start=104, &
+                             recv_comm=NO_ID,     &
+                             recv_domain=NO_ID,   &
+                             recv_element=NO_ID,  &
+                             recv_dof=NO_ID)
+
+
+    call seed%init(idomain_g=1,         &
+                   idomain_l=1,         &
+                   ielement_g=13,       &
+                   ielement_l=13,       &
+                   nfields=nfields,     &
+                   nterms_s=nterms_s,   &
+                   iproc=0,             &
+                   itime=itime,         &
+                   dof_start=96,        &
+                   recv_comm=0,         &
+                   recv_domain=0,       &
+                   recv_element=0)
 
     ielem = 14
     itime = 1
     ivar  = 2
-    call bmat%store(integral,face_location,seed,ivar,itime)
+    call bmat%store(integral,elem_info,seed,ivar,itime)
 
 
     !
     ! Check that the derivatives were assigned to their correct locations in the domain matrix.
     ! The xp_ad_ arrays should be stored as rows of the domain matrix.
     !
-    imat = bmat%lblks(ielem,itime)%loc(idomain_g=1,ielem_g=13)
+    imat = bmat%lblks(ielem,itime)%loc(idomain_g=1,ielem_g=13,itime=itime)
     mat  = bmat%lblks(ielem,itime)%dmat(imat)
     @assertEqual(integral(1)%xp_ad_, mat(9,:) )
     @assertEqual(integral(2)%xp_ad_, mat(10,:) )
@@ -318,14 +373,14 @@ end subroutine test_domain_matrix__store_2eq_8terms
 subroutine test_domain_matrix__clear_1eq_8terms()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NO_ID
     use mod_string,                 only: string_t
     use type_chidg,                 only: chidg_t
     use type_domain,                only: domain_t
     use type_point,                 only: point_t
     use type_domain_matrix,         only: domain_matrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use type_face_info,             only: face_info_t, face_info
+    use type_element_info,          only: element_info_t, element_info
     use type_seed,                  only: seed_t
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
@@ -338,9 +393,9 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     type(domain_connectivity_t) :: connectivity
     type(domain_matrix_t)       :: bmat
     type(AD_D)                  :: integral(8)
-    type(face_info_t)           :: face_location
+    type(element_info_t)        :: elem_info 
     type(seed_t)                :: seed
-    integer(ik)                 :: ielement_l, ivar, nderiv, i, neqns, imat, ielem, &
+    integer(ik)                 :: ielement_l, ivar, nderiv, i, nfields, imat, ielem, &
                                    nterms_c, idomain, spacedim, ntime, itime, nelements_g, nterms_s
     real(rk)                    :: tol
     real(rk),   allocatable     :: mat(:,:)
@@ -350,10 +405,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     call chidg%start_up('core')
     
 
-
-    !
     ! Create a 3x3x3 mesh
-    !
     call create_mesh_file("D1 NxNxN", filename = 'file.h5',                             &
                                       equation_sets = [string_t('Scalar Advection')],   &
                                       nelem_xi   = 3,                                   &
@@ -361,7 +413,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
                                       nelem_zeta = 3 )
 
 
-    neqns    = 1
+    nfields  = 1
     nterms_s = 8
     call chidg%set('Solution Order', integer_input=2)
     call chidg%set('Time Integrator' , algorithm='Steady')
@@ -371,28 +423,19 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     call chidg%read_mesh('file.h5')
 
 
-
-    !
     ! Call initialization on domain matrix
-    !
     call bmat%init(chidg%data%mesh,idom=1,mtype='full')
 
 
-
-    !
     ! Initialize AD variables with allocated derivative arrays
-    !
-    nderiv = neqns*nterms_s
+    nderiv = nfields*nterms_s
     do i = 1,8
         integral(i) = AD_D(nderiv)
     end do
 
 
-
-    integral = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
-    !
     ! Set the first and last element of each derivative array so they aren't just zeros
-    !
+    integral = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
     integral(1)%xp_ad_(1) = ONE
     integral(1)%xp_ad_(8) = ONE
     
@@ -418,39 +461,55 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     integral(8)%xp_ad_(8) = EIGHT
 
 
-    !
     ! Store Derivatives
-    !
-    face_location = face_info(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
-    call seed%init(     idomain_g=1,idomain_l=1,ielement_g=13,ielement_l=13, &
-                        neqns=neqns,nterms_s=nterms_s,iproc=0,recv_comm=0,recv_domain=0,recv_element=0)
     ivar  = 1
     itime = 1
-    call bmat%store(integral,face_location,seed,ivar,itime)
+    elem_info = element_info(idomain_g=1,         &
+                             idomain_l=1,         &
+                             ielement_g=14,       &
+                             ielement_l=14,       &
+                             iproc=0,             &
+                             pelem_ID=NO_ID,      &
+                             eqn_ID=1,            &
+                             nfields=nfields,     &
+                             ntime=1,             &
+                             nterms_s=8,          &
+                             nterms_c=8,          &
+                             dof_start=104,       &
+                             dof_local_start=104, &
+                             recv_comm=NO_ID,     &
+                             recv_domain=NO_ID,   &
+                             recv_element=NO_ID,  &
+                             recv_dof=NO_ID)
 
 
+    call seed%init(idomain_g=1,         &
+                   idomain_l=1,         &
+                   ielement_g=13,       &
+                   ielement_l=13,       &
+                   nfields=nfields,     &
+                   nterms_s=nterms_s,   &
+                   iproc=0,             &
+                   itime=itime,         &
+                   dof_start=96,        &
+                   recv_comm=0,         &
+                   recv_domain=0,       &
+                   recv_element=0)
+    call bmat%store(integral,elem_info,seed,ivar,itime)
 
-    !
+
     ! TESTING THIS
-    !
     call bmat%clear()
     
 
-    
-    !
     ! Loop through all domains and assert ZERO
-    !
     do ielem = 1,27
         do imat = 1,bmat%lblks(ielem,itime)%size()
             @assertEqual(ZERO, bmat%lblks(ielem,itime)%dmat(imat), tol)
         end do
     end do
 
-
-
-    !
     ! Close ChiDG interface
-    !
     call chidg%shut_down('core')
     
 end subroutine test_domain_matrix__clear_1eq_8terms

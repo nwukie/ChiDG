@@ -161,7 +161,8 @@ contains
         !
         ! Compute Lax-Friedrichs upwind flux
         !
-        dissipation = HALF*max(abs(wavespeed_m),abs(wavespeed_p))*(density_nutilde_m - density_nutilde_p)
+        !dissipation = HALF*max(abs(wavespeed_m),abs(wavespeed_p))*(density_nutilde_m - density_nutilde_p)
+        dissipation = -HALF*max(abs(wavespeed_m),abs(wavespeed_p))*(density_nutilde_p - density_nutilde_m)
 
 
         !

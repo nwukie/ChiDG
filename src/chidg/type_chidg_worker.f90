@@ -29,18 +29,24 @@
 module type_chidg_worker
 #include <messenger.h>
     use mod_kinds,              only: ik, rk
+    use mod_io,                 only: face_lift_stab, elem_lift_stab
     use mod_constants,          only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA,  &
                                       ONE, THIRD, TWO, NOT_A_FACE, BOUNDARY,    &
-                                      CARTESIAN, CYLINDRICAL, INTERIOR, HALF
+                                      CARTESIAN, CYLINDRICAL, INTERIOR, HALF,   &
+                                      FOUR, NO_ID
 
-    use mod_interpolate,        only: interpolate_element_autodiff
+    use mod_inv,                only: inv
+    use mod_interpolate,        only: interpolate_element_autodiff, interpolate_general_autodiff
+    use mod_polynomial,         only: polynomial_val
     use mod_integrate,          only: integrate_boundary_scalar_flux, &
                                       integrate_volume_vector_flux,   &
-                                      integrate_volume_scalar_source
+                                      integrate_volume_scalar_source, &
+                                      store_volume_integrals
 
     use type_point,             only: point_t
     use type_mesh,              only: mesh_t
     use type_solverdata,        only: solverdata_t
+    use type_time_manager,      only: time_manager_t
     use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t
     use type_function_info,     only: function_info_t
@@ -65,16 +71,18 @@ module type_chidg_worker
         type(mesh_t),           pointer :: mesh
         type(solverdata_t),     pointer :: solverdata
         type(chidg_cache_t),    pointer :: cache
+        type(time_manager_t),   pointer :: time_manager
         !type(properties_t),     pointer :: prop(:)
         type(properties_t), allocatable :: prop(:)
 
-        integer(ik)                 :: iface
-        integer(ik)                 :: itime
+
         type(element_info_t)        :: element_info
         type(function_info_t)       :: function_info
+        integer(ik)                 :: iface
+        integer(ik)                 :: itime        ! Time index
+        real(rk)                    :: t            ! Physical time
     
         character(:),   allocatable :: interpolation_source
-        real(rk)                    :: t                    ! Physical time
         logical                     :: contains_lift
 
     contains 
@@ -86,11 +94,17 @@ module type_chidg_worker
         procedure   :: set_face             ! Set iface index
         procedure   :: face_info            ! Return a face_info type
 
-
         ! Worker get/set data
+        procedure   :: interpolate_field
+        procedure   :: interpolate_field_general
         procedure   :: get_field
+        procedure   :: check_field_exists
         procedure   :: store_bc_state
         procedure   :: store_model_field
+
+        procedure   :: get_octree_rbf_indices
+        procedure   :: get_ndepend_simple
+
 
         ! BEGIN DEPRECATED
         procedure, private   :: get_primary_field_general
@@ -111,13 +125,6 @@ module type_chidg_worker
         procedure, private   :: get_primary_field_grad_ale_general
         ! END DEPRECATED
 
-
-
-
-
-
-
-
         ! Element/Face data access procedures
         procedure   :: normal
         procedure   :: unit_normal
@@ -128,15 +135,20 @@ module type_chidg_worker
         procedure   :: y
         procedure   :: z
         procedure   :: coordinate
+        procedure   :: coordinate_arbitrary
 
         procedure   :: element_size
         procedure   :: solution_order
         procedure   :: quadrature_weights
         procedure   :: inverse_jacobian
         procedure   :: face_area
+        procedure   :: volume
+        procedure   :: centroid
         procedure   :: coordinate_system
         procedure   :: face_type
         procedure   :: time
+        procedure   :: nnodes1d
+        procedure   :: h_smooth
 
         procedure   :: get_area_ratio
         procedure   :: get_grid_velocity_element
@@ -146,10 +158,9 @@ module type_chidg_worker
         procedure   :: get_det_jacobian_grid_element
         procedure   :: get_det_jacobian_grid_face
 
-
-
-
-
+        ! Shock sensor procedures
+        procedure   :: get_pressure_jump_indicator
+        procedure   :: get_pressure_jump_shock_sensor
 
         ! Integration procedures
         procedure   :: integrate_boundary_average
@@ -158,8 +169,10 @@ module type_chidg_worker
 
         procedure   :: integrate_volume_flux
         procedure   :: integrate_volume_source
+        procedure   :: accumulate_residual
 
-
+        ! Projection
+        procedure   :: project_from_nodes
 
         ! Worker auxiliary flux processing procedures. Used internally
         procedure, private:: post_process_volume_advective_flux_ale
@@ -187,11 +200,12 @@ contains
     !!  @date   8/22/2016
     !!
     !---------------------------------------------------------------------------------
-    subroutine init(self,mesh,prop,solverdata,cache)
+    subroutine init(self,mesh,prop,solverdata,time_manager,cache)
         class(chidg_worker_t),  intent(inout)       :: self
-        type(mesh_t),       intent(in), target  :: mesh
+        type(mesh_t),           intent(in), target  :: mesh
         type(properties_t),     intent(in), target  :: prop(:)
         type(solverdata_t),     intent(in), target  :: solverdata
+        type(time_manager_t),   intent(in), target  :: time_manager
         type(chidg_cache_t),    intent(in), target  :: cache
 
         character(:),   allocatable :: temp_name
@@ -205,6 +219,7 @@ contains
         self%prop       =  prop
         !self%prop       => prop
         self%solverdata => solverdata
+        self%time_manager => time_manager
         self%cache      => cache
 
     end subroutine init
@@ -525,7 +540,7 @@ contains
 
         type(face_info_t)               :: face_info
         character(:),   allocatable     :: cache_component, cache_type, user_msg
-        integer(ik)                     :: idirection, igq, iface, ifield, idomain_l, eqn_ID
+        integer(ik)                     :: idirection, igq, iface, ifield, idomain_l, ielement_l, eqn_ID
 
 
         !
@@ -574,10 +589,11 @@ contains
 
             if (cache_type == 'value') then
                 idomain_l = self%element_info%idomain_l
-                eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+                ielement_l = self%element_info%ielement_l
+                eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
                 ifield    = self%prop(eqn_ID)%get_primary_field_index(field)
 
-                var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, Pmin, Pmax)
+                var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, mode_min=Pmin, mode_max=Pmax)
 
             else if ( (cache_type == 'gradient') .or. &
                       (cache_type == 'gradient + lift') ) then
@@ -618,35 +634,164 @@ contains
 
 
     end function get_primary_field_element
-    !****************************************************************************************
+    !***************************************************************************************
 
 
 
 
-
-
-
-
-
-
-    !>
+    !>  Construct the interpolation of a field from a polynomial expansion to
+    !!  discrete reference coordinates.
     !!
+    !!  Note: this interpolates to REFERENCE coordinates for the particular element 
+    !!  currently being visited. [xi,eta,zeta] in [-1,1]
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2018
+    !!
+    !---------------------------------------------------------------------------------------
+    function interpolate_field(self,field,ref_nodes) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+        real(rk),               intent(in)  :: ref_nodes(:,:)
+
+        type(AD_D), allocatable :: var_gq(:)
+        real(rk),   allocatable :: interpolator(:,:) 
+        integer(ik)             :: nterms, nnodes, ierr, iterm, eqn_ID, ifield, inode
+
+        !
+        ! Construct interpolation matrix
+        !
+        nterms = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%nterms_s
+        nnodes = size(ref_nodes,1)
+        allocate(interpolator(nnodes,nterms), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        do iterm = 1,nterms
+            do inode = 1,nnodes
+                interpolator(inode,iterm) = polynomial_val(3,nterms,iterm,ref_nodes(inode,1:3))
+            end do
+        end do
+
+        !
+        ! Get access index in solution vector for field being interpolated
+        !
+        eqn_ID = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%eqn_ID
+        ifield = self%prop(eqn_ID)%get_primary_field_index(trim(field))
+
+
+        !
+        ! Call interpolation with interpolator overriding default interpolator
+        !
+        var_gq = interpolate_element_autodiff(self%mesh,self%solverdata%q,self%element_info,self%function_info,ifield,self%itime,'value',interpolator=interpolator)
+
+    end function interpolate_field
+    !***************************************************************************************
+
+
+
+
+
+
+    !>  Construct the interpolation of a field from a polynomial expansion to
+    !!  discrete physical coordinates.
+    !!
+    !!  Note: this interpolates to PHYSICAL coordinates, possibly from multiple
+    !!  donor elements.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/24/2018
+    !!
+    !!  @param[in]  field           String indicating primary field to be interpolated.
+    !!  @param[in]  physical_nodes  Physical coordinates to be interpolated to.
+    !!
+    !---------------------------------------------------------------------------------------
+    function interpolate_field_general(self,field,physical_nodes,try_offset,donors,donor_nodes,itime) result(var)
+        class(chidg_worker_t),  intent(in)              :: self
+        character(*),           intent(in)              :: field
+        real(rk),               intent(in), optional    :: physical_nodes(:,:)
+        real(rk),               intent(in), optional    :: try_offset(3)
+        type(element_info_t),   intent(in), optional    :: donors(:)
+        real(rk),               intent(in), optional    :: donor_nodes(:,:)
+        integer(ik),            intent(in), optional    :: itime
+
+        integer(ik)                             :: eqn_ID, ifield, itime_in
+        type(AD_D), allocatable, dimension(:)   :: var
+
+        itime_in = self%itime
+        if (present(itime)) itime_in = itime
+
+        ! Get equation_set identifier and locate field index
+        eqn_ID = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%eqn_ID
+        ifield = self%prop(eqn_ID)%get_primary_field_index(trim(field))
+
+        ! Arbitrary interpolation of primary field onto physical_nodes
+        var = interpolate_general_autodiff(self%mesh,                   &
+                                           self%solverdata%q,           &
+                                           self%function_info,          &
+                                           ifield,                      &
+                                           itime_in,                    &
+                                           'value',                     &
+                                           nodes=physical_nodes,        &
+                                           try_offset=try_offset,       &
+                                           donors=donors,               &
+                                           donor_nodes=donor_nodes)
+
+    end function interpolate_field_general
+    !**************************************************************************************
+
+
+
+    
+
+    !>  Check if a field exists in the cache.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   5/9/2019
+    !!
+    !--------------------------------------------------------------------------------------
+    function check_field_exists(self,field) result(exists)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+
+        logical :: exists
+
+        exists = self%cache%check_field_exists(field,'element')
+
+    end function check_field_exists
+    !***************************************************************************************
+
+
+
+
+
+
+    !>  Return a field from the chidg_cache.
+    !!
+    !!  Data in the chidg_cache is already interpolated to quadrature nodes.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   7/10/2017
     !!
     !---------------------------------------------------------------------------------------
-    function get_field(self,field,interp_type,interp_source_user) result(var_gq)
+    function get_field(self,field,interp_type,interp_source_user,iface,override_lift,use_lift_faces,only_lift) result(var_gq)
         class(chidg_worker_t),  intent(in)              :: self
         character(*),           intent(in)              :: field
         character(*),           intent(in)              :: interp_type
         character(*),           intent(in), optional    :: interp_source_user
+        integer(ik),            intent(in), optional    :: iface
+        logical,                intent(in), optional    :: override_lift
+        logical,                intent(in), optional    :: only_lift
+        integer(ik),            intent(in), optional    :: use_lift_faces(:)
+
 
         type(AD_D),     allocatable :: var_gq(:), tmp_gq(:)
         character(:),   allocatable :: cache_component, cache_type, lift_source, lift_nodes, user_msg, interp_source
-        integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface
-        real(rk)                    :: stabilization
-        logical                     :: no_lift
+        integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface_loop, iface_use, iface_select, i
+        real(rk)                    :: stabilization, face_area, centroid_m(3), centroid_p(3), centroid_distance(3),    &
+                                       volume_m, volume_p, centroid_normal_distance, average_normals(3)
+        real(rk),       allocatable :: unit_normal_1(:), unit_normal_2(:), unit_normal_3(:)
+        logical                     :: lift
+
 
         !
         ! Get user-specified interpolation source, or get from cache pointer entry
@@ -658,6 +803,51 @@ contains
         end if
 
 
+        !
+        ! Set face interpolation. Default is from worker. 
+        ! User can override with 'iface' optional input
+        !
+        iface_use = self%iface
+        if (present(iface)) iface_use = iface
+
+
+!        !
+!        ! Compute adaptive face lift stabilization: NOTE not verified or determined to be stable.
+!        !
+!        face_area = self%face_area()
+!        volume_m   = self%volume('interior')
+!        volume_p   = self%volume('exterior')
+!        centroid_m = self%centroid('interior')
+!        centroid_p = self%centroid('exterior')
+!        centroid_distance = abs(centroid_p - centroid_m)
+!        unit_normal_1 = self%unit_normal(1)
+!        unit_normal_2 = self%unit_normal(2)
+!        unit_normal_3 = self%unit_normal(3)
+!
+!        ! Compute average face normal
+!        average_normals(1) = abs(sum(unit_normal_1)/size(unit_normal_1))
+!        average_normals(2) = abs(sum(unit_normal_2)/size(unit_normal_2))
+!        average_normals(3) = abs(sum(unit_normal_3)/size(unit_normal_3))
+!
+!        ! Project centroid distance onto face normal vector
+!        centroid_normal_distance = abs(centroid_distance(1)*average_normals(1) + centroid_distance(2)*average_normals(2) + centroid_distance(3)*average_normals(3))
+!        print*, 'centroid m: ', centroid_m
+!        print*, 'centroid p: ', centroid_p
+!        print*, 'normal: ', average_normals
+!        print*, 'centroid normal: ', centroid_normal_distance
+!
+!        ! Compute adaptive face stabilization
+!        face_lift_stab = (FOUR/(face_area*centroid_normal_distance))*(volume_m * volume_p)/(volume_m + volume_p)
+!
+!        print*, 'pre comp: ', face_area, volume_m, volume_p, centroid_distance
+!        if (self%face_type() == BOUNDARY .and. (trim(interp_source) == 'face interior' .or. trim(interp_source) == 'face exterior')) print*, 'face stab: ', face_lift_stab, self%iface, trim(interp_source)
+!        print*, 'face stab: ', face_lift_stab, self%iface, trim(interp_source)
+!
+!        if (face_lift_stab > 4.5) print*, 'face_lift_stab: ', face_lift_stab
+!        if (face_lift_stab < 1.0) print*, 'face_lift_stab: ', face_lift_stab
+!
+!        if (face_lift_stab < 1.0_rk) face_lift_stab = 1.0_rk
+
 
 
         !
@@ -668,28 +858,53 @@ contains
                 cache_component = 'face interior'
                 lift_source     = 'face interior'
                 lift_nodes      = 'lift face'
-                lift_face_min   = self%iface
-                lift_face_max   = self%iface
-                stabilization   = real(NFACES,rk)
-            case('face exterior','boundary')
+                lift_face_min   = iface_use
+                lift_face_max   = iface_use
+                stabilization   = face_lift_stab
+            !case('face exterior','boundary')
+            !    cache_component = 'face exterior'
+            !    lift_source     = 'face exterior'
+            !    lift_nodes      = 'lift face'
+            !    lift_face_min   = iface_use
+            !    lift_face_max   = iface_use
+            !    stabilization   = real(lift_stab,rk)
+            case('boundary')
+                cache_component = 'face exterior'
+                !lift_source     = 'face interior'
+                lift_source     = 'face exterior'
+                lift_nodes      = 'lift face'
+                lift_face_min   = iface_use
+                lift_face_max   = iface_use
+                stabilization   = face_lift_stab
+            case('face exterior')
                 cache_component = 'face exterior'
                 lift_source     = 'face exterior'
                 lift_nodes      = 'lift face'
-                lift_face_min   = self%iface
-                lift_face_max   = self%iface
-                stabilization   = real(NFACES,rk)
+                lift_face_min   = iface_use
+                lift_face_max   = iface_use
+                stabilization   = face_lift_stab
             case('element')
                 cache_component = 'element'
                 lift_source     = 'face interior'
                 lift_nodes      = 'lift element'
                 lift_face_min   = 1
                 lift_face_max   = NFACES
-                stabilization   = ONE
+                !stabilization   = ONE
+                stabilization   = elem_lift_stab
             case default
                 user_msg = "chidg_worker%get_field: Invalid value for interpolation source. &
                             Try 'face interior', 'face exterior', 'boundary', or 'element'"
                 call chidg_signal_three(FATAL,user_msg,trim(field),trim(interp_type),trim(interp_source))
         end select
+
+
+
+
+
+
+
+
+
 
 
 
@@ -726,28 +941,47 @@ contains
         ! we don't want to lift because there is no lift for the boundary function to use
         ! If we aren't on a face, face_type returns NOT_A_FACE, so this is still valid for 
         ! returning element data.
-        no_lift = ((self%face_type() == BOUNDARY) .and. (cache_component == 'face interior')) .or. (.not. self%contains_lift)
+        !do_not_lift = ((self%face_type() == BOUNDARY) .and. (cache_component == 'face interior')) .or. (.not. self%contains_lift) 
+        lift = (.not. ((self%face_type() == BOUNDARY) .and. (cache_component == 'face interior'))) .and. &
+               (self%contains_lift) .and. &
+               (self%cache%lift)
+
+        ! Potential to override lift from optional user input 'override_lift'
+        if (present(override_lift)) lift = (.not. override_lift)
 
 
         !
         ! Retrieve data from cache
         !
         if ( cache_type == 'value') then
-            var_gq = self%cache%get_data(field,cache_component,'value',idirection,self%function_info%seed,self%iface)
+            var_gq = self%cache%get_data(field,cache_component,'value',idirection,self%function_info%seed,iface_use)
 
         else if (cache_type == 'gradient') then
 
-            if (self%cache%lift .and. (.not. no_lift)) then
-                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,self%iface)
+            if (lift) then
+                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,iface_use)
+                ! If we only want lift, zero out primal gradient
+                if (present(only_lift)) then
+                    if (only_lift) var_gq = ZERO
+                end if
 
                 ! Add lift contributions from each face
-                do iface = lift_face_min,lift_face_max
-                    tmp_gq = self%cache%get_data(field,lift_source, lift_nodes, idirection, self%function_info%seed,iface)
-                    var_gq = var_gq + stabilization*tmp_gq
-                end do
+                if (present(use_lift_faces)) then
+                    do iface_loop = 1,size(use_lift_faces)
+                        iface_select = use_lift_faces(iface_loop) 
+                        tmp_gq = self%cache%get_data(field,lift_source, lift_nodes, idirection, self%function_info%seed,iface_select)
+                        var_gq = var_gq + stabilization*tmp_gq
+                    end do
+
+                else
+                    do iface_loop = lift_face_min,lift_face_max
+                        tmp_gq = self%cache%get_data(field,lift_source, lift_nodes, idirection, self%function_info%seed,iface_loop)
+                        var_gq = var_gq + stabilization*tmp_gq
+                    end do
+                end if
 
             else
-                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,self%iface)
+                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,iface_use)
             end if
 
         else
@@ -755,7 +989,6 @@ contains
             call chidg_signal(FATAL,user_msg)
 
         end if
-
 
 
     end function get_field
@@ -1123,10 +1356,6 @@ contains
 
 
 
-
-
-
-
     !>  Store a primary field being defined from a boundary condition state function
     !!  to the 'face exterior' cache component.
     !!
@@ -1178,7 +1407,6 @@ contains
             call self%cache%set_data(field,'face exterior',cache_data,'gradient',idirection,self%function_info%seed,self%iface)
 
         end if
-
 
 
     end subroutine store_bc_state
@@ -1287,7 +1515,7 @@ contains
         type(AD_D),             intent(inout)   :: flux_2_p(:)
         type(AD_D),             intent(inout)   :: flux_3_p(:)
 
-        integer(ik)                             :: ifield, idomain_l, eqn_ID
+        integer(ik)                             :: ifield, idomain_l, ielement_l, eqn_ID
         type(AD_D), allocatable, dimension(:)   :: q_m, q_p, flux_1, flux_2, flux_3, integrand
         type(AD_D), allocatable, dimension(:,:) :: flux_ref_m, flux_ref_p
         real(rk),   allocatable, dimension(:)   :: norm_1, norm_2, norm_3
@@ -1333,9 +1561,10 @@ contains
         ! Integrate
         !
         idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+        ielement_l = self%element_info%ielement_l
+        eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%element_info,self%function_info,self%iface,ifield,self%itime,integrand)
 
 
     end subroutine integrate_boundary_average
@@ -1356,7 +1585,7 @@ contains
         character(*),           intent(in)      :: primary_field
         type(AD_D),             intent(inout)   :: upwind(:)
 
-        integer(ik)                                 :: ifield, idomain_l, eqn_ID
+        integer(ik)                                 :: ifield, idomain_l, ielement_l, eqn_ID
         real(rk),   allocatable,    dimension(:)    :: norm_1, norm_2, norm_3, darea
 
         !
@@ -1365,6 +1594,7 @@ contains
         norm_1  = self%normal(1)
         norm_2  = self%normal(2)
         norm_3  = self%normal(3)
+        darea = norm_1 ! allocate to avoid DEBUG error
         darea = sqrt(norm_1**TWO+norm_2**TWO+norm_3**TWO)
 
 
@@ -1377,10 +1607,11 @@ contains
         !
         ! Integrate
         !
-        idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
-        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,upwind)
+        idomain_l  = self%element_info%idomain_l
+        ielement_l = self%element_info%ielement_l
+        eqn_ID     = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+        ifield     = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%element_info,self%function_info,self%iface,ifield,self%itime,upwind)
 
 
     end subroutine integrate_boundary_upwind
@@ -1403,7 +1634,7 @@ contains
         type(AD_D),             intent(inout)   :: flux_2(:)
         type(AD_D),             intent(inout)   :: flux_3(:)
 
-        integer(ik)                             :: ifield, idomain_l, eqn_ID
+        integer(ik)                             :: ifield, idomain_l, ielement_l, eqn_ID
         real(rk),   allocatable, dimension(:)   :: norm_1, norm_2, norm_3
         type(AD_D), allocatable, dimension(:)   :: integrand, q_bc
         type(AD_D), allocatable, dimension(:,:) :: flux
@@ -1433,13 +1664,15 @@ contains
         integrand = flux(:,1)*norm_1 + flux(:,2)*norm_2 + flux(:,3)*norm_3
 
 
+
         !
         ! Integrate
         !
         idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+        ielement_l = self%element_info%ielement_l
+        eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%element_info,self%function_info,self%iface,ifield,self%itime,integrand)
 
 
     end subroutine integrate_boundary_condition
@@ -1471,13 +1704,14 @@ contains
         type(AD_D),             intent(inout)   :: flux_2(:)
         type(AD_D),             intent(inout)   :: flux_3(:)
 
-        integer(ik)             :: ifield, idomain_l, eqn_ID
+        integer(ik)             :: ifield, idomain_l, ielement_l, eqn_ID
         type(AD_D), allocatable :: flux(:,:), q(:)
 
 
-        idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
-        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+        idomain_l  = self%element_info%idomain_l
+        ielement_l = self%element_info%ielement_l
+        eqn_ID     = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+        ifield     = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
 
         !
@@ -1493,7 +1727,6 @@ contains
                 call chidg_signal_one(FATAL,"worker%integrate_volume_flux: Invalid value for incoming flux_type.",trim(flux_type))
         end select
 
-        
         !
         ! Integrate: int[ grad(psi) (dot) F_ale ]
         !
@@ -1521,16 +1754,89 @@ contains
         character(*),           intent(in)      :: primary_field
         type(AD_D),             intent(inout)   :: integrand(:)
 
-        integer(ik) :: ifield, idomain_l, eqn_ID
+        integer(ik) :: ifield, idomain_l, ielement_l, eqn_ID
 
-        idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
-        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+        idomain_l  = self%element_info%idomain_l
+        ielement_l = self%element_info%ielement_l
+        eqn_ID     = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+        ifield     = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
         call integrate_volume_scalar_source(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,integrand)
 
     end subroutine integrate_volume_source
     !***************************************************************************************
+
+
+
+
+    !>  Accumulate residual. No assumed integration steps such as 
+    !!  in integrate_volume_flux.
+    !!
+    !!  
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/4/2017
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine accumulate_residual(self,primary_field,residual)
+        class(chidg_worker_t),  intent(in)      :: self
+        character(*),           intent(in)      :: primary_field
+        type(AD_D),             intent(inout)   :: residual(:)
+
+        integer(ik) :: ifield, idomain_l, ielement_l, eqn_ID
+
+        idomain_l = self%element_info%idomain_l
+        ielement_l = self%element_info%ielement_l
+        eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+
+        call store_volume_integrals(self%mesh, self%solverdata, self%element_info, self%function_info, ifield, self%itime, residual)
+
+    end subroutine accumulate_residual
+    !**************************************************************************************
+
+
+
+
+
+
+    !>  Project function from quadrature nodes to modal basis.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/4/2017
+    !!
+    !--------------------------------------------------------------------------------------
+    function project_from_nodes(self,nodes) result(modes)
+        class(chidg_worker_t),  intent(in)  :: self
+        type(AD_D),             intent(in)  :: nodes(:)
+
+        type(AD_D), allocatable :: temp(:), modes(:)
+!        real(rk),   allocatable :: interpolator(:,:)
+
+        associate ( idomain_l  => self%element_info%idomain_l, &
+                    ielement_l => self%element_info%ielement_l )
+            associate( element => self%mesh%domain(idomain_l)%elems(ielement_l) )
+
+            ! Pre-multiply weights and elemental volumes
+            temp = nodes * element%basis_s%weights_element() * element%jinv
+
+            ! Inner product: <psi, f>
+            !temp = matmul(transpose(element%basis_s%interpolator_element('Value')),nodes)
+            temp = matmul(transpose(element%basis_s%interpolator_element('Value')),temp)
+            modes = temp
+            
+            ! Inner project: <psi, f>/<psi, psi>
+!            modes = matmul(element%invmass,temp) 
+
+!            interpolator = element%basis_s%interpolator_element('Value')
+!            modes = matmul(inv(interpolator(1:size(interpolator,2),:)), nodes)
+
+            end associate
+        end associate
+
+    end function project_from_nodes
+    !**************************************************************************************
+
 
 
 
@@ -1574,13 +1880,18 @@ contains
     !!  @date   8/22/2016
     !!
     !---------------------------------------------------------------------------------------
-    function unit_normal(self,direction) result(unorm_gq)
-        class(chidg_worker_t),  intent(in)  :: self
-        integer(ik),            intent(in)  :: direction
+    function unit_normal(self,direction,iface_override) result(unorm_gq)
+        class(chidg_worker_t),  intent(in)              :: self
+        integer(ik),            intent(in)              :: direction
+        integer(ik),            intent(in), optional    :: iface_override
 
         real(rk), dimension(:), allocatable :: unorm_gq
 
-        unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm(:,direction)
+        if (present(iface_override)) then
+            unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,iface_override)%unorm(:,direction)
+        else
+            unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm(:,direction)
+        end if
 
     end function unit_normal
     !***************************************************************************************
@@ -1804,6 +2115,41 @@ contains
 
 
 
+
+    !>  Interface for returning coordinates.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   02/16/2017
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function coordinate_arbitrary(self,ref_coords) result(phys_coords)
+        class(chidg_worker_t),  intent(in)              :: self
+        real(rk),               intent(in)              :: ref_coords(:,:)
+
+        real(rk)    :: phys_coords(size(ref_coords,1),size(ref_coords,2))
+        integer     :: i
+
+        do i = 1,size(ref_coords,1)
+            phys_coords(i,:) = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%physical_point([ref_coords(i,1),ref_coords(i,2),ref_coords(i,3)],'Deformed')
+        end do
+
+    end function coordinate_arbitrary
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     !>  Return the approximate size of an element bounding box.
     !!
     !!  Returns:
@@ -1949,13 +2295,35 @@ contains
 
 
 
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/01/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function h_smooth(self,user_source) result(h_s)
+        class(chidg_worker_t),  intent(in)              :: self
+        character(*),           intent(in), optional    :: user_source
 
+        character(:),   allocatable                 :: user_msg, source
+        real(rk),       allocatable, dimension(:,:) :: h_s
 
+        ! Select source
+        source = self%interpolation_source
+        if ( present(user_source) ) source = user_source
 
+        ! Retrieve smoothed h-field
+        if ( (source == 'boundary') .or. (source == 'face interior') .or. (source == 'face exterior') ) then
+            h_s = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%h_smooth
+        else if ( (source == 'volume') .or. (source == 'element') ) then
+            h_s = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%h_smooth
+        else
+            user_msg = "chidg_worker%h_smooth: Invalid source for returning smooth h field. Options are 'boundary' and 'volume'."
+            call chidg_signal_one(FATAL,user_msg,source)
+        end if
 
-
-
-
+    end function h_smooth 
+    !**************************************************************************************
 
 
 
@@ -1978,9 +2346,9 @@ contains
         real(rk),   allocatable,    dimension(:)    :: weights
 
         if (source == 'face') then
-            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%basis_s%weights(self%iface)
+            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%basis_s%weights_face(self%iface)
         else if (source == 'element') then
-            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%basis_s%weights()
+            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%basis_s%weights_element()
         else
             call chidg_signal(FATAL,"chidg_worker%quadrature_weights(source): Invalid value for 'source'. Options are 'face', 'element'")
         end if
@@ -2024,6 +2392,124 @@ contains
     !**************************************************************************************
 
 
+    !>  Return the volume of the interior/exterior element.
+    !!
+    !!  NOTE: this returns the volume of the reference physical element, not the deformed
+    !!  ALE volume.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   06/30/2019
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function volume(self,source) result(volume_)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: source
+
+        integer(ik) :: idomain_l, ielement_l, pelem_ID
+        real(rk)    :: volume_
+
+        if (trim(source) == 'interior') then
+            volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
+
+        else if (trim(source) == 'exterior') then
+
+            ! Interior face, find neighbor and account for local or parallel storage
+            if (self%face_type() == INTERIOR) then
+                idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
+                ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
+                pelem_ID   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_pelem_ID
+                if (pelem_ID == NO_ID) then
+                    volume_ = self%mesh%domain(idomain_l)%elems(ielement_l)%vol
+                else
+                    volume_ = self%mesh%parallel_element(pelem_ID)%vol
+                end if
+
+            ! Boundary face, assume ficticious exterior element of equal volume
+            else if (self%face_type() == BOUNDARY) then
+                volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
+
+            ! Overset face, assume ficticious exterior element of equal volume
+            else if (self%face_type() == CHIMERA) then
+                volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
+
+            end if
+
+
+
+        else
+            call chidg_signal(FATAL,"chidg_worker%volume: invalid source parameter. Valid inputs are ['interior', 'exterior']")
+        end if
+
+    end function volume
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Return the centroid of the interior/exterior element.
+    !!
+    !!  NOTE: this returns the centroid of the reference physical element, not the deformed
+    !!  ALE centroid.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   06/30/2019
+    !!
+    !--------------------------------------------------------------------------------------
+    function centroid(self,source) result(centroid_)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: source
+
+        integer(ik) :: idomain_l, ielement_l, pelem_ID
+        real(rk)    :: centroid_(3), face_centroid(3), interior_centroid(3), delta(3)
+
+        if (trim(source) == 'interior') then
+             centroid_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
+
+        else if (trim(source) == 'exterior') then
+
+            ! Interior face, find neighbor and account for local or parallel storage
+            if (self%face_type() == INTERIOR) then
+                idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
+                ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
+                pelem_ID   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_pelem_ID
+                if (pelem_ID == NO_ID) then
+                    centroid_ = self%mesh%domain(idomain_l)%elems(ielement_l)%centroid
+                else
+                    centroid_ = self%mesh%parallel_element(pelem_ID)%centroid
+                end if
+
+            ! Boundary face, assume ficticious exterior element and assume centroid at equal 
+            ! distance to face opposite interior element
+            else if (self%face_type() == BOUNDARY) then
+                face_centroid = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%centroid
+                interior_centroid = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
+                delta = face_centroid - interior_centroid
+                centroid_ = interior_centroid + TWO*delta
+
+            ! Overset face, assume ficticious exterior element and assume centroid at equal 
+            ! distance to face opposite interior element
+            else if (self%face_type() == CHIMERA) then
+                face_centroid = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%centroid
+                interior_centroid = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
+                delta = face_centroid - interior_centroid
+                centroid_ = interior_centroid + TWO*delta
+
+            end if
+
+
+
+        else
+            call chidg_signal(FATAL,"chidg_worker%centroid: invalid source parameter. Valid inputs are ['interior', 'exterior']")
+        end if
+
+    end function centroid 
+    !**************************************************************************************
+
 
 
 
@@ -2048,7 +2534,6 @@ contains
 
     end function face_area
     !**************************************************************************************
-
 
 
 
@@ -2134,6 +2619,93 @@ contains
 
 
 
+
+
+    !>  Given a 3D quadrature node set, compute the number of nodes in one dimension
+    !!  of the set.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/4/2017
+    !!
+    !-------------------------------------------------------------------------------------
+    function nnodes1d(self,node_set_3d) result(nnodes1d_)
+        class(chidg_worker_t),  intent(in)  :: self
+        class(*),               intent(in)  :: node_set_3d(:)
+
+        integer(ik) :: nnodes1d_
+
+        nnodes1d_ = 0
+        do while ( nnodes1d_*nnodes1d_*nnodes1d_  < size(node_set_3d) )
+            nnodes1d_ = nnodes1d_ + 1
+        end do
+
+    end function nnodes1d
+    !*************************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/20/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_octree_rbf_indices(self, rbf_set_ID) result(rbf_index_list)
+        class(chidg_worker_t),  intent(inout)   :: self
+        integer(ik),            intent(in)      :: rbf_set_ID
+
+        integer(ik) :: idomain_l, ielement_l
+        integer(ik), allocatable, dimension(:) :: rbf_index_list
+
+        idomain_l  = self%element_info%idomain_l 
+        ielement_l = self%element_info%ielement_l 
+
+        rbf_index_list = self%mesh%domain(idomain_l)%elems(ielement_l)%get_rbf_indices(rbf_set_ID)
+
+    end function get_octree_rbf_indices
+    !********************************************************************************
+
+
+
+    !> This function adapts and simplifies get_ndepend_exterior from type_cache_handler, 
+    !! which asks for extra arguments we might not have access to.
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    03/14/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_ndepend_simple(self, iface) result(ndepend)
+        class(chidg_worker_t),  intent(in)   :: self 
+        integer(ik),            intent(in)   :: iface
+
+        integer(ik) :: ndepend, idomain_l, ielement_l,  &
+                       ChiID, group_ID, patch_ID, face_ID
+
+        idomain_l  = self%element_info%idomain_l 
+        ielement_l = self%element_info%ielement_l 
+
+        ! Compute the number of exterior element dependencies for face exterior state
+        if ( self%face_type() == INTERIOR ) then
+            ndepend = 1
+            
+        else if ( self%face_type() == CHIMERA ) then
+            ChiID   = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
+            ndepend = self%mesh%domain(idomain_l)%chimera%recv(ChiID)%ndonors()
+
+        else if ( self%face_type() == BOUNDARY ) then
+            group_ID = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
+            patch_ID = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
+            face_ID  = self%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
+            ndepend  = self%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
+
+        end if
+
+    end function get_ndepend_simple
+    !****************************************************************************************
 
 
 
@@ -2992,6 +3564,120 @@ contains
 
     end function post_process_boundary_diffusive_flux_ale
     !************************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    04/16/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_pressure_jump_indicator(self) result(val_gq)
+        class(chidg_worker_t),      intent(inout)  :: self
+
+        type(AD_D), allocatable :: val_gq(:)
+        type(AD_D), allocatable :: nodal_ones(:), pressure_p(:), pressure_m(:), jump(:), avg(:)
+        type(AD_D)              :: face_val
+
+        real(rk),   allocatable :: jinv(:), weight(:)
+
+        integer(ik)     :: iface, order, iface_old
+        real(rk)        :: phi_min, phi_max
+
+        nodal_ones = self%get_field('Density', 'value', 'element')
+        nodal_ones = ONE
+        val_gq = ZERO*nodal_ones     
+
+        iface_old = self%iface
+
+        ! Loop over faces
+        do iface = 1, NFACES
+            call self%set_face(iface)
+        ! Get face internal/external pressure values
+            pressure_m = self%get_field('Pressure','value','face interior')
+            pressure_p = self%get_field('Pressure','value','face exterior')
+
+            jump = (pressure_p-pressure_m)
+            avg  = HALF*(pressure_p+pressure_m)
+
+            ! Integrate over face
+            jinv   = self%inverse_jacobian('face')
+            weight = self%quadrature_weights('face')
+            face_val = sum(jinv*weight*abs(jump/avg))/sum(jinv*weight) 
+
+            ! Add to sum
+            val_gq = val_gq + face_val*nodal_ones   
+
+        end do !iface
+
+        ! Reset original face index
+        call self%set_face(iface_old)
+
+    end function get_pressure_jump_indicator
+    !********************************************************************************
+
+
+
+    !>
+    !! 
+    !!
+    !! @author  Eric M. Wolf
+    !! @date    04/16/2019 
+    !!
+    !--------------------------------------------------------------------------------
+    function get_pressure_jump_shock_sensor(self) result(sensor)
+        class(chidg_worker_t),      intent(inout)  :: self
+
+        type(AD_D), allocatable :: sensor(:)
+        type(AD_D), allocatable :: jump_indicator(:), logval(:)
+
+        integer(ik) :: order
+        real(rk)    :: phi_min, phi_max
+
+        jump_indicator = self%get_pressure_jump_indicator()
+
+        logval = log10(jump_indicator)
+
+        order = self%solution_order('interior')
+        phi_min = -2.0_rk - log10(real(order+1, rk))
+        phi_max = phi_min + 1.0_rk
+
+        sensor = sin_ramp(logval, phi_min, phi_max)
+
+    end function get_pressure_jump_shock_sensor
+    !********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

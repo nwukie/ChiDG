@@ -114,7 +114,8 @@ contains
         grid_vel_n = grid_vel(:,1)*unorm_1  +  grid_vel(:,2)*unorm_2  +  grid_vel(:,3)*unorm_3
 
         wave_speed  = max(abs(c_n_m),abs(c_n_p)) + grid_vel_n
-        dissipation = HALF*wave_speed*(u_m-u_p)
+        !dissipation = HALF*wave_speed*(u_m-u_p)
+        dissipation = -HALF*wave_speed*(u_p-u_m)
 
 
         !

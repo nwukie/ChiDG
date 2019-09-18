@@ -212,7 +212,7 @@ contains
         tol                 = 1.e-13_rk
         nterms_s            = 8
         IO_DESTINATION      = 'file'
-        time_integrator     = 'Backward_Euler'
+        time_integrator     = 'Backward Euler'
         nonlinear_solver    = 'newton'
         linear_solver       = 'fgmres'
         preconditioner      = 'ILU0'
@@ -245,7 +245,7 @@ contains
         ! Read grid, initialize time integrator
         !
         call chidg%read_mesh(filename)
-        call chidg%time_integrator%init(chidg%data)
+        call chidg%time_integrator%init()
 
 
         associate ( q   => chidg%data%sdata%q, &

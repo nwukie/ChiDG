@@ -16,7 +16,8 @@ find_path (TECPLOT_INCLUDE_DIR
            PATH_SUFFIXES include
            NO_DEFAULT_PATH)
 find_library (TECIO_LIBRARY
-              NAMES libtecio.a libtecio.so libtecio.dylib libtecio
+              #NAMES libtecio.a libtecio.so libtecio.dylib libtecio
+              NAMES libteciompi.a libteciompi.so libteciompi.dylib libteciompi
               HINTS ${TEC_ROOT}
               PATH_SUFFIXES lib
               NO_DEFAULT_PATH)

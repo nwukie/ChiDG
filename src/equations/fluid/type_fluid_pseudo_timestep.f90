@@ -88,6 +88,7 @@ contains
             rhoE = interpolate_element_standard(mesh,sdata%q,idomain,ielem,irhoE,itime, 'value')
 
 
+
             !
             ! Account for Cylindrical coordinates. Get tangential momentum from angular momentum
             !
@@ -125,10 +126,8 @@ contains
             !
             ! Compute velocity magnitude
             !
-            !r = mesh%domain(idomain)%elems(ielem)%interp_coords(:)%c1_
             r = mesh%domain(idomain)%elems(ielem)%interp_coords(:,1)
             vmag = sqrt((rhou*rhou + rhov*rhov + rhow*rhow)/(rho*rho))
-            !vmag = sqrt((rhou*rhou + (rhov-rho*omega*r)*(rhov-rho*omega*r) + rhow*rhow)/(rho*rho))
 
 
             !
@@ -138,19 +137,22 @@ contains
             lam = sum(vmag)/size(vmag) + sum(c)/size(vmag)
 
 
+
             !
             ! Compute element spacing parameter
             !
             h = mesh%domain(idomain)%elems(ielem)%vol**(THIRD)
 
-
             !
             ! Compute elemen-local timestep
             !
-            !sdata%dt(idomain,ielem) = (cfl*h)/lam
-            do ieqn = 1,size(cfl)
-                mesh%domain(idomain)%elems(ielem)%dtau(ieqn) = cfl(ieqn)*h/lam
-            end do
+            if (size(cfl) == 1) then
+                mesh%domain(idomain)%elems(ielem)%dtau = cfl(1)*h/lam
+            else
+                do ieqn = 1,size(cfl)
+                    mesh%domain(idomain)%elems(ielem)%dtau(ieqn) = cfl(ieqn)*h/lam
+                end do
+            end if
 
 
 

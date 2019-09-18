@@ -213,7 +213,7 @@ contains
             !
             ! Test first element, linearization block sizes
             !
-            size1d = domain%nterms_s  *  domain%neqns
+            size1d = domain%nterms_s*domain%nfields
 
 
             @assertEqual(size1d,size(vecs(1)%vec))

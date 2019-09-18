@@ -7,7 +7,8 @@ module type_bc_state_group
     use type_mesh,              only: mesh_t
 
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
-    use mpi_f08,                only: mpi_comm, MPI_LOGICAL, MPI_Comm_split, MPI_Allgather, MPI_UNDEFINED
+    use mpi_f08,                only: mpi_comm, MPI_LOGICAL, MPI_Comm_split, MPI_Allgather, &
+                                      MPI_UNDEFINED, MPI_INTEGER4, MPI_SUM
     implicit none
 
 
@@ -33,13 +34,15 @@ module type_bc_state_group
     !----------------------------------------------------------------------------------------
     type, public :: bc_state_group_t
         
-        character(:),               allocatable :: name         ! boundary state group name
-        character(:),               allocatable :: family       ! boundary state group family
+        character(:),               allocatable :: name             ! boundary state group name
+        character(:),               allocatable :: family           ! boundary state group family
 
-        class(bc_state_wrapper_t),  allocatable :: bc_state(:)  ! boundary state functions
+        class(bc_state_wrapper_t),  allocatable :: bc_state(:)      ! boundary state functions
 
-        type(mpi_comm)                          :: bc_COMM      ! MPI communicator for bc procs
-        integer(ik)                             :: bc_ID        ! bc state group identifier
+        type(mpi_comm)                          :: bc_COMM          ! MPI communicator for bc procs
+        integer(ik)                             :: bc_ID = NO_ID    ! bc state group identifier
+        integer(ik),                allocatable :: bc_procs(:)      ! List of participating ChiDG_COMM procs
+        integer(ik)                             :: nfaces_g
 
     contains
 
@@ -48,20 +51,16 @@ module type_bc_state_group
         procedure   :: set_family
         procedure   :: get_family
 
-
         procedure   :: add_bc_state
         procedure   :: new_bc_state
         procedure   :: remove_states
         procedure   :: nbc_states
 
-
         procedure   :: init_comm
         procedure   :: init_coupling
-        procedure   :: init_specialized
+        procedure   :: init_precomm
+        procedure   :: init_postcomm
 
-!        procedure   :: init_coupling_data
-
-        
     end type bc_state_group_t
     !*****************************************************************************************
 
@@ -219,26 +218,34 @@ contains
         !
         group_family = self%get_family()
         state_family = bc_state%get_family()
+        !add_state = (trim(group_family) == ''                ) .or. &
+        !            (trim(group_family) == 'Empty'           ) .or. &
+        !            (trim(group_family) == trim(state_family))
         add_state = (trim(group_family) == ''                ) .or. &
-                    (trim(group_family) == 'Empty'           ) .or. &
-                    (trim(group_family) == trim(state_family))
+                    (trim(group_family) == 'Empty'           ) 
 
 
         !
         ! Add to vector of bc_states on the group.
         !
-        if (add_state) then
-            call self%set_family(trim(state_family))
-            state_ID = self%new_bc_state()
-            allocate(self%bc_state(state_ID)%state, source=bc_state, stat=ierr)
-            if (ierr /= 0) call AllocationError
-        else
-            user_msg = "bc_state_group%add_bc_state: An attempt was made to add a bc_state &
-                        object to a bc_state_group with dissimilar family. As a rule, &
-                        bc_state_group objects may only contain bc_state objects of a &
-                        single family."
-            call chidg_signal_one(FATAL,user_msg, bc_state%get_name())
-        end if
+        call self%set_family(trim(state_family))
+        state_ID = self%new_bc_state()
+        allocate(self%bc_state(state_ID)%state, source=bc_state, stat=ierr)
+        if (ierr /= 0) call AllocationError
+        
+
+!        if (add_state) then
+!            call self%set_family(trim(state_family))
+!            state_ID = self%new_bc_state()
+!            allocate(self%bc_state(state_ID)%state, source=bc_state, stat=ierr)
+!            if (ierr /= 0) call AllocationError
+!        else
+!            user_msg = "bc_state_group%add_bc_state: An attempt was made to add a bc_state &
+!                        object to a bc_state_group with dissimilar family. As a rule, &
+!                        bc_state_group objects may only contain bc_state objects of a &
+!                        single family."
+!            call chidg_signal_one(FATAL,user_msg, bc_state%get_name())
+!        end if
 
     end subroutine add_bc_state
     !******************************************************************************************
@@ -367,7 +374,8 @@ contains
         type(mesh_t),               intent(in)      :: mesh
 
         logical                     :: irank_has_geometry, ranks_have_geometry(NRANK)
-        integer(ik)                 :: ierr, color, group_ID
+        integer(ik)                 :: ierr, color, group_ID, bc_NRANK, bc_IRANK
+        integer(ik),    allocatable :: procs(:), procs_reduced(:)
         character(:),   allocatable :: user_msg
 
 
@@ -391,7 +399,7 @@ contains
         !
         ! Send this single information to all and receive back ordered information from all
         !
-        call MPI_Allgather(irank_has_geometry,1,MPI_LOGICAL,ranks_have_geometry,1,MPI_LOGICAL,ChiDG_COMM,ierr)
+        call MPI_AllGather(irank_has_geometry,1,MPI_LOGICAL,ranks_have_geometry,1,MPI_LOGICAL,ChiDG_COMM,ierr)
         user_msg = "bc%init_bc_comm: Error in collective MPI_Allgather for determining which &
                     MPI ranks contain portions of a boundary condition bc_patch."
         if (ierr /= 0) call chidg_signal(FATAL,user_msg)
@@ -418,6 +426,35 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,user_msg)
 
 
+
+
+
+        ! Initialize bc_procs, nfaces_g
+        if (irank_has_geometry) then
+
+            call MPI_Comm_Size(self%bc_COMM,bc_NRANK,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'bc_state_group%init_comm: error computing bc_NRANK.')
+            call MPI_Comm_Rank(self%bc_COMM,bc_IRANK,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'bc_state_group%init_comm: error computing bc_IRANK.')
+
+            ! Size buffers for accumulating ChiDG_COMM ranks in bc_COMM
+            if (allocated(procs))         deallocate(procs)
+            if (allocated(procs_reduced)) deallocate(procs_reduced)
+            allocate(procs(bc_NRANK), procs_reduced(bc_NRANK), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            ! Register current ChiDG_COMM proc
+            procs = 0
+            procs(bc_IRANK+1) = IRANK
+
+            call MPI_AllReduce(procs,procs_reduced,bc_NRANK,MPI_INTEGER4,MPI_SUM,self%bc_COMM,ierr) 
+            if (ierr /= 0) call chidg_signal(FATAL,'bc_state_group%init_comm: error computing MPI_AllReduce for bc_procs.')
+            self%bc_procs = procs_reduced
+
+            self%nfaces_g = mesh%bc_patch_group(group_ID)%get_nfaces_global(self%bc_COMM)
+        end if
+
+
     end subroutine init_comm
     !***************************************************************************************
 
@@ -435,11 +472,11 @@ contains
     !!  @date   4/6/2017
     !!
     !---------------------------------------------------------------------------------------
-    subroutine init_specialized(self,mesh)
+    subroutine init_precomm(self,mesh)
         class(bc_state_group_t),    intent(inout)   :: self
         type(mesh_t),               intent(inout)   :: mesh
 
-        integer(ik)                 :: iop, group_ID
+        integer(ik) :: iop, group_ID
 
 
         !
@@ -452,7 +489,7 @@ contains
                 if (mesh%bc_patch_group(group_ID)%npatches() > 0) then
 
                     do iop = 1,size(self%bc_state)
-                        call self%bc_state(iop)%state%init_bc_specialized(mesh, group_ID, self%bc_COMM)
+                        call self%bc_state(iop)%state%init_bc_precomm(mesh, group_ID, self%bc_COMM)
                     end do !iop
 
                 end if !bc_patch
@@ -463,8 +500,56 @@ contains
 
 
 
-    end subroutine init_specialized
+    end subroutine init_precomm
     !****************************************************************************************
+
+
+
+
+
+    !>  Implementation specific routine for bc_state objects.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/6/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine init_postcomm(self,mesh)
+        class(bc_state_group_t),    intent(inout)   :: self
+        type(mesh_t),               intent(inout)   :: mesh
+
+        integer(ik) :: iop, group_ID
+
+
+        !
+        ! Have bc_operators initialize the boundary condition coupling
+        !
+        if (allocated(self%bc_state)) then
+
+            group_ID = mesh%get_bc_patch_group_id(self%name)
+            if (group_ID /= NO_ID) then
+                if (mesh%bc_patch_group(group_ID)%npatches() > 0) then
+
+                    do iop = 1,size(self%bc_state)
+                        call self%bc_state(iop)%state%init_bc_postcomm(mesh, group_ID, self%bc_COMM)
+                    end do !iop
+
+                end if !bc_patch
+            end if
+
+        end if !bc_state
+
+
+
+
+    end subroutine init_postcomm
+    !****************************************************************************************
+
+
+
+
+
+
+
 
 
 
@@ -483,29 +568,19 @@ contains
         class(bc_state_group_t),    intent(inout)  :: self
         type(mesh_t),               intent(inout)  :: mesh
 
-
         integer(ik) :: iop, group_ID
 
-        !
         ! Have bc_operators initialize the boundary condition coupling
-        !
         if (allocated(self%bc_state)) then
-
             group_ID = mesh%get_bc_patch_group_id(self%name)
             if (group_ID /= NO_ID) then
                 if (mesh%bc_patch_group(group_ID)%npatches() > 0) then
-
                     do iop = 1,size(self%bc_state)
                         call self%bc_state(iop)%state%init_bc_coupling(mesh,group_ID,self%bc_COMM)
                     end do !iop
-
                 end if !bc_patch
             end if !NO_ID
-
         end if !bc_state
-
-
-
 
     end subroutine init_coupling
     !****************************************************************************************

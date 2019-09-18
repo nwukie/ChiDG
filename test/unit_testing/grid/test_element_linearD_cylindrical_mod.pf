@@ -1,6 +1,7 @@
 module test_element_linearD_cylindrical_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
+    use mod_chidg_mpi,              only: IRANK
     use mod_constants,              only: PI, ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, EIGHT, NINE, TEN, &
                                           XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_chidg,                 only: chidg_t
@@ -50,11 +51,13 @@ contains
         
         integer(ik), parameter          :: npt = 8
         real(rk)                        :: nodes(npt,3)
-        integer(ik)                     :: ftype, ielem, idomain, ntime,                    &
-                                           neqns, nterms_s, ineighbor_domain_g,             &
-                                           ineighbor_domain_l, ineighbor_element_g,         &
-                                           ineighbor_element_l, ineighbor_face,             &
-                                           ineighbor_proc, ineighbor_neqns, ineighbor_nterms_s
+        integer(ik)                     :: ftype, ielem, idomain, ntime,                        &
+                                           nfields, nterms_s, dof_start, dof_local_start,       &
+                                           ineighbor_domain_g,                                  &
+                                           ineighbor_domain_l, ineighbor_element_g,             &
+                                           ineighbor_element_l, ineighbor_face,                 &
+                                           ineighbor_proc, ineighbor_nfields, ineighbor_ntime,  &
+                                           ineighbor_nterms_s, ineighbor_dof_start, ineighbor_dof_local_start
         
         
         ! Set collocation quadratur for testing coordinates at quadrature points 
@@ -83,29 +86,31 @@ contains
         !
         nodes(1,:) = [1._rk, 0._rk,  0._rk]
         nodes(2,:) = [2._rk, 0._rk,  0._rk]
-        nodes(3,:) = [1._rk, PI/TWO, 0._rk]
-        nodes(4,:) = [2._rk, PI/TWO, 0._rk]
+        nodes(3,:) = [2._rk, PI/TWO, 0._rk]
+        nodes(4,:) = [1._rk, PI/TWO, 0._rk]
         nodes(5,:) = [1._rk, 0._rk,  1._rk]
         nodes(6,:) = [2._rk, 0._rk,  1._rk]
-        nodes(7,:) = [1._rk, PI/TWO, 1._rk]
-        nodes(8,:) = [2._rk, PI/TWO, 1._rk]
+        nodes(7,:) = [2._rk, PI/TWO, 1._rk]
+        nodes(8,:) = [1._rk, PI/TWO, 1._rk]
         this%nodes = nodes
 
         
         !
         ! Initialize Element geometry and Numerics
         !
-        idomain  = 1
-        ielem    = 1
-        neqns    = 2
-        nterms_s = 8
-        ntime    = 1
-        call this%elem%init_geom(nodes        = nodes,                          &
-                                 connectivity = [1, 2, 3, 4, 5, 6, 7, 8],       &
-                                 etype        = 1,                              &
-                                 location     = [idomain,idomain,ielem,ielem],  &
+        idomain         = 1
+        ielem           = 1
+        nfields         = 2
+        nterms_s        = 8
+        ntime           = 1
+        dof_start       = 1
+        dof_local_start = 1
+        call this%elem%init_geom(nodes        = nodes,                                  &
+                                 connectivity = [1, 2, 3, 4, 5, 6, 7, 8],               &
+                                 etype        = 1,                                      &
+                                 location     = [idomain,idomain,ielem,ielem,IRANK],    &
                                  coord_system = 'Cylindrical')
-        call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime)
+        call this%elem%init_sol('Quadrature',1,nterms_s,nfields,ntime,dof_start,dof_local_start)
         
         
         !
@@ -123,38 +128,46 @@ contains
         ! Initialize face neighbors
         !
         ftype = 0
-        ineighbor_domain_g  = 0
-        ineighbor_domain_l  = 0
-        ineighbor_element_g = 0
-        ineighbor_element_l = 0
-        ineighbor_face      = 0
-        ineighbor_neqns     = 2
-        ineighbor_nterms_s  = 8
-        ineighbor_proc      = 0
-        call this%faces(XI_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
-                                                   ineighbor_element_g,ineighbor_element_l,    &
-                                                   ineighbor_face,ineighbor_neqns,             &
-                                                   ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(XI_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
-                                                   ineighbor_element_g,ineighbor_element_l,    &
-                                                   ineighbor_face,ineighbor_neqns,             &
-                                                   ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
-                                                    ineighbor_element_g,ineighbor_element_l,   &
-                                                    ineighbor_face,ineighbor_neqns,            &
-                                                    ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
-                                                    ineighbor_element_g,ineighbor_element_l,   &
-                                                    ineighbor_face,ineighbor_neqns,            &
-                                                    ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ZETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,           &
-                                                     ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ZETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,           &
-                                                     ineighbor_nterms_s,ineighbor_proc)
+        ineighbor_domain_g        = 0
+        ineighbor_domain_l        = 0
+        ineighbor_element_g       = 0
+        ineighbor_element_l       = 0
+        ineighbor_face            = 0
+        ineighbor_nfields         = 2
+        ineighbor_nterms_s        = 8
+        ineighbor_proc            = 0
+        ineighbor_dof_start       = 1
+        ineighbor_dof_local_start = 1
+        call this%faces(XI_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,               &
+                                                   ineighbor_element_g,ineighbor_element_l,             &
+                                                   ineighbor_face,ineighbor_nfields,ineighbor_ntime,    &
+                                                   ineighbor_nterms_s,ineighbor_proc,                   &
+                                                   ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(XI_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,               &
+                                                   ineighbor_element_g,ineighbor_element_l,             &
+                                                   ineighbor_face,ineighbor_nfields,ineighbor_ntime,    &
+                                                   ineighbor_nterms_s,ineighbor_proc,                   &
+                                                   ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,              &
+                                                    ineighbor_element_g,ineighbor_element_l,            &
+                                                    ineighbor_face,ineighbor_nfields,ineighbor_ntime,   &
+                                                    ineighbor_nterms_s,ineighbor_proc,                  &
+                                                    ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,              &
+                                                    ineighbor_element_g,ineighbor_element_l,            &
+                                                    ineighbor_face,ineighbor_nfields,ineighbor_ntime,   &
+                                                    ineighbor_nterms_s,ineighbor_proc,                  &
+                                                    ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ZETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ZETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
 
         
         call this%faces(XI_MIN)%init_sol(this%elem)
@@ -226,8 +239,8 @@ contains
     subroutine testElement_metric(self)
         class(test_element_linearD),    intent(inout)   :: self
 
-        real(rk)    :: test_metric(3,3,self%elem%basis_s%nnodes_ie())
-        real(rk)    :: jinv(self%elem%basis_s%nnodes_ie())
+        real(rk)    :: test_metric(3,3,self%elem%basis_s%nnodes_elem())
+        real(rk)    :: jinv(self%elem%basis_s%nnodes_elem())
 
         jinv = (PI/16._rk) * self%elem%interp_coords(:,1)
         
@@ -262,7 +275,7 @@ contains
     subroutine testElement_jinv(self)
         class(test_element_linearD),    intent(inout)   :: self
 
-        real(rk)    :: test_jinv(self%elem%basis_s%nnodes_ie())
+        real(rk)    :: test_jinv(self%elem%basis_s%nnodes_elem())
         
         test_jinv = (PI/16._rk) * self%elem%interp_coords(:,1)
         @assertEqual(test_jinv,self%elem%jinv)
@@ -350,7 +363,7 @@ contains
     subroutine testElement_quadpts(self)
         class(test_element_linearD),    intent(inout)   :: self
 
-        real(rk), dimension(self%elem%basis_s%nnodes_ie()) :: test_r, test_theta, test_z
+        real(rk), dimension(self%elem%basis_s%nnodes_elem()) :: test_r, test_theta, test_z
         real(rk)                                        :: r1,r2,theta1,theta2,z1,z2
 
         r1     = 1.5_rk    - 0.5_rk*sqrt(ONE/THREE)
@@ -395,15 +408,15 @@ contains
     subroutine testElement_grad1(self)
         class(test_element_linearD),    intent(inout)       :: self
 
-        real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8)  :: test
-        real(rk), dimension(self%elem%basis_s%nnodes_ie())     :: xi, eta, zeta
+        real(rk), dimension(self%elem%basis_s%nnodes_elem(), 8)  :: test
+        real(rk), dimension(self%elem%basis_s%nnodes_elem())     :: xi, eta, zeta
         real(rk), allocatable                               :: nodes(:,:)
         
         real(rk) :: tol
         
         tol = 1.e-14_rk
         
-        nodes = self%elem%basis_s%nodes() 
+        nodes = self%elem%basis_s%nodes_element() 
         xi   = nodes(:,1)
         eta  = nodes(:,2)
         zeta = nodes(:,3)
@@ -446,15 +459,15 @@ contains
     subroutine testElement_grad2(self)
         class(test_element_linearD),    intent(inout)   :: self
 
-        real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8)  :: test
-        real(rk), dimension(self%elem%basis_s%nnodes_ie())     :: xi, eta, zeta, r
+        real(rk), dimension(self%elem%basis_s%nnodes_elem(), 8)  :: test
+        real(rk), dimension(self%elem%basis_s%nnodes_elem())     :: xi, eta, zeta, r
         real(rk),   allocatable                             :: nodes(:,:)
         
         real(rk) :: tol
         
         tol = 1.e-14_rk
         
-        nodes = self%elem%basis_s%nodes()
+        nodes = self%elem%basis_s%nodes_element()
         xi   = nodes(:,1)
         eta  = nodes(:,2)
         zeta = nodes(:,3)
@@ -499,15 +512,15 @@ contains
     subroutine testElement_grad3(self)
         class(test_element_linearD),    intent(inout)   :: self
 
-        real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8)  :: test
-        real(rk), dimension(self%elem%basis_s%nnodes_ie())     :: xi, eta, zeta
+        real(rk), dimension(self%elem%basis_s%nnodes_elem(), 8)  :: test
+        real(rk), dimension(self%elem%basis_s%nnodes_elem())     :: xi, eta, zeta
         real(rk),   allocatable                             :: nodes(:,:)
         
         real(rk) :: tol
         
         tol = 1.e-14_rk
         
-        nodes = self%elem%basis_s%nodes()
+        nodes = self%elem%basis_s%nodes_element()
         xi   = nodes(:,1)
         eta  = nodes(:,2)
         zeta = nodes(:,3)
@@ -553,7 +566,7 @@ contains
         class(test_element_linearD),    intent(inout)   :: self
 
         real(rk)    :: tol
-        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_if()) :: &
+        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_face()) :: &
             test_norm_r, test_norm_t, test_norm_z
         
         tol = 1.e-15_rk

@@ -2,18 +2,19 @@ module type_cache_handler
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: NFACES, INTERIOR, CHIMERA, BOUNDARY, DIAG, NO_PROC,   &
-                                  ME, NEIGHBOR, HALF, ONE,                              &
+                                  ME, NEIGHBOR, ZERO, HALF, ONE,                        &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NO_ID
     use mod_DNAD_tools,     only: face_compute_seed, element_compute_seed
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_element_autodiff
     use mod_chidg_mpi,      only: IRANK
+    use mod_io,             only: verbosity
     use DNAD_D
 
     use type_chidg_cache,       only: chidg_cache_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_equation_set,      only: equation_set_t
     use type_bc_state_group,    only: bc_state_group_t
-
+    use type_timer,             only: timer_t
     implicit none
 
 
@@ -40,6 +41,7 @@ module type_cache_handler
     !----------------------------------------------------------------------------------------
     type, public :: cache_handler_t
 
+        type(timer_t)   :: timer_primary, timer_model, timer_lift, timer_resize, timer_model_grad_compute
 
 
     contains
@@ -101,6 +103,8 @@ contains
         integer(ik) :: idomain_l, ielement_l, iface, eqn_ID, face_min, face_max
         logical     :: compute_gradients, valid_indices, update_interior_faces, update_exterior_faces, update_element
 
+        type(AD_D), allocatable, dimension(:) :: grad1_mom3, grad2_mom3, grad3_mom3
+
 
         !
         ! Check for valid indices
@@ -110,7 +114,6 @@ contains
                         (worker%itime /= 0)
 
         if (.not. valid_indices) call chidg_signal(FATAL,"cache_handler%update: Bad domain/element/time indices were detected during update.")
-
 
 
         !
@@ -148,7 +151,6 @@ contains
         end select
 
 
-
         !
         ! Set range of faces to update
         !
@@ -161,37 +163,42 @@ contains
         end if
 
 
-
         !
         ! Resize cache
         !
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
+        call self%timer_resize%start()
         call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l,differentiate,lift)
-
+        call self%timer_resize%stop()
 
 
         !
         ! Determine if we want to update gradient terms in the cache
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         compute_gradients = (allocated(equation_set(eqn_ID)%volume_diffusive_operator)   .or. &
                              allocated(equation_set(eqn_ID)%boundary_diffusive_operator) )
-
-
 
 
         !
         ! Update fields
         !
+        call self%timer_primary%start()
         call self%update_auxiliary_fields(worker,equation_set,bc_state_group,differentiate)
         call self%update_primary_fields(  worker,equation_set,bc_state_group,differentiate,compute_gradients,update_element, update_interior_faces, update_exterior_faces, face_min, face_max)
+        call self%timer_primary%stop()
+
+        call self%timer_model%start()
+        if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
+        call self%timer_model%stop()
 
 
 
         !
         ! Compute f(Q-) models. Interior, Exterior, BC, Element
         !
+        call self%timer_model%start()
         do iface = face_min,face_max
 
             ! Update worker face index
@@ -201,19 +208,38 @@ contains
             if (update_interior_faces) call self%update_model_interior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
             if (update_exterior_faces) call self%update_model_exterior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
 
+        end do !iface
+        call self%timer_model%stop()
+
+
+
+        !
+        ! Compute f(Q-) models. Interior, Exterior, BC, Element
+        !
+        call self%timer_model%start()
+        do iface = face_min,face_max
+
+            ! Update worker face index
+            call worker%set_face(iface)
 
             if (update_exterior_faces) call self%update_primary_bc(worker,equation_set,bc_state_group,differentiate)
             if (update_exterior_faces) call self%update_model_bc(  worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
-
 
             if (update_interior_faces) call self%update_model_interior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
             if (update_exterior_faces) call self%update_model_exterior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
             if (update_exterior_faces) call self%update_model_bc(      worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
 
-        end do !iface
 
-        if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
+        end do !iface
+        call self%timer_model%stop()
+
+
+
+
+
+        call self%timer_model%start()
         if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
+        call self%timer_model%stop()
 
 
 
@@ -222,7 +248,15 @@ contains
         !
         ! Compute f(Q-,Q+), f(Grad(Q) models. Interior, Exterior, BC, Element
         !
+        !compute_gradients = .false.
+        call self%timer_lift%start()
         if (compute_gradients) then
+
+!            !
+!            ! Store lift indicator in worker
+!            !
+!            worker%contains_lift = lift
+
 
             !
             ! Update lifting operators for second-order pde's
@@ -245,16 +279,21 @@ contains
 
             end do !iface
 
+
             
             !
             ! Update model 'element' cache entries
             !
             if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Grad(Q))')
 
+!        else
+!            !
+!            ! Store lift indicator in worker
+!            !
+!            worker%contains_lift = .false.
 
         end if ! compute_gradients
-
-
+        call self%timer_lift%stop()
 
 
     end subroutine update
@@ -311,7 +350,6 @@ contains
 
             ! Update worker face index
             call worker%set_face(iface)
-
 
             ! Update face interior/exterior/bc states.
             if (update_interior_faces) call self%update_primary_interior(worker,equation_set,bc_state_group,differentiate,compute_gradients)
@@ -449,10 +487,10 @@ contains
         ! Compute Value/Gradients
         !
         idepend = 1
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
-        worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+        worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff,worker%itime)
         worker%function_info%idepend = idepend
-        do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
+        do ieqn = 1,worker%mesh%domain(idomain_l)%nfields
             field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
             !
@@ -488,6 +526,7 @@ contains
                 grad2_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
                 grad3_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
 
+
                 !
                 ! Get ALE transformation data
                 !
@@ -515,6 +554,8 @@ contains
                 call worker%cache%set_data(field,'element',grad1_u,'gradient',1,worker%function_info%seed)
                 call worker%cache%set_data(field,'element',grad2_u,'gradient',2,worker%function_info%seed)
                 call worker%cache%set_data(field,'element',grad3_u,'gradient',3,worker%function_info%seed)
+
+
             end if
 
         end do !ieqn
@@ -580,11 +621,11 @@ contains
         !
         ! Compute Values
         !
-        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
         worker%function_info%idepend = idepend
         worker%function_info%idiff   = idiff
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
-        do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+        do ieqn = 1,worker%mesh%domain(idomain_l)%nfields
 
             field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
@@ -593,10 +634,10 @@ contains
             ! Interpolate modes to nodes on undeformed element
             ! NOTE: we always need to compute the graduent for interior faces for boundary conditions.
             !
-            value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'value',ME)
-            grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad1',ME)
-            grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad2',ME)
-            grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad3',ME)
+            value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ieqn,worker%itime,'value',ME)
+            grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ieqn,worker%itime,'grad1',ME)
+            grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ieqn,worker%itime,'grad2',ME)
+            grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ieqn,worker%itime,'grad3',ME)
 
 
             !
@@ -664,8 +705,8 @@ contains
         logical,                    intent(in)      :: differentiate
         logical,                    intent(in)      :: compute_gradients
 
-        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, &
-                                                       iface, BC_ID, BC_face, ndepend, idiff, eqn_ID
+        integer(ik)                                 :: idepend, ifield, idomain_l, ielement_l, &
+                                                       iface, BC_ID, BC_face, ndepend, idiff, eqn_ID, ChiID
         character(:),   allocatable                 :: field
         real(rk),       allocatable                 :: ale_Dinv(:,:,:)
         real(rk),       allocatable, dimension(:)   :: ale_g, ale_g_grad1, ale_g_grad2, ale_g_grad3
@@ -700,12 +741,21 @@ contains
         if ( (worker%face_type() == INTERIOR) .or. &
              (worker%face_type() == CHIMERA ) ) then
             
-            eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
-            do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
-                field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
+
+
+            if (worker%face_type() == INTERIOR) then
+                eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+            else if (worker%face_type() == CHIMERA) then
+                ChiID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
+                eqn_ID = worker%mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%elem_info%eqn_ID
+            end if
+
+
+            do ifield = 1,worker%prop(eqn_ID)%nprimary_fields()
+                field = worker%prop(eqn_ID)%get_primary_field_name(ifield)
                 do idepend = 1,ndepend
 
-                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                     worker%function_info%idepend = idepend
 
 
@@ -714,7 +764,7 @@ contains
                     !
 
                     ! Interpolate modes to nodes on undeformed element
-                    value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'value',NEIGHBOR)
+                    value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'value',NEIGHBOR)
 
                     ! Get ALE transformation data
                     ale_g = worker%get_det_jacobian_grid_face('value','face exterior')
@@ -734,9 +784,9 @@ contains
                         !
                         ! Interpolate modes to nodes on undeformed element
                         !
-                        grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad1',NEIGHBOR)
-                        grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad2',NEIGHBOR)
-                        grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad3',NEIGHBOR)
+                        grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad1',NEIGHBOR)
+                        grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad2',NEIGHBOR)
+                        grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad3',NEIGHBOR)
 
 
                         !
@@ -770,7 +820,7 @@ contains
 
 
                 end do !idepend
-            end do !ieqn
+            end do !ifield
 
         end if
 
@@ -802,7 +852,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
-                                       istate, bc_ID, group_ID, patch_ID, face_ID, eqn_ID
+                                       istate, bc_ID, group_ID, patch_ID, face_ID, eqn_ID, itime_start, itime_end, itime_couple
         character(:),   allocatable :: field
 
 
@@ -823,28 +873,41 @@ contains
 
             ndepend = get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate)
 
+
+            if ( worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling == 'Global') then
+                itime_start = 1
+                itime_end   = worker%time_manager%ntime
+            else
+                itime_start = worker%itime
+                itime_end   = worker%itime
+            end if
+
             do istate = 1,size(bc_state_group(bc_ID)%bc_state)
                 do idepend = 1,ndepend
+                    do itime_couple = itime_start,itime_end
 
-                    ! Get coupled bc element to linearize against.
-                    if (differentiate) then
-                        worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(idepend)
-                        worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(idepend)
-                        worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend)
-                        worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend)
-                        worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend)
-                    else
-                        worker%function_info%seed%idomain_g  = 0
-                        worker%function_info%seed%idomain_l  = 0
-                        worker%function_info%seed%ielement_g = 0
-                        worker%function_info%seed%ielement_l = 0
-                        worker%function_info%seed%iproc      = NO_PROC
-                    end if
+                        ! Get coupled bc element to linearize against.
+                        if (differentiate) then
+                            worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(idepend)
+                            worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(idepend)
+                            worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend)
+                            worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend)
+                            worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend)
+                            worker%function_info%seed%itime      = itime_couple
+                        else
+                            worker%function_info%seed%idomain_g  = 0
+                            worker%function_info%seed%idomain_l  = 0
+                            worker%function_info%seed%ielement_g = 0
+                            worker%function_info%seed%ielement_l = 0
+                            worker%function_info%seed%iproc      = NO_PROC
+                            worker%function_info%seed%itime      = itime_couple
+                        end if
 
-                    eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+                        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
 
-                    call bc_state_group(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop, bc_state_group(bc_ID)%bc_COMM)
+                        call bc_state_group(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop, bc_state_group(bc_ID)%bc_COMM)
 
+                    end do !itime_couple
                 end do !idepend
             end do !istate
 
@@ -884,15 +947,16 @@ contains
         type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
-        integer(ik) :: idomain_l, eqn_ID
+        integer(ik) :: idomain_l, ielement_l, eqn_ID
 
 
-        idomain_l  = worker%element_info%idomain_l 
 
         !
         ! Update lifting terms for gradients if diffusive operators are present
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         if (allocated(equation_set(eqn_ID)%volume_diffusive_operator) .or. &
             allocated(equation_set(eqn_ID)%boundary_diffusive_operator)) then
 
@@ -930,8 +994,8 @@ contains
         type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
-        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
-                                                       idiff, iaux_field, ifield, eqn_ID
+        integer(ik)                                 :: idepend, iaux, idomain_l, ielement_l, iface, &
+                                                       idiff, iaux_field, ifield, eqn_ID, nfields_primary, nterms_s_primary
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -951,26 +1015,24 @@ contains
         end if
 
         idepend = 0 ! no linearization
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
-        do ifield = 1,worker%prop(eqn_ID)%nauxiliary_fields()
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+        do iaux = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
-            !
             ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
-            !
-            field      = worker%prop(eqn_ID)%get_auxiliary_field_name(ifield)
+            field      = worker%prop(eqn_ID)%get_auxiliary_field_name(iaux)
             iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
             ! Set seed
-            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff,worker%itime)
             worker%function_info%idepend = idepend
             worker%function_info%idiff   = idiff
 
             ! Interpolate modes to nodes
-            ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
-            value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'value')
-            grad1_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'grad1')
-            grad2_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
-            grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
+            ifield = 1    !implicitly assuming only 1 equation in the auxiliary field chidg_vector
+            value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ifield,worker%itime,'value')
+            grad1_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ifield,worker%itime,'grad1')
+            grad2_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ifield,worker%itime,'grad2')
+            grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ifield,worker%itime,'grad3')
 
             ! Store gq data in cache
             call worker%cache%set_data(field,'element',value_gq,'value',   0,worker%function_info%seed)
@@ -978,10 +1040,7 @@ contains
             call worker%cache%set_data(field,'element',grad2_gq,'gradient',2,worker%function_info%seed)
             call worker%cache%set_data(field,'element',grad3_gq,'gradient',3,worker%function_info%seed)
 
-        end do !ieqn
-
-
-
+        end do !iaux
 
     end subroutine update_auxiliary_element
     !*****************************************************************************************
@@ -1011,7 +1070,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ifield, idomain_l, ielement_l, iface, &
-                                                       iaux_field, iaux, idiff, eqn_ID
+                                                       iaux_field, iaux, idiff, eqn_ID, nfields_primary, nterms_s_primary
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -1021,9 +1080,7 @@ contains
         iface      = worker%iface
 
 
-        !
         ! Set differentiation indicator
-        !
         if (differentiate) then
             idiff = DIAG
         else
@@ -1031,32 +1088,27 @@ contains
         end if
 
 
-
-        !
         ! Face interior state. 
-        !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         idepend = 0 ! no linearization
         do iaux = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
-            !
             ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
-            !
             field      = worker%prop(eqn_ID)%get_auxiliary_field_name(iaux)
             iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
             ! Set seed
-            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
             worker%function_info%idepend = idepend
             worker%function_info%idiff   = idiff
 
             ! Interpolate modes to nodes
             ! NOTE: implicitly assuming only 1 field in the auxiliary field chidg_vector
             ifield = 1
-            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'value',ME)
-            grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad1',ME)
-            grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad2',ME)
-            grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad3',ME)
+            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'value',ME)
+            grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad1',ME)
+            grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad2',ME)
+            grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad3',ME)
 
             ! Store gq data in cache
             call worker%cache%set_data(field,'face interior',value_gq,'value',   0,worker%function_info%seed,iface)
@@ -1065,8 +1117,6 @@ contains
             call worker%cache%set_data(field,'face interior',grad3_gq,'gradient',3,worker%function_info%seed,iface)
 
         end do !iaux
-
-
 
     end subroutine update_auxiliary_interior
     !*****************************************************************************************
@@ -1101,7 +1151,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, idomain_l, ielement_l, iface, &
-                                                       iaux, iaux_field, ifield, idiff, eqn_ID
+                                                       iaux, iaux_field, ifield, idiff, eqn_ID, nfields_primary, nterms_s_primary
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -1111,9 +1161,7 @@ contains
         iface      = worker%iface
 
 
-        !
         ! Set differentiation indicator
-        !
         if (differentiate) then
             idiff = DIAG
         else
@@ -1121,33 +1169,29 @@ contains
         end if
 
 
-        !
         ! Face exterior state. 
-        !
         if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
 
-            eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+            eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             idepend = 0 ! no linearization
             do iaux = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
-                !
                 ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
-                !
                 field      = worker%prop(eqn_ID)%get_auxiliary_field_name(iaux)
                 iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
                 ! Set seed
-                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                 worker%function_info%idepend = idepend
                 worker%function_info%idiff   = idiff
 
                 ! Interpolate modes to nodes
                 ! WARNING: implicitly assuming only 1 field in the auxiliary field chidg_vector
                 ifield = 1
-                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'value',NEIGHBOR)
-                grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad1',NEIGHBOR)
-                grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad2',NEIGHBOR)
-                grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad3',NEIGHBOR)
+                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'value',NEIGHBOR)
+                grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad1',NEIGHBOR)
+                grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad2',NEIGHBOR)
+                grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad3',NEIGHBOR)
 
                 ! Store gq data in cache
                 call worker%cache%set_data(field,'face exterior',value_gq,'value',   0,worker%function_info%seed,iface)
@@ -1158,7 +1202,6 @@ contains
             end do !iaux
 
         end if
-
 
 
     end subroutine update_auxiliary_exterior
@@ -1194,7 +1237,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ifield, idomain_l, ielement_l, iface, &
-                                                       iaux_field, iaux, idiff, eqn_ID
+                                                       iaux_field, iaux, idiff, eqn_ID, nfields_primary, nterms_s_primary
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -1204,9 +1247,7 @@ contains
         iface      = worker%iface
 
 
-        !
         ! Set differentiation indicator
-        !
         if (differentiate) then
             idiff = DIAG
         else
@@ -1214,34 +1255,28 @@ contains
         end if
 
 
-
-        !
         ! Face interior state. 
-        !
         if ( (worker%face_type() == BOUNDARY) ) then
 
-            eqn_ID  = worker%mesh%domain(idomain_l)%eqn_ID
+            eqn_ID  = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             idepend = 0 ! no linearization
             do iaux = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
-                !
                 ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
-                !
                 field      = worker%prop(eqn_ID)%get_auxiliary_field_name(iaux)
                 iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
                 ! Set seed
-                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                 worker%function_info%idepend = idepend
                 worker%function_info%idiff   = idiff
 
-                !
                 ! Interpolate modes to nodes
-                ifield = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
-                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'value',ME)
-                grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad1',ME)
-                grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad2',ME)
-                grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ifield,worker%itime,'grad3',ME)
+                ifield = 1    !implicitly assuming only 1 equation in the auxiliary field chidg_vector
+                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'value',ME)
+                grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad1',ME)
+                grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad2',ME)
+                grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad3',ME)
 
                 ! Store gq data in cache
                 call worker%cache%set_data(field,'face exterior',value_gq,'value',   0,worker%function_info%seed,iface)
@@ -1295,7 +1330,7 @@ contains
         !
         ! Compute element model field. Potentially differentiated wrt exterior elements.
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         worker%interpolation_source = 'element'
         do imodel = 1,equation_set(eqn_ID)%nmodels()
 
@@ -1370,10 +1405,12 @@ contains
                         end if
 
                         do idepend = 1,ndepend
-                            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+                            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff,worker%itime)
                             worker%function_info%idepend = idepend
 
+                            !if (dependency=='f(Grad(Q))') call self%timer_model_grad_compute%start()
                             call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
+                            !if (dependency=='f(Grad(Q))') call self%timer_model_grad_compute%stop()
                         end do !idepend
                     end if !compute
 
@@ -1406,7 +1443,7 @@ contains
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
         character(*),               intent(in)      :: model_type
 
@@ -1427,9 +1464,10 @@ contains
         ! Update models for 'face interior'. Differentiated wrt interior.
         !
         idepend = 1
-        eqn_ID  = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID  = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         worker%interpolation_source = 'face interior'
         do imodel = 1,equation_set(eqn_ID)%nmodels()
+
 
             !
             ! Compute if model dependency matches specified model type in the 
@@ -1450,7 +1488,7 @@ contains
                 end if
 
 
-                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                 worker%function_info%idepend = idepend
                 worker%function_info%idiff   = idiff
 
@@ -1498,7 +1536,7 @@ contains
                         ! Loop through external dependencies and compute model
                         !
                         do idepend = 1,ndepend
-                            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                             worker%function_info%idepend = idepend
                             worker%function_info%idiff   = idiff
 
@@ -1544,7 +1582,7 @@ contains
         character(*),               intent(in)      :: model_type
 
         integer(ik)                 :: idepend, imodel, idomain_l, ielement_l, iface, &
-                                       bc_ID, patch_ID, face_ID, ndepend, idiff, eqn_ID
+                                       bc_ID, patch_ID, face_ID, ndepend, idiff, eqn_ID, ChiID
         character(:),   allocatable :: field, model_dependency
         logical                     :: selected_model
 
@@ -1558,7 +1596,17 @@ contains
         !
         ! Face exterior state: interior neighbors and chimera
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        !eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        if (worker%face_type() == INTERIOR) then
+            eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+        else if (worker%face_type() == CHIMERA) then
+            ChiID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
+            eqn_ID = worker%mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%elem_info%eqn_ID
+        end if
+
+
+
+
         worker%interpolation_source = 'face exterior'
         if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
 
@@ -1571,6 +1619,7 @@ contains
                 idiff = 0
             end if
             
+
             ! 
             ! Compute the number of exterior element dependencies for face exterior state
             !
@@ -1586,7 +1635,7 @@ contains
                 if (selected_model) then
                     do idepend = 1,ndepend
 
-                        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                         worker%function_info%idepend = idepend
 
                         call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
@@ -1620,7 +1669,7 @@ contains
                     if (selected_model) then
                         do idepend = 1,ndepend
 
-                            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                             worker%function_info%idepend = idepend
 
                             call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
@@ -1661,7 +1710,7 @@ contains
         character(*),               intent(in)      :: model_type
 
         integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
-                                       istate, bc_ID, group_ID, patch_ID, face_ID, imodel, eqn_ID
+                                       istate, bc_ID, group_ID, patch_ID, face_ID, imodel, eqn_ID, itime_start, itime_end, itime_couple
         character(:),   allocatable :: field, model_dependency
         logical                     :: selected_model
 
@@ -1675,7 +1724,7 @@ contains
         !
         ! Face exterior state: boundaries
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         worker%interpolation_source = 'face exterior'
         if ( (worker%face_type() == BOUNDARY) ) then
 
@@ -1689,6 +1738,17 @@ contains
             patch_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
             face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
 
+            if ( worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling == 'Global') then
+                itime_start = 1
+                itime_end   = worker%time_manager%ntime
+            else
+                itime_start = worker%itime
+                itime_end   = worker%itime
+            end if
+
+
+
+
             do imodel = 1,equation_set(eqn_ID)%nmodels()
 
                 !
@@ -1699,29 +1759,33 @@ contains
 
                 if (selected_model) then
                     do idepend = 1,ndepend
+                        do itime_couple = itime_start,itime_end
 
 
-                        if (differentiate) then
-                            ! Get coupled bc element to differentiate wrt
-                            worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(idepend)
-                            worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(idepend)
-                            worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend)
-                            worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend)
-                            worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend)
+                            if (differentiate) then
+                                ! Get coupled bc element to differentiate wrt
+                                worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(idepend)
+                                worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(idepend)
+                                worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend)
+                                worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend)
+                                worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend)
+                                worker%function_info%seed%itime      = itime_couple
 
-                        else
-                            ! Set no differentiation
-                            worker%function_info%seed%idomain_g  = 0
-                            worker%function_info%seed%idomain_l  = 0
-                            worker%function_info%seed%ielement_g = 0
-                            worker%function_info%seed%ielement_l = 0
-                            worker%function_info%seed%iproc      = NO_PROC
-                        end if
+                            else
+                                ! Set no differentiation
+                                worker%function_info%seed%idomain_g  = 0
+                                worker%function_info%seed%idomain_l  = 0
+                                worker%function_info%seed%ielement_g = 0
+                                worker%function_info%seed%ielement_l = 0
+                                worker%function_info%seed%iproc      = NO_PROC
+                                worker%function_info%seed%itime      = itime_couple
+                            end if
 
 
 
-                        call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
+                            call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
 
+                        end do !itime_couple
                     end do !idepend
                 end if !select model
 
@@ -1766,10 +1830,10 @@ contains
         type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
-        character(:),   allocatable :: field
+        character(:),   allocatable :: field, bc_family
         real(rk),       allocatable :: ale_g_m(:), ale_g_p(:)
         integer(ik)                 :: idomain_l, ielement_l, iface, idepend, &
-                                       ndepend, BC_ID, BC_face, ieqn, idiff, eqn_ID
+                                       ndepend, BC_ID, BC_face, ifield, idiff, eqn_ID
 
         type(AD_D), allocatable, dimension(:), save   ::    &
             var_m, var_p, var_diff, var_diff_weighted,      &
@@ -1794,33 +1858,29 @@ contains
         !
         do iface = 1,NFACES
 
-
-            !
             ! Update worker face index
-            !
             call worker%set_face(iface)
 
-
-
-            associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights(iface),                           &
-                        val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface)),   &
-                        val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface),              &
-                        val_vol          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value'),                    &
-                        invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                        &
-                        br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face,                                 &
+            associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                            &
+                        br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face,                                         &
                         br2_vol          => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_vol)
 
 
 
+            bc_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+            if (bc_ID /= NO_ID) then
+                bc_family = bc_state_group(bc_ID)%family
+            else
+                bc_family = 'none'
+            end if
 
 
-            do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
 
-                !
+            eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+            do ifield = 1,worker%prop(eqn_ID)%nprimary_fields()
+
                 ! Get field
-                !
-                eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
-                field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
+                field = worker%prop(eqn_ID)%get_primary_field_name(ifield)
 
 
 
@@ -1839,7 +1899,7 @@ contains
                 do idepend = 1,ndepend
 
                     ! Get Seed
-                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                     worker%function_info%idepend = idepend
 
 
@@ -1847,9 +1907,11 @@ contains
                     var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
                     var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
+
                     ! Get ALE transformation
                     ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
                     ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
+
 
                     ! Transform values to undeformed element
                     var_m = var_m*ale_g_m
@@ -1857,10 +1919,17 @@ contains
 
 
                     ! Difference
-                    var_diff = HALF*(var_p - var_m) 
+                    if ( worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY ) then
+                        var_diff = (var_p - var_m)
+                    else
+                        var_diff = HALF*(var_p - var_m) 
+                    end if
+
+
 
                     ! Multiply by weights
                     var_diff_weighted = var_diff * weights
+
 
                     ! Multiply by normal. Note: normal is scaled by face jacobian.
                     var_diff_x = var_diff_weighted * worker%normal(1)
@@ -1874,22 +1943,6 @@ contains
                     !   2: Local solve for lift modes in element basis
                     !   3: Interpolate lift modes to face/volume quadrature nodes
                     !
-                    ! Project onto basis
-!                    rhs_x = matmul(val_face_trans,var_diff_x)
-!                    rhs_y = matmul(val_face_trans,var_diff_y)
-!                    rhs_z = matmul(val_face_trans,var_diff_z)
-! 
-!                    ! Local solve for lift modes in element basis
-!                    lift_modes_x = matmul(invmass,rhs_x)
-!                    lift_modes_y = matmul(invmass,rhs_y)
-!                    lift_modes_z = matmul(invmass,rhs_z)
-! 
-!                    ! Evaluate lift modes at face quadrature nodes
-!                    lift_gq_face_x = matmul(val_face,lift_modes_x)
-!                    lift_gq_face_y = matmul(val_face,lift_modes_y)
-!                    lift_gq_face_z = matmul(val_face,lift_modes_z)
-
-                    !
                     ! Improved approach creates a single matrix that performs the
                     ! three steps in one MV multiply:
                     !
@@ -1900,23 +1953,35 @@ contains
                     lift_gq_face_y = matmul(br2_face,var_diff_y)
                     lift_gq_face_z = matmul(br2_face,var_diff_z)
 
-                    
+
+!                    if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
+!                        lift_gq_face_x = ZERO
+!                        lift_gq_face_y = ZERO
+!                        lift_gq_face_z = ZERO
+!                    end if
+
+
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
 
 
-!                    ! Evaluate lift modes at volume quadrature nodes
-!                    lift_gq_vol_x = matmul(val_vol,lift_modes_x)
-!                    lift_gq_vol_y = matmul(val_vol,lift_modes_y)
-!                    lift_gq_vol_z = matmul(val_vol,lift_modes_z)
-
+                    ! 1: Project onto element basis
+                    ! 2: Interpolate lift modes to volume quadrature nodes
                     lift_gq_vol_x = matmul(br2_vol,var_diff_x)
                     lift_gq_vol_y = matmul(br2_vol,var_diff_y)
                     lift_gq_vol_z = matmul(br2_vol,var_diff_z)
 
-                    
+
+!                    if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
+!                        lift_gq_vol_x = ZERO
+!                        lift_gq_vol_y = ZERO
+!                        lift_gq_vol_z = ZERO
+!                    end if
+
+
+
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, iface)
@@ -1946,13 +2011,14 @@ contains
                 do idepend = 1,ndepend
 
                     ! Get Seed
-                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                     worker%function_info%idepend = idepend
 
 
                     ! Get interior/exterior state
                     var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
                     var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
+
 
                     ! Get ALE transformation
                     ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
@@ -1963,9 +2029,13 @@ contains
                     var_p = var_p*ale_g_p
 
 
-
                     ! Difference
-                    var_diff = HALF*(var_p - var_m) 
+                    if ( worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY ) then
+                        var_diff = (var_p - var_m) 
+                    else
+                        var_diff = HALF*(var_p - var_m) 
+                    end if
+
 
                     ! Multiply by weights
                     var_diff_weighted = var_diff * weights
@@ -1975,24 +2045,17 @@ contains
                     var_diff_y = var_diff_weighted * worker%normal(2)
                     var_diff_z = var_diff_weighted * worker%normal(3)
 
-!                    ! Project onto basis
-!                    rhs_x = matmul(val_face_trans,var_diff_x)
-!                    rhs_y = matmul(val_face_trans,var_diff_y)
-!                    rhs_z = matmul(val_face_trans,var_diff_z)
-!
-!                    ! Local solve for lift modes in element basis
-!                    lift_modes_x = matmul(invmass,rhs_x)
-!                    lift_modes_y = matmul(invmass,rhs_y)
-!                    lift_modes_z = matmul(invmass,rhs_z)
-
-
-                    ! Evaluate lift modes at face quadrature nodes
-!                    lift_gq_face_x = matmul(val_face,lift_modes_x)
-!                    lift_gq_face_y = matmul(val_face,lift_modes_y)
-!                    lift_gq_face_z = matmul(val_face,lift_modes_z)
+                    ! Project onto element basis, evaluate at face quadrature nodes
                     lift_gq_face_x = matmul(br2_face,var_diff_x)
                     lift_gq_face_y = matmul(br2_face,var_diff_y)
                     lift_gq_face_z = matmul(br2_face,var_diff_z)
+
+
+!                    if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
+!                        lift_gq_face_x = ZERO
+!                        lift_gq_face_y = ZERO
+!                        lift_gq_face_z = ZERO
+!                    end if
                     
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
@@ -2000,13 +2063,18 @@ contains
                     call worker%cache%set_data(field,'face interior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
 
 
-                    ! Evaluate lift modes at volume quadrature nodes
-!                    lift_gq_vol_x = matmul(val_vol,lift_modes_x)
-!                    lift_gq_vol_y = matmul(val_vol,lift_modes_y)
-!                    lift_gq_vol_z = matmul(val_vol,lift_modes_z)
+                    ! Project onto element basis, evaluate at element quadrature nodes
                     lift_gq_vol_x = matmul(br2_vol,var_diff_x)
                     lift_gq_vol_y = matmul(br2_vol,var_diff_y)
                     lift_gq_vol_z = matmul(br2_vol,var_diff_z)
+
+
+!                    if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
+!                        lift_gq_vol_x = ZERO
+!                        lift_gq_vol_y = ZERO
+!                        lift_gq_vol_z = ZERO
+!                    end if
+
                     
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, iface)
@@ -2015,10 +2083,9 @@ contains
 
 
 
-
                 end do !idepend
 
-            end do !ieqn
+            end do !ifield
 
 
             end associate
@@ -2086,7 +2153,7 @@ contains
             !
             ! Compute lift for each equation
             !
-            do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
+            do ieqn = 1,worker%mesh%domain(idomain_l)%nfields
 
 
                 !
@@ -2103,7 +2170,7 @@ contains
                 do idepend = 1,ndepend
 
                     ! Get Seed
-                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                     worker%function_info%idepend = idepend
 
 
@@ -2137,7 +2204,7 @@ contains
                 do idepend = 1,ndepend
 
                     ! Get Seed
-                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff,worker%itime)
                     worker%function_info%idepend = idepend
 
                     if (interior_face) then
@@ -2209,8 +2276,7 @@ contains
 
         character(:),   allocatable                 :: field
         real(rk),       allocatable, dimension(:)   :: normx, normy, normz, weights, ale_g_m, ale_g_p
-        real(rk),       allocatable, dimension(:,:) :: val_face_trans, val_face, val_vol, &
-                                                       invmass, br2_face
+        real(rk),       allocatable, dimension(:,:) :: br2_face
 
 
         !
@@ -2236,26 +2302,18 @@ contains
         !
         ! Get field
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
 
         if ( local_neighbor ) then
-            weights          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%basis_s%weights(iface_n)
-            val_face_trans   = transpose(worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%basis_s%interpolator('Value',iface_n))
-            val_face         = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%basis_s%interpolator('Value',iface_n)
-            val_vol          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%basis_s%interpolator('Value')
-            invmass          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%invmass
+            weights          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%basis_s%weights_face(iface_n)
             br2_face         = worker%mesh%domain(idomain_l_n)%faces(ielement_l_n,iface_n)%br2_face
 
 
         else if ( remote_neighbor ) then
             ! User local element gq instance. Assumes same order of accuracy.
-            weights          = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights(iface_n)
-            val_face_trans   = transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface_n))
-            val_face         = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface_n)
-            val_vol          = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value')
-            invmass          = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%neighbor_invmass
+            weights          = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface_n)
             br2_face         = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%neighbor_br2_face
 
 
@@ -2272,6 +2330,7 @@ contains
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
+
             ! Get ALE transformation
             ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
             ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
@@ -2283,6 +2342,8 @@ contains
 
 
             ! Difference. Relative to exterior element, so reversed
+            ! Relative to the exterior element, var_m is the exterior state
+            ! and var_p is the interior state.
             var_diff = HALF*(var_m - var_p) 
 
             ! Multiply by weights
@@ -2293,30 +2354,11 @@ contains
             var_diff_y = var_diff_weighted * normy
             var_diff_z = var_diff_weighted * normz
 
-            !
-            ! Project onto basis
-            !
-!            ! Approach 1: start
-!            rhs_x = matmul(val_face_trans,var_diff_x)
-!            rhs_y = matmul(val_face_trans,var_diff_y)
-!            rhs_z = matmul(val_face_trans,var_diff_z)
-!
-!            ! Local solve for lift modes in element basis
-!            lift_modes_x = matmul(invmass,rhs_x)
-!            lift_modes_y = matmul(invmass,rhs_y)
-!            lift_modes_z = matmul(invmass,rhs_z)
-!
-!            ! Evaluate lift modes at quadrature nodes
-!            lift_gq_face_x = matmul(val_face,lift_modes_x)
-!            lift_gq_face_y = matmul(val_face,lift_modes_y)
-!            lift_gq_face_z = matmul(val_face,lift_modes_z)
-!            ! stop
-
-            ! Approach 2: start
+            ! 1: Lift boundary difference. Project into element basis.
+            ! 2: Evaluate lift modes at face quadrature nodes
             lift_gq_face_x = matmul(br2_face,var_diff_x)
             lift_gq_face_y = matmul(br2_face,var_diff_y)
             lift_gq_face_z = matmul(br2_face,var_diff_z)
-            ! stop
             
             ! Store lift
             call worker%cache%set_data(field,'face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
@@ -2343,8 +2385,12 @@ contains
     !>  Handle computing lift for an external element, when the face is a boundary face.
     !!
     !!  In this case, the external element does NOT exist, so we use the interior element. 
-    !!  This is kind of like assuming that a boundary element exists of equal size to 
-    !!  the interior element.
+    !!  !This is kind of like assuming that a boundary element exists of equal size to 
+    !!  !the interior element.
+    !!
+    !!  Actually, on the boundary, we basically just need the interior lift because we aren't
+    !!  computing an average flux. Rather we are just computing a boundary flux, so here we
+    !!  essentially compute the interior lift and use it for the boundary.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/14/2016
@@ -2358,7 +2404,7 @@ contains
         type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         integer(ik),                intent(in)      :: ieqn
 
-        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, eqn_ID
+        integer(ik) :: idomain_l, ielement_l, iface, iface_n, eqn_ID, bc_ID
         logical     :: boundary_face, interior_face
 
         type(AD_D), allocatable, dimension(:)   ::          &
@@ -2368,7 +2414,7 @@ contains
             lift_modes_x,   lift_modes_y,   lift_modes_z,   &
             lift_gq_x,      lift_gq_y,      lift_gq_z
 
-        character(:),   allocatable                 :: field
+        character(:),   allocatable                 :: field, bc_family
         real(rk),       allocatable, dimension(:)   :: normx, normy, normz, ale_g_m, ale_g_p
 
 
@@ -2380,46 +2426,99 @@ contains
         iface      = worker%iface
 
 
-        if (iface == XI_MIN) then
-            iface_n = XI_MAX
-        else if (iface == ETA_MIN) then
-            iface_n = ETA_MAX
-        else if (iface == ZETA_MIN) then
-            iface_n = ZETA_MAX
-        else if (iface == XI_MAX) then
-            iface_n = XI_MIN
-        else if (iface == ETA_MAX) then
-            iface_n = ETA_MIN
-        else if (iface == ZETA_MAX) then
-            iface_n = ZETA_MIN
-        end if
 
 
         !
         ! Get field
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
 
+!        ! OLD
+!        if (iface == XI_MIN) then
+!            iface_n = XI_MAX
+!        else if (iface == ETA_MIN) then
+!            iface_n = ETA_MAX
+!        else if (iface == ZETA_MIN) then
+!            iface_n = ZETA_MAX
+!        else if (iface == XI_MAX) then
+!            iface_n = XI_MIN
+!        else if (iface == ETA_MAX) then
+!            iface_n = ETA_MIN
+!        else if (iface == ZETA_MAX) then
+!            iface_n = ZETA_MIN
+!        end if
+!        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface_n),                         &
+!                    !br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
+!                    br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface_n)%br2_face)
+!
+!            ! Get normal vector. Use reverse of the normal vector from the interior element since no exterior element exists.
+!            normx = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+!            normy = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+!            normz = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+!            !normx = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+!            !normy = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+!            !normz = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+!
+!            ! Get interior/exterior state
+!            var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
+!            var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
+!
+!            ! Get ALE transformation
+!            ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
+!            ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
+!
+!            ! Transform values to undeformed element
+!            var_m = var_m*ale_g_m
+!            var_p = var_p*ale_g_p
+!
+!            ! Difference. Relative to exterior element, so reversed
+!            var_diff = (var_m - var_p) 
+!            !var_diff = HALF*(var_p - var_m) 
+!
+!
+!            ! Multiply by weights
+!            var_diff_weighted = var_diff * weights
+!
+!
+!            ! Multiply by normal. Note: normal is scaled by face jacobian.
+!            var_diff_x = var_diff_weighted * normx
+!            var_diff_y = var_diff_weighted * normy
+!            var_diff_z = var_diff_weighted * normz
+!
+!
+!            ! 1: Lift boundary difference. Project into element basis.
+!            ! 2: Evaluate lift modes at face quadrature nodes
+!            lift_gq_x = matmul(br2_face,var_diff_x)
+!            lift_gq_y = matmul(br2_face,var_diff_y)
+!            lift_gq_z = matmul(br2_face,var_diff_z)
+!            
+!
+!            ! Store lift
+!            call worker%cache%set_data(field,'face exterior', lift_gq_x, 'lift face', 1, worker%function_info%seed, iface)
+!            call worker%cache%set_data(field,'face exterior', lift_gq_y, 'lift face', 2, worker%function_info%seed, iface)
+!            call worker%cache%set_data(field,'face exterior', lift_gq_z, 'lift face', 3, worker%function_info%seed, iface)
+!
+!
+!        end associate
 
-        !
-        ! Neighbor element
-        !
-        idomain_l_n  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
-        ielement_l_n = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
 
+        bc_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+        if (bc_ID /= NO_ID) then
+            bc_family = bc_state_group(bc_ID)%family
+        else
+            bc_family = 'none'
+        end if
 
-        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights(iface_n),                         &
-                    val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface_n)), &
-                    val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface_n),            &
-                    invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                        &
+        ! NEW
+        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),  &
                     br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
 
             ! Get normal vector. Use reverse of the normal vector from the interior element since no exterior element exists.
-            normx = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
-            normy = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
-            normz = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+            normx = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+            normy = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+            normz = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
@@ -2434,46 +2533,27 @@ contains
             var_p = var_p*ale_g_p
 
             ! Difference. Relative to exterior element, so reversed
-            var_diff = HALF*(var_m - var_p) 
-
+            var_diff = (var_p - var_m) 
 
             ! Multiply by weights
             var_diff_weighted = var_diff * weights
-
 
             ! Multiply by normal. Note: normal is scaled by face jacobian.
             var_diff_x = var_diff_weighted * normx
             var_diff_y = var_diff_weighted * normy
             var_diff_z = var_diff_weighted * normz
 
-
-            !
-            ! Project onto basis
-            !
-             ! Approach 1: start
-!            rhs_x = matmul(val_face_trans,var_diff_x)
-!            rhs_y = matmul(val_face_trans,var_diff_y)
-!            rhs_z = matmul(val_face_trans,var_diff_z)
-!
-!
-!            ! Local solve for lift modes in element basis
-!            lift_modes_x = matmul(invmass,rhs_x)
-!            lift_modes_y = matmul(invmass,rhs_y)
-!            lift_modes_z = matmul(invmass,rhs_z)
-!
-!
-!            ! Evaluate lift modes at quadrature nodes
-!            lift_gq_x = matmul(val_face,lift_modes_x)
-!            lift_gq_y = matmul(val_face,lift_modes_y)
-!            lift_gq_z = matmul(val_face,lift_modes_z)
-!            ! stop
-
-            ! Approach 2: start
+            ! 1: Lift boundary difference. Project into element basis.
+            ! 2: Evaluate lift modes at face quadrature nodes
             lift_gq_x = matmul(br2_face,var_diff_x)
             lift_gq_y = matmul(br2_face,var_diff_y)
             lift_gq_z = matmul(br2_face,var_diff_z)
-            ! stop
             
+!            if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
+!                lift_gq_x = ZERO
+!                lift_gq_y = ZERO
+!                lift_gq_z = ZERO
+!            end if
 
             ! Store lift
             call worker%cache%set_data(field,'face exterior', lift_gq_x, 'lift face', 1, worker%function_info%seed, iface)
@@ -2482,8 +2562,6 @@ contains
 
 
         end associate
-
-
 
 
 
@@ -2545,7 +2623,7 @@ contains
         !
         ! Get field
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
         !
@@ -2554,12 +2632,8 @@ contains
         ! there were a reflected element like the receiver element that was acting as 
         ! the donor.
         !
-        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights(iface),                           &
-                    val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface)),   &
-                    val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface),              &
-                    val_vol          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value'),                    &
-                    invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                        &
-                    br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face )
+        associate ( weights        => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                            &
+                    br2_face       => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face )
 
 
             ! Use reversed normal vectors of receiver element
@@ -2571,14 +2645,15 @@ contains
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
+
             ! Get ALE transformation
             ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
             ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
 
+
             ! Transform values to undeformed element
             var_m = var_m*ale_g_m
             var_p = var_p*ale_g_p
-
 
 
             ! Difference. Relative to exterior element, so reversed
@@ -2592,44 +2667,18 @@ contains
             var_diff_y = var_diff_weighted * normy
             var_diff_z = var_diff_weighted * normz
 
-            !
-            ! Project onto basis
-            !
-
-!            ! Approach 1: start
-!            rhs_x = matmul(val_face_trans,var_diff_x)
-!            rhs_y = matmul(val_face_trans,var_diff_y)
-!            rhs_z = matmul(val_face_trans,var_diff_z)
-!
-!            ! Local solve for lift modes in element basis
-!            lift_modes_x = matmul(invmass,rhs_x)
-!            lift_modes_y = matmul(invmass,rhs_y)
-!            lift_modes_z = matmul(invmass,rhs_z)
-!
-!            ! Evaluate lift modes at quadrature nodes
-!            lift_gq_face_x = matmul(val_face,lift_modes_x)
-!            lift_gq_face_y = matmul(val_face,lift_modes_y)
-!            lift_gq_face_z = matmul(val_face,lift_modes_z)
-!            ! stop
-
-
-            ! Approach 2: start
+            ! 1: Lift boundary difference. Project into element basis.
+            ! 2: Evaluate lift modes at face quadrature nodes
             lift_gq_face_x = matmul(br2_face,var_diff_x)
             lift_gq_face_y = matmul(br2_face,var_diff_y)
             lift_gq_face_z = matmul(br2_face,var_diff_z)
-            ! stop 
             
             ! Store lift
             call worker%cache%set_data(field,'face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
             call worker%cache%set_data(field,'face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
             call worker%cache%set_data(field,'face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
 
-
         end associate
-
-
-
-
 
 
     end subroutine handle_external_lift__chimera_face

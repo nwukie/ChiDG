@@ -26,11 +26,17 @@ module type_bc_patch
     !!        including those elements/faces that are not located on the current 
     !!        processor.
     !!
+    !!  NOTE: regarding temporal_coupling, most boundary conditions will want
+    !!        temporal_coupling = 'Local' and this is the default. For boundary
+    !!        conditions that involve cross-timelevel coupling, such as some
+    !!        for harmonic balance that incorporate terms across time levels
+    !!        and across elements on the boundary, 'Global' will indicate that
+    !!        the coupling between these interactions should be included.
+    !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
     !!  @date   2/27/2017   ! updated for added generality
-    !!
-    !!
+    !!  @date   4/20/2018   ! added temporal_coupling attribute
     !!
     !----------------------------------------------------------------------------
     type, public :: bc_patch_t
@@ -51,6 +57,8 @@ module type_bc_patch
         
         ! For each face in the patch, a list of elements it is coupled with
         type(bc_element_coupling_t), allocatable    :: coupling(:)
+        character(:),                allocatable    :: spatial_coupling     ! 'Local' or 'Global'
+        character(:),                allocatable    :: temporal_coupling    ! 'Local' or 'Global'
 
     contains
 
@@ -109,11 +117,13 @@ contains
         type(boundary_connectivity_t),  intent(in)      :: bc_connectivity
 
 
-        self%name         = trim(patch_name)
-        self%patch_ID     = patch_ID
-        self%idomain_g_   = idomain_g
-        self%idomain_l_   = idomain_l
-        self%connectivity = bc_connectivity
+        self%name              = trim(patch_name)
+        self%patch_ID          = patch_ID
+        self%idomain_g_        = idomain_g
+        self%idomain_l_        = idomain_l
+        self%connectivity      = bc_connectivity
+        self%spatial_coupling  = 'Local' ! Default, can be overwritten
+        self%temporal_coupling = 'Local' ! Default, can be overwritten
 
     end subroutine init
     !****************************************************************************
@@ -337,18 +347,21 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------
-    subroutine set_coupled_element_data(self,face_ID,idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+    subroutine set_coupled_element_data(self,face_ID,idomain_g,ielement_g,nfields,ntime,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
         class(bc_patch_t),  intent(inout)   :: self
         integer(ik),        intent(in)      :: face_ID
         integer(ik),        intent(in)      :: idomain_g
         integer(ik),        intent(in)      :: ielement_g
-        integer(ik),        intent(in)      :: neqns
+        integer(ik),        intent(in)      :: nfields
+        integer(ik),        intent(in)      :: ntime
         integer(ik),        intent(in)      :: nterms_s
+        integer(ik),        intent(in)      :: dof_start
+        integer(ik),        intent(in)      :: dof_local_start
         real(rk),           intent(in)      :: total_area
         real(rk),           intent(in)      :: areas(:)
         real(rk),           intent(in)      :: quad_pts(:,:)
 
-        call self%coupling(face_ID)%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,point_t(quad_pts))
+        call self%coupling(face_ID)%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,dof_start,dof_local_start,total_area,areas,point_t(quad_pts))
     
     end subroutine set_coupled_element_data
     !***********************************************************************************
@@ -394,7 +407,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------
-    subroutine set_coupled_element_recv(self,face_ID,idomain_g,ielement_g,recv_comm,recv_domain,recv_element)
+    subroutine set_coupled_element_recv(self,face_ID,idomain_g,ielement_g,recv_comm,recv_domain,recv_element,recv_dof)
         class(bc_patch_t),  intent(inout)   :: self
         integer(ik),        intent(in)      :: face_ID
         integer(ik),        intent(in)      :: idomain_g
@@ -402,9 +415,10 @@ contains
         integer(ik),        intent(in)      :: recv_comm
         integer(ik),        intent(in)      :: recv_domain
         integer(ik),        intent(in)      :: recv_element
+        integer(ik),        intent(in)      :: recv_dof
 
 
-        call self%coupling(face_ID)%set_coupled_element_recv(idomain_g,ielement_g,recv_comm,recv_domain,recv_element)
+        call self%coupling(face_ID)%set_coupled_element_recv(idomain_g,ielement_g,recv_comm,recv_domain,recv_element,recv_dof)
 
 
     end subroutine set_coupled_element_recv

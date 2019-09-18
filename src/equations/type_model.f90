@@ -7,7 +7,6 @@ module type_model
 
 
 
-
     !>  A class for implementing models.
     !!
     !!
@@ -101,7 +100,6 @@ module type_model
 
 
 
-
 contains
 
 
@@ -125,7 +123,6 @@ contains
 
 
 
-
     !>  Return the name of the model_t.
     !!
     !!  @author Nathan A. Wukie
@@ -145,15 +142,6 @@ contains
 
     end function get_name
     !*************************************************************************************
-
-
-
-
-
-
-
-
-
 
 
 
@@ -214,35 +202,12 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     !>  Add a model field that the model is providing a definition for.
     !!
     !!  This should be called from 'init' in a model implementation.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/29/2016
-    !!
     !!
     !-------------------------------------------------------------------------------------
     subroutine add_model_field(self,string)
@@ -252,10 +217,7 @@ contains
         integer(ik)                 :: ierr, ieq
         type(string_t), allocatable :: temp(:)
 
-
-        !
         ! Extend fields if necessary
-        !
         if (allocated(self%model_fields)) then
             
             allocate(temp(size(self%model_fields) + 1), stat=ierr)
@@ -269,22 +231,14 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        !
         ! Set new variable
-        !
         call temp(size(temp))%set(string)
 
-
-        !
         ! Copy temp back to self
-        !
         self%model_fields = temp
-
 
     end subroutine add_model_field
     !*************************************************************************************
-
-
 
 
 
@@ -306,7 +260,6 @@ contains
         user_msg = "get_model_field: field index is out of bounds."
         if (ifield > self%nmodel_fields()) call chidg_signal(FATAL,user_msg)
 
-
         string = self%model_fields(ifield)%get()
 
     end function get_model_field
@@ -314,16 +267,10 @@ contains
 
 
 
-
-
-
-
-
     !>  Return number of model fields the model is contributing to.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/29/2016
-    !!
     !!
     !-------------------------------------------------------------------------------------
     function nmodel_fields(self) result(nfields)
@@ -337,10 +284,8 @@ contains
             nfields = 0
         end if
 
-
     end function nmodel_fields
     !*************************************************************************************
-
 
 
 

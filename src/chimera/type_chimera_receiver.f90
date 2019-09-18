@@ -7,6 +7,7 @@ module type_chimera_receiver
     use type_pvector,       only: pvector_t
     use type_rvector,       only: rvector_t
     use type_chimera_donor, only: chimera_donor_t, chimera_donor
+    use type_element_info,  only: element_info_t
     implicit none
 
 
@@ -19,24 +20,19 @@ module type_chimera_receiver
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------
     type, public :: chimera_receiver_t
 
-        integer(ik)                     :: idomain_g    ! ChiDG-global domain index of receiver
-        integer(ik)                     :: idomain_l    ! Proc-local domain index of receiver
-        integer(ik)                     :: ielement_g   ! Domain-global element index of receiver
-        integer(ik)                     :: ielement_l   ! Proc-local element index of receiver
-        integer(ik)                     :: iface        ! Face index of receiver
+        integer(ik)     :: idomain_g    ! ChiDG-global domain index of receiver
+        integer(ik)     :: idomain_l    ! Proc-local domain index of receiver
+        integer(ik)     :: ielement_g   ! Domain-global element index of receiver
+        integer(ik)     :: ielement_l   ! Proc-local element index of receiver
+        integer(ik)     :: iface        ! Face index of receiver
 
-        !
         ! Array of donors
-        !
         type(chimera_donor_t), allocatable :: donor(:)
 
-
-        !
         ! Data assembled from all donors to define the complete node set
-        !
         real(rk),   allocatable :: ale_g(:)
         real(rk),   allocatable :: ale_g_grad1(:)
         real(rk),   allocatable :: ale_g_grad2(:)
@@ -55,7 +51,7 @@ module type_chimera_receiver
         procedure   :: clear
 
     end type chimera_receiver_t
-    !******************************************************************************************
+    !***********************************************************************************
 
 
 
@@ -113,7 +109,6 @@ contains
 
 
 
-
     !>  Add chimera donor to the receiver face object.
     !!
     !!  If donor matching the incoming donor already exists, return its ID instead of
@@ -123,27 +118,61 @@ contains
     !!  @date   7/25/2017
     !!
     !----------------------------------------------------------------------------------------
-    function add_donor(self, idomain_g, idomain_l, ielement_g, ielement_l, iproc) result(donor_ID)
+    function add_donor(self, donor) result(donor_ID)
         class(chimera_receiver_t),  intent(inout)   :: self
-        integer(ik),                intent(in)      :: idomain_g
-        integer(ik),                intent(in)      :: idomain_l
-        integer(ik),                intent(in)      :: ielement_g
-        integer(ik),                intent(in)      :: ielement_l
-        integer(ik),                intent(in)      :: iproc
+        type(element_info_t),       intent(in)      :: donor
 
         integer(ik) :: donor_ID
 
 
         ! Check if receiver matching the incoming face already exists.
         ! If not, call new and construct new object.
-        donor_ID = self%find_donor(idomain_g,ielement_g)
+        donor_ID = self%find_donor(donor%idomain_g,donor%ielement_g)
         if ( donor_ID == NO_ID ) then
             donor_ID = self%new_donor()
-            self%donor(donor_ID) = chimera_donor(idomain_g, idomain_l, ielement_g, ielement_l, iproc)
+            !self%donor(donor_ID) = chimera_donor(idomain_g, idomain_l, ielement_g, ielement_l, iproc)
+            self%donor(donor_ID)%elem_info = donor
         end if
 
     end function add_donor
     !****************************************************************************************
+
+
+
+
+
+
+
+!    !>  Add chimera donor to the receiver face object.
+!    !!
+!    !!  If donor matching the incoming donor already exists, return its ID instead of
+!    !!  creating a new instance.
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   7/25/2017
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function add_donor(self, idomain_g, idomain_l, ielement_g, ielement_l, iproc) result(donor_ID)
+!        class(chimera_receiver_t),  intent(inout)   :: self
+!        integer(ik),                intent(in)      :: idomain_g
+!        integer(ik),                intent(in)      :: idomain_l
+!        integer(ik),                intent(in)      :: ielement_g
+!        integer(ik),                intent(in)      :: ielement_l
+!        integer(ik),                intent(in)      :: iproc
+!
+!        integer(ik) :: donor_ID
+!
+!
+!        ! Check if receiver matching the incoming face already exists.
+!        ! If not, call new and construct new object.
+!        donor_ID = self%find_donor(idomain_g,ielement_g)
+!        if ( donor_ID == NO_ID ) then
+!            donor_ID = self%new_donor()
+!            self%donor(donor_ID) = chimera_donor(idomain_g, idomain_l, ielement_g, ielement_l, iproc)
+!        end if
+!
+!    end function add_donor
+!    !****************************************************************************************
 
 
 
@@ -211,8 +240,8 @@ contains
 
         donor_ID = NO_ID
         do idonor = 1,self%ndonors()
-            if ( (self%donor(idonor)%idomain_g  == idomain_g ) .and. &
-                 (self%donor(idonor)%ielement_g == ielement_g) ) then
+            if ( (self%donor(idonor)%elem_info%idomain_g  == idomain_g ) .and. &
+                 (self%donor(idonor)%elem_info%ielement_g == ielement_g) ) then
                  donor_ID = idonor
                  exit
             end if

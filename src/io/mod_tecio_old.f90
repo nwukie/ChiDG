@@ -74,7 +74,7 @@ contains
 
 
         integer(ik)     :: ierr, ieq, eqn_ID
-        character(100)  :: varstring
+        character(1000) :: varstring
         type(timer_t)   :: timer
 
         call timer%start()
@@ -92,7 +92,7 @@ contains
         ! TODO: Generalized TECIO for different equation set in each domain.
         !
         ieq = 1
-        eqn_ID = data%mesh%domain(1)%eqn_ID
+        eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
         do while (ieq <= data%eqnset(eqn_ID)%prop%nprimary_fields())
             varstring = trim(varstring)//","//trim(data%eqnset(1)%prop%get_primary_field_name(ieq))
             ieq = ieq + 1
@@ -229,9 +229,9 @@ contains
                                     ! Get coordinate value at point
                                     if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
 
-                                        r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(1,[xi,eta,zeta],'Deformed'),rdouble)
-                                        theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point(2,[xi,eta,zeta],'Deformed'),rdouble)
-                                        z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(3,[xi,eta,zeta],'Deformed'),rdouble)
+                                        r     = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(1,[xi,eta,zeta],'Deformed'),rdouble)
+                                        theta = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(2,[xi,eta,zeta],'Deformed'),rdouble)
+                                        z     = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(3,[xi,eta,zeta],'Deformed'),rdouble)
 
                                         if (icoord == 1) then
                                             val = r*cos(theta)
@@ -243,7 +243,7 @@ contains
 
                                     else
 
-                                        val = real(data%mesh%domain(idom)%elems(ielem)%grid_point(icoord,[xi,eta,zeta],'Deformed'),rdouble)
+                                        val = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(icoord,[xi,eta,zeta],'Deformed'),rdouble)
 
                                     end if
 
@@ -268,7 +268,7 @@ contains
 
 
                 ! For each variable in equation set, compute value pointwise and save
-                eqn_ID = data%mesh%domain(idom)%eqn_ID
+                eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID
                 do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                     ! For each actual element, create a sub-sampling of elements to resolve solution variation
@@ -544,9 +544,9 @@ contains
                                         ! Get coordinate value at point
                                         if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
 
-                                            r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(1,[xi,eta,zeta],'Deformed'),rdouble)
-                                            theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point(2,[xi,eta,zeta],'Deformed'),rdouble)
-                                            z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(3,[xi,eta,zeta],'Deformed'),rdouble)
+                                            r     = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(1,[xi,eta,zeta],'Deformed'),rdouble)
+                                            theta = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(2,[xi,eta,zeta],'Deformed'),rdouble)
+                                            z     = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(3,[xi,eta,zeta],'Deformed'),rdouble)
 
                                             if (icoord == 1) then
                                                 val = r*cos(theta)
@@ -558,7 +558,7 @@ contains
 
                                         else
 
-                                            val = real(data%mesh%domain(idom)%elems(ielem)%grid_point(icoord,[xi,eta,zeta],'Deformed'),rdouble)
+                                            val = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(icoord,[xi,eta,zeta],'Deformed'),rdouble)
 
                                         end if
 
@@ -584,7 +584,7 @@ contains
 
 
                 ! For each variable in equation set, compute value pointwise and save
-                eqn_ID = data%mesh%domain(idom)%eqn_ID
+                eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID
                 do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                     ! For each actual face, create a sub-sampling of faces to resolve solution variation

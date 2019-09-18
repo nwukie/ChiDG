@@ -28,15 +28,14 @@ contains
     !!  @param[out] nnodes_face Number of quadrature nodes defined for a face
     !!  @param[out] nnodes_vol  Number of quadrature nodes defined for a volume
     !!
-    !-------------------------------------------------------------------------------------------------------
-    !subroutine compute_nnodes_gq(nterms_s,nterms_c,nnodes_face,nnodes_vol)
+    !---------------------------------------------------------------------------------------
     subroutine compute_nnodes_gq(spacedim,nterms_s,nterms_c,nnodes_face,nnodes_vol)
         use mod_io,                     only: gq_rule
-
         integer(ik), intent(in)         :: spacedim
         integer(ik), intent(in)         :: nterms_s, nterms_c
         integer(ik), intent(out)        :: nnodes_face, nnodes_vol
-        integer(ik)                     :: nterms1d,nnodes1d,nnodes2d,nnodes3d
+
+        integer(ik)                     :: nterms1d, nnodes1d, nnodes2d, nnodes3d
 
         !
         ! Find number of terms in the 1d expansion
@@ -105,7 +104,7 @@ contains
 
 
     end subroutine compute_nnodes_gq
-    !*********************************************************************************************************
+    !*************************************************************************************
 
 
 
@@ -125,7 +124,7 @@ contains
     !!  @param[inout]   gqout   Integer index of the selected quadrature instance in
     !!                          the global quadrature instance array, GQ
     !!
-    !---------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     subroutine get_quadrature(spacedim,nterms,nn_v,nn_f,gqout)
         integer(ik),    intent(in)      :: spacedim
         integer(ik),    intent(in)      :: nterms
@@ -140,7 +139,8 @@ contains
 
 
         !
-        ! Loop through the quadrature instances that exist and get the index of one that matches the requirement.
+        ! Loop through the quadrature instances that exist and get the index of one 
+        ! that matches the requirement.
         !
         do igq = 1,size(GQ)
 
@@ -150,7 +150,8 @@ contains
                 !
                 ! If we are here, check if the current GQ(igq) has the right terms and nodes.
                 !
-                has_correct_nodes_terms = (GQ(igq)%nterms == nterms) .and. (GQ(igq)%nnodes_v == nn_v)
+                has_correct_nodes_terms = (GQ(igq)%nterms == nterms) .and. &
+                                          (GQ(igq)%nnodes_v == nn_v)
                 is_correct_spacedim     = ( GQ(igq)%spacedim == spacedim )
 
                 if (has_correct_nodes_terms .and. is_correct_spacedim) then
@@ -160,8 +161,8 @@ contains
 
             else
                 !
-                ! If we are here, then no initialized GQ instance was found that met the requirements,
-                ! so, we initialize a new one.
+                ! If we are here, then no initialized GQ instance was found that met 
+                ! the requirements, so, we initialize a new one.
                 !
                 call GQ(igq)%init(spacedim,nn_f,nn_v,nterms)
                 gqout = igq
@@ -174,7 +175,7 @@ contains
         end do
 
     end subroutine get_quadrature
-    !**********************************************************************************************************
+    !*************************************************************************************
 
 
 

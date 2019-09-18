@@ -1,13 +1,11 @@
 module PRIMLINEULER_boundary_average_advective_flux_imag
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only:  ZERO, ONE, TWO, HALF, ME, NEIGHBOR
-
-    use type_boundary_flux,     only: boundary_flux_t
+    use mod_constants,          only: ZERO, ONE, TWO, HALF
+    use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use DNAD_D
 
-    use PRIMLINEULER_properties,    only: PRIMLINEULER_properties_t
     use mod_primitive_linearized_euler
     implicit none
     private
@@ -24,11 +22,12 @@ module PRIMLINEULER_boundary_average_advective_flux_imag
     !!  @date   3/15/2016
     !!
     !------------------------------------------------------------------------------------------
-    type, extends(boundary_flux_t), public :: PRIMLINEULER_boundary_average_advective_flux_imag_t
+    type, extends(operator_t), public :: PRIMLINEULER_boundary_average_advective_flux_imag_t
 
     contains
 
-        procedure  :: compute
+        procedure   :: init
+        procedure   :: compute
 
     end type PRIMLINEULER_boundary_average_advective_flux_imag_t
     !*******************************************************************************************
@@ -45,12 +44,52 @@ module PRIMLINEULER_boundary_average_advective_flux_imag
 contains
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/22/2018
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init(self)
+        class(PRIMLINEULER_boundary_average_advective_flux_imag_t), intent(inout) :: self
+        
+        !
+        ! Set operator name
+        !
+        call self%set_name("PRIMLINEULER Boundary Average Imag")
+
+        !
+        ! Set operator type
+        !
+        call self%set_operator_type("Boundary Advective Flux")
+
+        !
+        ! Set operator equations
+        !
+        call self%add_primary_field("Density(imag)"   )
+        call self%add_primary_field("Velocity-1(imag)")
+        call self%add_primary_field("Velocity-2(imag)")
+        call self%add_primary_field("Velocity-3(imag)")
+        call self%add_primary_field("Pressure(imag)"  )
+
+    end subroutine init
+    !********************************************************************************
+
+
+
+
+
+
+
+
+
+
 
     !>   Boundary Flux routine for Euler
     !!
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   3/16/2016
+    !!  @date   1/22/2018
     !!
     !!
     !----------------------------------------------------------------------------------------
@@ -59,18 +98,6 @@ contains
         type(chidg_worker_t),                                       intent(inout)   :: worker
         class(properties_t),                                        intent(inout)   :: prop
 
-
-        ! Equation indices
-        integer(ik)     :: irho
-        integer(ik)     :: iu
-        integer(ik)     :: iv
-        integer(ik)     :: iw
-        integer(ik)     :: ip
-
-
-        integer(ik)     :: ifcn, idonor, iblk, igq
-
-
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
             rho_m,   rho_p,                         &
@@ -78,46 +105,30 @@ contains
             v_m,     v_p,                           &
             w_m,     w_p,                           &
             p_m,     p_p,                           &
-            flux_x_m,   flux_y_m,   flux_z_m,       &
-            flux_x_p,   flux_y_p,   flux_z_p,       &
-            flux_x,     flux_y,     flux_z,         &
-            integrand
-
-        real(rk),   allocatable, dimension(:)   ::  &
-            normx, normy, normz
-
-        irho = prop%get_eqn_index("rho_i")
-        iu   = prop%get_eqn_index("u_i")
-        iv   = prop%get_eqn_index("v_i")
-        iw   = prop%get_eqn_index("w_i")
-        ip   = prop%get_eqn_index("p_i")
-
+            flux_1_m,   flux_2_m,   flux_3_m,       &
+            flux_1_p,   flux_2_p,   flux_3_p
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m = worker%interpolate(irho, 'value', ME)
-        rho_p = worker%interpolate(irho, 'value', NEIGHBOR)
+        rho_m = worker%interpolate('Density(imag)',    'value', 'face interior')
+        rho_p = worker%interpolate('Density(imag)',    'value', 'face exterior')
 
-        u_m   = worker%interpolate(iu, 'value', ME)
-        u_p   = worker%interpolate(iu, 'value', NEIGHBOR)
+        u_m   = worker%interpolate('Velocity-1(imag)', 'value', 'face interior')
+        u_p   = worker%interpolate('Velocity-1(imag)', 'value', 'face exterior')
 
-        v_m   = worker%interpolate(iv, 'value', ME)
-        v_p   = worker%interpolate(iv, 'value', NEIGHBOR)
+        v_m   = worker%interpolate('Velocity-2(imag)', 'value', 'face interior')
+        v_p   = worker%interpolate('Velocity-2(imag)', 'value', 'face exterior')
 
-        w_m   = worker%interpolate(iw, 'value', ME)
-        w_p   = worker%interpolate(iw, 'value', NEIGHBOR)
+        w_m   = worker%interpolate('Velocity-3(imag)', 'value', 'face interior')
+        w_p   = worker%interpolate('Velocity-3(imag)', 'value', 'face exterior')
 
-        p_m   = worker%interpolate(ip, 'value', ME)
-        p_p   = worker%interpolate(ip, 'value', NEIGHBOR)
-
-
+        p_m   = worker%interpolate('Pressure(imag)',   'value', 'face interior')
+        p_p   = worker%interpolate('Pressure(imag)',   'value', 'face exterior')
 
 
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
+
 
 
 
@@ -125,194 +136,169 @@ contains
         !================================
         !       MASS FLUX
         !================================
-        flux_x_m = rho_x_rho  * rho_m  + &
-                   rho_x_u * u_m + &
-                   rho_x_v * v_m + &
-                   rho_x_w * w_m + &
-                   rho_x_p * p_m
-        flux_y_m = rho_y_rho  * rho_m  + &
-                   rho_y_u * u_m + &
-                   rho_y_v * v_m + &
-                   rho_y_w * w_m + &
-                   rho_y_p * p_m 
-        flux_z_m = rho_z_rho  * rho_m  + &
-                   rho_z_u * u_m + &
-                   rho_z_v * v_m + &
-                   rho_z_w * w_m + &
-                   rho_z_p * p_m 
+        flux_1_m = rho_1_rho * rho_m + &
+                   rho_1_u   * u_m   + &
+                   rho_1_v   * v_m   + &
+                   rho_1_w   * w_m   + &
+                   rho_1_p   * p_m
+        flux_2_m = rho_2_rho * rho_m + &
+                   rho_2_u   * u_m   + &
+                   rho_2_v   * v_m   + &
+                   rho_2_w   * w_m   + &
+                   rho_2_p   * p_m 
+        flux_3_m = rho_3_rho * rho_m + &
+                   rho_3_u   * u_m   + &
+                   rho_3_v   * v_m   + &
+                   rho_3_w   * w_m   + &
+                   rho_3_p   * p_m 
 
 
-        flux_x_p = rho_x_rho  * rho_p  + &
-                   rho_x_u * u_p + &
-                   rho_x_v * v_p + &
-                   rho_x_w * w_p + &
-                   rho_x_p * p_p
-        flux_y_p = rho_y_rho  * rho_p  + &
-                   rho_y_u * u_p + &
-                   rho_y_v * v_p + &
-                   rho_y_w * w_p + &
-                   rho_y_p * p_p 
-        flux_z_p = rho_z_rho  * rho_p  + &
-                   rho_z_u * u_p + &
-                   rho_z_v * v_p + &
-                   rho_z_w * w_p + &
-                   rho_z_p * p_p 
+        flux_1_p = rho_1_rho * rho_p + &
+                   rho_1_u   * u_p   + &
+                   rho_1_v   * v_p   + &
+                   rho_1_w   * w_p   + &
+                   rho_1_p   * p_p
+        flux_2_p = rho_2_rho * rho_p + &
+                   rho_2_u   * u_p   + &
+                   rho_2_v   * v_p   + &
+                   rho_2_w   * w_p   + &
+                   rho_2_p   * p_p 
+        flux_3_p = rho_3_rho * rho_p + &
+                   rho_3_u   * u_p   + &
+                   rho_3_v   * v_p   + &
+                   rho_3_w   * w_p   + &
+                   rho_3_p   * p_p 
 
 
-
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-
-        call worker%integrate_boundary(irho,integrand)
+        call worker%integrate_boundary_average('Density(imag)','Advection', &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
+        
 
 
         !================================
         !       X-MOMENTUM FLUX
         !================================
-        flux_x_m = u_x_rho  * rho_m  + &
-                   u_x_u * u_m + &
-                   u_x_v * v_m + &
-                   u_x_w * w_m + &
-                   u_x_p * p_m
-        flux_y_m = u_y_rho  * rho_m  + &
-                   u_y_u * u_m + &
-                   u_y_v * v_m + &
-                   u_y_w * w_m + &
-                   u_y_p * p_m 
-        flux_z_m = u_z_rho  * rho_m  + &
-                   u_z_u * u_m + &
-                   u_z_v * v_m + &
-                   u_z_w * w_m + &
-                   u_z_p * p_m 
-
-        flux_x_p = u_x_rho  * rho_p  + &
-                   u_x_u * u_p + &
-                   u_x_v * v_p + &
-                   u_x_w * w_p + &
-                   u_x_p * p_p
-        flux_y_p = u_y_rho  * rho_p  + &
-                   u_y_u * u_p + &
-                   u_y_v * v_p + &
-                   u_y_w * w_p + &
-                   u_y_p * p_p 
-        flux_z_p = u_z_rho  * rho_p  + &
-                   u_z_u * u_p + &
-                   u_z_v * v_p + &
-                   u_z_w * w_p + &
-                   u_z_p * p_p 
+        flux_1_m = u_1_rho * rho_m + &
+                   u_1_u   * u_m   + &
+                   u_1_v   * v_m   + &
+                   u_1_w   * w_m   + &
+                   u_1_p   * p_m
+        flux_2_m = u_2_rho * rho_m + &
+                   u_2_u   * u_m   + &
+                   u_2_v   * v_m   + &
+                   u_2_w   * w_m   + &
+                   u_2_p   * p_m 
+        flux_3_m = u_3_rho * rho_m + &
+                   u_3_u   * u_m   + &
+                   u_3_v   * v_m   + &
+                   u_3_w   * w_m   + &
+                   u_3_p   * p_m 
 
 
+        flux_1_p = u_1_rho * rho_p + &
+                   u_1_u   * u_p   + &
+                   u_1_v   * v_p   + &
+                   u_1_w   * w_p   + &
+                   u_1_p   * p_p
+        flux_2_p = u_2_rho * rho_p + &
+                   u_2_u   * u_p   + &
+                   u_2_v   * v_p   + &
+                   u_2_w   * w_p   + &
+                   u_2_p   * p_p 
+        flux_3_p = u_3_rho * rho_p + &
+                   u_3_u   * u_p   + &
+                   u_3_v   * v_p   + &
+                   u_3_w   * w_p   + &
+                   u_3_p   * p_p 
 
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-
-        call worker%integrate_boundary(iu,integrand)
+        call worker%integrate_boundary_average('Velocity-1(imag)','Advection',  &
+                                                flux_1_m,flux_2_m,flux_3_m,     &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
 
         !================================
         !       Y-MOMENTUM FLUX
         !================================
-        flux_x_m = v_x_rho  * rho_m  + &
-                   v_x_u * u_m + &
-                   v_x_v * v_m + &
-                   v_x_w * w_m + &
-                   v_x_p * p_m
-        flux_y_m = v_y_rho  * rho_m  + &
-                   v_y_u * u_m + &
-                   v_y_v * v_m + &
-                   v_y_w * w_m + &
-                   v_y_p * p_m 
-        flux_z_m = v_z_rho  * rho_m  + &
-                   v_z_u * u_m + &
-                   v_z_v * v_m + &
-                   v_z_w * w_m + &
-                   v_z_p * p_m 
+        flux_1_m = v_1_rho * rho_m + &
+                   v_1_u   * u_m   + &
+                   v_1_v   * v_m   + &
+                   v_1_w   * w_m   + &
+                   v_1_p   * p_m
+        flux_2_m = v_2_rho * rho_m + &
+                   v_2_u   * u_m   + &
+                   v_2_v   * v_m   + &
+                   v_2_w   * w_m   + &
+                   v_2_p   * p_m 
+        flux_3_m = v_3_rho * rho_m + &
+                   v_3_u   * u_m   + &
+                   v_3_v   * v_m   + &
+                   v_3_w   * w_m   + &
+                   v_3_p   * p_m 
 
 
-        flux_x_p = v_x_rho  * rho_p  + &
-                   v_x_u * u_p + &
-                   v_x_v * v_p + &
-                   v_x_w * w_p + &
-                   v_x_p * p_p
-        flux_y_p = v_y_rho  * rho_p  + &
-                   v_y_u * u_p + &
-                   v_y_v * v_p + &
-                   v_y_w * w_p + &
-                   v_y_p * p_p 
-        flux_z_p = v_z_rho  * rho_p  + &
-                   v_z_u * u_p + &
-                   v_z_v * v_p + &
-                   v_z_w * w_p + &
-                   v_z_p * p_p 
+        flux_1_p = v_1_rho * rho_p + &
+                   v_1_u   * u_p   + &
+                   v_1_v   * v_p   + &
+                   v_1_w   * w_p   + &
+                   v_1_p   * p_p
+        flux_2_p = v_2_rho * rho_p + &
+                   v_2_u   * u_p   + &
+                   v_2_v   * v_p   + &
+                   v_2_w   * w_p   + &
+                   v_2_p   * p_p 
+        flux_3_p = v_3_rho * rho_p + &
+                   v_3_u   * u_p   + &
+                   v_3_v   * v_p   + &
+                   v_3_w   * w_p   + &
+                   v_3_p   * p_p 
+
+        call worker%integrate_boundary_average('Velocity-2(imag)','Advection',  &
+                                                flux_1_m,flux_2_m,flux_3_m,     &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
 
-
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-
-        call worker%integrate_boundary(iv,integrand)
 
         !================================
         !       Z-MOMENTUM FLUX
         !================================
-        flux_x_m = w_x_rho  * rho_m  + &
-                   w_x_u    * u_m + &
-                   w_x_v    * v_m + &
-                   w_x_w    * w_m + &
-                   w_x_p    * p_m
-        flux_y_m = w_y_rho  * rho_m  + &
-                   w_y_u    * u_m + &
-                   w_y_v    * v_m + &
-                   w_y_w    * w_m + &
-                   w_y_p    * p_m 
-        flux_z_m = w_z_rho  * rho_m  + &
-                   w_z_u    * u_m + &
-                   w_z_v    * v_m + &
-                   w_z_w    * w_m + &
-                   w_z_p    * p_m 
+        flux_1_m = w_1_rho * rho_m + &
+                   w_1_u   * u_m   + &
+                   w_1_v   * v_m   + &
+                   w_1_w   * w_m   + &
+                   w_1_p   * p_m
+        flux_2_m = w_2_rho * rho_m + &
+                   w_2_u   * u_m + &
+                   w_2_v   * v_m + &
+                   w_2_w   * w_m + &
+                   w_2_p   * p_m 
+        flux_3_m = w_3_rho * rho_m + &
+                   w_3_u   * u_m + &
+                   w_3_v   * v_m + &
+                   w_3_w   * w_m + &
+                   w_3_p   * p_m 
 
 
-        flux_x_p = w_x_rho  * rho_p  + &
-                   w_x_u    * u_p + &
-                   w_x_v    * v_p + &
-                   w_x_w    * w_p + &
-                   w_x_p    * p_p
-        flux_y_p = w_y_rho  * rho_p  + &
-                   w_y_u    * u_p + &
-                   w_y_v    * v_p + &
-                   w_y_w    * w_p + &
-                   w_y_p    * p_p 
-        flux_z_p = w_z_rho  * rho_p  + &
-                   w_z_u    * u_p + &
-                   w_z_v    * v_p + &
-                   w_z_w    * w_p + &
-                   w_z_p    * p_p 
+        flux_1_p = w_1_rho * rho_p + &
+                   w_1_u   * u_p   + &
+                   w_1_v   * v_p   + &
+                   w_1_w   * w_p   + &
+                   w_1_p   * p_p
+        flux_2_p = w_2_rho * rho_p + &
+                   w_2_u   * u_p   + &
+                   w_2_v   * v_p   + &
+                   w_2_w   * w_p   + &
+                   w_2_p   * p_p 
+        flux_3_p = w_3_rho * rho_p + &
+                   w_3_u   * u_p   + &
+                   w_3_v   * v_p   + &
+                   w_3_w   * w_p   + &
+                   w_3_p   * p_p 
 
 
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-
-        call worker%integrate_boundary(iw,integrand)
+        call worker%integrate_boundary_average('Velocity-3(imag)','Advection',  &
+                                                flux_1_m,flux_2_m,flux_3_m,     &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
 
 
@@ -320,49 +306,43 @@ contains
         !================================
         !          ENERGY FLUX
         !================================
-        flux_x_m = p_x_rho  * rho_m  + &
-                   p_x_u    * u_m + &
-                   p_x_v    * v_m + &
-                   p_x_w    * w_m + &
-                   p_x_p    * p_m
-        flux_y_m = p_y_rho  * rho_m  + &
-                   p_y_u    * u_m + &
-                   p_y_v    * v_m + &
-                   p_y_w    * w_m + &
-                   p_y_p    * p_m 
-        flux_z_m = p_z_rho  * rho_m  + &
-                   p_z_u    * u_m + &
-                   p_z_v    * v_m + &
-                   p_z_w    * w_m + &
-                   p_z_p    * p_m 
-
-        flux_x_p = p_x_rho  * rho_p  + &
-                   p_x_u    * u_p + &
-                   p_x_v    * v_p + &
-                   p_x_w    * w_p + &
-                   p_x_p    * p_p
-        flux_y_p = p_y_rho  * rho_p  + &
-                   p_y_u    * u_p + &
-                   p_y_v    * v_p + &
-                   p_y_w    * w_p + &
-                   p_y_p    * p_p 
-        flux_z_p = p_z_rho  * rho_p  + &
-                   p_z_u    * u_p + &
-                   p_z_v    * v_p + &
-                   p_z_w    * w_p + &
-                   p_z_p    * p_p 
+        flux_1_m = p_1_rho * rho_m + &
+                   p_1_u   * u_m   + &
+                   p_1_v   * v_m   + &
+                   p_1_w   * w_m   + &
+                   p_1_p   * p_m
+        flux_2_m = p_2_rho * rho_m + &
+                   p_2_u   * u_m   + &
+                   p_2_v   * v_m   + &
+                   p_2_w   * w_m   + &
+                   p_2_p   * p_m 
+        flux_3_m = p_3_rho * rho_m + &
+                   p_3_u   * u_m   + &
+                   p_3_v   * v_m   + &
+                   p_3_w   * w_m   + &
+                   p_3_p   * p_m 
 
 
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
+        flux_1_p = p_1_rho * rho_p + &
+                   p_1_u   * u_p   + &
+                   p_1_v   * v_p   + &
+                   p_1_w   * w_p   + &
+                   p_1_p   * p_p
+        flux_2_p = p_2_rho * rho_p + &
+                   p_2_u   * u_p   + &
+                   p_2_v   * v_p   + &
+                   p_2_w   * w_p   + &
+                   p_2_p   * p_p 
+        flux_3_p = p_3_rho * rho_p + &
+                   p_3_u   * u_p   + &
+                   p_3_v   * v_p   + &
+                   p_3_w   * w_p   + &
+                   p_3_p   * p_p 
 
 
-        ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-
-        call worker%integrate_boundary(ip,integrand)
-
+        call worker%integrate_boundary_average('Pressure(imag)','Advection',    &
+                                                flux_1_m,flux_2_m,flux_3_m,     &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
     end subroutine compute
     !************************************************************************************************************

@@ -1566,7 +1566,7 @@ contains
         character(*),   intent(in)      :: selection
 
         integer(ik) :: ireport, ierr, myunit
-        real(rk)    :: force(3), work
+        real(rk)    :: force(3), power
         logical     :: exists
 
 
@@ -1591,7 +1591,7 @@ contains
 
             case ('forces')
 
-                call report_forces(self%data,trim(report_info),force=force, work=work)
+                call report_forces(self%data,trim(report_info),force=force, power=power)
                 if (IRANK == GLOBAL_MASTER) then
                     inquire(file="aero.txt", exist=exists)
                     if (exists) then
@@ -1600,7 +1600,7 @@ contains
                         open(newunit=myunit, file="aero.txt", status="new",action="write")
                         write(myunit,*) 'force-1', 'force-2', 'force-3', 'work'
                     end if
-                    write(myunit,*) force(1), force(2), force(3), work
+                    write(myunit,*) force(1), force(2), force(3), power
                     close(myunit)
                 end if
 

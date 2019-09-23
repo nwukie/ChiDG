@@ -10,7 +10,6 @@ subroutine test_hole_cutting_cylinder_single_grid()
                                           tioga_performconnectivity, tioga_reduce_fringes
     use mod_gridspace,              only: linspace
     use iso_c_binding,              only: c_int, c_double, c_ptr, c_null_ptr, c_loc
-    use hole_cutting_test_grids,    only: create_cylinder_single_grid
     implicit none
 
     integer(c_int), target :: bid1, btag1, nnodes1, nwall_nodes1, noverset_nodes1, nelement_types1, nvertices_per_element1, nelements1
@@ -330,7 +329,6 @@ subroutine test_hole_cutting_cylinder_overlap_grid()
                                           tioga_performconnectivity, tioga_reduce_fringes
     use mod_gridspace,              only: linspace
     use iso_c_binding,              only: c_int, c_double, c_ptr, c_null_ptr, c_loc
-    use hole_cutting_test_grids,    only: create_cylinder_single_grid
     implicit none
 
     integer(c_int), target :: bid1, btag1, nnodes1, nwall_nodes1, noverset_nodes1, nelement_types1, nvertices_per_element1, nelements1
@@ -779,7 +777,6 @@ subroutine test_hole_cutting_overlapping_interior_grids()
                                           tioga_performconnectivity, tioga_reduce_fringes
     use mod_gridspace,              only: linspace
     use iso_c_binding,              only: c_int, c_double, c_ptr, c_null_ptr, c_loc
-    use hole_cutting_test_grids,    only: create_cylinder_single_grid
     implicit none
 
     integer(c_int), target :: bid1, btag1, nnodes1, nwall_nodes1, noverset_nodes1, nelement_types1, nvertices_per_element1, nelements1

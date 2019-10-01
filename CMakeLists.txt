@@ -477,7 +477,6 @@ set(ExternalProjectCMakeArgs
     )
 
 
-
 ExternalProject_Add(
     tioga
     DOWNLOAD_COMMAND ${TIOGA_DOWNLOAD_COMMAND}
@@ -490,11 +489,18 @@ ExternalProject_Add(
     CMAKE_ARGS ${ExternalProjectCMakeArgs}
     )
 
+
 if (NOT TIOGA_TAR)
     add_dependencies(tioga git_update)
 endif()
 
-set(TIOGA_LIBRARIES ${PROJECT_BINARY_DIR}/external/tioga/lib/libtioga.dylib)
+             
+if (APPLE)
+    set(TIOGA_LIBRARIES ${PROJECT_BINARY_DIR}/external/tioga/lib/libtioga.dylib)
+else()
+    set(TIOGA_LIBRARIES ${PROJECT_BINARY_DIR}/external/tioga/lib/libtioga.so)
+endif()
+
 set(TIOGA_INCLUDE_DIR ${PROJECT_BINARY_DIR}/external/tioga/include)
 include_directories(${TIOGA_INCLUDE_DIR})
 

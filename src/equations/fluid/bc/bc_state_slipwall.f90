@@ -147,11 +147,14 @@ contains
         !
         !   We then rescale the velocity to have the same magnitude as the interior velocity.
         !
+
+        ! Convert to relative momentum
         grid_velocity = worker%get_grid_velocity_face('face interior')
         wmom1_m = mom1_m-grid_velocity(:,1)*density_m
         wmom2_m = mom2_m-grid_velocity(:,2)*density_m
         wmom3_m = mom3_m-grid_velocity(:,3)*density_m
 
+        ! Subtract wall-normal component of momentum
         wmom1_bc = wmom1_m - (wmom1_m*unorm_1 + wmom2_m*unorm_2 + wmom3_m*unorm_3)*unorm_1
         wmom2_bc = wmom2_m - (wmom1_m*unorm_1 + wmom2_m*unorm_2 + wmom3_m*unorm_3)*unorm_2
         wmom3_bc = wmom3_m - (wmom1_m*unorm_1 + wmom2_m*unorm_2 + wmom3_m*unorm_3)*unorm_3
@@ -168,7 +171,7 @@ contains
         wmom2_bc = wmom2_bc * (wmom_mag_m/wmom_mag_bc)
         wmom3_bc = wmom3_bc * (wmom_mag_m/wmom_mag_bc)
 
-        ! Convert to absolute
+        ! Convert to absolute momentum
         mom1_bc = wmom1_bc + grid_velocity(:,1)*density_m
         mom2_bc = wmom2_bc + grid_velocity(:,2)*density_m
         mom3_bc = wmom3_bc + grid_velocity(:,3)*density_m

@@ -8,7 +8,8 @@ module type_chidg
     use mod_function,               only: register_functions
     use mod_prescribed_mesh_motion_function, only: register_prescribed_mesh_motion_functions
     use mod_radial_basis_function,  only: register_radial_basis_functions
-    use mod_force,                      only: report_forces
+    use mod_force,                  only: report_forces
+    use mod_hole_cutting,           only: compute_iblank
 
 
     use mod_grid,                   only: initialize_grid
@@ -603,6 +604,9 @@ contains
 
         call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('Reading mesh... ', io_proc=GLOBAL_MASTER)
+
+        ! Run pre-processor to compute iblank 
+        call compute_iblank(grid_file,ChiDG_COMM)
 
 
         ! Read domain geometry. Also performs partitioning.
@@ -1562,7 +1566,7 @@ contains
         character(*),   intent(in)      :: selection
 
         integer(ik) :: ireport, ierr, myunit
-        real(rk)    :: force(3), work
+        real(rk)    :: force(3), power
         logical     :: exists
 
 
@@ -1587,7 +1591,7 @@ contains
 
             case ('forces')
 
-                call report_forces(self%data,trim(report_info),force=force, work=work)
+                call report_forces(self%data,trim(report_info),force=force, power=power)
                 if (IRANK == GLOBAL_MASTER) then
                     inquire(file="aero.txt", exist=exists)
                     if (exists) then
@@ -1596,7 +1600,7 @@ contains
                         open(newunit=myunit, file="aero.txt", status="new",action="write")
                         write(myunit,*) 'force-1', 'force-2', 'force-3', 'work'
                     end if
-                    write(myunit,*) force(1), force(2), force(3), work
+                    write(myunit,*) force(1), force(2), force(3), power
                     close(myunit)
                 end if
 

@@ -9,19 +9,21 @@ module mod_prescribed_mesh_motion_function
     !
     use pmmf_static,                            only: static_pmmf
     use pmmf_sinusoidal,                        only: sinusoidal_pmmf
-    use pmmf_sinusoidal_1d,                        only: sinusoidal_1d_pmmf
-    use pmmf_sinusoidal_2d,                        only: sinusoidal_2d_pmmf
-    use pmmf_sinusoidal_uniform_flow,                        only: sinusoidal_uniform_flow_pmmf
-    use pmmf_sinusoidal_convecting_vortex,                        only: sinusoidal_convecting_vortex_pmmf
+    use pmmf_sinusoidal_1d,                     only: sinusoidal_1d_pmmf
+    use pmmf_sinusoidal_2d,                     only: sinusoidal_2d_pmmf
+    use pmmf_sinusoidal_uniform_flow,           only: sinusoidal_uniform_flow_pmmf
+    use pmmf_sinusoidal_convecting_vortex,      only: sinusoidal_convecting_vortex_pmmf
     use pmmf_isotropic_dilation,                only: isotropic_dilation_pmmf
     use pmmf_constant_motion_1d_x,              only: constant_motion_1d_x_pmmf
     use pmmf_hpaf_case1,                        only: hpaf_case1_pmmf
     use pmmf_hpaf_case2,                        only: hpaf_case2_pmmf
     use pmmf_hpaf_case3,                        only: hpaf_case3_pmmf
-    use pmmf_hpaf_case1_blended,                        only: hpaf_case1_blended_pmmf
-    use pmmf_hpaf_case2_blended,                        only: hpaf_case2_blended_pmmf
-    use pmmf_hpaf_case3_blended,                        only: hpaf_case3_blended_pmmf
-    use pmmf_rigid_body_motion,                         only: rigid_body_motion_pmmf
+    use pmmf_hpaf_case1_blended,                only: hpaf_case1_blended_pmmf
+    use pmmf_hpaf_case2_blended,                only: hpaf_case2_blended_pmmf
+    use pmmf_hpaf_case3_blended,                only: hpaf_case3_blended_pmmf
+    use pmmf_fic_case1,                         only: fic_case1_pmmf
+    use pmmf_fic_case2,                         only: fic_case2_pmmf
+    use pmmf_rigid_body_motion,                 only: rigid_body_motion_pmmf
     implicit none
 
 
@@ -53,19 +55,21 @@ contains
         !
         type(static_pmmf)                               :: static
         type(sinusoidal_pmmf)                           :: sinusoidal
-        type(sinusoidal_1d_pmmf)                           :: sinusoidal_1d
-        type(sinusoidal_2d_pmmf)                           :: sinusoidal_2d
-        type(sinusoidal_uniform_flow_pmmf)                           :: sinusoidal_uniform_flow
-        type(sinusoidal_convecting_vortex_pmmf)                           :: sinusoidal_convecting_vortex
+        type(sinusoidal_1d_pmmf)                        :: sinusoidal_1d
+        type(sinusoidal_2d_pmmf)                        :: sinusoidal_2d
+        type(sinusoidal_uniform_flow_pmmf)              :: sinusoidal_uniform_flow
+        type(sinusoidal_convecting_vortex_pmmf)         :: sinusoidal_convecting_vortex
         type(isotropic_dilation_pmmf)                   :: isotropic_dilation
         type(constant_motion_1d_x_pmmf)                 :: constant_motion_1d_x
         type(hpaf_case1_pmmf)                           :: hpaf_case1
         type(hpaf_case2_pmmf)                           :: hpaf_case2
         type(hpaf_case3_pmmf)                           :: hpaf_case3
-        type(hpaf_case1_blended_pmmf)                           :: hpaf_case1_blended
-        type(hpaf_case2_blended_pmmf)                           :: hpaf_case2_blended
-        type(hpaf_case3_blended_pmmf)                           :: hpaf_case3_blended
-        type(rigid_body_motion_pmmf)                            :: rigid_body_motion
+        type(hpaf_case1_blended_pmmf)                   :: hpaf_case1_blended
+        type(hpaf_case2_blended_pmmf)                   :: hpaf_case2_blended
+        type(hpaf_case3_blended_pmmf)                   :: hpaf_case3_blended
+        type(fic_case1_pmmf)                            :: fic_case1
+        type(fic_case2_pmmf)                            :: fic_case2
+        type(rigid_body_motion_pmmf)                    :: rigid_body_motion
 
         if ( .not. initialized ) then
             !
@@ -85,6 +89,8 @@ contains
             call registered_pmmfs%push_back(hpaf_case1_blended)
             call registered_pmmfs%push_back(hpaf_case2_blended)
             call registered_pmmfs%push_back(hpaf_case3_blended)
+            call registered_pmmfs%push_back(fic_case1)
+            call registered_pmmfs%push_back(fic_case2)
             call registered_pmmfs%push_back(rigid_body_motion)
        
             !

@@ -105,7 +105,7 @@ contains
             norm_1,         norm_2,         norm_3,         &
             unorm_1,        unorm_2,        unorm_3,        &
             unorm_1_ale,    unorm_2_ale,    unorm_3_ale,    &
-            ale_area_ratio, r, grid_vel_n
+            r, grid_vel_n
 
         real(rk), allocatable, dimension(:,:) :: grid_vel
 
@@ -113,7 +113,6 @@ contains
 
 
         grid_vel = worker%get_grid_velocity_face('face interior')
-        ale_area_ratio = worker%get_area_ratio()
 
 
         !

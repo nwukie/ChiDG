@@ -1954,12 +1954,6 @@ contains
                     lift_gq_face_z = matmul(br2_face,var_diff_z)
 
 
-!                    if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
-!                        lift_gq_face_x = ZERO
-!                        lift_gq_face_y = ZERO
-!                        lift_gq_face_z = ZERO
-!                    end if
-
 
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
@@ -1972,13 +1966,6 @@ contains
                     lift_gq_vol_x = matmul(br2_vol,var_diff_x)
                     lift_gq_vol_y = matmul(br2_vol,var_diff_y)
                     lift_gq_vol_z = matmul(br2_vol,var_diff_z)
-
-
-!                    if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
-!                        lift_gq_vol_x = ZERO
-!                        lift_gq_vol_y = ZERO
-!                        lift_gq_vol_z = ZERO
-!                    end if
 
 
 
@@ -2050,12 +2037,6 @@ contains
                     lift_gq_face_y = matmul(br2_face,var_diff_y)
                     lift_gq_face_z = matmul(br2_face,var_diff_z)
 
-
-!                    if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
-!                        lift_gq_face_x = ZERO
-!                        lift_gq_face_y = ZERO
-!                        lift_gq_face_z = ZERO
-!                    end if
                     
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
@@ -2069,13 +2050,6 @@ contains
                     lift_gq_vol_z = matmul(br2_vol,var_diff_z)
 
 
-!                    if (trim(bc_family) == 'Wall' .and. trim(field) == 'Energy') then
-!                        lift_gq_vol_x = ZERO
-!                        lift_gq_vol_y = ZERO
-!                        lift_gq_vol_z = ZERO
-!                    end if
-
-                    
                     ! Store lift
                     call worker%cache%set_data(field,'face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, iface)

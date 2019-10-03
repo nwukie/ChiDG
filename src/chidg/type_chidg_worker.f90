@@ -3461,12 +3461,13 @@ contains
         logical                                     :: chimera_face
 
 
-        chimera_face = (self%face_type() == CHIMERA)
-        if (chimera_face) then
-            source = 'face interior'
-        else
-            source = interp_source
-        end if
+!        chimera_face = (self%face_type() == CHIMERA)
+!        if (chimera_face) then
+!            source = 'face interior'
+!        else
+!            source = interp_source
+!        end if
+        source = interp_source
 
 
         grid_vel = self%get_grid_velocity_face(source)
@@ -3545,12 +3546,13 @@ contains
         character(:),   allocatable :: source
         logical                     :: chimera_face
 
-        chimera_face = (self%face_type() == CHIMERA)
-        if (chimera_face) then
-            source = 'face interior'
-        else
-            source = interp_source
-        end if
+!        chimera_face = (self%face_type() == CHIMERA)
+!        if (chimera_face) then
+!            source = 'face interior'
+!        else
+!            source = interp_source
+!        end if
+        source = interp_source
 
         ale_g    = self%get_det_jacobian_grid_face('value', source)
         ale_Dinv = self%get_inv_jacobian_grid_face(source)

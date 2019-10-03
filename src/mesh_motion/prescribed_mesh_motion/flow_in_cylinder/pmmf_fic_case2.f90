@@ -71,24 +71,24 @@ contains
         Atheta = PI
         alpha = time**TWO*(THREE-time)/FOUR
 
-        !Case 2
+        ! Case 2
         height = ZERO
         theta  = Atheta*alpha
 
-        !Center of motion nodeinates
+        ! Center of motion nodeinates
         xc = ZERO
         yc = ZERO
 
-        !Get the reference frame nodeinates of the grid point
+        ! Get the reference frame nodeinates of the grid point
         x0 = node(1)
         y0 = node(2)
 
 
-        !Rotation about center
+        ! Rotation about center
         x_ale =  cos(theta)*(x0-xc)+sin(theta)*(y0-yc) + xc
         y_ale = -sin(theta)*(x0-xc)+cos(theta)*(y0-yc) + yc
 
-        !Translation
+        ! Translation
         y_ale = y_ale + height
 
 
@@ -126,8 +126,7 @@ contains
 
         Atheta   = PI
         alpha    = time**TWO*(THREE-time)/FOUR
-        dalphadt = TWO*time*(THREE-time)/FOUR + &
-                   time**TWO*(-ONE)/FOUR
+        dalphadt = TWO*time*(THREE-time)/FOUR - (time**TWO)/FOUR
 
 
         !Case 2

@@ -153,7 +153,7 @@ contains
         vx_ale = vr*cos(theta0)
         vy_ale = vr*sin(theta0)
 
-        print*, sign(1._rk,vr), sign(1._rk,r - r0), vx_ale, vy_ale
+      !  print*, sign(1._rk,vr), sign(1._rk,r - r0), vx_ale, vy_ale
 
 
         val(1) = vx_ale

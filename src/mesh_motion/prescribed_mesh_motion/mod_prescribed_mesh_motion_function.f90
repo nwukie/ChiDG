@@ -23,6 +23,7 @@ module mod_prescribed_mesh_motion_function
     use pmmf_hpaf_case3_blended,                only: hpaf_case3_blended_pmmf
     use pmmf_fic_case1,                         only: fic_case1_pmmf
     use pmmf_fic_case2,                         only: fic_case2_pmmf
+    use pmmf_fic_case3,                         only: fic_case3_pmmf
     use pmmf_rigid_body_motion,                 only: rigid_body_motion_pmmf
     implicit none
 
@@ -69,6 +70,7 @@ contains
         type(hpaf_case3_blended_pmmf)                   :: hpaf_case3_blended
         type(fic_case1_pmmf)                            :: fic_case1
         type(fic_case2_pmmf)                            :: fic_case2
+        type(fic_case3_pmmf)                            :: fic_case3
         type(rigid_body_motion_pmmf)                    :: rigid_body_motion
 
         if ( .not. initialized ) then
@@ -91,6 +93,7 @@ contains
             call registered_pmmfs%push_back(hpaf_case3_blended)
             call registered_pmmfs%push_back(fic_case1)
             call registered_pmmfs%push_back(fic_case2)
+            call registered_pmmfs%push_back(fic_case3)
             call registered_pmmfs%push_back(rigid_body_motion)
        
             !

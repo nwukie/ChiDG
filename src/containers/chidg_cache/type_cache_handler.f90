@@ -1831,21 +1831,19 @@ contains
         logical,                    intent(in)      :: differentiate
 
         character(:),   allocatable :: field, bc_family
-        real(rk),       allocatable :: ale_g_m(:), ale_g_p(:)
         integer(ik)                 :: idomain_l, ielement_l, iface, idepend, &
                                        ndepend, BC_ID, BC_face, ifield, idiff, eqn_ID
 
         type(AD_D), allocatable, dimension(:), save   ::    &
             var_m, var_p, var_diff, var_diff_weighted,      &
             var_diff_x,     var_diff_y,     var_diff_z,     &
-            rhs_x,          rhs_y,          rhs_z,          &
-            lift_modes_x,   lift_modes_y,   lift_modes_z,   &
             lift_gq_face_x, lift_gq_face_y, lift_gq_face_z, &
             lift_gq_vol_x,  lift_gq_vol_y,  lift_gq_vol_z,  &
             lift_face_grad1, lift_face_grad2, lift_face_grad3, &
             lift_vol_grad1, lift_vol_grad2, lift_vol_grad3
 
         real(rk), allocatable, dimension(:,:,:) :: ale_Dinv
+        real(rk), allocatable, dimension(:)   :: ale_g, ale_g_grad1, ale_g_grad2, ale_g_grad3
 
 
         idomain_l  = worker%element_info%idomain_l 
@@ -1911,23 +1909,12 @@ contains
                     var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
 
-                    ! Get ALE transformation
-                    ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
-                    ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
-
-
-                    ! Transform values to undeformed element
-                    var_m = var_m*ale_g_m
-                    var_p = var_p*ale_g_p
-
-
                     ! Difference
                     if ( worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY ) then
                         var_diff = (var_p - var_m)
                     else
                         var_diff = HALF*(var_p - var_m) 
                     end if
-
 
 
                     ! Multiply by weights
@@ -1957,29 +1944,33 @@ contains
                     lift_gq_face_z = matmul(br2_face,var_diff_z)
 
 
+!!!!!! TESTING
+                    !
+                    ! Get ALE transformation data
+                    !
+                    ale_g       = worker%get_det_jacobian_grid_face('value', 'face interior')
+                    ale_g_grad1 = worker%get_det_jacobian_grid_face('grad1', 'face interior')
+                    ale_g_grad2 = worker%get_det_jacobian_grid_face('grad2', 'face interior')
+                    ale_g_grad3 = worker%get_det_jacobian_grid_face('grad3', 'face interior')
+                    ale_Dinv    = worker%get_inv_jacobian_grid_face('face interior')
+
+                    !
+                    ! Compute transformation to deformed element
+                    !
+                    var_m     = var_m/ale_g
+                    lift_gq_face_x = lift_gq_face_x-(var_m)*ale_g_grad1
+                    lift_gq_face_y = lift_gq_face_y-(var_m)*ale_g_grad2
+                    lift_gq_face_z = lift_gq_face_z-(var_m)*ale_g_grad3
+
+                    lift_face_grad1 = (ale_Dinv(1,1,:)*lift_gq_face_x + ale_Dinv(2,1,:)*lift_gq_face_y + ale_Dinv(3,1,:)*lift_gq_face_z)/ale_g
+                    lift_face_grad2 = (ale_Dinv(1,2,:)*lift_gq_face_x + ale_Dinv(2,2,:)*lift_gq_face_y + ale_Dinv(3,2,:)*lift_gq_face_z)/ale_g
+                    lift_face_grad3 = (ale_Dinv(1,3,:)*lift_gq_face_x + ale_Dinv(2,3,:)*lift_gq_face_y + ale_Dinv(3,3,:)*lift_gq_face_z)/ale_g
 
 !!!!!! TESTING
-
-            !
-            ! Get ALE transformation data
-            !
-            ale_Dinv = worker%get_inv_jacobian_grid_face('face interior')
-
-            lift_face_grad1 = ale_Dinv(1,1,:)*lift_gq_face_x + ale_Dinv(2,1,:)*lift_gq_face_y + ale_Dinv(3,1,:)*lift_gq_face_z
-            lift_face_grad2 = ale_Dinv(1,2,:)*lift_gq_face_x + ale_Dinv(2,2,:)*lift_gq_face_y + ale_Dinv(3,2,:)*lift_gq_face_z
-            lift_face_grad3 = ale_Dinv(1,3,:)*lift_gq_face_x + ale_Dinv(2,3,:)*lift_gq_face_y + ale_Dinv(3,3,:)*lift_gq_face_z
-
-!!!!!! TESTING
-
-
-
 
 
 
                     ! Store lift
-                    !call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
-                    !call worker%cache%set_data(field,'face interior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
-                    !call worker%cache%set_data(field,'face interior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_face_grad1, 'lift face', 1, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_face_grad2, 'lift face', 2, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_face_grad3, 'lift face', 3, worker%function_info%seed, iface)
@@ -1993,22 +1984,33 @@ contains
 
 !!!!!! TESTING
 
-            !
-            ! Get ALE transformation data
-            !
-            ale_Dinv = worker%get_inv_jacobian_grid_element()
+                    !
+                    ! Get ALE transformation data
+                    !
+                    ale_g       = worker%get_det_jacobian_grid_element('value')
+                    ale_g_grad1 = worker%get_det_jacobian_grid_element('grad1')
+                    ale_g_grad2 = worker%get_det_jacobian_grid_element('grad2')
+                    ale_g_grad3 = worker%get_det_jacobian_grid_element('grad3')
+                    ale_Dinv    = worker%get_inv_jacobian_grid_element()
 
-            lift_vol_grad1 = ale_Dinv(1,1,:)*lift_gq_vol_x + ale_Dinv(2,1,:)*lift_gq_vol_y + ale_Dinv(3,1,:)*lift_gq_vol_z
-            lift_vol_grad2 = ale_Dinv(1,2,:)*lift_gq_vol_x + ale_Dinv(2,2,:)*lift_gq_vol_y + ale_Dinv(3,2,:)*lift_gq_vol_z
-            lift_vol_grad3 = ale_Dinv(1,3,:)*lift_gq_vol_x + ale_Dinv(2,3,:)*lift_gq_vol_y + ale_Dinv(3,3,:)*lift_gq_vol_z
+
+                    !
+                    ! Compute transformation to deformed element
+                    !
+                    var_m          = worker%cache%get_data(field,'element', 'value', 0, worker%function_info%seed, iface)
+                    var_m          = var_m/ale_g
+                    lift_gq_vol_x = lift_gq_vol_x-(var_m)*ale_g_grad1
+                    lift_gq_vol_y = lift_gq_vol_y-(var_m)*ale_g_grad2
+                    lift_gq_vol_z = lift_gq_vol_z-(var_m)*ale_g_grad3
+
+                    lift_vol_grad1 = (ale_Dinv(1,1,:)*lift_gq_vol_x + ale_Dinv(2,1,:)*lift_gq_vol_y + ale_Dinv(3,1,:)*lift_gq_vol_z)/ale_g
+                    lift_vol_grad2 = (ale_Dinv(1,2,:)*lift_gq_vol_x + ale_Dinv(2,2,:)*lift_gq_vol_y + ale_Dinv(3,2,:)*lift_gq_vol_z)/ale_g
+                    lift_vol_grad3 = (ale_Dinv(1,3,:)*lift_gq_vol_x + ale_Dinv(2,3,:)*lift_gq_vol_y + ale_Dinv(3,3,:)*lift_gq_vol_z)/ale_g
 
 !!!!!! TESTING
 
 
                     ! Store lift
-                    !call worker%cache%set_data(field,'face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, iface)
-                    !call worker%cache%set_data(field,'face interior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, iface)
-                    !call worker%cache%set_data(field,'face interior', lift_gq_vol_z, 'lift element', 3, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_vol_grad1, 'lift element', 1, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_vol_grad2, 'lift element', 2, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_vol_grad3, 'lift element', 3, worker%function_info%seed, iface)
@@ -2046,15 +2048,6 @@ contains
                     var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
 
-                    ! Get ALE transformation
-                    ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
-                    ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
-
-                    ! Transform values to undeformed element
-                    var_m = var_m*ale_g_m
-                    var_p = var_p*ale_g_p
-
-
                     ! Difference
                     if ( worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY ) then
                         var_diff = (var_p - var_m) 
@@ -2078,22 +2071,32 @@ contains
 
 !!!!!! TESTING
 
-            !
-            ! Get ALE transformation data
-            !
-            ale_Dinv = worker%get_inv_jacobian_grid_face('face interior')
+                    !
+                    ! Get ALE transformation data
+                    !
+                    ale_g       = worker%get_det_jacobian_grid_face('value', 'face interior')
+                    ale_g_grad1 = worker%get_det_jacobian_grid_face('grad1', 'face interior')
+                    ale_g_grad2 = worker%get_det_jacobian_grid_face('grad2', 'face interior')
+                    ale_g_grad3 = worker%get_det_jacobian_grid_face('grad3', 'face interior')
+                    ale_Dinv    = worker%get_inv_jacobian_grid_face('face interior')
 
-            lift_face_grad1 = ale_Dinv(1,1,:)*lift_gq_face_x + ale_Dinv(2,1,:)*lift_gq_face_y + ale_Dinv(3,1,:)*lift_gq_face_z
-            lift_face_grad2 = ale_Dinv(1,2,:)*lift_gq_face_x + ale_Dinv(2,2,:)*lift_gq_face_y + ale_Dinv(3,2,:)*lift_gq_face_z
-            lift_face_grad3 = ale_Dinv(1,3,:)*lift_gq_face_x + ale_Dinv(2,3,:)*lift_gq_face_y + ale_Dinv(3,3,:)*lift_gq_face_z
+                    !
+                    ! Compute transformation to deformed element
+                    !
+                    var_m          = var_m/ale_g
+                    lift_gq_face_x = lift_gq_face_x-(var_m)*ale_g_grad1
+                    lift_gq_face_y = lift_gq_face_y-(var_m)*ale_g_grad2
+                    lift_gq_face_z = lift_gq_face_z-(var_m)*ale_g_grad3
+
+
+                    lift_face_grad1 = (ale_Dinv(1,1,:)*lift_gq_face_x + ale_Dinv(2,1,:)*lift_gq_face_y + ale_Dinv(3,1,:)*lift_gq_face_z)/ale_g
+                    lift_face_grad2 = (ale_Dinv(1,2,:)*lift_gq_face_x + ale_Dinv(2,2,:)*lift_gq_face_y + ale_Dinv(3,2,:)*lift_gq_face_z)/ale_g
+                    lift_face_grad3 = (ale_Dinv(1,3,:)*lift_gq_face_x + ale_Dinv(2,3,:)*lift_gq_face_y + ale_Dinv(3,3,:)*lift_gq_face_z)/ale_g
 
 !!!!!! TESTING
 
                     
                     ! Store lift
-                    !call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
-                    !call worker%cache%set_data(field,'face interior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
-                    !call worker%cache%set_data(field,'face interior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_face_grad1, 'lift face', 1, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_face_grad2, 'lift face', 2, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_face_grad3, 'lift face', 3, worker%function_info%seed, iface)
@@ -2106,21 +2109,32 @@ contains
 
 !!!!!! TESTING
 
-            !
-            ! Get ALE transformation data
-            !
-            ale_Dinv = worker%get_inv_jacobian_grid_element()
+                    !
+                    ! Get ALE transformation data
+                    !
+                    ale_g       = worker%get_det_jacobian_grid_element('value')
+                    ale_g_grad1 = worker%get_det_jacobian_grid_element('grad1')
+                    ale_g_grad2 = worker%get_det_jacobian_grid_element('grad2')
+                    ale_g_grad3 = worker%get_det_jacobian_grid_element('grad3')
+                    ale_Dinv    = worker%get_inv_jacobian_grid_element()
 
-            lift_vol_grad1 = ale_Dinv(1,1,:)*lift_gq_vol_x + ale_Dinv(2,1,:)*lift_gq_vol_y + ale_Dinv(3,1,:)*lift_gq_vol_z
-            lift_vol_grad2 = ale_Dinv(1,2,:)*lift_gq_vol_x + ale_Dinv(2,2,:)*lift_gq_vol_y + ale_Dinv(3,2,:)*lift_gq_vol_z
-            lift_vol_grad3 = ale_Dinv(1,3,:)*lift_gq_vol_x + ale_Dinv(2,3,:)*lift_gq_vol_y + ale_Dinv(3,3,:)*lift_gq_vol_z
+
+                    !
+                    ! Compute transformation to deformed element
+                    !
+                    var_m         = worker%cache%get_data(field,'element', 'value', 0, worker%function_info%seed, iface)
+                    var_m         = var_m/ale_g
+                    lift_gq_vol_x = lift_gq_vol_x-(var_m)*ale_g_grad1
+                    lift_gq_vol_y = lift_gq_vol_y-(var_m)*ale_g_grad2
+                    lift_gq_vol_z = lift_gq_vol_z-(var_m)*ale_g_grad3
+
+                    lift_vol_grad1 = (ale_Dinv(1,1,:)*lift_gq_vol_x + ale_Dinv(2,1,:)*lift_gq_vol_y + ale_Dinv(3,1,:)*lift_gq_vol_z)/ale_g
+                    lift_vol_grad2 = (ale_Dinv(1,2,:)*lift_gq_vol_x + ale_Dinv(2,2,:)*lift_gq_vol_y + ale_Dinv(3,2,:)*lift_gq_vol_z)/ale_g
+                    lift_vol_grad3 = (ale_Dinv(1,3,:)*lift_gq_vol_x + ale_Dinv(2,3,:)*lift_gq_vol_y + ale_Dinv(3,3,:)*lift_gq_vol_z)/ale_g
 
 !!!!!! TESTING
 
                     ! Store lift
-                    !call worker%cache%set_data(field,'face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, iface)
-                    !call worker%cache%set_data(field,'face interior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, iface)
-                    !call worker%cache%set_data(field,'face interior', lift_gq_vol_z, 'lift element', 3, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_vol_grad1, 'lift element', 1, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_vol_grad2, 'lift element', 2, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_vol_grad3, 'lift element', 3, worker%function_info%seed, iface)
@@ -2317,7 +2331,7 @@ contains
             lift_face_grad1, lift_face_grad2, lift_face_grad3
 
         character(:),   allocatable                     :: field
-        real(rk),       allocatable, dimension(:)       :: normx, normy, normz, weights, ale_g_m, ale_g_p
+        real(rk),       allocatable, dimension(:)       :: normx, normy, normz, weights, ale_g, ale_g_grad1, ale_g_grad2, ale_g_grad3
         real(rk),       allocatable, dimension(:,:)     :: br2_face
         real(rk),       allocatable, dimension(:,:,:)   :: ale_Dinv
 
@@ -2374,16 +2388,6 @@ contains
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
 
-            ! Get ALE transformation
-            ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
-            ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
-
-            ! Transform values to undeformed element
-            var_m = var_m*ale_g_m
-            var_p = var_p*ale_g_p
-
-
-
             ! Difference. Relative to exterior element, so reversed
             ! Relative to the exterior element, var_m is the exterior state
             ! and var_p is the interior state.
@@ -2409,19 +2413,29 @@ contains
             !
             ! Get ALE transformation data
             !
-            ale_Dinv = worker%get_inv_jacobian_grid_face('face exterior')
+            ale_g       = worker%get_det_jacobian_grid_face('value', 'face exterior')
+            ale_g_grad1 = worker%get_det_jacobian_grid_face('grad1', 'face exterior')
+            ale_g_grad2 = worker%get_det_jacobian_grid_face('grad2', 'face exterior')
+            ale_g_grad3 = worker%get_det_jacobian_grid_face('grad3', 'face exterior')
+            ale_Dinv    = worker%get_inv_jacobian_grid_face('face exterior')
 
-            lift_face_grad1 = ale_Dinv(1,1,:)*lift_gq_face_x + ale_Dinv(2,1,:)*lift_gq_face_y + ale_Dinv(3,1,:)*lift_gq_face_z
-            lift_face_grad2 = ale_Dinv(1,2,:)*lift_gq_face_x + ale_Dinv(2,2,:)*lift_gq_face_y + ale_Dinv(3,2,:)*lift_gq_face_z
-            lift_face_grad3 = ale_Dinv(1,3,:)*lift_gq_face_x + ale_Dinv(2,3,:)*lift_gq_face_y + ale_Dinv(3,3,:)*lift_gq_face_z
+            !
+            ! Compute transformation to deformed element
+            !
+            var_p          = var_p/ale_g
+            lift_gq_face_x = lift_gq_face_x-(var_p)*ale_g_grad1
+            lift_gq_face_y = lift_gq_face_y-(var_p)*ale_g_grad2
+            lift_gq_face_z = lift_gq_face_z-(var_p)*ale_g_grad3
+
+            lift_face_grad1 = (ale_Dinv(1,1,:)*lift_gq_face_x + ale_Dinv(2,1,:)*lift_gq_face_y + ale_Dinv(3,1,:)*lift_gq_face_z)/ale_g
+            lift_face_grad2 = (ale_Dinv(1,2,:)*lift_gq_face_x + ale_Dinv(2,2,:)*lift_gq_face_y + ale_Dinv(3,2,:)*lift_gq_face_z)/ale_g
+            lift_face_grad3 = (ale_Dinv(1,3,:)*lift_gq_face_x + ale_Dinv(2,3,:)*lift_gq_face_y + ale_Dinv(3,3,:)*lift_gq_face_z)/ale_g
+
 
 !!!!!! TESTING
 
             
             ! Store lift
-            !call worker%cache%set_data(field,'face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
-            !call worker%cache%set_data(field,'face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
-            !call worker%cache%set_data(field,'face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
             call worker%cache%set_data(field,'face exterior', lift_face_grad1, 'lift face', 1, worker%function_info%seed, iface)
             call worker%cache%set_data(field,'face exterior', lift_face_grad2, 'lift face', 2, worker%function_info%seed, iface)
             call worker%cache%set_data(field,'face exterior', lift_face_grad3, 'lift face', 3, worker%function_info%seed, iface)
@@ -2475,7 +2489,7 @@ contains
             lift_grad1,     lift_grad2,     lift_grad3
 
         character(:),   allocatable                     :: field, bc_family
-        real(rk),       allocatable, dimension(:)       :: normx, normy, normz, ale_g_m, ale_g_p
+        real(rk),       allocatable, dimension(:)       :: normx, normy, normz, ale_g, ale_g_grad1, ale_g_grad2, ale_g_grad3
         real(rk),       allocatable, dimension(:,:,:)   :: ale_Dinv
 
 
@@ -2514,14 +2528,6 @@ contains
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
-            ! Get ALE transformation
-            ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
-            ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
-
-            ! Transform values to undeformed element
-            var_m = var_m*ale_g_m
-            var_p = var_p*ale_g_p
-
             ! Difference. Relative to exterior element, so reversed
             var_diff = (var_p - var_m) 
 
@@ -2541,22 +2547,32 @@ contains
 
 !!!!!! TESTING
 
+
             !
             ! Get ALE transformation data
             !
-            ale_Dinv = worker%get_inv_jacobian_grid_face('face exterior')
+            ale_g       = worker%get_det_jacobian_grid_face('value', 'face exterior')
+            ale_g_grad1 = worker%get_det_jacobian_grid_face('grad1', 'face exterior')
+            ale_g_grad2 = worker%get_det_jacobian_grid_face('grad2', 'face exterior')
+            ale_g_grad3 = worker%get_det_jacobian_grid_face('grad3', 'face exterior')
+            ale_Dinv    = worker%get_inv_jacobian_grid_face('face exterior')
 
-            lift_grad1 = ale_Dinv(1,1,:)*lift_gq_x + ale_Dinv(2,1,:)*lift_gq_y + ale_Dinv(3,1,:)*lift_gq_z
-            lift_grad2 = ale_Dinv(1,2,:)*lift_gq_x + ale_Dinv(2,2,:)*lift_gq_y + ale_Dinv(3,2,:)*lift_gq_z
-            lift_grad3 = ale_Dinv(1,3,:)*lift_gq_x + ale_Dinv(2,3,:)*lift_gq_y + ale_Dinv(3,3,:)*lift_gq_z
+            !
+            ! Compute transformation to deformed element
+            !
+            var_p     = var_p/ale_g
+            lift_gq_x = lift_gq_x-(var_p)*ale_g_grad1
+            lift_gq_y = lift_gq_y-(var_p)*ale_g_grad2
+            lift_gq_z = lift_gq_z-(var_p)*ale_g_grad3
+
+            lift_grad1 = (ale_Dinv(1,1,:)*lift_gq_x + ale_Dinv(2,1,:)*lift_gq_y + ale_Dinv(3,1,:)*lift_gq_z)/ale_g
+            lift_grad2 = (ale_Dinv(1,2,:)*lift_gq_x + ale_Dinv(2,2,:)*lift_gq_y + ale_Dinv(3,2,:)*lift_gq_z)/ale_g
+            lift_grad3 = (ale_Dinv(1,3,:)*lift_gq_x + ale_Dinv(2,3,:)*lift_gq_y + ale_Dinv(3,3,:)*lift_gq_z)/ale_g
 
 !!!!!! TESTING
             
 
             ! Store lift
-            !call worker%cache%set_data(field,'face exterior', lift_gq_x, 'lift face', 1, worker%function_info%seed, iface)
-            !call worker%cache%set_data(field,'face exterior', lift_gq_y, 'lift face', 2, worker%function_info%seed, iface)
-            !call worker%cache%set_data(field,'face exterior', lift_gq_z, 'lift face', 3, worker%function_info%seed, iface)
             call worker%cache%set_data(field,'face exterior', lift_grad1, 'lift face', 1, worker%function_info%seed, iface)
             call worker%cache%set_data(field,'face exterior', lift_grad2, 'lift face', 2, worker%function_info%seed, iface)
             call worker%cache%set_data(field,'face exterior', lift_grad3, 'lift face', 3, worker%function_info%seed, iface)
@@ -2607,7 +2623,7 @@ contains
             lift_grad1, lift_grad2, lift_grad3
 
         character(:),   allocatable                     :: field
-        real(rk),       allocatable, dimension(:)       :: normx, normy, normz, ale_g_m, ale_g_p
+        real(rk),       allocatable, dimension(:)       :: normx, normy, normz, ale_g, ale_g_grad1, ale_g_grad2, ale_g_grad3
         real(rk),       allocatable, dimension(:,:,:)   :: ale_Dinv
 
 
@@ -2645,17 +2661,6 @@ contains
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
-
-            ! Get ALE transformation
-            ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
-            ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
-
-
-            ! Transform values to undeformed element
-            var_m = var_m*ale_g_m
-            var_p = var_p*ale_g_p
-
-
             ! Difference. Relative to exterior element, so reversed
             var_diff = HALF*(var_m - var_p) 
 
@@ -2676,14 +2681,27 @@ contains
 
 !!!!!! TESTING
 
+
             !
             ! Get ALE transformation data
             !
-            ale_Dinv = worker%get_inv_jacobian_grid_face('face exterior')
+            ale_g       = worker%get_det_jacobian_grid_face('value', 'face exterior')
+            ale_g_grad1 = worker%get_det_jacobian_grid_face('grad1', 'face exterior')
+            ale_g_grad2 = worker%get_det_jacobian_grid_face('grad2', 'face exterior')
+            ale_g_grad3 = worker%get_det_jacobian_grid_face('grad3', 'face exterior')
+            ale_Dinv    = worker%get_inv_jacobian_grid_face('face exterior')
 
-            lift_grad1 = ale_Dinv(1,1,:)*lift_gq_face_x + ale_Dinv(2,1,:)*lift_gq_face_y + ale_Dinv(3,1,:)*lift_gq_face_z
-            lift_grad2 = ale_Dinv(1,2,:)*lift_gq_face_x + ale_Dinv(2,2,:)*lift_gq_face_y + ale_Dinv(3,2,:)*lift_gq_face_z
-            lift_grad3 = ale_Dinv(1,3,:)*lift_gq_face_x + ale_Dinv(2,3,:)*lift_gq_face_y + ale_Dinv(3,3,:)*lift_gq_face_z
+            !
+            ! Compute transformation to deformed element
+            !
+            var_p          = var_p/ale_g
+            lift_gq_face_x = lift_gq_face_x-(var_p)*ale_g_grad1
+            lift_gq_face_y = lift_gq_face_y-(var_p)*ale_g_grad2
+            lift_gq_face_z = lift_gq_face_z-(var_p)*ale_g_grad3
+
+            lift_grad1 = (ale_Dinv(1,1,:)*lift_gq_face_x + ale_Dinv(2,1,:)*lift_gq_face_y + ale_Dinv(3,1,:)*lift_gq_face_z)/ale_g
+            lift_grad2 = (ale_Dinv(1,2,:)*lift_gq_face_x + ale_Dinv(2,2,:)*lift_gq_face_y + ale_Dinv(3,2,:)*lift_gq_face_z)/ale_g
+            lift_grad3 = (ale_Dinv(1,3,:)*lift_gq_face_x + ale_Dinv(2,3,:)*lift_gq_face_y + ale_Dinv(3,3,:)*lift_gq_face_z)/ale_g
 
 !!!!!! TESTING
 
@@ -2691,9 +2709,6 @@ contains
 
             
             ! Store lift
-            !call worker%cache%set_data(field,'face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
-            !call worker%cache%set_data(field,'face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
-            !call worker%cache%set_data(field,'face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
             call worker%cache%set_data(field,'face exterior', lift_grad1, 'lift face', 1, worker%function_info%seed, iface)
             call worker%cache%set_data(field,'face exterior', lift_grad2, 'lift face', 2, worker%function_info%seed, iface)
             call worker%cache%set_data(field,'face exterior', lift_grad3, 'lift face', 3, worker%function_info%seed, iface)

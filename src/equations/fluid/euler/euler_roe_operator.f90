@@ -228,9 +228,9 @@ contains
         !lamda3 = abs(vmagtil + ctil) + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
 
         grid_vel_n = grid_vel(:,1)*unorm_1_ale  +  grid_vel(:,2)*unorm_2_ale  +  grid_vel(:,3)*unorm_3_ale
-        lamda1 = abs(vmagtil + grid_vel_n - ctil)
-        lamda2 = abs(vmagtil + grid_vel_n)
-        lamda3 = abs(vmagtil + grid_vel_n + ctil)
+        lamda1 = abs(vmagtil - grid_vel_n - ctil)
+        lamda2 = abs(vmagtil - grid_vel_n)
+        lamda3 = abs(vmagtil - grid_vel_n + ctil)
 
         eps = 0.01_rk
         where ( (-eps*ctil < lamda1) .and. (lamda1 < eps*ctil) )

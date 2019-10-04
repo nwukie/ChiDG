@@ -1314,7 +1314,7 @@ contains
 
 
         !
-        ! Apply Quotiend Rule for computing gradient of det_jacobian_grid
+        ! Apply Quotient Rule for computing gradient of det_jacobian_grid
         !
         !   det_jacobian_grid = jinv_def/jinv
         !
@@ -2055,7 +2055,7 @@ contains
         ! Compute volume scaling and deformation gradient
         !
         ale_g = jinv_def/jinv
-        ale_Dinv = matmul(metric_ale,inv_3x3(metric))
+        ale_Dinv = matmul(inv_3x3(metric), metric_ale)
 
 
         ! evaluate polynomial modes at node location

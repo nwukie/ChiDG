@@ -2942,7 +2942,7 @@ contains
                     idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
                     ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
                     iface      = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_face
-                    ale_Dinv = self%mesh%domain(idomain_l)%faces(ielement_l, iface)%ale_Dinv
+                    ale_Dinv   = self%mesh%domain(idomain_l)%faces(ielement_l, iface)%ale_Dinv
                 end if
 
             else if (self%face_type() == CHIMERA) then

@@ -702,7 +702,8 @@ contains
             ! Compute metric_ale: 
             !   dxi/dx = [Dinv]*[dxi/dX]
             !   dxi/dx = [dX/dx]*[dxi/dX]
-            metric_ale = matmul(self%ale_Dinv(:,:,inode),self%metric(:,:,inode))
+            !metric_ale = matmul(self%ale_Dinv(:,:,inode),self%metric(:,:,inode))
+            metric_ale = matmul(self%metric(:,:,inode),self%ale_Dinv(:,:,inode))
 
             select case (self%iface)
                 case (XI_MIN, XI_MAX)

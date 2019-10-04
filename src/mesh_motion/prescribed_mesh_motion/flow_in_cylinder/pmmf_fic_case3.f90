@@ -113,7 +113,7 @@ contains
         real(rk)    :: val(3)
         real(rk)    :: Aa, alpha, psi, x0, y0, r0, theta0, &
                        a, b, e, r, dalphadt, dpsidt, h, dhdt, drdt, &
-                       vr, vx_ale, vy_ale
+                       vr, vx_ale, vy_ale, f, dedt, dbdt, dfdt
 
         Aa       = 1.5
         alpha    = time**TWO*(THREE-time)/FOUR
@@ -130,20 +130,30 @@ contains
         b = r0 / psi
         e = sqrt(ONE - psi**(-FOUR))
         r = b/(sqrt(ONE - (e*cos(theta0))**TWO))
+        f = sqrt(ONE - e*e*cos(theta0)*cos(theta0))
 
 
         ! Velocity 
         dalphadt = TWO*time*(THREE-time)/FOUR - (time**TWO)/FOUR
         dpsidt   = (Aa - ONE)*dalphadt
-        h        = sqrt( (psi**FOUR)*(sin(theta0)**TWO) + cos(theta0)**TWO)
-        dhdt     = TWO*psi*psi*psi*dpsidt/h
-        drdt     = (r0*dpsidt*h - r0*psi*dhdt)/(h*h)
+
+        dedt = TWO*dpsidt/((psi**5._rk)*sqrt(ONE - psi**(-FOUR)))
+        dfdt = - cos(theta0)**TWO * e * dedt / (sqrt(ONE - e*e*cos(theta0)*cos(theta0)))
+        dbdt = -r0*dpsidt/(psi*psi)
+
+        drdt = (dbdt*f - b*dfdt)/(f*f)
+!        h        = sqrt( (psi**FOUR)*(sin(theta0)**TWO) + cos(theta0)**TWO)
+!        dhdt     = TWO*psi*psi*psi*dpsidt/h
+!        drdt     = (r0*dpsidt*h - r0*psi*dhdt)/(h*h)
         vr       = drdt
+
 
         
         ! Convert to cartesian: assumes theta is not a function of (t)
         vx_ale = vr*cos(theta0)
         vy_ale = vr*sin(theta0)
+
+        print*, sign(1._rk,vr), sign(1._rk,r - r0), vx_ale, vy_ale
 
 
         val(1) = vx_ale

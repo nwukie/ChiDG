@@ -2313,12 +2313,8 @@ contains
         type(AD_D), allocatable, dimension(:)   ::              &
             var_m, var_p, var_diff, var_diff_weighted,          &
             var_diff_x,     var_diff_y,     var_diff_z,         &
-            rhs_x,          rhs_y,          rhs_z,              &
-            lift_modes_x,   lift_modes_y,   lift_modes_z,       &
             lift_gq_face_x, lift_gq_face_y, lift_gq_face_z,     &
-            lift_gq_vol_x,  lift_gq_vol_y,  lift_gq_vol_z,      &
-            lift_face_grad1, lift_face_grad2, lift_face_grad3,  &
-            lift_vol_grad1, lift_vol_grad2, lift_vol_grad3
+            lift_face_grad1, lift_face_grad2, lift_face_grad3
 
         character(:),   allocatable                     :: field
         real(rk),       allocatable, dimension(:)       :: normx, normy, normz, weights, ale_g_m, ale_g_p
@@ -2475,12 +2471,12 @@ contains
         type(AD_D), allocatable, dimension(:)   ::          &
             var_m, var_p, var_diff, var_diff_weighted,      &
             var_diff_x,     var_diff_y,     var_diff_z,     &
-            rhs_x,          rhs_y,          rhs_z,          &
-            lift_modes_x,   lift_modes_y,   lift_modes_z,   &
-            lift_gq_x,      lift_gq_y,      lift_gq_z
+            lift_gq_x,      lift_gq_y,      lift_gq_z,      &
+            lift_grad1,     lift_grad2,     lift_grad3
 
-        character(:),   allocatable                 :: field, bc_family
-        real(rk),       allocatable, dimension(:)   :: normx, normy, normz, ale_g_m, ale_g_p
+        character(:),   allocatable                     :: field, bc_family
+        real(rk),       allocatable, dimension(:)       :: normx, normy, normz, ale_g_m, ale_g_p
+        real(rk),       allocatable, dimension(:,:,:)   :: ale_Dinv
 
 
         !
@@ -2542,12 +2538,28 @@ contains
             lift_gq_x = matmul(br2_face,var_diff_x)
             lift_gq_y = matmul(br2_face,var_diff_y)
             lift_gq_z = matmul(br2_face,var_diff_z)
+
+!!!!!! TESTING
+
+            !
+            ! Get ALE transformation data
+            !
+            ale_Dinv = worker%get_inv_jacobian_grid_face('face exterior')
+
+            lift_grad1 = ale_Dinv(1,1,:)*lift_gq_x + ale_Dinv(2,1,:)*lift_gq_y + ale_Dinv(3,1,:)*lift_gq_z
+            lift_grad2 = ale_Dinv(1,2,:)*lift_gq_x + ale_Dinv(2,2,:)*lift_gq_y + ale_Dinv(3,2,:)*lift_gq_z
+            lift_grad3 = ale_Dinv(1,3,:)*lift_gq_x + ale_Dinv(2,3,:)*lift_gq_y + ale_Dinv(3,3,:)*lift_gq_z
+
+!!!!!! TESTING
             
 
             ! Store lift
-            call worker%cache%set_data(field,'face exterior', lift_gq_x, 'lift face', 1, worker%function_info%seed, iface)
-            call worker%cache%set_data(field,'face exterior', lift_gq_y, 'lift face', 2, worker%function_info%seed, iface)
-            call worker%cache%set_data(field,'face exterior', lift_gq_z, 'lift face', 3, worker%function_info%seed, iface)
+            !call worker%cache%set_data(field,'face exterior', lift_gq_x, 'lift face', 1, worker%function_info%seed, iface)
+            !call worker%cache%set_data(field,'face exterior', lift_gq_y, 'lift face', 2, worker%function_info%seed, iface)
+            !call worker%cache%set_data(field,'face exterior', lift_gq_z, 'lift face', 3, worker%function_info%seed, iface)
+            call worker%cache%set_data(field,'face exterior', lift_grad1, 'lift face', 1, worker%function_info%seed, iface)
+            call worker%cache%set_data(field,'face exterior', lift_grad2, 'lift face', 2, worker%function_info%seed, iface)
+            call worker%cache%set_data(field,'face exterior', lift_grad3, 'lift face', 3, worker%function_info%seed, iface)
 
 
         end associate
@@ -2591,13 +2603,12 @@ contains
         type(AD_D), allocatable, dimension(:)   ::          &
             var_m, var_p, var_diff, var_diff_weighted,      &
             var_diff_x,     var_diff_y,     var_diff_z,     &
-            rhs_x,          rhs_y,          rhs_z,          &
-            lift_modes_x,   lift_modes_y,   lift_modes_z,   &
             lift_gq_face_x, lift_gq_face_y, lift_gq_face_z, &
-            lift_gq_vol_x,  lift_gq_vol_y,  lift_gq_vol_z
+            lift_grad1, lift_grad2, lift_grad3
 
-        character(:),   allocatable                 :: field
-        real(rk),       allocatable, dimension(:)   :: normx, normy, normz, ale_g_m, ale_g_p
+        character(:),   allocatable                     :: field
+        real(rk),       allocatable, dimension(:)       :: normx, normy, normz, ale_g_m, ale_g_p
+        real(rk),       allocatable, dimension(:,:,:)   :: ale_Dinv
 
 
         !
@@ -2661,11 +2672,31 @@ contains
             lift_gq_face_x = matmul(br2_face,var_diff_x)
             lift_gq_face_y = matmul(br2_face,var_diff_y)
             lift_gq_face_z = matmul(br2_face,var_diff_z)
+
+
+!!!!!! TESTING
+
+            !
+            ! Get ALE transformation data
+            !
+            ale_Dinv = worker%get_inv_jacobian_grid_face('face exterior')
+
+            lift_grad1 = ale_Dinv(1,1,:)*lift_gq_face_x + ale_Dinv(2,1,:)*lift_gq_face_y + ale_Dinv(3,1,:)*lift_gq_face_z
+            lift_grad2 = ale_Dinv(1,2,:)*lift_gq_face_x + ale_Dinv(2,2,:)*lift_gq_face_y + ale_Dinv(3,2,:)*lift_gq_face_z
+            lift_grad3 = ale_Dinv(1,3,:)*lift_gq_face_x + ale_Dinv(2,3,:)*lift_gq_face_y + ale_Dinv(3,3,:)*lift_gq_face_z
+
+!!!!!! TESTING
+
+
+
             
             ! Store lift
-            call worker%cache%set_data(field,'face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
-            call worker%cache%set_data(field,'face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
-            call worker%cache%set_data(field,'face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
+            !call worker%cache%set_data(field,'face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
+            !call worker%cache%set_data(field,'face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
+            !call worker%cache%set_data(field,'face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
+            call worker%cache%set_data(field,'face exterior', lift_grad1, 'lift face', 1, worker%function_info%seed, iface)
+            call worker%cache%set_data(field,'face exterior', lift_grad2, 'lift face', 2, worker%function_info%seed, iface)
+            call worker%cache%set_data(field,'face exterior', lift_grad3, 'lift face', 3, worker%function_info%seed, iface)
 
         end associate
 

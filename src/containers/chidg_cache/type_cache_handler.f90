@@ -1957,7 +1957,7 @@ contains
                     !
                     ! Compute transformation to deformed element
                     !
-                    var_m     = var_m/ale_g
+                    !var_m          = var_m/ale_g ! Already transformed to physical domain when var_m was stored to cache
                     lift_gq_face_x = lift_gq_face_x-(var_m)*ale_g_grad1
                     lift_gq_face_y = lift_gq_face_y-(var_m)*ale_g_grad2
                     lift_gq_face_z = lift_gq_face_z-(var_m)*ale_g_grad3
@@ -1998,7 +1998,7 @@ contains
                     ! Compute transformation to deformed element
                     !
                     var_m          = worker%cache%get_data(field,'element', 'value', 0, worker%function_info%seed, iface)
-                    var_m          = var_m/ale_g
+                    !var_m          = var_m/ale_g ! already transformed
                     lift_gq_vol_x = lift_gq_vol_x-(var_m)*ale_g_grad1
                     lift_gq_vol_y = lift_gq_vol_y-(var_m)*ale_g_grad2
                     lift_gq_vol_z = lift_gq_vol_z-(var_m)*ale_g_grad3
@@ -2083,7 +2083,7 @@ contains
                     !
                     ! Compute transformation to deformed element
                     !
-                    var_m          = var_m/ale_g
+                    !var_m          = var_m/ale_g ! already transformed
                     lift_gq_face_x = lift_gq_face_x-(var_m)*ale_g_grad1
                     lift_gq_face_y = lift_gq_face_y-(var_m)*ale_g_grad2
                     lift_gq_face_z = lift_gq_face_z-(var_m)*ale_g_grad3
@@ -2123,7 +2123,7 @@ contains
                     ! Compute transformation to deformed element
                     !
                     var_m         = worker%cache%get_data(field,'element', 'value', 0, worker%function_info%seed, iface)
-                    var_m         = var_m/ale_g
+                    !var_m         = var_m/ale_g ! already transformed
                     lift_gq_vol_x = lift_gq_vol_x-(var_m)*ale_g_grad1
                     lift_gq_vol_y = lift_gq_vol_y-(var_m)*ale_g_grad2
                     lift_gq_vol_z = lift_gq_vol_z-(var_m)*ale_g_grad3
@@ -2422,7 +2422,7 @@ contains
             !
             ! Compute transformation to deformed element
             !
-            var_p          = var_p/ale_g
+            !var_p          = var_p/ale_g ! already transformed
             lift_gq_face_x = lift_gq_face_x-(var_p)*ale_g_grad1
             lift_gq_face_y = lift_gq_face_y-(var_p)*ale_g_grad2
             lift_gq_face_z = lift_gq_face_z-(var_p)*ale_g_grad3
@@ -2560,7 +2560,7 @@ contains
             !
             ! Compute transformation to deformed element
             !
-            var_p     = var_p/ale_g
+            !var_p     = var_p/ale_g ! already transformed
             lift_gq_x = lift_gq_x-(var_p)*ale_g_grad1
             lift_gq_y = lift_gq_y-(var_p)*ale_g_grad2
             lift_gq_z = lift_gq_z-(var_p)*ale_g_grad3
@@ -2694,7 +2694,7 @@ contains
             !
             ! Compute transformation to deformed element
             !
-            var_p          = var_p/ale_g
+            !var_p          = var_p/ale_g ! already transformed
             lift_gq_face_x = lift_gq_face_x-(var_p)*ale_g_grad1
             lift_gq_face_y = lift_gq_face_y-(var_p)*ale_g_grad2
             lift_gq_face_z = lift_gq_face_z-(var_p)*ale_g_grad3

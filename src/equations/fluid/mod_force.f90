@@ -17,6 +17,7 @@ module mod_force
     use type_chidg_cache,       only: chidg_cache_t
     use type_cache_handler,     only: cache_handler_t
     use mpi_f08,                only: MPI_AllReduce, MPI_REAL8, MPI_SUM
+    use ieee_arithmetic,        only: ieee_is_nan
     use DNAD_D
     implicit none
 
@@ -53,8 +54,7 @@ contains
         real(rk),           intent(inout),  optional    :: power
     
         integer(ik)                 :: group_ID, patch_ID, face_ID, &
-                                       idomain_g,  idomain_l,        &
-                                       ielement_g, ielement_l, iface, ierr
+                                       idomain_l, ielement_l, iface, ierr
 
         type(chidg_worker_t)        :: worker
         type(chidg_cache_t)         :: cache
@@ -105,17 +105,13 @@ contains
             do patch_ID = 1,data%mesh%bc_patch_group(group_ID)%npatches()
                 do face_ID = 1,data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
-                    idomain_g  = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
                     idomain_l  = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
-                    ielement_g = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
                     ielement_l = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
                     iface      = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
 
 
                     ! Initialize element location object
                     elem_info = data%mesh%get_element_info(idomain_l,ielement_l)
-
-
                     call worker%set_element(elem_info)
                     worker%itime = 1
 
@@ -177,6 +173,15 @@ contains
 
                     ! Transform normal vector with g*G^{-T} so our normal and Area correspond to quantities on the deformed grid
                     det_jacobian_grid = worker%get_det_jacobian_grid_face('value', 'face interior')
+
+                    if (any(ieee_is_nan(det_jacobian_grid))) then
+                        print*, worker%element_info%idomain_l, worker%element_info%ielement_l, worker%iface
+                        print*, 'det jacobian grid: ', det_jacobian_grid
+                    end if
+
+
+
+
                     jacobian_grid     = worker%get_inv_jacobian_grid_face('face interior')
                     grid_velocity     = worker%get_grid_velocity_face('face interior')
                     norm_1_phys = det_jacobian_grid*(jacobian_grid(1,1,:)*norm_1 + jacobian_grid(2,1,:)*norm_2 + jacobian_grid(3,1,:)*norm_3)
@@ -197,10 +202,16 @@ contains
                     !stress_y = norm_1_phys*tau_12 + norm_2_phys*tau_22 + norm_3_phys*tau_32
                     !stress_z = norm_1_phys*tau_13 + norm_2_phys*tau_23 + norm_3_phys*tau_33
 
+
                     stress_x = tau_11*norm_1_phys + tau_12*norm_2_phys + tau_13*norm_3_phys
                     stress_y = tau_21*norm_1_phys + tau_22*norm_2_phys + tau_23*norm_3_phys
                     stress_z = tau_31*norm_1_phys + tau_32*norm_2_phys + tau_33*norm_3_phys
 
+                    if (any(ieee_is_nan(worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%ale_g_modes))) print*, 'ale g modes: ',      worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%ale_g_modes
+                    if (any(ieee_is_nan(worker%mesh%domain(worker%element_info%idomain_l)%faces(worker%element_info%ielement_l,iface)%ale_g_modes))) print*, 'ale g modes face: ', worker%mesh%domain(worker%element_info%idomain_l)%faces(worker%element_info%ielement_l,iface)%ale_g_modes
+                    if (any(ieee_is_nan(jacobian_grid))) print*, 'jacobian grid: ', jacobian_grid
+                    !print*, 'grid_velocity: ', grid_velocity(:,1), grid_velocity(:,2), grid_velocity(:,3)
+                    !print*, 'norm: ', norm_1_phys, norm_2_phys, norm_3_phys
 
                     ! Integrate
                     weights = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights_face(iface)
@@ -226,6 +237,7 @@ contains
         if (present(force)) call MPI_AllReduce(force_local,force,3,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
         if (present(power)) call MPI_AllReduce(power_local,power,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 
+        print*, 'force: ', force
 
     end subroutine report_forces
     !******************************************************************************************

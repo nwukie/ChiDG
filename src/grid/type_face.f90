@@ -10,6 +10,7 @@ module type_face
     use type_densevector,       only: densevector_t
     use mod_inv,                only: inv, inv_3x3
     use mod_determinant,        only: det_3x3
+    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
 
@@ -964,14 +965,14 @@ contains
         character(:),   allocatable :: coordinate_system, user_msg
 
         real(rk),   dimension(:),   allocatable ::                  &
-            dd1_dxidxi,   dd1_detadeta,   dd1_dzetadzeta,           &
-            dd2_dxidxi,   dd2_detadeta,   dd2_dzetadzeta,           &
-            dd3_dxidxi,   dd3_detadeta,   dd3_dzetadzeta,           &
-            dd1_dxideta,  dd1_dxidzeta,   dd1_detadzeta,            &
-            dd2_dxideta,  dd2_dxidzeta,   dd2_detadzeta,            &
-            dd3_dxideta,  dd3_dxidzeta,   dd3_detadzeta,            &
-            jinv_grad1, jinv_grad2, jinv_grad3,   &
-            jinv_def_grad1,   jinv_def_grad2,   jinv_def_grad3,     &
+!            dd1_dxidxi,   dd1_detadeta,   dd1_dzetadzeta,           &
+!            dd2_dxidxi,   dd2_detadeta,   dd2_dzetadzeta,           &
+!            dd3_dxidxi,   dd3_detadeta,   dd3_dzetadzeta,           &
+!            dd1_dxideta,  dd1_dxidzeta,   dd1_detadzeta,            &
+!            dd2_dxideta,  dd2_dxidzeta,   dd2_detadzeta,            &
+!            dd3_dxideta,  dd3_dxidzeta,   dd3_detadzeta,            &
+!            jinv_grad1, jinv_grad2, jinv_grad3,   &
+!            jinv_def_grad1,   jinv_def_grad2,   jinv_def_grad3,     &
             ale_g_ddxi, ale_g_ddeta, ale_g_ddzeta, scaling_row2
 
         real(rk),   dimension(:,:), allocatable ::  &
@@ -987,6 +988,7 @@ contains
         !
         nnodes     = self%basis_c%nnodes_face()
 
+        val        = self%basis_c%interpolator_face('Value',     self%iface)
         ddxi       = self%basis_c%interpolator_face('ddxi',      self%iface)
         ddeta      = self%basis_c%interpolator_face('ddeta',     self%iface)
         ddzeta     = self%basis_c%interpolator_face('ddzeta',    self%iface)
@@ -1074,106 +1076,135 @@ contains
         end do !inode
 
 
+        ! Note, interpolator is from solution basis, not coordinate basis
+        ! since ale_g_modes is in solution basis expansion.
+        val    = self%basis_s%interpolator_face('Value',  self%iface)
+        ddxi   = self%basis_s%interpolator_face('ddxi',   self%iface)
+        ddeta  = self%basis_s%interpolator_face('ddeta',  self%iface)
+        ddzeta = self%basis_s%interpolator_face('ddzeta', self%iface)
 
-        ! Second/mixed derivatives
-        dd1_dxidxi     = matmul(dxidxi,     self%coords%getvar(1,itime = 1))
-        dd1_detadeta   = matmul(detadeta,   self%coords%getvar(1,itime = 1))
-        dd1_dzetadzeta = matmul(dzetadzeta, self%coords%getvar(1,itime = 1))
-        dd1_dxideta    = matmul(dxideta,    self%coords%getvar(1,itime = 1))
-        dd1_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(1,itime = 1))
-        dd1_detadzeta  = matmul(detadzeta,  self%coords%getvar(1,itime = 1))
-
-        dd2_dxidxi     = matmul(dxidxi,     self%coords%getvar(2,itime = 1))
-        dd2_detadeta   = matmul(detadeta,   self%coords%getvar(2,itime = 1))
-        dd2_dzetadzeta = matmul(dzetadzeta, self%coords%getvar(2,itime = 1))
-        dd2_dxideta    = matmul(dxideta,    self%coords%getvar(2,itime = 1))
-        dd2_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(2,itime = 1))
-        dd2_detadzeta  = matmul(detadzeta,  self%coords%getvar(2,itime = 1))
-
-        dd3_dxidxi     = matmul(dxidxi,     self%coords%getvar(3,itime = 1))
-        dd3_detadeta   = matmul(detadeta,   self%coords%getvar(3,itime = 1))
-        dd3_dzetadzeta = matmul(dzetadzeta, self%coords%getvar(3,itime = 1))
-        dd3_dxideta    = matmul(dxideta,    self%coords%getvar(3,itime = 1))
-        dd3_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(3,itime = 1))
-        dd3_detadzeta  = matmul(detadzeta,  self%coords%getvar(3,itime = 1))
-
-        jinv_grad1 = dd1_dxidxi*self%metric(1,1,:)     +  dd1_dxideta*self%metric(2,1,:)    +  dd1_dxidzeta*self%metric(3,1,:)   +  &
-                     dd2_dxidxi*self%metric(1,2,:)     +  dd2_dxideta*self%metric(2,2,:)    +  dd2_dxidzeta*self%metric(3,2,:)   +  &
-                     dd3_dxidxi*self%metric(1,3,:)     +  dd3_dxideta*self%metric(2,3,:)    +  dd3_dxidzeta*self%metric(3,3,:)
-
-        jinv_grad2 = dd1_dxideta*self%metric(1,1,:)    +  dd1_detadeta*self%metric(2,1,:)   +  dd1_detadzeta*self%metric(3,1,:)  +  &
-                     dd2_dxideta*self%metric(1,2,:)    +  dd2_detadeta*self%metric(2,2,:)   +  dd2_detadzeta*self%metric(3,2,:)  +  &
-                     dd3_dxideta*self%metric(1,3,:)    +  dd3_detadeta*self%metric(2,3,:)   +  dd3_detadzeta*self%metric(3,3,:)
-
-        jinv_grad3 = dd1_dxidzeta*self%metric(1,1,:)   +  dd1_detadzeta*self%metric(2,1,:)  +  dd1_dzetadzeta*self%metric(3,1,:) +  &
-                     dd2_dxidzeta*self%metric(1,2,:)   +  dd2_detadzeta*self%metric(2,2,:)  +  dd2_dzetadzeta*self%metric(3,2,:) +  &
-                     dd3_dxidzeta*self%metric(1,3,:)   +  dd3_detadzeta*self%metric(2,3,:)  +  dd3_dzetadzeta*self%metric(3,3,:)
+        self%ale_g    = matmul(val,    self%ale_g_modes)
+        ale_g_ddxi    = matmul(ddxi,   self%ale_g_modes)
+        ale_g_ddeta   = matmul(ddeta,  self%ale_g_modes)
+        ale_g_ddzeta  = matmul(ddzeta, self%ale_g_modes)
 
 
-        ! Second/mixed derivatives
-        dd1_dxidxi     = matmul(dxidxi,     self%ale_coords%getvar(1,itime = 1))
-        dd1_detadeta   = matmul(detadeta,   self%ale_coords%getvar(1,itime = 1))
-        dd1_dzetadzeta = matmul(dzetadzeta, self%ale_coords%getvar(1,itime = 1))
-        dd1_dxideta    = matmul(dxideta,    self%ale_coords%getvar(1,itime = 1))
-        dd1_dxidzeta   = matmul(dxidzeta,   self%ale_coords%getvar(1,itime = 1))
-        dd1_detadzeta  = matmul(detadzeta,  self%ale_coords%getvar(1,itime = 1))
+        self%ale_g_grad1 = self%metric(1,1,:) * ale_g_ddxi  + &
+                           self%metric(2,1,:) * ale_g_ddeta + &
+                           self%metric(3,1,:) * ale_g_ddzeta
 
-        dd2_dxidxi     = matmul(dxidxi,     self%ale_coords%getvar(2,itime = 1))
-        dd2_detadeta   = matmul(detadeta,   self%ale_coords%getvar(2,itime = 1))
-        dd2_dzetadzeta = matmul(dzetadzeta, self%ale_coords%getvar(2,itime = 1))
-        dd2_dxideta    = matmul(dxideta,    self%ale_coords%getvar(2,itime = 1))
-        dd2_dxidzeta   = matmul(dxidzeta,   self%ale_coords%getvar(2,itime = 1))
-        dd2_detadzeta  = matmul(detadzeta,  self%ale_coords%getvar(2,itime = 1))
+        self%ale_g_grad2 = self%metric(1,2,:) * ale_g_ddxi  + &
+                           self%metric(2,2,:) * ale_g_ddeta + &
+                           self%metric(3,2,:) * ale_g_ddzeta
 
-        dd3_dxidxi     = matmul(dxidxi,     self%ale_coords%getvar(3,itime = 1))
-        dd3_detadeta   = matmul(detadeta,   self%ale_coords%getvar(3,itime = 1))
-        dd3_dzetadzeta = matmul(dzetadzeta, self%ale_coords%getvar(3,itime = 1))
-        dd3_dxideta    = matmul(dxideta,    self%ale_coords%getvar(3,itime = 1))
-        dd3_dxidzeta   = matmul(dxidzeta,   self%ale_coords%getvar(3,itime = 1))
-        dd3_detadzeta  = matmul(detadzeta,  self%ale_coords%getvar(3,itime = 1))
+        self%ale_g_grad3 = self%metric(1,3,:) * ale_g_ddxi  + &
+                           self%metric(2,3,:) * ale_g_ddeta + &
+                           self%metric(3,3,:) * ale_g_ddzeta
 
 
 
-        jinv_def_grad1 = dd1_dxidxi*jacobian_ale(1,1,:)    +  dd1_dxideta*jacobian_ale(2,1,:)    +  dd1_dxidzeta*jacobian_ale(3,1,:)   +  &
-                         dd2_dxidxi*jacobian_ale(1,2,:)    +  dd2_dxideta*jacobian_ale(2,2,:)    +  dd2_dxidzeta*jacobian_ale(3,2,:)   +  &
-                         dd3_dxidxi*jacobian_ale(1,3,:)    +  dd3_dxideta*jacobian_ale(2,3,:)    +  dd3_dxidzeta*jacobian_ale(3,3,:)
-
-        jinv_def_grad2 = dd1_dxideta*jacobian_ale(1,1,:)   +  dd1_detadeta*jacobian_ale(2,1,:)   +  dd1_detadzeta*jacobian_ale(3,1,:)  +  &
-                         dd2_dxideta*jacobian_ale(1,2,:)   +  dd2_detadeta*jacobian_ale(2,2,:)   +  dd2_detadzeta*jacobian_ale(3,2,:)  +  &
-                         dd3_dxideta*jacobian_ale(1,3,:)   +  dd3_detadeta*jacobian_ale(2,3,:)   +  dd3_detadzeta*jacobian_ale(3,3,:)
-
-        jinv_def_grad3 = dd1_dxidzeta*jacobian_ale(1,1,:)  +  dd1_detadzeta*jacobian_ale(2,1,:)  +  dd1_dzetadzeta*jacobian_ale(3,1,:) +  &
-                         dd2_dxidzeta*jacobian_ale(1,2,:)  +  dd2_detadzeta*jacobian_ale(2,2,:)  +  dd2_dzetadzeta*jacobian_ale(3,2,:) +  &
-                         dd3_dxidzeta*jacobian_ale(1,3,:)  +  dd3_detadzeta*jacobian_ale(2,3,:)  +  dd3_dzetadzeta*jacobian_ale(3,3,:)
 
 
-        !
-        ! Apply Quotiend Rule for computing gradient of det_jacobian_grid
-        !
-        !   det_jacobian_grid = jinv_ale/jinv
-        !
-        !   grad(det_jacobian_grid) = [grad(jinv_ale)*jinv - jinv_ale*grad(jinv)] / [jinv*jinv]
-        !
-        self%ale_g   = self%jinv_def/self%jinv
-        ale_g_ddxi   = (jinv_def_grad1*self%jinv  -  self%jinv_def*jinv_grad1)/(self%jinv**TWO)
-        ale_g_ddeta  = (jinv_def_grad2*self%jinv  -  self%jinv_def*jinv_grad2)/(self%jinv**TWO)
-        ale_g_ddzeta = (jinv_def_grad3*self%jinv  -  self%jinv_def*jinv_grad3)/(self%jinv**TWO)
 
-
-        ! Transform into gradient in physical space(undeformed geometry)
-        do inode = 1,size(ale_g_ddxi)
-            self%ale_g_grad1(inode) = self%metric(1,1,inode) * ale_g_ddxi(inode)  + &
-                                      self%metric(2,1,inode) * ale_g_ddeta(inode) + &
-                                      self%metric(3,1,inode) * ale_g_ddzeta(inode)
-
-            self%ale_g_grad2(inode) = self%metric(1,2,inode) * ale_g_ddxi(inode)  + &
-                                      self%metric(2,2,inode) * ale_g_ddeta(inode) + &
-                                      self%metric(3,2,inode) * ale_g_ddzeta(inode)
-
-            self%ale_g_grad3(inode) = self%metric(1,3,inode) * ale_g_ddxi(inode)  + &
-                                      self%metric(2,3,inode) * ale_g_ddeta(inode) + &
-                                      self%metric(3,3,inode) * ale_g_ddzeta(inode)
-        end do
+!        ! Second/mixed derivatives
+!        dd1_dxidxi     = matmul(dxidxi,     self%coords%getvar(1,itime = 1))
+!        dd1_detadeta   = matmul(detadeta,   self%coords%getvar(1,itime = 1))
+!        dd1_dzetadzeta = matmul(dzetadzeta, self%coords%getvar(1,itime = 1))
+!        dd1_dxideta    = matmul(dxideta,    self%coords%getvar(1,itime = 1))
+!        dd1_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(1,itime = 1))
+!        dd1_detadzeta  = matmul(detadzeta,  self%coords%getvar(1,itime = 1))
+!
+!        dd2_dxidxi     = matmul(dxidxi,     self%coords%getvar(2,itime = 1))
+!        dd2_detadeta   = matmul(detadeta,   self%coords%getvar(2,itime = 1))
+!        dd2_dzetadzeta = matmul(dzetadzeta, self%coords%getvar(2,itime = 1))
+!        dd2_dxideta    = matmul(dxideta,    self%coords%getvar(2,itime = 1))
+!        dd2_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(2,itime = 1))
+!        dd2_detadzeta  = matmul(detadzeta,  self%coords%getvar(2,itime = 1))
+!
+!        dd3_dxidxi     = matmul(dxidxi,     self%coords%getvar(3,itime = 1))
+!        dd3_detadeta   = matmul(detadeta,   self%coords%getvar(3,itime = 1))
+!        dd3_dzetadzeta = matmul(dzetadzeta, self%coords%getvar(3,itime = 1))
+!        dd3_dxideta    = matmul(dxideta,    self%coords%getvar(3,itime = 1))
+!        dd3_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(3,itime = 1))
+!        dd3_detadzeta  = matmul(detadzeta,  self%coords%getvar(3,itime = 1))
+!
+!        jinv_grad1 = dd1_dxidxi*self%metric(1,1,:)     +  dd1_dxideta*self%metric(2,1,:)    +  dd1_dxidzeta*self%metric(3,1,:)   +  &
+!                     dd2_dxidxi*self%metric(1,2,:)     +  dd2_dxideta*self%metric(2,2,:)    +  dd2_dxidzeta*self%metric(3,2,:)   +  &
+!                     dd3_dxidxi*self%metric(1,3,:)     +  dd3_dxideta*self%metric(2,3,:)    +  dd3_dxidzeta*self%metric(3,3,:)
+!
+!        jinv_grad2 = dd1_dxideta*self%metric(1,1,:)    +  dd1_detadeta*self%metric(2,1,:)   +  dd1_detadzeta*self%metric(3,1,:)  +  &
+!                     dd2_dxideta*self%metric(1,2,:)    +  dd2_detadeta*self%metric(2,2,:)   +  dd2_detadzeta*self%metric(3,2,:)  +  &
+!                     dd3_dxideta*self%metric(1,3,:)    +  dd3_detadeta*self%metric(2,3,:)   +  dd3_detadzeta*self%metric(3,3,:)
+!
+!        jinv_grad3 = dd1_dxidzeta*self%metric(1,1,:)   +  dd1_detadzeta*self%metric(2,1,:)  +  dd1_dzetadzeta*self%metric(3,1,:) +  &
+!                     dd2_dxidzeta*self%metric(1,2,:)   +  dd2_detadzeta*self%metric(2,2,:)  +  dd2_dzetadzeta*self%metric(3,2,:) +  &
+!                     dd3_dxidzeta*self%metric(1,3,:)   +  dd3_detadzeta*self%metric(2,3,:)  +  dd3_dzetadzeta*self%metric(3,3,:)
+!
+!
+!        ! Second/mixed derivatives
+!        dd1_dxidxi     = matmul(dxidxi,     self%ale_coords%getvar(1,itime = 1))
+!        dd1_detadeta   = matmul(detadeta,   self%ale_coords%getvar(1,itime = 1))
+!        dd1_dzetadzeta = matmul(dzetadzeta, self%ale_coords%getvar(1,itime = 1))
+!        dd1_dxideta    = matmul(dxideta,    self%ale_coords%getvar(1,itime = 1))
+!        dd1_dxidzeta   = matmul(dxidzeta,   self%ale_coords%getvar(1,itime = 1))
+!        dd1_detadzeta  = matmul(detadzeta,  self%ale_coords%getvar(1,itime = 1))
+!
+!        dd2_dxidxi     = matmul(dxidxi,     self%ale_coords%getvar(2,itime = 1))
+!        dd2_detadeta   = matmul(detadeta,   self%ale_coords%getvar(2,itime = 1))
+!        dd2_dzetadzeta = matmul(dzetadzeta, self%ale_coords%getvar(2,itime = 1))
+!        dd2_dxideta    = matmul(dxideta,    self%ale_coords%getvar(2,itime = 1))
+!        dd2_dxidzeta   = matmul(dxidzeta,   self%ale_coords%getvar(2,itime = 1))
+!        dd2_detadzeta  = matmul(detadzeta,  self%ale_coords%getvar(2,itime = 1))
+!
+!        dd3_dxidxi     = matmul(dxidxi,     self%ale_coords%getvar(3,itime = 1))
+!        dd3_detadeta   = matmul(detadeta,   self%ale_coords%getvar(3,itime = 1))
+!        dd3_dzetadzeta = matmul(dzetadzeta, self%ale_coords%getvar(3,itime = 1))
+!        dd3_dxideta    = matmul(dxideta,    self%ale_coords%getvar(3,itime = 1))
+!        dd3_dxidzeta   = matmul(dxidzeta,   self%ale_coords%getvar(3,itime = 1))
+!        dd3_detadzeta  = matmul(detadzeta,  self%ale_coords%getvar(3,itime = 1))
+!
+!
+!
+!        jinv_def_grad1 = dd1_dxidxi*jacobian_ale(1,1,:)    +  dd1_dxideta*jacobian_ale(2,1,:)    +  dd1_dxidzeta*jacobian_ale(3,1,:)   +  &
+!                         dd2_dxidxi*jacobian_ale(1,2,:)    +  dd2_dxideta*jacobian_ale(2,2,:)    +  dd2_dxidzeta*jacobian_ale(3,2,:)   +  &
+!                         dd3_dxidxi*jacobian_ale(1,3,:)    +  dd3_dxideta*jacobian_ale(2,3,:)    +  dd3_dxidzeta*jacobian_ale(3,3,:)
+!
+!        jinv_def_grad2 = dd1_dxideta*jacobian_ale(1,1,:)   +  dd1_detadeta*jacobian_ale(2,1,:)   +  dd1_detadzeta*jacobian_ale(3,1,:)  +  &
+!                         dd2_dxideta*jacobian_ale(1,2,:)   +  dd2_detadeta*jacobian_ale(2,2,:)   +  dd2_detadzeta*jacobian_ale(3,2,:)  +  &
+!                         dd3_dxideta*jacobian_ale(1,3,:)   +  dd3_detadeta*jacobian_ale(2,3,:)   +  dd3_detadzeta*jacobian_ale(3,3,:)
+!
+!        jinv_def_grad3 = dd1_dxidzeta*jacobian_ale(1,1,:)  +  dd1_detadzeta*jacobian_ale(2,1,:)  +  dd1_dzetadzeta*jacobian_ale(3,1,:) +  &
+!                         dd2_dxidzeta*jacobian_ale(1,2,:)  +  dd2_detadzeta*jacobian_ale(2,2,:)  +  dd2_dzetadzeta*jacobian_ale(3,2,:) +  &
+!                         dd3_dxidzeta*jacobian_ale(1,3,:)  +  dd3_detadzeta*jacobian_ale(2,3,:)  +  dd3_dzetadzeta*jacobian_ale(3,3,:)
+!
+!
+!        !
+!        ! Apply Quotiend Rule for computing gradient of det_jacobian_grid
+!        !
+!        !   det_jacobian_grid = jinv_ale/jinv
+!        !
+!        !   grad(det_jacobian_grid) = [grad(jinv_ale)*jinv - jinv_ale*grad(jinv)] / [jinv*jinv]
+!        !
+!        self%ale_g   = self%jinv_def/self%jinv
+!        ale_g_ddxi   = (jinv_def_grad1*self%jinv  -  self%jinv_def*jinv_grad1)/(self%jinv**TWO)
+!        ale_g_ddeta  = (jinv_def_grad2*self%jinv  -  self%jinv_def*jinv_grad2)/(self%jinv**TWO)
+!        ale_g_ddzeta = (jinv_def_grad3*self%jinv  -  self%jinv_def*jinv_grad3)/(self%jinv**TWO)
+!
+!
+!        ! Transform into gradient in physical space(undeformed geometry)
+!        do inode = 1,size(ale_g_ddxi)
+!            self%ale_g_grad1(inode) = self%metric(1,1,inode) * ale_g_ddxi(inode)  + &
+!                                      self%metric(2,1,inode) * ale_g_ddeta(inode) + &
+!                                      self%metric(3,1,inode) * ale_g_ddzeta(inode)
+!
+!            self%ale_g_grad2(inode) = self%metric(1,2,inode) * ale_g_ddxi(inode)  + &
+!                                      self%metric(2,2,inode) * ale_g_ddeta(inode) + &
+!                                      self%metric(3,2,inode) * ale_g_ddzeta(inode)
+!
+!            self%ale_g_grad3(inode) = self%metric(1,3,inode) * ale_g_ddxi(inode)  + &
+!                                      self%metric(2,3,inode) * ale_g_ddeta(inode) + &
+!                                      self%metric(3,3,inode) * ale_g_ddzeta(inode)
+!        end do
 
 
     end subroutine interpolate_metrics_ale

@@ -291,10 +291,10 @@ contains
         zeros = ZERO
 
         @assertEqual(27.0_rk*self%elem%jinv, self%elem%jinv_def,    1.e-14_rk)
-        @assertEqual(test_ale_g,                   self%elem%ale_g,       1.e-14_rk)
-        @assertEqual(zeros,                        self%elem%ale_g_grad1, 1.e-14_rk)
-        @assertEqual(zeros,                        self%elem%ale_g_grad2, 1.e-14_rk)
-        @assertEqual(zeros,                        self%elem%ale_g_grad3, 1.e-14_rk)
+        @assertEqual(test_ale_g,             self%elem%ale_g,       1.e-14_rk)
+        @assertEqual(zeros,                  self%elem%ale_g_grad1, 1.e-14_rk)
+        @assertEqual(zeros,                  self%elem%ale_g_grad2, 1.e-14_rk)
+        @assertEqual(zeros,                  self%elem%ale_g_grad3, 1.e-14_rk)
 
     end subroutine testElement_jinv_def
     !****************************************************************************************
@@ -467,27 +467,28 @@ contains
     subroutine testElement_face_jinv_def(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
 
-        real(rk) :: test_ale_g(self%faces(XI_MAX)%basis_s%nnodes_face())
+        real(rk) :: test_ale_g(self%faces(XI_MAX)%basis_s%nnodes_face()), tol
         
         test_ale_g = 27.0_rk 
+        tol = 1.e-13_rk
 
-        @assertEqual(self%faces(XI_MIN)%jinv_def,27.0_rk*self%faces(XI_MIN)%jinv)
-        @assertEqual(self%faces(XI_MIN)%ale_g,test_ale_g)
+        @assertEqual(self%faces(XI_MIN)%jinv_def,27.0_rk*self%faces(XI_MIN)%jinv,tol)
+        @assertEqual(self%faces(XI_MIN)%ale_g,   test_ale_g,tol)
 
-        @assertEqual(self%faces(XI_MAX)%jinv_def,27.0_rk*self%faces(XI_MAX)%jinv)
-        @assertEqual(self%faces(XI_MAX)%ale_g,test_ale_g)
+        @assertEqual(self%faces(XI_MAX)%jinv_def,27.0_rk*self%faces(XI_MAX)%jinv,tol)
+        @assertEqual(self%faces(XI_MAX)%ale_g,test_ale_g,tol)
 
-        @assertEqual(self%faces(ETA_MIN)%jinv_def,27.0_rk*self%faces(ETA_MIN)%jinv)
-        @assertEqual(self%faces(ETA_MIN)%ale_g,test_ale_g)
+        @assertEqual(self%faces(ETA_MIN)%jinv_def,27.0_rk*self%faces(ETA_MIN)%jinv,tol)
+        @assertEqual(self%faces(ETA_MIN)%ale_g,test_ale_g,tol)
 
-        @assertEqual(self%faces(ETA_MAX)%jinv_def,27.0_rk*self%faces(ETA_MAX)%jinv)
-        @assertEqual(self%faces(ETA_MAX)%ale_g,test_ale_g)
+        @assertEqual(self%faces(ETA_MAX)%jinv_def,27.0_rk*self%faces(ETA_MAX)%jinv,tol)
+        @assertEqual(self%faces(ETA_MAX)%ale_g,test_ale_g,tol)
 
-        @assertEqual(self%faces(ZETA_MIN)%jinv_def,27.0_rk*self%faces(ZETA_MIN)%jinv)
-        @assertEqual(self%faces(ZETA_MIN)%ale_g,test_ale_g)
+        @assertEqual(self%faces(ZETA_MIN)%jinv_def,27.0_rk*self%faces(ZETA_MIN)%jinv,tol)
+        @assertEqual(self%faces(ZETA_MIN)%ale_g,test_ale_g,tol)
 
-        @assertEqual(self%faces(ZETA_MAX)%jinv_def,27.0_rk*self%faces(ZETA_MAX)%jinv)
-        @assertEqual(self%faces(ZETA_MAX)%ale_g,test_ale_g)
+        @assertEqual(self%faces(ZETA_MAX)%jinv_def,27.0_rk*self%faces(ZETA_MAX)%jinv,tol)
+        @assertEqual(self%faces(ZETA_MAX)%ale_g,test_ale_g,tol)
 
     end subroutine testElement_face_jinv_def
     !****************************************************************************************

@@ -1243,6 +1243,9 @@ contains
         temp = matmul(transpose(val),fvals)
         self%ale_g_modes = matmul(self%invmass,temp)
 
+        ! Reset ale_g as interpolation of modal representation
+        self%ale_g = matmul(val, self%ale_g_modes)
+
 
         ! Solution basis since ale_g_modes is in solution basis.
         ddxi    = self%basis_s%interpolator_element('ddxi')

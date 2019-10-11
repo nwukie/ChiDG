@@ -471,9 +471,16 @@ set(ExternalProjectCMakeArgs
     -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    # Fix rpath link error
+    #-DCMAKE_SKIP_BUILD_RPATH=FALSE
+    #-DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE
+    #-DCMAKE_INSTALL_RPATH=${PROJECT_BINARY_DIR}/external/tioga
+    #-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE
+    #-DCMAKE_SKIP_RPATH=TRUE
     -DTIOGA_HAS_NODEGID=OFF
     -DBUILD_TIOGA_EXE=OFF
     -DBUILD_GRIDGEN_EXE=OFF
+    -DBUILD_SHARED_LIBS=OFF
     )
 
 
@@ -495,11 +502,13 @@ if (NOT TIOGA_TAR)
 endif()
 
              
-if (APPLE)
-    set(TIOGA_LIBRARIES ${PROJECT_BINARY_DIR}/external/tioga/lib/libtioga.dylib)
-else()
-    set(TIOGA_LIBRARIES ${PROJECT_BINARY_DIR}/external/tioga/lib/libtioga.so)
-endif()
+#if (APPLE)
+#    set(TIOGA_LIBRARIES ${PROJECT_BINARY_DIR}/external/tioga/lib/libtioga.dylib)
+#else()
+#    set(TIOGA_LIBRARIES ${PROJECT_BINARY_DIR}/external/tioga/lib/libtioga.so)
+#endif()
+
+set(TIOGA_LIBRARIES ${PROJECT_BINARY_DIR}/external/tioga/lib/libtioga.a)
 
 set(TIOGA_INCLUDE_DIR ${PROJECT_BINARY_DIR}/external/tioga/include)
 include_directories(${TIOGA_INCLUDE_DIR})

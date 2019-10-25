@@ -207,7 +207,6 @@ contains
         integer(ik),    allocatable     :: elements(:,:)
 
 
-
         ! Write solution for each domain
         fid = open_file_hdf(file_name)
         do idom = 1,data%mesh%ndomains()
@@ -870,13 +869,10 @@ contains
 
         logical     :: DataExists, ElementsEqual, exists
         integer(ik) :: type, ierr, ndomains,    &
-                       order, ivar, ielem, idom, nelem_g, &
-                       ielement_g, nterms_s, ntime, eqn_ID
+                       order, ifield, ielem, idom, nelem_g, &
+                       nterms_s, ntime
 
-
-        !
         ! Open the Domain/Fields group
-        !
         call h5lexists_f(domain_id, "Fields", exists, ierr)
         if (exists) then
             call h5gopen_f(domain_id, "Fields", gid, ierr, H5P_DEFAULT_F)
@@ -886,10 +882,7 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: Domain/Fields group did not open properly.")
 
 
-
-        !
         ! Set dimensions of dataspace to write
-        !
         domain_name = get_domain_name_hdf(domain_id)
         idom        = data%get_domain_index(domain_name)
         nelem_g     = data%mesh%domain(idom)%get_nelements_global()
@@ -897,17 +890,14 @@ contains
         ndims       = 3
         ntime       = data%ntime()
 
-        !
+
         ! Set the dimensions of the dataspace to write in
-        !
         dims(1:3)    = [nterms_s, nelem_g, ntime]
         maxdims(1:3) = H5S_UNLIMITED_F
 
 
-        !
         ! Modify dataset creation properties, i.e. enable chunking in order to append
         ! dataspace, if needed.
-        !
         dimsc = [1, nelem_g, 1]  ! Chunk size
 
         call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
@@ -917,93 +907,64 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5pset_chunk_f error setting chunk properties.")
 
 
-
-        !
         ! Reset dataspace size if necessary
-        !
         call h5lexists_f(gid, trim(field_name), exists, ierr)
         if (exists) then
+
             ! Open the existing dataset
             call h5dopen_f(gid, trim(field_name), did, ierr, H5P_DEFAULT_F)
             if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: field does not exist or was not opened correctly.")
 
-
             ! Extend dataset if necessary
             call h5dset_extent_f(did, dims, ierr)
             if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5dset_extent_f.")
-
 
             ! Update existing dataspace ID since it may have been expanded
             call h5dget_space_f(did, sid, ierr)
             if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5dget_space_f.")
 
         else
+
             ! Create a new dataspace
             call h5screate_simple_f(ndims,dims,sid,ierr,maxdims)
             if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: h5screate_simple_f.")
 
-
             ! Create a new dataset
             call h5dcreate_f(gid, trim(field_name), H5T_NATIVE_DOUBLE, sid, did, ierr, crp_list)
             if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: h5dcreate_f.")
+
         end if
 
 
-
-        !
         ! Assemble field buffer matrix that gets written to file
-        !
         allocate(var(nterms_s,1,1))
-
-
 
         do ielem = 1,data%mesh%domain(idom)%nelem
 
             elem_info = data%mesh%get_element_info(idom,ielem)
 
-            !
-            ! Get field integer index from field character string
-            !
-            eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
-            ivar = data%eqnset(eqn_ID)%prop%get_primary_field_index(field_name)
-
-
-            !
             ! get domain-global element index
-            !
-            ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g
-            start = [1-1,ielement_g-1,itime-1]   ! 0-based
+            start = [1-1,elem_info%ielement_g-1,itime-1]   ! 0-based
             count = [nterms_s, 1, 1]
 
-            !
             ! Select subset of dataspace - sid
-            !
             call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
 
-            !
             ! Create a memory dataspace
-            !
             dimsm(1) = size(var,1)
             dimsm(2) = size(var,2)
             dimsm(3) = size(var,3)
             call h5screate_simple_f(ndims,dimsm,memspace,ierr)
 
-
-            !
             ! Write modes
-            !
-            !var(:,1,1) = real(data%sdata%q%dom(idom)%vecs(ielem)%getvar(ivar,itime),rdouble)
-            var(:,1,1) = real(data%sdata%q%get_field(elem_info,ivar,itime),rdouble)
+            ifield = data%eqnset(elem_info%eqn_ID)%prop%get_primary_field_index(field_name)
+            var(:,1,1) = real(data%sdata%q%get_field(elem_info,ifield,itime),rdouble)
             cp_var = c_loc(var(1,1,1))
             call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)
 
-
             call h5sclose_f(memspace,ierr)
 
-
         end do
-
-
 
 
         call h5pclose_f(crp_list, ierr) ! Close dataset creation property
@@ -1141,52 +1102,38 @@ contains
 
         patches = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
 
-
-        !
         !  Loop through connectivities and read boundary conditions
-        !
         nconn = size(partition%connectivities)
         do iconn = 1,nconn
 
-
-            !
             ! Get name of current domain, open domain group
-            !
             domain = partition%connectivities(iconn)%get_domain_name()
             patch_data(iconn)%domain_name = domain
             dom_id = open_domain_hdf(fid,trim(domain))
 
 
-            !
             ! Allocation bcs for current domain
-            !
             npatches = get_npatches_hdf(dom_id)
             allocate(patch_data(iconn)%bc_connectivity(npatches), stat=ierr)
             if (ierr /= 0) call AllocationError
 
-
-            !
             ! Loop faces and get boundary condition for each
-            !
             ! TODO: should probably turn this into a loop over bcs instead of faces.
             do ipatch = 1,npatches
 
 
                 ! Open face boundary condition group
                 patch_id = open_patch_hdf(dom_id,patches(ipatch))
-    
 
                 ! Get bc patch connectivity for current face
                 patch = get_patch_hdf(patch_id)
                 nbcfaces = size(patch,1)
-
 
                 ! Store boundary condition connectivity
                 call patch_data(iconn)%bc_connectivity(ipatch)%init(nbcfaces)
                 do ibc_face = 1,nbcfaces
                     patch_data(iconn)%bc_connectivity(ipatch)%data(ibc_face)%data = patch(ibc_face,:)
                 end do
-
                 
                 ! Read Boundary State Group
                 group_name = get_patch_group_hdf(patch_id)
@@ -1194,20 +1141,15 @@ contains
                 call patch_data(iconn)%group_name%push_back(string_t(trim(group_name)))
                 call patch_data(iconn)%patch_name%push_back(string_t(trim(patch_name)))
 
-
                 ! Close face boundary condition group
                 call close_patch_hdf(patch_id)
 
             end do ! ipatch
 
-
             ! Close domain group
             call close_domain_hdf(dom_id)
 
-
         end do  ! iconn
-
-
 
     end subroutine read_patches_hdf
     !****************************************************************************************
@@ -1258,23 +1200,17 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        !
         ! Read each group of bc_state's
-        !
         do igroup = 1,ngroups
 
             ! Open face boundary condition group
             group_name = bc_group_names%at(igroup)
             group_id = open_bc_state_group_hdf(fid,group_name%get())
 
-            !
             ! Get bc_group Family attribute.
-            !
             bc_state_groups(igroup)%family = get_bc_state_group_family_hdf(group_id)
 
-            !
             ! Loop through and read states + their properties
-            !
             bc_state_names = get_bc_state_names_hdf(group_id)
             do istate = 1,bc_state_names%size()
 
@@ -1408,26 +1344,19 @@ contains
 
         fid = open_file_hdf(file_name)
 
-
-        !
         ! Add boundary condition state groups to the file.
-        !
         do igroup = 1,data%nbc_state_groups()
+
             group_name = data%bc_state_group(igroup)%get_name()
 
-            !
             ! If the group already exists, completely remove so we don't end up with
             ! conflicting settings.
-            !
             exists = check_link_exists_hdf(fid,"BCSG_"//group_name)
             if (exists) call remove_bc_state_group_hdf(fid,trim(group_name))
 
-            !
             ! Add all states
-            !
             call create_bc_state_group_hdf(fid,trim(group_name))
             bcsg_id = open_bc_state_group_hdf(fid,trim(group_name))
-
             do istate = 1,data%bc_state_group(igroup)%nbc_states()
 
                 state_name = data%bc_state_group(igroup)%bc_state(istate)%state%name
@@ -1435,16 +1364,13 @@ contains
 
             end do !istate
 
-
             call close_bc_state_group_hdf(bcsg_id)
         end do !igroup
-
 
         call close_file_hdf(fid)
 
     end subroutine write_bc_state_groups_hdf
     !***************************************************************************************
-
 
 
 
@@ -1794,20 +1720,14 @@ contains
             allocate(pmm_groups_wrapper%mm_groups(ngroups), stat=ierr)
             if (ierr /= 0) call AllocationError
 
-
             do igroup = 1,ngroups
 
                 ! Open face boundary condition group
                 group_name = pmm_group_names%at(igroup)
-                !group_id = open_pmm_group_hdf(fid,group_name%get())
                 group_id = open_mm_group_hdf(fid, trim(group_name%get()))
-                !call h5gopen_f(fid, "MM_"//trim(group_name%get()), group_id, ierr)
-                !if (ierr /= 0) call chidg_signal_one(FATAL,"read_mm_groups_hdf: error opening bc_state group.",trim(pmm_name%get()))
-
 
                 if (allocated(pmm)) deallocate(pmm)
                 if (allocated(pmm_temp)) deallocate(pmm_temp)
-                
                 
                 call get_mm_hdf(fid,group_id, group_name%get(), pmm_temp)
                 allocate(pmm, source = pmm_temp)
@@ -1816,18 +1736,13 @@ contains
                 pmm_groups_wrapper%ngroups = pmm_groups_wrapper%ngroups+1
                 pmm_groups_wrapper%mm_groups(igroup)%name = trim(group_name%get())
                 allocate(pmm_groups_wrapper%mm_groups(igroup)%mm, source = pmm)
-                !pmm_groups_wrapper%pmm_groups(igroup)%pmm = pmm
-
-
 
                 ! Close boundary condition state group
                 call h5gclose_f(group_id, ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,"read_mm_groups_hdf: h5gclose")
 
-
             end do !igroup
         end if
-
 
 
     end subroutine read_mm_groups_hdf
@@ -1895,32 +1810,17 @@ contains
         nnodes_g = 0
         do idom = 1,size(domain_names)
 
-                domain_name = domain_names(idom)
-                domain_id = open_domain_hdf(fid,trim(domain_name))
+            domain_name = domain_names(idom)
+            domain_id = open_domain_hdf(fid,trim(domain_name))
 
-                ! Get connectivity and total number of nodes in the domain
-                !connectivity = get_domain_connectivity_hdf(domain_id)
-                nnodes       = get_domain_nnodes_hdf(domain_id)
- 
-                global_nodes(nnodes_g+1:nnodes_g+nnodes,:) = get_domain_coordinates_hdf(domain_id)
-                nnodes_g = nnodes_g + nnodes
-!                !
-!                ! Initialize domain connectivity structure
-!                !
-!                nelements = size(connectivity,1)
-!                call connectivities(idom)%init(domain_name,nelements, nnodes)
-!
-!
-!                do ielem = 1,nelements
-!                    mapping = connectivity(ielem,3)
-!                    call connectivities(idom)%data(ielem)%init(mapping)
-!                    connectivities(idom)%data(ielem)%data = connectivity(ielem,:)
-!                    call connectivities(idom)%data(ielem)%set_element_partition(NO_PROC)
-!                end do
+            ! Get connectivity and total number of nodes in the domain
+            nnodes = get_domain_nnodes_hdf(domain_id)
 
+            global_nodes(nnodes_g+1:nnodes_g+nnodes,:) = get_domain_coordinates_hdf(domain_id)
+            nnodes_g = nnodes_g + nnodes
 
-                ! Close domain
-                call close_domain_hdf(domain_id)
+            ! Close domain
+            call close_domain_hdf(domain_id)
 
         end do  ! idom
 

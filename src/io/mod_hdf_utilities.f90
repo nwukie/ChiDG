@@ -244,9 +244,6 @@ module mod_hdf_utilities
     use pmm_rbf_mm_driver,                      only: rbf_mm_driver_pmm
     use mod_rbf_mm_driver
     use mod_prescribed_mesh_motion_function
-!    use type_prescribed_mesh_motion,                only: prescribed_mesh_motion_t
-!    use type_prescribed_mesh_motion_group,          only: prescribed_mesh_motion_group_t
-!    use type_prescribed_mesh_motion_group_wrapper,  only: prescribed_mesh_motion_group_wrapper_t
     implicit none
 
     
@@ -354,9 +351,7 @@ contains
         filename_init = trim(filename)
         
 
-        !
         ! Check if input file already exists
-        !
         file_exists = check_file_exists_hdf(filename_init)
         if (file_exists) then
             call write_line("Found "//trim(filename_init)//" that already exists. Deleting it to create new file...")
@@ -364,28 +359,21 @@ contains
         end if
 
 
-        !
         ! Create file
-        !
         call open_hdf()
         call h5fcreate_f(trim(filename_init), H5F_ACC_TRUNC_F, fid, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"initialize_file_hdf: Error h5fcreate_f.")
         call write_line("File created: "//trim(filename_init))
 
 
-        !
         ! Set storage formet
-        !
         call set_storage_version_major_hdf(fid,STORAGE_VERSION_MAJOR)
         call set_storage_version_minor_hdf(fid,STORAGE_VERSION_MINOR)
 
 
-        !
         ! Set contains status for grid/solution 
-        !
         call set_contains_grid_hdf(fid,"False")
         call set_contains_solution_hdf(fid,"False")
-
 
 
         call h5fclose_f(fid,ierr)
@@ -406,18 +394,13 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   11/23/2016
     !!
-    !!
     !----------------------------------------------------------------------------------------
-    !subroutine initialize_file_structure_hdf(fid,data)
     subroutine initialize_file_structure_hdf(fid,mesh)
         integer(HID_T),     intent(in)  :: fid
-        !type(chidg_data_t), intent(in)  :: data
         type(mesh_t),       intent(in)  :: mesh
 
         integer(ik)                 :: idom
         character(:),   allocatable :: domain_name
-!        integer(ik)                 :: eqn_ID
-!        integer(HID_T)              :: domain_id
 
         do idom = 1,mesh%ndomains()
 
@@ -425,16 +408,7 @@ contains
             domain_name = mesh%domain(idom)%name
             call create_domain_hdf(fid,domain_name)
 
-
-!            ! Set additional attributes
-!            eqn_ID    = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has same eqn_ID
-!            domain_id = open_domain_hdf(fid,trim(domain_name))
-!            call set_domain_equation_set_hdf(domain_id,data%eqnset(eqn_ID)%get_name())
-!            call close_domain_hdf(domain_id)
-    
-
         end do !idom
-
 
     end subroutine initialize_file_structure_hdf
     !***************************************************************************************
@@ -483,9 +457,7 @@ contains
         user_msg = "open_file_hdf: Specified file is not an HDF5 file."
         if (.not. file_is_hdf5) call chidg_signal_one(FATAL,user_msg,trim(filename_open))
 
-        !
         !  Open input file using default properties.
-        !
         call open_hdf()
         call write_line('   Opening file: ', filename_open, io_proc=GLOBAL_MASTER, ltrim=.false., silence=silent)
         call h5fopen_f(filename_open, H5F_ACC_RDWR_F, fid, ierr)
@@ -493,11 +465,8 @@ contains
         if (ierr /= 0) call chidg_signal_one(FATAL,user_msg,trim(filename_open))
 
 
-        !
         ! Check file format major.minor version
-        !
         call check_file_storage_version_hdf(fid)
-
 
         HDF_nfiles_open = HDF_nfiles_open + 1
 
@@ -528,12 +497,10 @@ contains
         integer(SIZE_T) :: name_size
         integer         :: ierr
 
-
         ! Get file name
         call h5fget_name_f(fid, buf, name_size, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"close_file_hdf: error getting file name from identifier.")
         call write_line('   Closing file: ', trim(buf), io_proc=GLOBAL_MASTER, ltrim=.false., silence=silent)
-
 
         !  Close file and Fortran interface
         call h5fclose_f(fid, ierr)
@@ -545,8 +512,6 @@ contains
 
     end subroutine close_file_hdf
     !****************************************************************************************
-
-
 
 
 
@@ -573,16 +538,13 @@ contains
         character(:), allocatable   :: msg
         logical                     :: read_user_input
 
-        !
+
         ! Get file major.minor version
-        !
         file_major_version = get_storage_version_major_hdf(fid)
         file_minor_version = get_storage_version_minor_hdf(fid)
 
 
-        !
         ! Test against current version
-        !
         if ( (file_major_version /= STORAGE_VERSION_MAJOR) .or. &
              (file_minor_version /= STORAGE_VERSION_MINOR) ) then
 
@@ -1055,26 +1017,19 @@ contains
         integer(ik)             :: mapping, ierr
 
 
-        !
         ! Create new domain. /D_domain_name
-        !
         call create_domain_hdf(fid,domain_name)
 
 
-        !
         ! Size perturbation array and set to default=zero.
-        !  
         dnodes = nodes
         vnodes = nodes
         dnodes = ZERO
         vnodes = ZERO
 
 
-        !
         ! Open Domain
-        !
         dom_id = open_domain_hdf(fid,domain_name)
-
 
 
         ! Set 'Coordinate System', 'Coordinates', 'DCoordinates', 'VCoordinates', and 'Elements'
@@ -1088,16 +1043,11 @@ contains
         call set_domain_equation_set_hdf(dom_id,trim(equation_set))
 
 
-
-        !
         ! Close Domain
-        !
         call close_domain_hdf(dom_id)
 
 
-        !
         ! Write equation set group to file root. /EQN_equation_set
-        !
         call create_eqn_group_hdf(fid, trim(equation_set))
 
 
@@ -1138,9 +1088,7 @@ contains
         integer(HID_T)  :: domain_id, grid_id, bc_id, var_id
         logical         :: domain_exists
 
-        !
         ! Check if the domain group already exists
-        !
         domain_exists = check_link_exists_hdf(fid,"D_"//trim(domain_name))
 
         
@@ -1202,11 +1150,9 @@ contains
         exists = check_link_exists_hdf(fid,"D_"//trim(domainname))
         if (.not. exists) call chidg_signal_one(FATAL,"open_domain_hdf: Couldn't find domain in file.","D_"//trim(domainname))
 
-
         ! If so, open.
         call h5gopen_f(fid,"D_"//trim(domainname), dom_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"open_domain_hdf: Error in h5gopen_f")
-
 
     end function open_domain_hdf
     !****************************************************************************************

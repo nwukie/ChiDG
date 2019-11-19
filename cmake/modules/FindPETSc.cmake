@@ -159,7 +159,7 @@ if (petsc_conf_rules AND petsc_conf_variables AND NOT petsc_config_current)
 include ${petsc_conf_rules}
 include ${petsc_conf_variables}
 show :
-\t-@echo -n \${\${VARIABLE}}
+\t-@printf '%s' \"\${\${VARIABLE}}\"
 ")
 
   macro (PETSC_GET_VARIABLE name var)
@@ -176,7 +176,7 @@ show :
   petsc_get_variable (PCC_FLAGS                petsc_cc_flags)
   petsc_get_variable (MPIEXEC                  petsc_mpiexec)
   # We are done with the temporary Makefile, calling PETSC_GET_VARIABLE after this point is invalid!
-  file (REMOVE ${petsc_config_makefile})
+#  file (REMOVE ${petsc_config_makefile})
 
   include (ResolveCompilerPaths)
   # Extract include paths and libraries from compile command line
@@ -205,7 +205,6 @@ show :
 
   include (CorrectWindowsPaths)
   convert_cygwin_path(petsc_lib_dir)
-  message (STATUS "petsc_lib_dir ${petsc_lib_dir}")
 
   macro (PETSC_FIND_LIBRARY suffix name)
     set (PETSC_LIBRARY_${suffix} "NOTFOUND" CACHE INTERNAL "Cleared" FORCE) # Clear any stale value, if we got here, we need to find it again

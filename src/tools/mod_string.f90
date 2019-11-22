@@ -17,9 +17,210 @@ module mod_string
 !        module procedure new_string
 !    end interface
     
+    public str
+    interface str
+        module procedure to_string
+    end interface
 
 
 contains
+
+
+
+
+    !>  Convert data to string representation and return string.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   11/20/2019
+    !!
+    !-------------------------------------------------------------------------------------------------
+    function to_string(data_in) result(string_out)
+        class(*),    intent(in)  :: data_in
+
+        character(100)              :: write_internal
+        character(:),   allocatable :: string_out
+
+        string_out = ''
+
+        select type(data_in)
+
+            type is(character(len=*))
+                string_out = data_in
+
+            type is(integer)
+
+                if ( data_in == 0 ) then
+                    write_internal = '0'
+
+                ! Positive integers
+                else if ( data_in < 1e1 .and. data_in > 0) then
+                    write(write_internal, '(I1.0)') data_in
+                else if ( data_in < 1e2 .and. data_in > 0) then
+                    write(write_internal, '(I2.0)') data_in
+                else if ( data_in < 1e3 .and. data_in > 0) then
+                    write(write_internal, '(I3.0)') data_in
+                else if ( data_in < 1e4 .and. data_in > 0) then
+                    write(write_internal, '(I4.0)') data_in
+                else if ( data_in < 1e5 .and. data_in > 0) then
+                    write(write_internal, '(I5.0)') data_in
+                else if ( data_in < 1e6 .and. data_in > 0) then
+                    write(write_internal, '(I6.0)') data_in
+                else if ( data_in < 1e7 .and. data_in > 0) then
+                    write(write_internal, '(I7.0)') data_in
+                else if ( data_in < 1e8 .and. data_in > 0) then
+                    write(write_internal, '(I8.0)') data_in
+                else if ( data_in < 1e9 .and. data_in > 0) then
+                    write(write_internal, '(I9.0)') data_in
+                else if ( data_in < 1e10 .and. data_in > 0) then
+                    write(write_internal, '(I10.0)') data_in
+                else if ( data_in < 1e11 .and. data_in > 0) then
+                    write(write_internal, '(I11.0)') data_in
+
+                ! Negative integers: extra char width for neg sign
+                else if ( abs(data_in) < 1e1 .and. data_in < 0) then
+                    write(write_internal, '(I2.0)') data_in
+                else if ( abs(data_in) < 1e2 .and. data_in < 0) then
+                    write(write_internal, '(I3.0)') data_in
+                else if ( abs(data_in) < 1e3 .and. data_in < 0) then
+                    write(write_internal, '(I4.0)') data_in
+                else if ( abs(data_in) < 1e4 .and. data_in < 0) then
+                    write(write_internal, '(I5.0)') data_in
+                else if ( abs(data_in) < 1e5 .and. data_in < 0) then
+                    write(write_internal, '(I6.0)') data_in
+                else if ( abs(data_in) < 1e6 .and. data_in < 0) then
+                    write(write_internal, '(I7.0)') data_in
+                else if ( abs(data_in) < 1e7 .and. data_in < 0) then
+                    write(write_internal, '(I8.0)') data_in
+                else if ( abs(data_in) < 1e8 .and. data_in < 0) then
+                    write(write_internal, '(I9.0)') data_in
+                else if ( abs(data_in) < 1e9 .and. data_in < 0) then
+                    write(write_internal, '(I10.0)') data_in
+                else if ( abs(data_in) < 1e10 .and. data_in < 0) then
+                    write(write_internal, '(I11.0)') data_in
+                else if ( abs(data_in) < 1e11 .and. data_in < 0) then
+                    write(write_internal, '(I12.0)') data_in
+                else
+                    write(write_internal, '(I10.0)') data_in
+                end if
+                string_out = write_internal
+
+            type is(integer(8))
+
+                if ( data_in == 0 ) then
+                    write_internal = '0'
+
+                ! Positive integers
+                else if ( data_in < 1e1 .and. data_in > 0) then
+                    write(write_internal, '(I1.0)') data_in
+                else if ( data_in < 1e2 .and. data_in > 0) then
+                    write(write_internal, '(I2.0)') data_in
+                else if ( data_in < 1e3 .and. data_in > 0) then
+                    write(write_internal, '(I3.0)') data_in
+                else if ( data_in < 1e4 .and. data_in > 0) then
+                    write(write_internal, '(I4.0)') data_in
+                else if ( data_in < 1e5 .and. data_in > 0) then
+                    write(write_internal, '(I5.0)') data_in
+                else if ( data_in < 1e6 .and. data_in > 0) then
+                    write(write_internal, '(I6.0)') data_in
+                else if ( data_in < 1e7 .and. data_in > 0) then
+                    write(write_internal, '(I7.0)') data_in
+                else if ( data_in < 1e8 .and. data_in > 0) then
+                    write(write_internal, '(I8.0)') data_in
+                else if ( data_in < 1e9 .and. data_in > 0) then
+                    write(write_internal, '(I9.0)') data_in
+                else if ( data_in < 1e10 .and. data_in > 0) then
+                    write(write_internal, '(I10.0)') data_in
+                else if ( data_in < 1e11 .and. data_in > 0) then
+                    write(write_internal, '(I11.0)') data_in
+
+                ! Negative integers: extra char width for neg sign
+                else if ( abs(data_in) < 1e1 .and. data_in < 0) then
+                    write(write_internal, '(I2.0)') data_in
+                else if ( abs(data_in) < 1e2 .and. data_in < 0) then
+                    write(write_internal, '(I3.0)') data_in
+                else if ( abs(data_in) < 1e3 .and. data_in < 0) then
+                    write(write_internal, '(I4.0)') data_in
+                else if ( abs(data_in) < 1e4 .and. data_in < 0) then
+                    write(write_internal, '(I5.0)') data_in
+                else if ( abs(data_in) < 1e5 .and. data_in < 0) then
+                    write(write_internal, '(I6.0)') data_in
+                else if ( abs(data_in) < 1e6 .and. data_in < 0) then
+                    write(write_internal, '(I7.0)') data_in
+                else if ( abs(data_in) < 1e7 .and. data_in < 0) then
+                    write(write_internal, '(I8.0)') data_in
+                else if ( abs(data_in) < 1e8 .and. data_in < 0) then
+                    write(write_internal, '(I9.0)') data_in
+                else if ( abs(data_in) < 1e9 .and. data_in < 0) then
+                    write(write_internal, '(I10.0)') data_in
+                else if ( abs(data_in) < 1e10 .and. data_in < 0) then
+                    write(write_internal, '(I11.0)') data_in
+                else if ( abs(data_in) < 1e11 .and. data_in < 0) then
+                    write(write_internal, '(I12.0)') data_in
+                else
+                    write(write_internal, '(I10.0)') data_in
+                end if
+                string_out = write_internal
+
+            type is(real)
+                if (abs(data_in) > 0.1) then
+                    write(write_internal, '(F24.14)') data_in
+                else
+                    write(write_internal, '(E24.14)') data_in
+                end if
+                string_out = write_internal
+
+            type is(real(8))
+                if (abs(data_in) < 0.1) then
+                    write(write_internal, '(E24.14)') data_in
+                else if ( (abs(data_in) > 0.1) .and. (abs(data_in) < 1.e9) ) then
+                    write(write_internal, '(F24.14)') data_in
+                else
+                    write(write_internal, '(E24.14)') data_in
+                end if
+                string_out = write_internal
+
+            type is(logical(1))
+                if (data_in) then
+                    string_out = 'True'
+                else
+                    string_out = 'False'
+                end if
+
+            type is (logical(2))
+                if (data_in) then
+                    string_out = 'True'
+                else
+                    string_out = 'False'
+                end if
+
+            type is (logical(4))
+                if (data_in) then
+                    string_out = 'True'
+                else
+                    string_out = 'False'
+                end if
+
+            class default
+                print*, 'Error: no IO rule for provided data in add_to_line'
+                stop
+        end select
+
+
+    end function to_string
+    !***********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -91,31 +292,6 @@ contains
 
     end function upper
     !*********************************************************************************************
-
-
-
-
-
-!    !>
-!    !!
-!    !!
-!    !!
-!    !!
-!    !!
-!    !!
-!    !---------------------------------------------------------------------------------------------
-!    subroutine write_formatted(self)
-!        class(string_t),    intent(in)  :: self
-!
-!        print*, 
-!
-!    end subroutine write_formatted
-!    !**********************************************************************************************
-
-
-
-
-
 
 
 

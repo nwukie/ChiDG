@@ -4,6 +4,7 @@ include(ExternalProject)
 
 set(ChiDG_VERSION_MAJOR 0)
 set(ChiDG_VERSION_MINOR 2)
+set(ChiDG_VERSION_PATCH 0)
 
 #-----------------------------------------------------------------------------------
 #                           Check for bad CMake version

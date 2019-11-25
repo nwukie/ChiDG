@@ -4,6 +4,7 @@ include(ExternalProject)
 
 set(ChiDG_VERSION_MAJOR 0)
 set(ChiDG_VERSION_MINOR 2)
+set(ChiDG_VERSION_PATCH 0)
 
 #-----------------------------------------------------------------------------------
 #                           Check for bad CMake version
@@ -79,10 +80,22 @@ elseif (CMAKE_Fortran_COMPILER_ID MATCHES GNU)
                                      -ffree-line-length-none -fbacktrace \
                                      -fstack-protector -fcheck=bounds \
                                      -g")    
-    set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form \
-                                     -ffree-line-length-none -fexternal-blas \
-                                     -funroll-loops")
-                                     #-march=native -funroll-loops")
+
+    # GCC9 has regression that causes internal compiler error using
+    # fexternal-blas and O3. Removing fexternal-blas for GCC9
+    if ( (CMAKE_Fortran_COMPILER_VERSION GREATER_EQUAL 9.0.0) AND
+         (CMAKE_Fortran_COMPILER_VERSION LESS 10.0.0) )
+
+        message(STATUS "A GCC9 compiler regression causes internal compiler errors when using -fexternal-blas. Removing -fexternal-blas for GCC9.")
+        set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form \
+                                         -ffree-line-length-none \
+                                         -funroll-loops")
+    else()
+        set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form \
+                                        -ffree-line-length-none -fexternal-blas \
+                                        -funroll-loops")
+
+    endif()
 
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-O0")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "-O3")
@@ -172,7 +185,6 @@ message(STATUS "MPI Summary:")
 set(MPI_Fortran_COMPILER $ENV{MPI_Fortran_COMPILER})
 set(MPI_C_COMPILER $ENV{MPI_C_COMPILER})
 set(MPI_CXX_COMPILER $ENV{MPI_CXX_COMPILER})
-
 
 
 #find_package(MPI REQUIRED COMPONENTS Fortran)
@@ -520,7 +532,22 @@ message(STATUS "    TIOGA Libraries: "     ${TIOGA_LIBRARIES})
 #                                           Find PETSc
 #----------------------------------------------------------------------------------------------
 message(STATUS " ")
+
+# Specify PETSC_DIR and PETSC_ARCH
+if (DEFINED PETSC_DIR AND DEFINED PETSC_ARCH)
+    message(STATUS "Taking PETSC_DIR and PETSC_ARCH from configuration line.")
+elseif(DEFINED ENV{PETSC_DIR} AND DEFINED ENV{PETSC_ARCH})
+    message(STATUS "Taking PETSC_DIR and PETSC_ARCH from environment.")
+    set(PETSC_DIR $ENV{PETSC_DIR})
+    set(PETSC_ARCH $ENV{PETSC_ARCH})
+else()
+    message(SEND_ERROR "PETSC_DIR and PETSC_ARCH must be specified, but were not found.")
+endif ()
+
+
 message(STATUS "PETSc Summary:")
+message(STATUS "    PETSC_DIR: " ${PETSC_DIR})
+message(STATUS "    PETSC_ARCH: " ${PETSC_ARCH})
 set(PETSC_EXECUTABLE_RUNS YES) # Override variable, since the module for petsc does not yet treat Fortran properly.
 find_package (PETSc 3.11.3 REQUIRED)
 include_directories(${PETSC_INCLUDES})

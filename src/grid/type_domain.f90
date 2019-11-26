@@ -684,10 +684,10 @@ contains
                                    ineighbor_element_g, ineighbor_element_l,            &
                                    ineighbor_face,      ineighbor_proc,                 &
                                    ineighbor_nfields,   ineighbor_nterms_s,             &
-                                   ineighbor_ntime,     ineighbor_dof_start,            &
-                                   ineighbor_dof_local_start,      &
+                                   ineighbor_ntime,     ineighbor_nnodes_r,             &
+                                   ineighbor_dof_start, ineighbor_dof_local_start,      &
                                    neighbor_status, idomain_g, idomain_l, ielement_g,   &
-                                   ielement_l, nterms_s, nfields, ntime,                &
+                                   ielement_l, nterms_s, nfields, ntime, nnodes_r,      &
                                    dof_start, dof_local_start
 
         logical :: orphan_face, local_interior_face, parallel_interior_face
@@ -746,6 +746,7 @@ contains
                         ineighbor_nfields         = self%elems(ineighbor_element_l)%nfields
                         ineighbor_ntime           = self%elems(ineighbor_element_l)%ntime
                         ineighbor_nterms_s        = self%elems(ineighbor_element_l)%nterms_s
+                        ineighbor_nnodes_r        = self%elems(ineighbor_element_l)%basis_c%nnodes_r()
                         ineighbor_dof_start       = self%elems(ineighbor_element_l)%dof_start
                         ineighbor_dof_local_start = self%elems(ineighbor_element_l)%dof_local_start
 
@@ -763,6 +764,7 @@ contains
                         ineighbor_nfields         = 0
                         ineighbor_ntime           = 0
                         ineighbor_nterms_s        = 0
+                        ineighbor_nnodes_r        = 0
                         ineighbor_dof_start       = NO_ID
                         ineighbor_dof_local_start = NO_ID
                         ineighbor_proc            = NO_PROC
@@ -777,8 +779,8 @@ contains
                                                                     ineighbor_element_g, ineighbor_element_l,   &
                                                                     ineighbor_face,      ineighbor_nfields,     &
                                                                     ineighbor_ntime,     ineighbor_nterms_s,    &
-                                                                    ineighbor_proc,      ineighbor_dof_start,   &
-                                                                    ineighbor_dof_local_start)
+                                                                    ineighbor_nnodes_r,  ineighbor_proc,        &
+                                                                    ineighbor_dof_start, ineighbor_dof_local_start)
 
                     !
                     ! Also, initialize neighbor face at the same time so we don't
@@ -794,14 +796,15 @@ contains
                         nfields         = self%elems(ielem)%nfields
                         ntime           = self%elems(ielem)%ntime
                         nterms_s        = self%elems(ielem)%nterms_s
+                        nnodes_r        = self%elems(ielem)%basis_c%nnodes_r()
                         dof_start       = self%elems(ielem)%dof_start
                         dof_local_start = self%elems(ielem)%dof_local_start
                         call self%faces(ineighbor_element_l,ineighbor_face)%set_neighbor(ftype,idomain_g,  idomain_l,   &
                                                                                                ielement_g, ielement_l,  &
                                                                                                iface,      nfields,     &
                                                                                                ntime,      nterms_s,    &
-                                                                                               IRANK,      dof_start,   &
-                                                                                               dof_local_start)
+                                                                                               nnodes_r,   IRANK,       &
+                                                                                               dof_start,  dof_local_start)
                     end if
 
                 end if
@@ -835,8 +838,9 @@ contains
                         ineighbor_element_g, ineighbor_element_l,       &
                         ineighbor_face,      ineighbor_proc,            &
                         ineighbor_nfields,   ineighbor_ntime,           &
-                        ineighbor_nterms_s,  neighbor_status,           &
-                        ineighbor_dof_start, ineighbor_dof_local_start
+                        ineighbor_nterms_s,  ineighbor_nnodes_r,        &
+                        ineighbor_dof_start, ineighbor_dof_local_start, &
+                        neighbor_status
 
         real(rk)                                :: neighbor_h(3)
         real(rk), allocatable, dimension(:,:)   :: neighbor_grad1,   neighbor_grad2,    &
@@ -845,7 +849,7 @@ contains
 
         logical :: searching, orphan_face, parallel_interior_face
 
-        integer(ik) :: grad_size(2), br2_face_size(2), br2_vol_size(2), invmass_size(2), data(9)
+        integer(ik) :: grad_size(2), br2_face_size(2), br2_vol_size(2), invmass_size(2), data(10)
         integer(ik) :: corner_one, corner_two, corner_three, corner_four, mapping
         integer(ik), allocatable :: face_search_corners(:,:), face_owner_rank(:), face_owner_rank_reduced(:)
         integer(ik) :: nfaces_search
@@ -950,7 +954,7 @@ contains
 
                         iproc = face_owner_rank_reduced(iface_search)
 
-                        call MPI_Recv(data,9,MPI_INTEGER4,iproc,4,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(data,10,MPI_INTEGER4,iproc,4,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
                         ineighbor_domain_g        = data(1)
                         ineighbor_domain_l        = data(2)
                         ineighbor_element_g       = data(3)
@@ -959,7 +963,8 @@ contains
                         ineighbor_nfields         = data(6)
                         ineighbor_ntime           = data(7)
                         ineighbor_nterms_s        = data(8)
-                        ineighbor_dof_start       = data(9)
+                        ineighbor_nnodes_r        = data(9)
+                        ineighbor_dof_start       = data(10)
                         ineighbor_dof_local_start = NO_ID
                         ineighbor_proc            = iproc
 
@@ -1014,6 +1019,7 @@ contains
                         ineighbor_nfields         = 0
                         ineighbor_ntime           = 0
                         ineighbor_nterms_s        = 0
+                        ineighbor_nnodes_r        = 0
                         ineighbor_dof_start       = NO_ID
                         ineighbor_dof_local_start = NO_ID
                         ineighbor_proc            = NO_PROC
@@ -1025,8 +1031,8 @@ contains
                                                                     ineighbor_element_g, ineighbor_element_l, &
                                                                     ineighbor_face,      ineighbor_nfields,   &
                                                                     ineighbor_ntime,     ineighbor_nterms_s,  &
-                                                                    ineighbor_proc,      ineighbor_dof_start, &
-                                                                    ineighbor_dof_local_start)
+                                                                    ineighbor_nnodes_r,  ineighbor_proc,      &
+                                                                    ineighbor_dof_start, ineighbor_dof_local_start)
 
 
                 end if ! search_face
@@ -1113,8 +1119,8 @@ contains
                        ineighbor_domain_g, ineighbor_domain_l,              &
                        ineighbor_element_g, ineighbor_element_l,            &
                        ineighbor_face, ineighbor_nfields, ineighbor_ntime,  &
-                       ineighbor_nterms_s, ineighbor_dof_start,             &
-                       data(9), grad_size(2),            &
+                       ineighbor_nterms_s, ineighbor_nnodes_r,              &
+                       ineighbor_dof_start, data(10), grad_size(2),                              &
                        invmass_size(2), br2_face_size(2), br2_vol_size(2)
         logical     :: includes_corner_one, includes_corner_two, &
                        includes_corner_three, includes_corner_four, neighbor_element
@@ -1150,6 +1156,7 @@ contains
                         ineighbor_nfields   = self%elems(ielem_l)%nfields
                         ineighbor_ntime     = self%elems(ielem_l)%ntime
                         ineighbor_nterms_s  = self%elems(ielem_l)%nterms_s
+                        ineighbor_nnodes_r  = self%elems(ielem_l)%basis_c%nnodes_r()
                         ineighbor_dof_start = self%elems(ielem_l)%dof_start
 
                         
@@ -1162,11 +1169,12 @@ contains
                         data = [ineighbor_domain_g,  ineighbor_domain_l,    &
                                 ineighbor_element_g, ineighbor_element_l,   &
                                 ineighbor_face,      ineighbor_nfields,     &
-                                ineighbor_ntime,     ineighbor_nterms_s,  ineighbor_dof_start]
+                                ineighbor_ntime,     ineighbor_nterms_s,    &
+                                ineighbor_nnodes_r,  ineighbor_dof_start]
 
 
                         ! Send face location
-                        call MPI_Send(data,9,MPI_INTEGER4,iproc,4,ChiDG_COMM,ierr)
+                        call MPI_Send(data,10,MPI_INTEGER4,iproc,4,ChiDG_COMM,ierr)
 
                         ! Send Element Data
                         grad_size(1)     = size(self%faces(ielem_l,iface)%grad1,1)

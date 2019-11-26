@@ -53,6 +53,43 @@ contains
 
 
 
+    !>  Compute and return the derivative of the inverse of a 3x3 matrix A
+    !!  given an already differentiated matrix A.
+    !!
+    !!  This uses a mathematical preposition for differentiating the inverse
+    !!  of a square matrix
+    !!      See: https://atmos.washington.edu/~dennis/MatrixCalculus.pdf 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/17/2018
+    !!
+    !---------------------------------------------------------------------------
+    function dinv_3x3(A,dA) result(dAinv)
+        real(rk),   intent(in)    :: A(3,3)
+        real(rk),   intent(in)    :: dA(3,3)
+
+        real(rk)    :: Ainv(3,3), Ainv_n(3,3), Atemp(3,3), det, dAinv(3,3)
+
+        ! Find determinatn of A
+        !det = det_3x3(A)
+
+        ! Find inverse of A
+        Ainv = inv_3x3(A)
+
+        ! Negate Ainv
+        Ainv_n = -Ainv
+
+        Atemp = matmul(Ainv_n,dA)
+
+        dAinv = matmul(Atemp,Ainv)
+
+
+    end function dinv_3x3
+    !***************************************************************************
+
+
+
+
 
     !> Returns the inverse of a matrix calculated by finding the LU
     !! decomposition.  Depends on LAPACK.

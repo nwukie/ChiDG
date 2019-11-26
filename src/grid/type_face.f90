@@ -70,6 +70,7 @@ module type_face
         integer(ik)             :: ineighbor_face            = 0
         integer(ik)             :: ineighbor_nfields         = 0
         integer(ik)             :: ineighbor_nterms_s        = 0
+        integer(ik)             :: ineighbor_nnodes_r        = 0
         integer(ik)             :: ineighbor_ntime           = 0
         integer(ik)             :: ineighbor_dof_start       = NO_ID
         integer(ik)             :: ineighbor_dof_local_start = NO_ID
@@ -88,6 +89,12 @@ module type_face
         real(rk),   allocatable :: neighbor_br2_face(:,:)  ! Matrix for computing/obtaining br2 modes at face nodes
         real(rk),   allocatable :: neighbor_br2_vol(:,:)   ! Matrix for computing/obtaining br2 modes at volume nodes
         real(rk),   allocatable :: neighbor_invmass(:,:)    
+        real(rk),   allocatable :: neighbor_coords(:,:)         ! Modal representation of neighbor's coordinates
+        real(rk),   allocatable :: neighbor_dgrad1_dx(:,:,:,:)  ! Derivatives of grad of basis functions in at quadrature nodes wrt to neighbor nodes
+        real(rk),   allocatable :: neighbor_dgrad2_dx(:,:,:,:)  ! Derivatives of grad of basis functions in at quadrature nodes wrt to neighbor nodes
+        real(rk),   allocatable :: neighbor_dgrad3_dx(:,:,:,:)  ! Derivatives of grad of basis functions in at quadrature nodes wrt to neighbor nodes
+        real(rk),   allocatable :: neighbor_dbr2_f_dx(:,:,:,:)  ! Derivatives of br2_face matrix wrt to neigbor nodes
+        real(rk),   allocatable :: neighbor_dnorm_dx(:,:,:,:)   ! Derivatives of neighbor face wrt neighbor support nodes
 
 
         ! Neighbor ALE: if neighbor is off-processor
@@ -156,6 +163,19 @@ module type_face
         real(rk),   allocatable :: ale_g_grad2(:)
         real(rk),   allocatable :: ale_g_grad3(:)
         real(rk),   allocatable :: ale_g_modes(:)
+
+
+        ! Grid geometry sensitivities, adjoint-based
+        !   : Computes the derivatives of the metrics and jinv wrt reference grid nodes
+        real(rk),       allocatable :: dmetric_dx(:,:,:,:,:)    ! Derivatives of inverted jacobian matrix for each quadrature node wrt to each element node (mat_i,mat_j,quad_pt,diff_node,ncoords)
+        real(rk),       allocatable :: djinv_dx(:,:,:)          ! Derivative of differential volume ratio wrt element's node coordinates. (quad_pt,diff_nodes,ncoords) 
+        real(rk),       allocatable :: dnorm_dx(:,:,:,:)        ! Derivatives of face normal vector : scaled by differential area : undeformed face (quad_pt,dir,diff_node,ncoords)
+        real(rk),       allocatable :: dgrad1_dx(:,:,:,:)       ! Derivative of grad of basis functions in at quadrature nodes wrt grid nodes 
+        real(rk),       allocatable :: dgrad2_dx(:,:,:,:)       ! Derivative of grad of basis functions in at quadrature nodes wrt grid nodes
+        real(rk),       allocatable :: dgrad3_dx(:,:,:,:)       ! Derivative of grad of basis functions in at quadrature nodes wrt grid nodes
+        real(rk),       allocatable :: dbr2_v_dx(:,:,:,:)       ! Derivative of br2_vol matrix
+        real(rk),       allocatable :: dbr2_f_dx(:,:,:,:)       ! Derivative of br2_face matrix
+        
 
 
         ! Solution/Coordinate basis objects
@@ -1257,11 +1277,12 @@ contains
     !!  @date   6/10/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine set_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,                   &
-                                       ineighbor_element_g,ineighbor_element_l,                 &
-                                       ineighbor_face,ineighbor_nfields,ineighbor_ntime,        &
-                                       ineighbor_nterms_s, ineighbor_proc,ineighbor_dof_start,  &
-                                       ineighbor_dof_local_start)
+    subroutine set_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,   &
+                                       ineighbor_element_g,ineighbor_element_l, &
+                                       ineighbor_face,ineighbor_nfields,        &
+                                       ineighbor_ntime,ineighbor_nterms_s,      &
+                                       ineighbor_nnodes_r,ineighbor_proc,       &
+                                       ineighbor_dof_start, ineighbor_dof_local_start)
         class(face_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: ftype
         integer(ik),    intent(in)      :: ineighbor_domain_g
@@ -1272,6 +1293,7 @@ contains
         integer(ik),    intent(in)      :: ineighbor_nfields
         integer(ik),    intent(in)      :: ineighbor_ntime
         integer(ik),    intent(in)      :: ineighbor_nterms_s
+        integer(ik),    intent(in)      :: ineighbor_nnodes_r
         integer(ik),    intent(in)      :: ineighbor_proc
         integer(ik),    intent(in)      :: ineighbor_dof_start
         integer(ik),    intent(in)      :: ineighbor_dof_local_start
@@ -1286,6 +1308,7 @@ contains
         self%ineighbor_nfields         = ineighbor_nfields
         self%ineighbor_ntime           = ineighbor_ntime
         self%ineighbor_nterms_s        = ineighbor_nterms_s
+        self%ineighbor_nnodes_r        = ineighbor_nnodes_r
         self%ineighbor_proc            = ineighbor_proc
         self%ineighbor_dof_start       = ineighbor_dof_start
         self%ineighbor_dof_local_start = ineighbor_dof_local_start

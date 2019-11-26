@@ -773,28 +773,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     !>  Return the sum of squared terms in the dense vector.
     !!
     !!  @author Nathan A. Wukie

@@ -159,6 +159,9 @@ module type_reference_element
         procedure   :: interpolator_element
         procedure   :: interpolator_face
         procedure   :: interpolator_edge
+
+        ! Differentiation
+        procedure   :: get_coord_derivatives
         
         ! Query
         procedure   :: nnodes_r     ! number of nodes in the reference node set
@@ -1042,6 +1045,87 @@ contains
         
     end function interpolator_edge
     !*******************************************************************
+
+
+
+
+
+
+
+    !>  Return coordinate derivatives wrt to reference nodes.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/31/2018
+    !!
+    !-------------------------------------------------------------------
+    function get_coord_derivatives(self,source,direction,gq_node,iface) result(deriv)  
+        class(reference_element_t), intent(in)  :: self
+        character(*),               intent(in)  :: source
+        character(*),               intent(in)  :: direction
+        integer(ik),                intent(in)  :: gq_node
+        integer(ik),                intent(in)  :: iface
+
+        real(rk),       allocatable :: deriv(:)
+      
+        real(rk),       allocatable :: derivatives(:),val(:,:)
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: ierr, nnodes_r, directions, istart, iend, &
+                                       size_
+
+
+        nnodes_r    = self%nnodes_r()
+        directions  = 3
+
+        ! Select interpolator face/element
+        select case (source)
+            case('boundary','face interior','face exterior')
+                val = self%interpolator_face('Value',iface) 
+            case('volume','element')
+                val = self%interpolator_element('Value') 
+            case default
+                user_msg = "reference_element_t%get_coord_derivatives: Invalid source for returning coordinate. Options are 'boundary' and 'volume'."
+                call chidg_signal_one(FATAL,user_msg,source)
+        end select
+    
+        ! Note that the derivatives of the coordiantes wrt grid_nodes in x,y and z
+        ! (r,theta,z) directions are the same and that x, y and z (r,theta,z) are
+        ! independent from each other
+        derivatives = matmul(val(gq_node,:),self%nodes_to_modes)
+        
+        
+        ! Allocate deriv
+        size_ = nnodes_r * directions
+        allocate(deriv(size_), stat=ierr)
+        if (ierr/=0) call AllocationError
+        deriv = ZERO
+
+
+        ! Scatter derivatives in the full deriv vector
+        select case (direction)
+            case('1')
+                istart  = 1
+                iend    = nnodes_r 
+            case('2')
+                istart  = nnodes_r + 1
+                iend    = 2*nnodes_r
+            case('3')
+                istart  = 2*nnodes_r + 1
+                iend    = 3*nnodes_r
+            case default
+                user_msg = "reference_element_t%get_coord_derivatives: Invalid coordinate index. Options are '1', '2' and '3'."
+                call chidg_signal_one(FATAL,user_msg,source)
+        end select
+
+        deriv(istart:iend) = derivatives
+
+
+    end function get_coord_derivatives
+    !*******************************************************************
+
+
+
+
+
 
 
 

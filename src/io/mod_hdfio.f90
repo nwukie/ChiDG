@@ -252,7 +252,6 @@ contains
 
             ! Write equation set attribute
             eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has the same eqn_ID
-            !call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(eqn_ID)%name))
             call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(eqn_ID)%get_name()))
 
 
@@ -370,6 +369,145 @@ contains
 
     end subroutine read_fields_hdf
     !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Read adjoint solution modes from HDF file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/14/2017
+    !!
+    !!  @param[in]      filename    Character string of the file to be read from
+    !!  @param[inout]   data        chidg_data_t that will accept the solution modes
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine read_adjoint_fields_hdf(filename,data)
+        character(*),       intent(in)      :: filename
+        type(chidg_data_t), intent(inout)   :: data
+
+        integer(HID_T)                  :: fid, domain_id
+        integer                         :: ierr
+
+        real(rk),           allocatable :: times(:)
+        integer(ik)                     :: idom, ndomains, ieqn, neqns, itime, ntime, eqn_ID, iread
+        integer(ik)                     :: nfunc, nstep, ifunc
+        character(:),       allocatable :: field_name, user_msg, domain_name
+        logical                         :: file_exists, contains_adjoint_solution
+
+
+        ! Get number of domains contained in the ChiDG data instance
+        ndomains = data%mesh%ndomains()
+
+        ! Each process read ntime in serial
+        do iread = 0,NRANK-1
+            if ( iread == IRANK ) then
+
+                ! Open file
+                fid = open_file_hdf(filename)
+
+                ! Check file contains adjoint solution
+                contains_adjoint_solution = get_contains_adjoint_solution_hdf(fid)
+                user_msg = "We didn't find an adjoint  solution to read in the file that was specified."
+                if (.not. contains_adjoint_solution) call chidg_signal(FATAL,user_msg)
+
+                ! Read solution for each time step
+                times = get_times_hdf(fid)
+                ntime = size(times)
+
+                ! Get number of functionals and steps
+                nfunc = get_nfunctionals_hdf(fid)
+                nstep = 1 ! One file contains one adjoint solution per functional
+
+                ! Close file
+                call close_file_hdf(fid)
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do ! iread
+
+
+        ! Initialize v_in vector. This is collective so we don't want it inside a serial read loop
+        if (allocated(data%sdata%adjoint%v_in)) deallocate (data%sdata%adjoint%v_in)
+        allocate( data%sdata%adjoint%v_in(nfunc), stat=ierr)
+        if (ierr/=0) call AllocationError
+        do ifunc = 1,nfunc
+            call data%sdata%adjoint%v_in(ifunc)%init(data%mesh,ntime)
+        end do
+
+
+        ! Each process reads solution in serial 
+        do iread = 0,NRANK-1
+            if ( iread == IRANK ) then
+
+                ! Open file
+                fid = open_file_hdf(filename)
+
+                do itime = 1, ntime
+                    do idom = 1,ndomains
+
+
+                        ! Get domain name and number of primary fields
+                        domain_name = data%mesh%domain(idom)%name
+                        ! For each primary field in the domain, get the field name and read from file.
+                        domain_id = open_domain_hdf(fid,domain_name)
+                        
+                        ! Loop thorugh the adjoint fields (a set of each functional) 
+                        eqn_ID = data%mesh%domain(idom)%eqn_ID
+                        do ieqn = 1,data%eqnset(eqn_ID)%prop%nadjoint_fields()
+                            field_name = trim(data%eqnset(eqn_ID)%prop%get_adjoint_field_name(ieqn))
+                            ifunc      = data%eqnset(eqn_ID)%prop%adjoint_fields(ieqn)%get_functional_ID()
+                            call read_domain_field_hdf(data,domain_id,field_name,itime,'Adjoint',ifunc)
+                        end do ! ieqn
+
+                        call close_domain_hdf(domain_id)
+
+                    end do ! idom
+                end do ! itime
+
+                call close_file_hdf(fid)
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do ! iread
+
+
+    end subroutine read_adjoint_fields_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

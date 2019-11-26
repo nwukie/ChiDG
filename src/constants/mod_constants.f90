@@ -101,6 +101,7 @@ module mod_constants
     integer(ik), parameter :: NBLK      = 7     !< 6 neighbors, 1 self
 
     integer(ik), parameter :: BC_BLK    = -1
+    integer(ik), parameter :: DIFF_ZERO = -2
 
 
 
@@ -218,31 +219,32 @@ module mod_constants
 
 
     !
+    ! Differentiation types
     !
+    integer(ik),    parameter   :: NO_DIFF  = 0
+    integer(ik),    parameter   :: dQ_DIFF  = 1
+    integer(ik),    parameter   :: dD_DIFF  = 2
+    integer(ik),    parameter   :: dX_DIFF  = 3
+    integer(ik),    parameter   :: dBC_DIFF = 4
+
+
     !
-    real(rk),   parameter :: RKTOL = 20._rk * epsilon(1._rk)    ! Real-Kind Tolerance. Floating-point tolerance, one order of magnitude larger than machine precision.
+    ! Floating-point tolerance
+    !
+    real(rk),   parameter       :: RKTOL = 20._rk * epsilon(1._rk)    ! Real-Kind Tolerance. Floating-point tolerance, one order of magnitude larger than machine precision.
     
-    !integer(ik),    parameter   :: NO_EQUATION_SET = 0
-
-!    !
-!    !   Prescribed mesh Motion
-!    !
-!    integer(ik), parameter         :: NO_PMM_ASSIGNED = -1
-
 
     !
     !   Prescribed mesh Motion
     !
-
-    integer(ik), parameter         :: NO_MM_ASSIGNED = -1
+    integer(ik), parameter      :: NO_MM_ASSIGNED = -1
 
 
     !
     ! Node-Element registration
     !
-    
-    integer(ik), parameter          :: MAX_ELEMENTS_PER_NODE = 8
-    integer(ik), parameter          :: NO_ELEMENT = -1
+    integer(ik), parameter      :: MAX_ELEMENTS_PER_NODE = 8
+    integer(ik), parameter      :: NO_ELEMENT = -1
 
 
 

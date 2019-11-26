@@ -36,6 +36,7 @@ module type_element_coupling_data
         integer(ik)                 :: nfields     = 0
         integer(ik)                 :: ntime       = 0
         integer(ik)                 :: nterms_s    = 0
+        integer(ik)                 :: nnodes_r    = 0
         integer(ik)                 :: dof_start   = 0
         integer(ik)                 :: dof_local_start   = 0
         real(rk)                    :: total_area  = ZERO
@@ -121,11 +122,12 @@ contains
     !!  @date   4/18/2017
     !!
     !----------------------------------------------------------------------
-    subroutine set_data(self,nfields,ntime,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
+    subroutine set_data(self,nfields,ntime,nterms_s,nnodes_r,dof_start,dof_local_start,total_area,areas,quad_pts)
         class(element_coupling_data_t), intent(inout)   :: self
         integer(ik),                    intent(in)      :: nfields
         integer(ik),                    intent(in)      :: ntime
         integer(ik),                    intent(in)      :: nterms_s
+        integer(ik),                    intent(in)      :: nnodes_r
         integer(ik),                    intent(in)      :: dof_start
         integer(ik),                    intent(in)      :: dof_local_start
         real(rk),                       intent(in)      :: total_area
@@ -135,6 +137,7 @@ contains
         self%nfields         = nfields
         self%ntime           = ntime
         self%nterms_s        = nterms_s
+        self%nnodes_r        = nnodes_r
         self%dof_start       = dof_start
         self%dof_local_start = dof_local_start
         self%total_area      = total_area

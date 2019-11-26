@@ -48,9 +48,9 @@ module type_mesh
         type(mpi_request_vector_t)          :: comm_requests
 
         ! Tree data
-        real(rk), allocatable               :: global_nodes(:,:)
+        real(rk),               allocatable :: global_nodes(:,:)
         type(octree_t)                      :: octree
-        integer(ik),    allocatable         :: nelems_per_domain(:)
+        integer(ik),            allocatable :: nelems_per_domain(:)
 
 
         ! Interpolation node set ('Uniform', 'Quadrature')
@@ -68,6 +68,7 @@ module type_mesh
         procedure           :: get_domain_id
         procedure, private  :: new_domain
         procedure           :: ndomains
+        procedure           :: ndomains_g
 
         ! Boundary patch group procedures
         procedure, private  :: new_bc_patch_group
@@ -295,11 +296,10 @@ contains
 
 
 
-    !>  Return the number of domains in the chidg_data_t instance.
+    !>  Return the number of domains in the mesh_t instance.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
-    !!
     !!
     !--------------------------------------------------------------------------------
     function ndomains(self) result(ndomains_)
@@ -316,6 +316,35 @@ contains
     end function ndomains
     !********************************************************************************
 
+
+
+
+
+    !>  Return the global number of domains in the parallel mesh_t object.
+    !!
+    !!  MPI Collective function
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   11/26/2019
+    !!
+    !--------------------------------------------------------------------------------
+    function ndomains_g(self) result(idomain_g_global_max)
+        class(mesh_t),  intent(in)  :: self
+
+        integer(ik) :: idomain_g_local_max, idomain_g_global_max, idom, ierr
+
+        idomain_g_local_max = 0
+        do idom = 1,self%ndomains()
+            if (self%domain(idom)%idomain_g > idomain_g_local_max) idomain_g_local_max = self%domain(idom)%idomain_g
+        end do
+
+        ! Reduce max domain index across processes
+        call MPI_AllReduce(idomain_g_local_max,idomain_g_global_max,1,MPI_INTEGER4,MPI_MAX,ChiDG_COMM,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"mesh%ndomains_g: error reducing max number of domains.")
+
+
+    end function ndomains_g
+    !********************************************************************************
 
 
 
@@ -797,37 +826,25 @@ contains
         type(ivector_t)             :: recv_procs
 
 
-        !
         ! Accumulate processor ranks that we are receiving from: domains
-        !
         do idom = 1,self%ndomains()
             recv_procs_dom = self%domain(idom)%get_recv_procs()
-
             do iproc = 1,size(recv_procs_dom)
                 call recv_procs%push_back_unique(recv_procs_dom(iproc))
             end do ! iproc
-
         end do ! idom
 
 
-
-        !
         ! Accumulate processor ranks that we are receiving from: bc_patch_groups
-        !
         do igroup = 1,self%nbc_patch_groups()
             recv_procs_bc = self%bc_patch_group(igroup)%get_recv_procs()
-
             do iproc = 1,size(recv_procs_bc)
                 call recv_procs%push_back_unique(recv_procs_bc(iproc))
             end do ! iproc
-
         end do ! igroup
 
 
-
-        !
         ! Return as integer array
-        !
         recv_procs_array = recv_procs%data()
 
 
@@ -854,38 +871,25 @@ contains
         integer(ik),    allocatable :: send_procs_dom(:), send_procs_bc(:), send_procs_array(:)
         type(ivector_t)             :: send_procs
 
-
-        !
         ! Accumulate processor ranks that we are receiving from: domains
-        !
         do idom = 1,self%ndomains()
             send_procs_dom = self%domain(idom)%get_send_procs()
-
             do iproc = 1,size(send_procs_dom)
                 call send_procs%push_back_unique(send_procs_dom(iproc))
             end do ! iproc
-
         end do ! idom
 
 
-
-        !
         ! Accumulate processor ranks that we are receiving from: bc_patch_groups
-        !
         do igroup = 1,self%nbc_patch_groups()
             send_procs_bc = self%bc_patch_group(igroup)%get_send_procs()
-
             do iproc = 1,size(send_procs_bc)
                 call send_procs%push_back_unique(send_procs_bc(iproc))
             end do ! iproc
-
         end do ! igroup
 
 
-
-        !
         ! Return as integer array
-        !
         send_procs_array = send_procs%data()
 
 
@@ -912,10 +916,7 @@ contains
 
         integer(ik) :: idom, ielem, iface, n
 
-
-        !
         ! Accumulate number of INTERIOR neighbors that live on iproc
-        !
         n = 0
         do idom = 1,self%ndomains()
             do ielem = 1,self%domain(idom)%get_nelements_local()
@@ -925,8 +926,6 @@ contains
             end do !ielem
         end do !idom
         
-
-
     end function get_proc_ninterior_neighbors
     !**********************************************************************************
 
@@ -983,9 +982,7 @@ contains
         end do !idom
         
 
-        !
         ! Get number of counted donors coming from iproc
-        !
         n = donor_elements_g%size()
 
     end function get_proc_nchimera_donors
@@ -1081,11 +1078,7 @@ contains
         end do !idom
 
 
-
-
-        !
         ! Get size of accumulated elements being received
-        !
         n = recv_element_g%size()
 
     end function get_nelements_recv
@@ -2107,24 +2100,24 @@ contains
 
         type(element_info_t)    :: elem_info
 
-        elem_info = element_info(idomain_g       = self%domain(idomain_l)%elems(ielement_l)%idomain_g,       &
-                                 idomain_l       = self%domain(idomain_l)%elems(ielement_l)%idomain_l,       &
-                                 ielement_g      = self%domain(idomain_l)%elems(ielement_l)%ielement_g,      &
-                                 ielement_l      = self%domain(idomain_l)%elems(ielement_l)%ielement_l,      &
-                                 iproc           = self%domain(idomain_l)%elems(ielement_l)%iproc,           &
-                                 pelem_ID        = NO_ID,                                                    &
-                                 eqn_ID          = self%domain(idomain_l)%elems(ielement_l)%eqn_ID,          &
-                                 nfields         = self%domain(idomain_l)%elems(ielement_l)%nfields,         &
-                                 ntime           = self%domain(idomain_l)%elems(ielement_l)%ntime,           &
-                                 nterms_s        = self%domain(idomain_l)%elems(ielement_l)%nterms_s,        &
-                                 nterms_c        = self%domain(idomain_l)%elems(ielement_l)%nterms_c,        &
-                                 dof_start       = self%domain(idomain_l)%elems(ielement_l)%dof_start,       &
-                                 dof_local_start = self%domain(idomain_l)%elems(ielement_l)%dof_local_start, &
-                                 recv_comm       = self%domain(idomain_l)%elems(ielement_l)%recv_comm,       &
-                                 recv_domain     = self%domain(idomain_l)%elems(ielement_l)%recv_domain,     &
-                                 recv_element    = self%domain(idomain_l)%elems(ielement_l)%recv_element,    &
-                                 recv_dof        = self%domain(idomain_l)%elems(ielement_l)%recv_dof)
-
+        elem_info = element_info(idomain_g         = self%domain(idomain_l)%elems(ielement_l)%idomain_g,         &
+                                 idomain_l         = self%domain(idomain_l)%elems(ielement_l)%idomain_l,         &
+                                 ielement_g        = self%domain(idomain_l)%elems(ielement_l)%ielement_g,        &
+                                 ielement_l        = self%domain(idomain_l)%elems(ielement_l)%ielement_l,        &
+                                 iproc             = self%domain(idomain_l)%elems(ielement_l)%iproc,             &
+                                 pelem_ID          = NO_ID,                                                      &
+                                 coordinate_system = self%domain(idomain_l)%elems(ielement_l)%coordinate_system, &
+                                 eqn_ID            = self%domain(idomain_l)%elems(ielement_l)%eqn_ID,            &
+                                 nfields           = self%domain(idomain_l)%elems(ielement_l)%nfields,           &
+                                 ntime             = self%domain(idomain_l)%elems(ielement_l)%ntime,             &
+                                 nterms_s          = self%domain(idomain_l)%elems(ielement_l)%nterms_s,          &
+                                 nterms_c          = self%domain(idomain_l)%elems(ielement_l)%nterms_c,          &
+                                 dof_start         = self%domain(idomain_l)%elems(ielement_l)%dof_start,         &
+                                 dof_local_start   = self%domain(idomain_l)%elems(ielement_l)%dof_local_start,   &
+                                 recv_comm         = self%domain(idomain_l)%elems(ielement_l)%recv_comm,         &
+                                 recv_domain       = self%domain(idomain_l)%elems(ielement_l)%recv_domain,       &
+                                 recv_element      = self%domain(idomain_l)%elems(ielement_l)%recv_element,      &
+                                 recv_dof          = self%domain(idomain_l)%elems(ielement_l)%recv_dof)
 
     end function get_element_info
     !********************************************************************************

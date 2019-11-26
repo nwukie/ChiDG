@@ -99,10 +99,9 @@ module type_chidg_vector
         procedure,  public  :: get_ntime                        ! Return ntime associated with
         procedure,  public  :: set_ntime                        ! Set ntime in the associated
                                                                 ! densevectors
-        procedure,  public  :: ndomains
-
-        procedure,  public  :: restrict
-        procedure,  public  :: prolong
+!        procedure,  public  :: ndomains
+!        procedure,  public  :: restrict
+!        procedure,  public  :: prolong
                                                                     
 
         final               :: destroy
@@ -156,13 +155,14 @@ module type_chidg_vector
 
 
     interface 
-        subroutine vector_init_interface(self,mesh,ntime)
+        subroutine vector_init_interface(self,mesh,ntime,vtype)
             import chidg_vector_t
             import mesh_t
             import ik
-            class(chidg_vector_t),  intent(inout), target :: self
-            type(mesh_t),           intent(inout)   :: mesh
-            integer(ik),            intent(in)      :: ntime
+            class(chidg_vector_t),  intent(inout), target       :: self
+            type(mesh_t),           intent(inout)               :: mesh
+            integer(ik),            intent(in)                  :: ntime
+            character(*),           intent(in),     optional    :: vtype
         end subroutine vector_init_interface
     end interface
 
@@ -290,10 +290,11 @@ contains
     !!                      domain_vector_t subcomponent.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_init_vector(self,mesh,ntime)
+    subroutine chidg_init_vector(self,mesh,ntime,vtype)
         class(chidg_vector_t),  intent(inout), target   :: self
         type(mesh_t),           intent(inout)           :: mesh
         integer(ik),            intent(in)              :: ntime
+        character(*),           intent(in), optional    :: vtype
 
         integer(ik) :: ierr, ndomains, idom
 
@@ -313,7 +314,7 @@ contains
 
         ! Call initialization procedure for each domain_vector_t
         do idom = 1,ndomains
-            call self%dom(idom)%init(mesh%domain(idom))
+            call self%dom(idom)%init(mesh%domain(idom),vtype)
         end do
 
 
@@ -337,13 +338,16 @@ contains
     !!                      domain_vector_t subcomponent.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine petsc_init_vector(self,mesh,ntime)
-        class(chidg_vector_t),  intent(inout), target :: self
-        type(mesh_t),           intent(inout)         :: mesh
-        integer(ik),            intent(in)            :: ntime
+    subroutine petsc_init_vector(self,mesh,ntime,vtype)
+        class(chidg_vector_t),  intent(inout), target   :: self
+        type(mesh_t),           intent(inout)           :: mesh
+        integer(ik),            intent(in)              :: ntime
+        character(*),           intent(in), optional    :: vtype
 
-        integer(ik)     :: ndomains, idom, ielem, nparallel_dofs
-        integer(ik), allocatable :: parallel_dof_indices(:)
+        integer(ik)                 :: ndomains, idom, ielem, nparallel_dofs
+        integer(ik),    allocatable :: parallel_dof_indices(:)
+        character(:),   allocatable :: specialization, error_string
+
         PetscErrorCode  :: ierr
         PetscInt        :: nlocal_rows, nglobal_rows
 
@@ -369,12 +373,45 @@ contains
         call VecSetType(self%wrapped_petsc_vector%petsc_vector, 'standard', ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_init_vector: error calling VecSetType.')
 
+
+        ! Detect vector storage specialization
+        if (present(vtype)) then
+            select case (trim(vtype))
+                case ('primal differentiation')
+                    specialization = 'solution'
+                case ('auxiliary differentiation')
+                    specialization = 'auxiliary'
+                case ('grid differentiation')
+                    specialization = 'grid'
+                case default
+                    error_string = "chidg_vector%petsc_init_vector: Invalid parameter for 'vtype' &
+                                    ('primal differentiation', 'auxiliary differentiation', &
+                                    'grid differentiation')"
+                    call chidg_signal_one(FATAL,error_string,trim(vtype))
+            end select
+        else
+            specialization = 'solution'
+        end if
+
+
+
         ! Set vector size
         ! Compute proc-local degress-of-freedom
         nlocal_rows = 0
         do idom = 1,mesh%ndomains()
             do ielem = 1,mesh%domain(idom)%nelements()
-                nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%nterms_s * ntime)
+
+                select case(trim(specialization))
+                    case ('solution')
+                        nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%nterms_s * ntime)
+                    case ('auxiliary')
+                        nlocal_rows = nlocal_rows + ( 1 * mesh%domain(idom)%elems(ielem)%nterms_s * ntime)
+                    case ('grid')
+                        nlocal_rows = nlocal_rows + ( 3 * mesh%domain(idom)%elems(ielem)%basis_c%nnodes_r() * ntime)
+                    case default
+                        call chidg_signal_one(FATAL,"chidg_vector%petsc_init_vector: Invalid specialization parameter.",trim(specialization))
+                end select 
+
             end do !ielem
         end do !idom
 
@@ -1538,103 +1575,103 @@ contains
 
 
 
-    !>
-    !!
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   7/21/2017
-    !!
-    !---------------------------------------------------------------------------------------
-    function ndomains(self) result(ndomains_)
-        class(chidg_vector_t),  intent(in)  :: self
-
-        integer(ik) :: ndomains_
-
-        if (allocated(self%dom)) then
-            ndomains_ = size(self%dom)
-        else
-            ndomains_ = 0
-        end if
-
-    end function ndomains
-    !***************************************************************************************
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   7/21/2017
-    !!
-    !---------------------------------------------------------------------------------------
-    function restrict(self,nterms_r) result(restricted)
-        class(chidg_vector_t),  intent(inout)   :: self
-        integer(ik),            intent(in)      :: nterms_r
-
-        type(chidg_vector_t)    :: restricted
-        integer(ik)             :: idom, ierr
-        
-
-        restricted%send = self%send                     ! Copy self%send directly
-        restricted%recv = self%recv%restrict(nterms_r)  ! Get restricted copy of self%recv
-
-
-        ! Allocate storage for each domain
-        if (allocated(restricted%dom)) deallocate(restricted%dom)
-        allocate(restricted%dom(self%ndomains()), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        ! Return restricted domain_vector objects for each domain
-        do idom = 1,self%ndomains()
-            restricted%dom(idom) = self%dom(idom)%restrict(nterms_r)
-        end do !idom
-
-        ! Set ntime
-        restricted%ntime_ = self%ntime_
-
-    end function restrict
-    !***************************************************************************************
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   7/21/2017
-    !!
-    !---------------------------------------------------------------------------------------
-    function prolong(self,nterms_p) result(prolonged)
-        class(chidg_vector_t),  intent(inout)   :: self
-        integer(ik),            intent(in)      :: nterms_p
-
-        type(chidg_vector_t)    :: prolonged
-        integer(ik)             :: idom, ierr
-        
-
-        prolonged%send = self%send                     ! Copy self%send directly
-        prolonged%recv = self%recv%prolong(nterms_p)   ! Get prolonged copy of self%recv
-
-
-        ! Allocate storage for each domain
-        allocate(prolonged%dom(self%ndomains()), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        ! Return restricted domain_vector objects for each domain
-        do idom = 1,self%ndomains()
-            prolonged%dom(idom) = self%dom(idom)%prolong(nterms_p)
-        end do !idom
-
-        ! Set ntime
-        prolonged%ntime_ = self%ntime_
-
-    end function prolong
-    !***************************************************************************************
+!    !>
+!    !!
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   7/21/2017
+!    !!
+!    !---------------------------------------------------------------------------------------
+!    function ndomains(self) result(ndomains_)
+!        class(chidg_vector_t),  intent(in)  :: self
+!
+!        integer(ik) :: ndomains_
+!
+!        if (allocated(self%dom)) then
+!            ndomains_ = size(self%dom)
+!        else
+!            ndomains_ = 0
+!        end if
+!
+!    end function ndomains
+!    !***************************************************************************************
+!
+!
+!
+!
+!
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   7/21/2017
+!    !!
+!    !---------------------------------------------------------------------------------------
+!    function restrict(self,nterms_r) result(restricted)
+!        class(chidg_vector_t),  intent(inout)   :: self
+!        integer(ik),            intent(in)      :: nterms_r
+!
+!        type(chidg_vector_t)    :: restricted
+!        integer(ik)             :: idom, ierr
+!        
+!
+!        restricted%send = self%send                     ! Copy self%send directly
+!        restricted%recv = self%recv%restrict(nterms_r)  ! Get restricted copy of self%recv
+!
+!
+!        ! Allocate storage for each domain
+!        if (allocated(restricted%dom)) deallocate(restricted%dom)
+!        allocate(restricted%dom(self%ndomains()), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!        ! Return restricted domain_vector objects for each domain
+!        do idom = 1,self%ndomains()
+!            restricted%dom(idom) = self%dom(idom)%restrict(nterms_r)
+!        end do !idom
+!
+!        ! Set ntime
+!        restricted%ntime_ = self%ntime_
+!
+!    end function restrict
+!    !***************************************************************************************
+!
+!
+!
+!
+!
+!
+!
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   7/21/2017
+!    !!
+!    !---------------------------------------------------------------------------------------
+!    function prolong(self,nterms_p) result(prolonged)
+!        class(chidg_vector_t),  intent(inout)   :: self
+!        integer(ik),            intent(in)      :: nterms_p
+!
+!        type(chidg_vector_t)    :: prolonged
+!        integer(ik)             :: idom, ierr
+!        
+!
+!        prolonged%send = self%send                     ! Copy self%send directly
+!        prolonged%recv = self%recv%prolong(nterms_p)   ! Get prolonged copy of self%recv
+!
+!
+!        ! Allocate storage for each domain
+!        allocate(prolonged%dom(self%ndomains()), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!        ! Return restricted domain_vector objects for each domain
+!        do idom = 1,self%ndomains()
+!            prolonged%dom(idom) = self%dom(idom)%prolong(nterms_p)
+!        end do !idom
+!
+!        ! Set ntime
+!        prolonged%ntime_ = self%ntime_
+!
+!    end function prolong
+!    !***************************************************************************************
 
 
 

@@ -42,8 +42,11 @@ module type_chidg_matrix
 
         ! ChiDG
         type(domain_matrix_t), allocatable    :: dom(:) ! Array of domain-matrices. One for each domain
+
+        ! Initialization and Math flags
         logical     :: local_initialized = .false.      ! Has the matrix processor-local data been initialized
         logical     :: recv_initialized  = .false.      ! Has matrix been initialized with information about chidg_vector%recv
+        logical     :: transposed        = .false.
 
 
         ! backend dynamic procedures

@@ -1,4 +1,5 @@
 add_subdirectory(chidg_cache)
+add_subdirectory(functional_cache)
 
 
 add_lib_sources(
@@ -15,6 +16,7 @@ add_lib_sources(
                 type_mvector.f90
                 type_pvector.f90
                 type_evector.f90
+                type_nvector.f90
                 type_bcvector.f90
                 type_pmmfvector.f90
                 type_ovector.f90
@@ -47,5 +49,12 @@ add_lib_sources(
                 type_petsc_matrix_wrapper.f90
                 type_petsc_scatter_wrapper.f90
                 type_petsc_is_wrapper.f90
+                # Adjoint
+                type_chidg_adjoint.f90
+                type_chidg_adjointx.f90
+                type_chidg_adjointbc.f90
+                type_chidg_functional.f90
+                type_storage_flags.f90
+
                 )
 

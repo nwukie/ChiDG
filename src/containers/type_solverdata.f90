@@ -6,6 +6,11 @@ module type_solverdata
     use mod_io,                             only: backend
     use type_chidg_vector,                  only: chidg_vector_t, chidg_vector
     use type_chidg_matrix,                  only: chidg_matrix_t, chidg_matrix
+    use type_chidg_adjoint,                 only: chidg_adjoint_t
+    use type_chidg_adjointx,                only: chidg_adjointx_t
+    use type_chidg_adjointbc,               only: chidg_adjointbc_t
+    use type_chidg_functional,              only: chidg_functional_t
+    use type_storage_flags,                 only: storage_flags_t
     use type_mesh,                          only: mesh_t
     use type_function_status,               only: function_status_t
     use type_equationset_function_data,     only: equationset_function_data_t
@@ -26,15 +31,24 @@ module type_solverdata
     type, public  :: solverdata_t
 
         ! Base solver data
-        type(chidg_vector_t)            :: q           ! Solution vector
-        type(chidg_vector_t)            :: dq          ! Change in solution vector
-        type(chidg_vector_t)            :: rhs         ! Residual of the spatial scheme
-        type(chidg_matrix_t)            :: lhs         ! Linearization of the spatial scheme
+        type(chidg_vector_t)            :: q            ! Solution vector
+        type(chidg_vector_t)            :: dq           ! Change in solution vector
+        type(chidg_vector_t)            :: rhs          ! Residual of the spatial scheme
+        type(chidg_matrix_t)            :: lhs          ! Linearization of the spatial scheme
 
  
         ! Container for reading data
-        type(chidg_vector_t)            :: q_in     ! For reading data
-        type(chidg_vector_t)            :: q_out    ! For post-processing
+        type(chidg_vector_t)            :: q_in         ! For reading data
+        type(chidg_vector_t)            :: q_out        ! For post-processing
+
+
+        ! Adjoint storage
+        type(chidg_adjoint_t)           :: adjoint      ! Adjoint containers (adj_vec and q_time)
+        type(chidg_adjointx_t)          :: adjointx     ! Adjointx containers (Jx and vRx)
+        type(chidg_adjointbc_t)         :: adjointbc    ! Adjointbc containers (Ja and vRa)
+
+        ! Functional storage (no derivatives)
+        type(chidg_functional_t)        :: functional   ! Contains Array of computed functional/s
 
         
         ! Auxiliary fields
@@ -75,6 +89,11 @@ module type_solverdata
 
         generic, public     :: init => init_base
         procedure, private  :: init_base
+        procedure           :: init_adjoint
+        procedure           :: init_adjointx
+        procedure           :: init_adjointbc
+        procedure           :: init_functional
+
 
 
         procedure           :: nauxiliary_fields
@@ -121,10 +140,11 @@ contains
     !!                              each function in eqnset.
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine init_base(self,mesh,function_data)
+    subroutine init_base(self,mesh,function_data,storage_flags)
         class(solverdata_t),                intent(inout)   :: self
         type(mesh_t),                       intent(inout)   :: mesh
         type(equationset_function_data_t),  intent(in)      :: function_data(:)
+        type(storage_flags_t),              intent(in)      :: storage_flags
         
         integer(ik) :: ierr, ndom, maxelems, idom, iaux, aux_ID
         logical     :: increase_maxelems = .false.
@@ -136,19 +156,18 @@ contains
         self%rhs   = chidg_vector(trim(backend))
         self%q_in  = chidg_vector(trim(backend))
         self%q_out = chidg_vector(trim(backend))
-
         self%lhs   = chidg_matrix(trim(backend))
 
         ! Initialize vectors
-        call self%q%init(    mesh,mesh%ntime_)
-        call self%dq%init(   mesh,mesh%ntime_)
-        call self%rhs%init(  mesh,mesh%ntime_)
-        call self%q_in%init( mesh,mesh%ntime_)
-        call self%q_out%init(mesh,mesh%ntime_)
+        if (storage_flags%q)     call self%q%init(    mesh,mesh%ntime_)
+        if (storage_flags%dq)    call self%dq%init(   mesh,mesh%ntime_)
+        if (storage_flags%rhs)   call self%rhs%init(  mesh,mesh%ntime_)
+        if (storage_flags%q_in)  call self%q_in%init( mesh,mesh%ntime_)
+        if (storage_flags%q_out) call self%q_out%init(mesh,mesh%ntime_)
 
         ! Initialize matrix and parallel recv data
-        call self%lhs%init(mesh,'full')
-        call self%lhs%init_recv(self%rhs)
+        if (storage_flags%lhs) call self%lhs%init(mesh,'full')
+        if (storage_flags%lhs) call self%lhs%init_recv(self%rhs)
 
         ! By default, create 5 auxiliary field vectors. Each initialized with 'empty' field string.
         do iaux = 1,5
@@ -174,7 +193,7 @@ contains
 
 
         ! Initialize storage on flux and linearization registration
-        call self%function_status%init( mesh, function_data)
+        if (storage_flags%function_status) call self%function_status%init(mesh,function_data)
 
         ! Confirm solver initialization
         self%solverInitialized = .true.
@@ -183,6 +202,163 @@ contains
     end subroutine init_base
     !******************************************************************************************
 
+
+
+
+
+    !>  Allocate the adjoint containers based on number of nsteps (1 for steady and HB, nsteps for
+    !!  time marching)
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/30/2017
+    !!
+    !!  @param[in]  nsteps          Number of time steps 
+    !!  @param[in]  nfuncs          Number of objective functions/functionals 
+    !!  @param[in]  mesh            type_mesh
+    !!  @param[in]  storage_flags   flags defining which container needs to be initialized
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine init_adjoint(self,nfuncs,nsteps,mesh,storage_flags)
+        class(solverdata_t),    intent(inout)   :: self
+        integer(ik),            intent(in)      :: nsteps
+        integer(ik),            intent(in)      :: nfuncs
+        type(mesh_t),           intent(inout)   :: mesh
+        type(storage_flags_t),  intent(in)      :: storage_flags
+        
+        integer(ik)                 :: ierr
+        character(:),   allocatable :: user_msg
+        
+
+        ! Give Error if no functional is registered
+        user_msg = "solverdata%init_adjoint: no functionals registered. Adjoint computation not doable."
+        if (nfuncs == 0 .and. storage_flags%func_check ) call chidg_signal(FATAL,user_msg)
+
+        ! Allocate containers
+        call self%adjoint%init(nfuncs,nsteps,storage_flags) 
+
+        ! Allocate chidg_vectors
+        call self%adjoint%init_vector(mesh,mesh%ntime_,storage_flags)
+
+        ! Trasnspose lhs if we are computing adjoint variables
+        if (storage_flags%lhs_trans) self%lhs%transposed = .true.
+    
+    end subroutine init_adjoint
+    !******************************************************************************************
+
+
+
+
+
+    !>  Allocate containers for computing the sensitivities of a functional with respect to
+    !!  grid nodes movements. AdjointX 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   07/26/2018
+    !!
+    !!  @param[in]  nsteps          Number of time steps 
+    !!  @param[in]  nfuncs          Number of objective functions/functionals 
+    !!  @param[in]  mesh            type_mesh
+    !!  @param[in]  storage_flags   flags defining which container needs to be initialized
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine init_adjointx(self,nfuncs,nsteps,mesh,storage_flags)
+        class(solverdata_t),    intent(inout)   :: self
+        integer(ik),            intent(in)      :: nsteps
+        integer(ik),            intent(in)      :: nfuncs
+        type(mesh_t),           intent(inout)   :: mesh
+        type(storage_flags_t),  intent(in)      :: storage_flags
+        
+        integer(ik)                 :: ierr
+        character(:),   allocatable :: user_msg
+        
+        ! Give Error if no functional is registered (this should not happen, since
+        ! adjoint mode is OFF when nfunctionals == 0)
+        user_msg = "solverdata%init_adjointx: no functionals registered. Adjoint computation not doable."
+        if (nfuncs == 0 .and. storage_flags%func_check ) call chidg_signal(FATAL,user_msg)
+
+        ! Allocate containers
+        call self%adjointx%init(nfuncs,nsteps,storage_flags) 
+        
+        ! Allocate chidg_vectors
+        call self%adjointx%init_containers(mesh,mesh%ntime_,storage_flags)
+
+    end subroutine init_adjointx
+    !******************************************************************************************
+
+
+
+
+
+
+
+    !>  Allocate containers for computing the sensitivities of a functional with respect to
+    !!  BC properties/parameters. AdjointBC 
+    !!  
+    !!  @author Matteo Ugolotti
+    !!  @date   11/26/2018
+    !!
+    !!  @param[in]  nsteps          Number of time steps 
+    !!  @param[in]  nfuncs          Number of objective functions/functionals 
+    !!  @param[in]  mesh            type_mesh
+    !!  @param[in]  storage_flags   flags defining which container needs to be initialized
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine init_adjointbc(self,nfuncs,nsteps,mesh,storage_flags)
+        class(solverdata_t),    intent(inout)   :: self
+        integer(ik),            intent(in)      :: nsteps
+        integer(ik),            intent(in)      :: nfuncs
+        type(mesh_t),           intent(inout)   :: mesh
+        type(storage_flags_t),  intent(in)      :: storage_flags
+        
+        integer(ik)                 :: ierr
+        character(:),   allocatable :: user_msg
+        
+        ! Give Error if no functional is registered (this should not happen, since
+        ! adjoint mode is OFF when nfunctionals == 0)
+        user_msg = "solverdata%init_adjointbc: no functionals registered. Adjoint computation not doable."
+        if (nfuncs == 0 .and. storage_flags%func_check ) call chidg_signal(FATAL,user_msg)
+
+        ! Allocate containers
+        call self%adjointbc%init(nfuncs,nsteps,storage_flags) 
+        
+        ! Allocate chidg_vectors
+        call self%adjointbc%init_containers(mesh,mesh%ntime_,storage_flags)
+    
+    end subroutine init_adjointbc
+    !******************************************************************************************
+
+
+
+
+
+
+
+    !>  Allocate the functional container based on number of ntime (n for  HB, 1 for
+    !!  time marching and steady)
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   07/12/2017
+    !!
+    !!  @param[in]  nfuncs          Number of objective functions/functionals 
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine init_functional(self,nfuncs)
+        class(solverdata_t),    intent(inout)   :: self
+        integer(ik),            intent(in)      :: nfuncs
+        
+        integer(ik)    :: ierr
+        character(:),   allocatable :: user_msg
+
+
+        ! Give Error if no functional is registered
+        user_msg = "solverdata%init_functional: no functionals registered."
+        if (nfuncs == 0) call chidg_signal(FATAL,user_msg)
+
+        ! Allocate container for functionals
+        call self%functional%init(nfuncs)
+    
+    end subroutine init_functional
+    !******************************************************************************************
 
 
 
@@ -544,6 +720,11 @@ contains
 
         ! Release chidg_matrix data
         call self%lhs%release()
+
+        ! Release adjoint resources
+        call self%adjoint%release()
+        call self%adjointx%release()
+        call self%adjointbc%release()
 
         ! Release auxiliary_field vectors
         do iaux = 1,self%nauxiliary_fields()

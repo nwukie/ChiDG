@@ -21,6 +21,8 @@ module type_chidg_data
     use type_equationset_function_data, only: equationset_function_data_t
     use type_svector,                   only: svector_t
     use mod_string,                     only: string_t
+    use type_functional_group,          only: functional_group_t
+    use type_storage_flags,             only: storage_flags_t
 
     ! Factory methods
     use mod_equations,                  only: equation_set_factory
@@ -63,6 +65,7 @@ module type_chidg_data
         type(bc_state_group_t),         allocatable :: bc_state_group(:)
         type(equation_set_t),           allocatable :: eqnset(:)
         type(mesh_motion_wrapper_t),    allocatable :: mesh_motion(:)
+        type(functional_group_t)                    :: functional_group
 
     contains
 

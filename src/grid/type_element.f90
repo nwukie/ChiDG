@@ -122,6 +122,17 @@ module type_element
         real(rk),       allocatable :: ale_g_modes(:)           ! A modal expansion of the ale differential volume ratio in the solution basis
 
 
+        ! Grid geometry sensitivities, adjoint-based
+        !   : Computes the derivatives of the metrics and jinv wrt reference grid nodes
+        real(rk),       allocatable :: dmetric_dx(:,:,:,:,:)    ! Derivatives of inverted jacobian matrix for each quadrature node wrt to each element node (mat_i,mat_j,quad_pt,diff_node,ncoords)
+        real(rk),       allocatable :: djinv_dx(:,:,:)          ! Derivative of differential volume ratio wrt element's node coordinates. (quad_pt,diff_nodes,ncoords) 
+        real(rk),       allocatable :: dgrad1_dx(:,:,:,:)       ! Derivative of grad of basis functions in at quadrature nodes wrt grid nodes 
+        real(rk),       allocatable :: dgrad2_dx(:,:,:,:)       ! Derivative of grad of basis functions in at quadrature nodes wrt grid nodes
+        real(rk),       allocatable :: dgrad3_dx(:,:,:,:)       ! Derivative of grad of basis functions in at quadrature nodes wrt grid nodes
+        real(rk),       allocatable :: dmass_dx(:,:,:,:)        ! Derivative of mass matrix wrt to grid nodes
+        real(rk),       allocatable :: dinvmass_dx(:,:,:,:)     ! Derivative of invmass matrix wrt to grid nodes
+
+
         ! Matrices of physical gradients of basis/test functions
         real(rk),       allocatable :: grad1(:,:)           ! Grad of basis functions in at quadrature nodes
         real(rk),       allocatable :: grad2(:,:)           ! Grad of basis functions in at quadrature nodes
@@ -159,10 +170,10 @@ module type_element
 
         ! Tree box indicator
         integer(ik), allocatable    :: node_box_ID(:)
-        type(ivector_t)               :: box_ID
+        type(ivector_t)             :: box_ID
 
         ! RBF information
-        type(rbf_address_book_t)       :: rbf_address_book
+        type(rbf_address_book_t)    :: rbf_address_book
 
 
         real(rk),   allocatable :: bc(:,:)
@@ -269,9 +280,7 @@ contains
         if (self%geom_initialized) call chidg_signal(FATAL,user_msg)
 
 
-        !
         ! Get connectivity info
-        !
         mapping               = etype
         self%idomain_g        = location(1)
         self%idomain_l        = location(2)
@@ -282,27 +291,19 @@ contains
         self%connectivity     = connectivity
 
 
-
-        !
         ! Get reference element (reference nodes only, no interpolators)
-        !
         self%element_type = mapping
         ref_ID_c          = get_reference_element(element_type = mapping)
         self%basis_c => ref_elems(ref_ID_c)
 
 
-
-        !
         ! Accumulate coordinates for current element from node list.
-        !
         npts = self%basis_c%nnodes_r()
         allocate(nodes_l(npts,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-        !
         ! Accumulate local nodes
-        !
         do ipt = 1,npts
             ! Get node index
             inode = connectivity(ipt)
@@ -313,22 +314,16 @@ contains
         end do !ipt
 
 
-        !
         ! Accumulate vertex indices
         !
         ! Corresponding (xi, eta, zeta) for each vertex:
         ! 1: (-1,-1,-1), 2: (-1,-1,1), 3: (-1,1,-1), 4: (-1,1,1), 5: (1,-1,-1), 6: (1, -1, 1), 7: (1,1,-1), 8: (1,1,1)
-        !
         do ipt = 1, 8
             self%vertex_indices(ipt) = connectivity(element_vertex_indices(ipt, mapping))
         end do
 
 
-
-
-        !
         ! Get element mapping
-        !
         self%spacedim = 3
         self%ntime    = 1
         self%nodes_to_modes = self%basis_c%nodes_to_modes
@@ -337,27 +332,19 @@ contains
         if (self%nterms_c /= size(nodes_l,1)) call chidg_signal(FATAL,user_msg)
 
 
-
-        !
         ! Allocate storage
-        !
         allocate(self%node_coords(self%nterms_c,3),stat=ierr)
         call self%coords%init(self%nterms_c,self%spacedim,self%ntime,self%idomain_g,self%idomain_l,self%ielement_g,self%ielement_l)
         self%node_coords = nodes_l
 
 
-        !
         ! Compute element centroid
-        !
         self%centroid(1) = sum(self%node_coords(:,1))/self%nterms_c
         self%centroid(2) = sum(self%node_coords(:,2))/self%nterms_c
         self%centroid(3) = sum(self%node_coords(:,3))/self%nterms_c
 
 
-        
-        !
         ! Compute modal expansion of element coordinates
-        !
         modes1 = matmul(self%nodes_to_modes,self%node_coords(:,1))
         modes2 = matmul(self%nodes_to_modes,self%node_coords(:,2))
         modes3 = matmul(self%nodes_to_modes,self%node_coords(:,3))
@@ -367,10 +354,7 @@ contains
         call self%coords%setvar(3,itime = 1,vals = modes3)
 
 
-
-        !
         ! Compute approximate size of bounding box
-        !
         xmax = maxval(nodes_l(:,1))
         xmin = minval(nodes_l(:,1))
         xwidth = abs(xmax - xmin)
@@ -393,10 +377,7 @@ contains
 
 
 
-
-        !
         ! Set coordinate system and confirm initialization 
-        !
         select case(trim(coord_system))
             case('Cartesian')
                 self%coordinate_system = CARTESIAN
@@ -408,18 +389,14 @@ contains
         self%geom_initialized = .true.   
 
 
-        !
         ! Store element_data(1-2)
-        !
         self%element_data(1) = self%element_type
         self%element_data(2) = self%spacedim
         self%element_data(3) = self%coordinate_system
 
 
-        !
         ! ALE initialization
         !   Default: zero displacements/velocities
-        !
         dnodes = nodes
         vnodes = nodes
         dnodes = ZERO

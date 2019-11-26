@@ -1,6 +1,6 @@
 module type_seed
     use mod_kinds,      only: ik
-    use mod_constants,  only: NO_PROC
+    use mod_constants,  only: NO_PROC, NO_ID
     implicit none
 
 
@@ -29,6 +29,7 @@ module type_seed
         integer(ik) :: ielement_l
         integer(ik) :: nfields
         integer(ik) :: nterms_s
+        integer(ik) :: nnodes_r
         integer(ik) :: iproc
         integer(ik) :: itime
         integer(ik) :: dof_start
@@ -62,7 +63,7 @@ contains
     !!  @date   12/6/2016
     !!
     !-------------------------------------------------------------------------------------
-    subroutine init(self,idomain_g,idomain_l,ielement_g,ielement_l,nfields,nterms_s,iproc,itime,dof_start,recv_comm,recv_domain,recv_element)
+    subroutine init(self,idomain_g,idomain_l,ielement_g,ielement_l,nfields,nterms_s,nnodes_r,iproc,itime,dof_start,recv_comm,recv_domain,recv_element)
         class(seed_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: idomain_g
         integer(ik),    intent(in)      :: idomain_l
@@ -70,6 +71,7 @@ contains
         integer(ik),    intent(in)      :: ielement_l
         integer(ik),    intent(in)      :: nfields
         integer(ik),    intent(in)      :: nterms_s
+        integer(ik),    intent(in)      :: nnodes_r
         integer(ik),    intent(in)      :: iproc
         integer(ik),    intent(in)      :: itime
         integer(ik),    intent(in)      :: dof_start
@@ -77,13 +79,13 @@ contains
         integer(ik),    intent(in)      :: recv_domain
         integer(ik),    intent(in)      :: recv_element
 
-
         self%idomain_g    = idomain_g
         self%idomain_l    = idomain_l
         self%ielement_g   = ielement_g
         self%ielement_l   = ielement_l
         self%nfields      = nfields
         self%nterms_s     = nterms_s
+        self%nnodes_r     = nnodes_r
         self%iproc        = iproc
         self%itime        = itime
         self%dof_start    = dof_start
@@ -91,7 +93,6 @@ contains
         self%recv_comm    = recv_comm
         self%recv_domain  = recv_domain
         self%recv_element = recv_element
-
 
     end subroutine init
     !**************************************************************************************
@@ -115,8 +116,10 @@ contains
         self%ielement_l   = 0
         self%nfields      = 0
         self%nterms_s     = 0
+        self%nnodes_r     = 0
         self%iproc        = NO_PROC
         self%itime        = 0
+        self%dof_start    = NO_ID
 
         self%recv_comm    = 0
         self%recv_domain  = 0

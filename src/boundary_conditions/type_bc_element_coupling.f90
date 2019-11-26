@@ -37,6 +37,7 @@ module type_bc_element_coupling
         procedure   :: nfields
         procedure   :: ntime
         procedure   :: nterms_s
+        procedure   :: nnodes_r
         procedure   :: dof_start
         procedure   :: dof_local_start
 
@@ -210,13 +211,14 @@ contains
     !!
     !!
     !----------------------------------------------------------------------
-    subroutine set_coupled_element_data(self,idomain_g,ielement_g,nfields,ntime,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
+    subroutine set_coupled_element_data(self,idomain_g,ielement_g,nfields,ntime,nterms_s,nnodes_r,dof_start,dof_local_start,total_area,areas,quad_pts)
         class(bc_element_coupling_t),   intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g
         integer(ik),                    intent(in)      :: ielement_g
         integer(ik),                    intent(in)      :: nfields
         integer(ik),                    intent(in)      :: ntime
         integer(ik),                    intent(in)      :: nterms_s
+        integer(ik),                    intent(in)      :: nnodes_r
         integer(ik),                    intent(in)      :: dof_start
         integer(ik),                    intent(in)      :: dof_local_start
         real(rk),                       intent(in)      :: total_area
@@ -230,7 +232,7 @@ contains
         !
         elem_ID = self%find_coupled_element(idomain_g,ielement_g)
 
-        call self%data(elem_ID)%set_data(nfields,ntime,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
+        call self%data(elem_ID)%set_data(nfields,ntime,nterms_s,nnodes_r,dof_start,dof_local_start,total_area,areas,quad_pts)
 
     end subroutine set_coupled_element_data
     !**********************************************************************
@@ -437,6 +439,24 @@ contains
     end function nterms_s
     !************************************************************************
 
+
+
+    !>  Return the number of reference nodes on the coupled element.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/17/2017
+    !!
+    !-----------------------------------------------------------------------
+    function nnodes_r(self,elem_ID) result(nnodes_r_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: nnodes_r_ 
+
+        nnodes_r_ = self%data(elem_ID)%nnodes_r
+
+    end function nnodes_r
+    !************************************************************************
 
 
 

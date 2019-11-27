@@ -27,6 +27,14 @@ module type_chidg_functional
         type(ivector_t)                 :: step
         type(rvector_t)                 :: time
 
+
+        ! Adjoint
+
+        ! Adjoint X
+
+        ! Adjoint BC
+
+
         ! Initialization completed
         logical :: functional_storage_initialized = .false.
 

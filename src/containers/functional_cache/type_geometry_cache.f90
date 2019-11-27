@@ -19,6 +19,8 @@ module type_geometry_cache
 
     !>  Container to store integral computed on a geometry. 
     !!
+    !!  'reference' or 'auxiliary'
+    !!
     !!  @author Matteo Ugolotti
     !!  @date   2/23/2018
     !!

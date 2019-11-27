@@ -12,7 +12,33 @@ module type_integral_cache
     implicit none
 
 
-    !>  Container to store functional integrals computed one face/volume. 
+    !>  Container to store functional integrals (such as mass-weighted entropy) on a reference geometry.
+    !!
+    !!  Consider:
+    !!      [integral cache] = integrated mass flux
+    !!      [integral cache] = integrated mass-weighted entropy
+    !!                           |
+    !!                           v
+    !!      [integral cache] = mass-averaged entropy
+    !!
+    !!
+    !!
+    !! 
+    !!                                             [integral cache]  (e.g. pressure)
+    !!                                            /
+    !!                         [geometry cache] -- [integral cache]  (e.g. temperature)
+    !!                       /                    \
+    !!                      /                      [integral cache]
+    !!
+    !!  [Functional Cache]
+    !!                       
+    !!                      \                      [integral cache]  (e.g. T0)
+    !!                       \                    /
+    !!                         [geometry cache] -- [integral cache]  (e.g. P0)
+    !!                                            \
+    !!                                             [integral cache]
+    !!
+    !!
     !!
     !!  @author Matteo Ugolotti
     !!  @date   2/25/2018

@@ -74,25 +74,24 @@ contains
         namelist /viscosity/    mu
 
 
-
-        !
         ! Initialize model object
-        !
         call self%set_name('Constant Viscosity')
         call self%set_dependency('f(Q-)')
         call self%add_model_field('Laminar Viscosity')
 
 
-        !
         ! Check if input from 'models.nml' is available.
         !   1: if available, read and set self%mu
         !   2: if not available, do nothing and mu retains default value
-        !
         inquire(file='models.nml', exist=file_exists)
         if (file_exists) then
             open(newunit=unit,form='formatted',file='models.nml')
             read(unit,nml=viscosity,iostat=msg)
-            if (msg == 0) self%mu = mu
+            if (msg == 0) then
+                self%mu = mu
+            else
+                call chidg_signal(FATAL,"constant_viscosity%init: Error reading models.nml")
+            end if
             close(unit)
         end if
 

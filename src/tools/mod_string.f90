@@ -1,4 +1,5 @@
 module mod_string
+#include <messenger.h>
 
 
     type, public :: string_t
@@ -8,6 +9,8 @@ module mod_string
         procedure   :: upper
         procedure   :: set
         procedure   :: get
+        procedure   :: strip
+        procedure   :: replace
 !        procedure, private :: write_formatted
 !        generic :: write(formatted) => write_formatted
     end type string_t
@@ -450,6 +453,119 @@ contains
 
 
 
+
+
+    !>  Split the string at the given separator and return an array of strings 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   2/12/2017
+    !!
+    !-----------------------------------------------------------------------------------------------
+    function strip(self,separator) result(string_list)
+        class(string_t),    intent(in)  :: self
+        character(*),       intent(in)  :: separator
+        
+        type(string_t), allocatable     :: string_list(:)
+        character(len=100)              :: temp_list(100)
+        integer                         :: ierr, i, index_l, pos
+        logical                         :: searching
+        character(len=:), allocatable   :: usr_msg_1, usr_msg_2, word, string
+
+        searching = .true.
+        index_l   = 0
+        string = self%get()
+
+        ! Split the string in words and add each word to temp_list
+        do while (searching)
+            
+            index_l = index_l + 1
+            pos = index(string,separator)  
+
+            if (pos == 0 ) then
+                word = string
+                searching = .false.
+            else
+                word = string(1:pos-1)
+            end if
+            
+            ! Check if the number of words is greater than the size of temp_list
+            usr_msg_1 = "string%strip: The number of words found in the stripped string "
+            usr_msg_2 = "are too many."
+            if (index_l > size(temp_list)) call chidg_signal_two(FATAL,usr_msg_1,self%str,usr_msg_2)
+            
+            ! Add word to temp_list
+            temp_list(index_l) = word
+            string = string(pos+1:)
+
+        end do
+        
+        ! Allocate the vector of strings based on the word found
+        allocate(string_list(index_l), stat=ierr)
+        if (ierr /= 0) call chidg_signal(FATAL, "strip: error in allocating the string_list")
+
+        ! Add words to the output vector
+        do i = 1,index_l
+            ! Adjust and trim the word and add it to string_list
+            string_list(i)%str = trim(adjustl(temp_list(i)))
+        end do
+
+    end function strip
+    !************************************************************************************************
+
+
+
+
+
+    !>  Replace a charcter (before) with a new character (after) 
+    !!  
+    !!  @author Matteo Ugolotti
+    !!  @date   2/12/2017
+    !!
+    !-----------------------------------------------------------------------------------------------
+    function replace(self,before,after) result(string_out)
+        class(string_t),    intent(in)  :: self
+        character(*),       intent(in)  :: before
+        character(*),       intent(in)  :: after
+        
+        type(string_t)                  :: string_out
+        integer                         :: ierr, i, index_l, pos, after_len, before_len
+        logical                         :: searching
+        character(len=:), allocatable   :: word, string
+
+        searching = .true.
+        string = self%get()
+
+        after_len  = len(after)
+        before_len = len(before)
+        i = 1
+
+        ! Split the string in words and add each word to temp_list
+        do while (searching)
+            
+            pos = index(string,before)  
+
+            if (pos == 0 ) then
+                word = string
+                searching = .false.
+            else
+                word = string(:pos-1)// after // string(pos+before_len:)
+            end if
+            
+            string = word
+
+            if (i == 100) then
+                searching = .false.
+            end if
+            
+            i = i + 1
+
+        end do
+
+        ! Adjust and trim the word and add it to string_list
+        call string_out%set(trim(adjustl(word)))
+
+    end function replace
+    !************************************************************************************************
 
 
 

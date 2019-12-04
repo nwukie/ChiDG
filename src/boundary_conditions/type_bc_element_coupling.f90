@@ -38,6 +38,7 @@ module type_bc_element_coupling
         procedure   :: ntime
         procedure   :: nterms_s
         procedure   :: nnodes_r
+        procedure   :: coordinate_system
         procedure   :: dof_start
         procedure   :: dof_local_start
 
@@ -78,10 +79,8 @@ contains
         integer(ik) :: ielem_coupled, idomain_g_coupled, ielement_g_coupled, elem_ID
 
 
-        !
         ! Check if element has already been added to coupling list
         ! for the specified face
-        !
         already_added = .false.
         do ielem_coupled = 1,self%ncoupled_elements()
 
@@ -95,23 +94,15 @@ contains
         end do
 
 
-
-
-        !
         ! If not already added, create new coupling 
         ! instance, set coupling indices.
-        !
         if (.not. already_added) then
-
             elem_ID = self%new_coupled_element()
             call self%data(elem_ID)%set_coupling(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
-
         end if
-
 
     end subroutine add_coupled_element
     !*********************************************************************
-
 
 
 
@@ -122,7 +113,6 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   4/12/2017
     !!
-    !!
     !----------------------------------------------------------------------
     function new_coupled_element(self) result(elem_ID)
         class(bc_element_coupling_t),   intent(inout)   :: self
@@ -130,34 +120,20 @@ contains
         type(element_coupling_data_t),  allocatable :: temp_data(:)
         integer(ik)                                 :: elem_ID, ierr
 
-        
-        !
         ! Resize array storage
-        !
         allocate(temp_data(self%ncoupled_elements() + 1), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
-        !
         ! Copy preciously initialized instances to new array. 
-        !
         if (self%ncoupled_elements() > 0) then
             temp_data(1:size(self%data)) = self%data(1:size(self%data))
         end if
 
-
-
-        !
         ! Move resized temp allocation back to bc_element_coupling%data.
-        !
         call move_alloc(temp_data,self%data)
 
-
-        !
         ! Set coupling identifier of newly allocated instance to be returned.
-        !
         elem_ID = self%ncoupled_elements()
-
 
     end function new_coupled_element
     !**********************************************************************
@@ -186,9 +162,7 @@ contains
 
         integer(ik) :: elem_ID
 
-        !
         ! Get location of coupled element
-        !
         elem_ID = self%find_coupled_element(idomain_g,ielement_g)
 
         call self%data(elem_ID)%set_recv(recv_comm,recv_domain,recv_element,recv_dof)
@@ -200,18 +174,13 @@ contains
 
 
 
-
-
-
     !>  Set auxiliary data for coupled element.
-    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/18/2017
     !!
-    !!
     !----------------------------------------------------------------------
-    subroutine set_coupled_element_data(self,idomain_g,ielement_g,nfields,ntime,nterms_s,nnodes_r,dof_start,dof_local_start,total_area,areas,quad_pts)
+    subroutine set_coupled_element_data(self,idomain_g,ielement_g,nfields,ntime,nterms_s,nnodes_r,coordinate_system,dof_start,dof_local_start,total_area,areas,quad_pts)
         class(bc_element_coupling_t),   intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g
         integer(ik),                    intent(in)      :: ielement_g
@@ -219,6 +188,7 @@ contains
         integer(ik),                    intent(in)      :: ntime
         integer(ik),                    intent(in)      :: nterms_s
         integer(ik),                    intent(in)      :: nnodes_r
+        integer(ik),                    intent(in)      :: coordinate_system
         integer(ik),                    intent(in)      :: dof_start
         integer(ik),                    intent(in)      :: dof_local_start
         real(rk),                       intent(in)      :: total_area
@@ -227,21 +197,13 @@ contains
 
         integer(ik)                 :: elem_ID
 
-        !
         ! Get location of coupled element
-        !
         elem_ID = self%find_coupled_element(idomain_g,ielement_g)
 
-        call self%data(elem_ID)%set_data(nfields,ntime,nterms_s,nnodes_r,dof_start,dof_local_start,total_area,areas,quad_pts)
+        call self%data(elem_ID)%set_data(nfields,ntime,nterms_s,nnodes_r,coordinate_system,dof_start,dof_local_start,total_area,areas,quad_pts)
 
     end subroutine set_coupled_element_data
     !**********************************************************************
-
-
-
-
-
-
 
 
 
@@ -251,7 +213,6 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/12/2017
-    !!
     !!
     !----------------------------------------------------------------------
     function ncoupled_elements(self) result(n)
@@ -267,8 +228,6 @@ contains
 
     end function ncoupled_elements
     !**********************************************************************
-
-
 
 
 
@@ -290,8 +249,6 @@ contains
 
     end function idomain_g
     !************************************************************************
-
-
 
 
 
@@ -457,6 +414,27 @@ contains
 
     end function nnodes_r
     !************************************************************************
+
+
+
+
+    !>  Return the integer identifier of the coordinate system.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/03/2019
+    !!
+    !-----------------------------------------------------------------------
+    function coordinate_system(self,elem_ID) result(coordinate_system_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: coordinate_system_
+
+        coordinate_system_ = self%data(elem_ID)%coordinate_system
+
+    end function coordinate_system
+    !************************************************************************
+
 
 
 

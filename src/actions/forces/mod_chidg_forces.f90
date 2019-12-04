@@ -11,7 +11,7 @@
 module mod_chidg_forces
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, TWO, NO_ID
+    use mod_constants,          only: ZERO, TWO, NO_ID, NO_DIFF
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
     use type_file_properties,   only: file_properties_t
@@ -151,7 +151,7 @@ contains
                 call cache_handler%update(worker,chidg%data%eqnset,chidg%data%bc_state_group,   &
                                                                    components    = 'all',       &
                                                                    face          = NO_ID,       &
-                                                                   differentiate = .false.,     &
+                                                                   differentiate = NO_DIFF,     &
                                                                    lift          = .true.)     
 
                 call worker%set_face(iface)

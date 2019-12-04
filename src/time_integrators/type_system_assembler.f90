@@ -29,12 +29,12 @@ module type_system_assembler
     ! Interface for passing a domain_t type
     abstract interface
         subroutine assemble_interface(self,data,differentiate,timing)
-            use mod_kinds,              only: rk
+            use mod_kinds,              only: rk, ik
             use type_chidg_data,        only: chidg_data_t
             import system_assembler_t
             class(system_assembler_t),  intent(inout)               :: self
             type(chidg_data_t),         intent(inout)               :: data
-            logical,                    intent(in)                  :: differentiate
+            integer(ik),                intent(in)                  :: differentiate
             real(rk),                   intent(inout),  optional    :: timing
         end subroutine assemble_interface
     end interface

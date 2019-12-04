@@ -1,7 +1,8 @@
 module mod_spatial
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR, NO_ID, ZERO
+    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR, NO_ID, ZERO, &
+                                      dD_DIFF, dQ_DIFF, dX_DIFF, dBC_DIFF, NO_DIFF
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
     use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier
@@ -13,6 +14,7 @@ module mod_spatial
     use type_cache_handler,     only: cache_handler_t
     use type_element_info,      only: element_info_t, element_info
     use type_timer,             only: timer_t
+    use type_svector,           only: svector_t
     implicit none
 
     type(chidg_cache_t)         :: cache
@@ -36,10 +38,11 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine update_space(data,differentiate,timing)
+    subroutine update_space(data,differentiate,timing,bc_parameters)
         type(chidg_data_t), intent(inout),  target      :: data
-        logical,            intent(in)                  :: differentiate
+        integer(ik),        intent(in)                  :: differentiate
         real(rk),           intent(inout),  optional    :: timing
+        type(svector_t),    intent(in),     optional    :: bc_parameters
 
         integer(ik)                 :: idom, ielem, iface, idiff, ierr, &
                                        diff_min, diff_max, eqn_ID, nelem_total, &
@@ -106,12 +109,15 @@ contains
                 elem_info = worker%mesh%get_element_info(idom,ielem)
                 call worker%set_element(elem_info)
 
+                !! Compute differential interpolator for mesh sensititivites
+                !call worker%mesh%compute_derivatives_dx(elem_info,differentiate)
 
                 ! Update the element cache
                 call cache_timer%start()
                 call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'all',           &
                                                                                    face          = NO_ID,           &
                                                                                    differentiate = differentiate,   &
+                                                                                   bc_parameters = bc_parameters,   &
                                                                                    lift          = .true.)
                 call cache_timer%stop()
 
@@ -135,7 +141,8 @@ contains
                 call eqnset%compute_volume_diffusive_operators(worker, differentiate)
                 call function_timer%stop()
 
-
+                !! Release differential interpolators allocated memory
+                !call worker%mesh%release_derivatives_dx(elem_info,differentiate)
 
 
                 end associate
@@ -155,8 +162,10 @@ contains
 
 
         call data%sdata%rhs%assemble()
-        if (differentiate) call data%sdata%lhs%assemble()
-
+        if (differentiate == dD_DIFF .or. &
+            differentiate == dQ_DIFF .or. &
+            differentiate == dX_DIFF .or. &
+            differentiate == dBC_DIFF) call data%sdata%lhs%assemble()
 
         ! Synchronize
         call MPI_Barrier(ChiDG_COMM,ierr)

@@ -457,11 +457,11 @@ contains
                         domain_id = open_domain_hdf(fid,domain_name)
                         
                         ! Loop thorugh the adjoint fields (a set of each functional) 
-                        eqn_ID = data%mesh%domain(idom)%eqn_ID
+                        eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has the same eqn_ID
                         do ieqn = 1,data%eqnset(eqn_ID)%prop%nadjoint_fields()
                             field_name = trim(data%eqnset(eqn_ID)%prop%get_adjoint_field_name(ieqn))
                             ifunc      = data%eqnset(eqn_ID)%prop%adjoint_fields(ieqn)%get_functional_ID()
-                            call read_domain_field_hdf(data,domain_id,field_name,itime,'Adjoint',ifunc)
+                            call read_domain_field_hdf(data,domain_id,field_name,itime,'Adjoint',ifunc=ifunc)
                         end do ! ieqn
 
                         call close_domain_hdf(domain_id)
@@ -590,7 +590,7 @@ contains
                         eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has the same eqn_ID
 
                         ! Read field
-                        call read_domain_field_hdf(data,domain_id,field,itime,'Auxiliary',store_as)
+                        call read_domain_field_hdf(data,domain_id,field,itime,'Auxiliary',store_as=store_as)
 
                         ! Close domain
                         call close_domain_hdf(domain_id)
@@ -786,13 +786,14 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine read_domain_field_hdf(data,domain_id,field_name,itime,field_type,store_as)
+    subroutine read_domain_field_hdf(data,domain_id,field_name,itime,field_type,store_as,ifunc)
         type(chidg_data_t),         intent(inout)           :: data
         integer(HID_T),             intent(in)              :: domain_id
         character(*),               intent(in)              :: field_name
         integer(ik),                intent(in)              :: itime
         character(*),               intent(in)              :: field_type
         character(*),               intent(in), optional    :: store_as
+        integer(ik),                intent(in), optional    :: ifunc
 
 
         integer(HID_T)          :: gid, sid, vid, memspace
@@ -840,6 +841,7 @@ contains
 
         domain_name = get_domain_name_hdf(domain_id)
         idom     = data%get_domain_index(domain_name)
+        if (idom == NO_ID) call chidg_signal_one(FATAL, 'read_domain_field_hdf: domain not found.', trim(domain_name))
         nterms_s = nterms_1d*nterms_1d*nterms_1d
 
         
@@ -929,6 +931,9 @@ contains
                 ! Implicitly assuming that an auxiliary field is stored as the first field in a full-sized chidg_vector
                 ifield = 1
                 call data%sdata%auxiliary_field(aux_ID)%set_field(real(bufferterms,rk),elem_info,ifield,itime) 
+            else if (field_type == 'Adjoint') then
+                ifield = data%eqnset(eqn_ID)%prop%get_adjoint_field_index(trim(field_name))
+                call data%sdata%adjoint%v_in(ifunc)%set_field(real(bufferterms,rk),elem_info,ifield,itime)
             end if
 
 
@@ -1023,6 +1028,8 @@ contains
         ! Set dimensions of dataspace to write
         domain_name = get_domain_name_hdf(domain_id)
         idom        = data%get_domain_index(domain_name)
+        if (idom == NO_ID) call chidg_signal_one(FATAL, 'write_domain_field_hdf: domain not found.', trim(domain_name))
+
         nelem_g     = data%mesh%domain(idom)%get_nelements_global()
         nterms_s    = data%mesh%domain(idom)%nterms_s
         ndims       = 3
@@ -1694,6 +1701,79 @@ contains
     end subroutine read_global_connectivity_hdf
     !****************************************************************************************
 
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine read_grid_npoints_hdf(filename,npoints)
+        character(*),               intent(in)      :: filename
+        integer(ik), allocatable,   intent(inout)   :: npoints(:,:)
+
+        integer(HID_T)   :: fid, domain_id
+
+        integer(ik),            allocatable :: connectivity(:,:)
+        character(len=1024),    allocatable :: domain_names(:)
+        character(:),           allocatable :: user_msg, domain_name
+        integer                             :: type, ierr, ndomains,    &
+                                               idom, idomain_g
+        logical                             :: contains_grid
+
+
+        fid = open_file_hdf(filename)
+
+        ! Check contains grid
+        contains_grid = get_contains_grid_hdf(fid)
+        user_msg = "We didn't find a grid to read in the file that was specified. &
+                    The file could be a bare ChiDG file or maybe was generated by &
+                    an incompatible version of the ChiDG library."
+        if (.not. contains_grid) call chidg_signal(FATAL,user_msg)
+
+
+        ! Allocate number of domains
+        ndomains = get_ndomains_hdf(fid)
+        user_msg = "read_grid_npoints_hdf: No domains were found in the file."
+        if (ndomains == 0) call chidg_signal(FATAL,user_msg)
+        allocate(npoints(ndomains,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        ! Loop through groups and read domain connectivities
+        domain_names = get_domain_names_hdf(fid)
+        do idom = 1,size(domain_names)
+
+                domain_name = domain_names(idom)
+                domain_id = open_domain_hdf(fid,trim(domain_name))
+
+                ! Get connectivity and total number of nodes in the domain
+                connectivity = get_domain_connectivity_hdf(domain_id)
+
+                ! Get domain global index from the first element
+                idomain_g = connectivity(1,1)
+                
+                ! Set domain npoints in array
+                npoints(idomain_g,:) = get_domain_npoints_hdf(domain_id)
+
+                ! Close domain
+                call close_domain_hdf(domain_id)
+
+        end do  ! idom
+
+        ! Close file
+        call close_file_hdf(fid)
+
+    end subroutine read_grid_npoints_hdf
+    !****************************************************************************************
 
 
 

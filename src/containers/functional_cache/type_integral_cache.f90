@@ -2,6 +2,7 @@ module type_integral_cache
 #include<messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO, ONE, NO_ID, NO_DIFF
+    use type_mesh,              only: mesh_t
     use type_svector,           only: svector_t
     use mod_string,             only: string_t
     use type_seed,              only: seed_t
@@ -122,11 +123,12 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine set_entity_value(self,integral,vec_model,fcn_info) 
-        class(integral_cache_t),    intent(inout)    :: self
-        type(AD_D),                 intent(in)       :: integral
-        type(chidg_vector_t),       intent(in)       :: vec_model 
-        type(function_info_t),      intent(in)       :: fcn_info
+    subroutine set_entity_value(self,mesh,integral,vec_model,fcn_info) 
+        class(integral_cache_t),    intent(inout)   :: self
+        type(mesh_t),               intent(in)      :: mesh
+        type(AD_D),                 intent(in)      :: integral
+        type(chidg_vector_t),       intent(in)      :: vec_model 
+        type(function_info_t),      intent(in)      :: fcn_info
          
         integer(ik)     :: itime 
             
@@ -183,9 +185,10 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    function get_entity_value(self,fcn_info) result(integral)
+    function get_entity_value(self,mesh,fcn_info) result(integral)
         class(integral_cache_t),    intent(inout)   :: self
-        type(function_info_t),      intent(in)       :: fcn_info
+        type(mesh_t),               intent(in)      :: mesh
+        type(function_info_t),      intent(in)      :: fcn_info
          
         type(AD_D)      :: integral
         integer(ik)     :: nderivs
@@ -221,11 +224,12 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine set_global_value(self,integral,vec_model,dtype) 
-        class(integral_cache_t),    intent(inout)    :: self
-        type(AD_D),                 intent(in)       :: integral
-        type(chidg_vector_t),       intent(in)       :: vec_model
-        integer(ik),                intent(in)       :: dtype
+    subroutine set_global_value(self,mesh,integral,vec_model,dtype) 
+        class(integral_cache_t),    intent(inout)   :: self
+        type(mesh_t),               intent(in)      :: mesh
+        type(AD_D),                 intent(in)      :: integral
+        type(chidg_vector_t),       intent(in)      :: vec_model
+        integer(ik),                intent(in)      :: dtype
         
         integer(ik)             :: istart, iend, idom, ielem
        
@@ -247,10 +251,13 @@ contains
         
         
             ! Loop thorugh domains and elements
-            do idom = 1,self%integral_deriv%ndomains()
-                do ielem = 1,self%integral_deriv%dom(idom)%nelements()
+            !do idom = 1,self%integral_deriv%ndomains()
+                !do ielem = 1,self%integral_deriv%dom(idom)%nelements()
+            do idom = 1,mesh%ndomains()
+                do ielem = 1,mesh%domain(idom)%nelements()
                     
                     associate( int_derivs  => self%integral_deriv%dom(idom)%vecs(ielem) )
+                        call chidg_signal(FATAL,"integral_cache%set_global_value: needs updated for petsc storage!")
 
                         ! Find correspondent derivatives in the AD_D vector
                         istart = iend + 1
@@ -291,8 +298,9 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    function get_global_value(self,vec_model,dtype) result(integral)
+    function get_global_value(self,mesh,vec_model,dtype) result(integral)
         class(integral_cache_t),    intent(inout)   :: self
+        type(mesh_t),               intent(in)      :: mesh
         type(chidg_vector_t),       intent(in)      :: vec_model
         integer(ik),                intent(in)      :: dtype
          
@@ -328,10 +336,13 @@ contains
             istart = 0
             iend   = 0
              
-            do idom = 1,self%integral_deriv%ndomains()
-                do ielem = 1,self%integral_deriv%dom(idom)%nelements()
+            !do idom = 1,self%integral_deriv%ndomains()
+            !    do ielem = 1,self%integral_deriv%dom(idom)%nelements()
+            do idom = 1,mesh%ndomains()
+                do ielem = 1,mesh%domain(idom)%nelements()
                     
                     associate( int_derivs  => self%integral_deriv%dom(idom)%vecs(ielem) )
+                        call chidg_signal(FATAL,"integral_cache%get_global_value: needs updated for petsc storage!")
 
                         ! Find correspondent derivatives in the AD_D vector
                         istart = iend + 1

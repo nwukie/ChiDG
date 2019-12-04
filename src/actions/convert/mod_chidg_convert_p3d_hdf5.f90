@@ -64,6 +64,7 @@ contains
         integer,        allocatable :: elements(:,:), faces(:,:)
         real(rk),       allocatable :: nodes(:,:)
         character(:),   allocatable :: coord_system
+        integer(ik)                 :: npoints(3)
 
         ! equation set string
         character(len=1024)         :: eqnset_string
@@ -233,7 +234,8 @@ contains
             !
             ! Add new domain to file
             !
-            call add_domain_hdf(file_id,trim(blockname),nodes,elements,coord_system,trim(eqnset_string))
+            npoints = [npt_i,npt_j,npt_k]
+            call add_domain_hdf(file_id,trim(blockname),npoints,nodes,elements,coord_system,trim(eqnset_string))
 
 
             !

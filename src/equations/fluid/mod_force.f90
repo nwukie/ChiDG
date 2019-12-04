@@ -9,7 +9,7 @@
 module mod_force
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, TWO, NO_ID
+    use mod_constants,          only: ZERO, TWO, NO_ID, NO_DIFF
     use mod_chidg_mpi,          only: ChiDG_COMM
     use type_chidg_data,        only: chidg_data_t
     use type_element_info,      only: element_info_t
@@ -119,7 +119,7 @@ contains
                     ! Update the element cache and all models so they are available
                     call cache_handler%update(worker,data%eqnset,data%bc_state_group, components    = 'all',   &
                                                                                       face          = NO_ID,   &
-                                                                                      differentiate = .false., &
+                                                                                      differentiate = NO_DIFF, &
                                                                                       lift          = .true.)
 
 

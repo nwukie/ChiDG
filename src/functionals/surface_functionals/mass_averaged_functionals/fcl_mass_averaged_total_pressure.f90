@@ -171,8 +171,8 @@ contains
         
         ! Store in cache 
         !call cache%set_value(temperature_flux,'temperature flux','reference',worker%function_info) 
-        call cache%set_value(pressure_flux,   'pressure flux',   'reference',worker%function_info) 
-        call cache%set_value(mass_flux,       'mass flux',       'reference',worker%function_info) 
+        call cache%set_value(worker%mesh,pressure_flux,   'pressure flux',   'reference',worker%function_info) 
+        call cache%set_value(worker%mesh,mass_flux,       'mass flux',       'reference',worker%function_info) 
     
     end subroutine compute_functional
     !******************************************************************************************
@@ -199,18 +199,19 @@ contains
     !!                               since the parallel communication already happened 
     !!                               
     !---------------------------------------------------------------------------------------------
-    subroutine finalize_functional(self,cache)
+    subroutine finalize_functional(self,worker,cache)
         class(mass_averaged_total_pressure_t),  intent(inout)   :: self
+        type(chidg_worker_t),                   intent(in)      :: worker
         type(functional_cache_t),               intent(inout)   :: cache
 
         type(AD_D)        :: temperature_flux, pressure_flux, mass_flux
         
         
         !temperature_flux = cache%get_value('temperature flux','reference')
-        pressure_flux    = cache%get_value('pressure flux','reference')
-        mass_flux        = cache%get_value('mass flux',    'reference')
+        pressure_flux    = cache%get_value(worker%mesh,'pressure flux','reference')
+        mass_flux        = cache%get_value(worker%mesh,'mass flux',    'reference')
 
-        call cache%set_value(pressure_flux/mass_flux,   'MA total pressure',   'reference')
+        call cache%set_value(worker%mesh,pressure_flux/mass_flux,   'MA total pressure',   'reference')
         !call cache%set_value(temperature_flux/mass_flux,'MA total temperature','reference')
 
     end subroutine finalize_functional

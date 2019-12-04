@@ -30,10 +30,10 @@ module type_DIRK_coupled_oscillator
 #include<messenger.h>
     use messenger,                      only: write_line
     use mod_kinds,                      only: rk, ik
-    use mod_constants,                  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, NO_ID
+    use mod_constants,                  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, &
+                                              NO_ID, dQ_DIFF, NO_DIFF
     use mod_spatial,                    only: update_space
     use mod_oscillating_cylinder_1,     only: oscillating_cylinder
-!    use mod_update_grid,                only: update_grid
     use mod_io,                         only: verbosity
 
     use type_time_integrator_marching,  only: time_integrator_marching_t
@@ -60,14 +60,10 @@ module type_DIRK_coupled_oscillator
 
 
     contains
-
         procedure   :: init
         procedure   :: step
-
-
     end type DIRK_coupled_oscillator_t
     !********************************************************************************
-
 
 
 
@@ -78,14 +74,10 @@ module type_DIRK_coupled_oscillator
     !!
     !--------------------------------------------------------------------------------
     type, extends(system_assembler_t),  public      :: assemble_DIRK_coupled_oscillator_t
-
         type(chidg_vector_t)    :: q_n
         type(chidg_vector_t)    :: q_n_stage
-
     contains
-
         procedure   :: assemble
-
     end type assemble_DIRK_coupled_oscillator_t
     !********************************************************************************
 
@@ -106,26 +98,18 @@ module type_DIRK_coupled_oscillator
     type, extends(solver_controller_t), public :: DIRK_coupled_oscillator_solver_controller_t
 
     contains
-
         procedure   :: update_lhs
-
     end type DIRK_coupled_oscillator_solver_controller_t
     !********************************************************************************
 
 
 
 
-
-
-
-    !
     ! DIRK_coupled_oscillator butcher tableau coefficients
-    !
     real(rk),   parameter   :: alpha = 0.435866521508459_rk
     real(rk),   parameter   :: tau   = (ONE + alpha)/TWO
     real(rk),   parameter   :: b1    = -(SIX*(alpha*alpha) - (16._rk*alpha) + ONE)/FOUR
     real(rk),   parameter   :: b2    = (SIX*(alpha*alpha) - (20._rk*alpha) + FIVE)/FOUR
-
 
 
 contains
@@ -325,10 +309,10 @@ contains
     !!
     !-------------------------------------------------------------------------------------
     subroutine assemble(self,data,differentiate,timing)
-        class(assemble_DIRK_coupled_oscillator_t), intent(inout)               :: self
-        type(chidg_data_t),     intent(inout)               :: data
-        logical,                intent(in)                  :: differentiate
-        real(rk),               intent(inout),  optional    :: timing
+        class(assemble_DIRK_coupled_oscillator_t),  intent(inout)               :: self
+        type(chidg_data_t),                         intent(inout)               :: data
+        integer(ik),                                intent(in)                  :: differentiate
+        real(rk),                                   intent(inout),  optional    :: timing
 
         type(chidg_vector_t)        :: delta_q 
         real(rk)                    :: dt
@@ -347,7 +331,7 @@ contains
         ! Clear data containers
         !
         call rhs%clear()
-        if (differentiate) call lhs%clear()
+        if (differentiate == dQ_DIFF) call lhs%clear()
         
 
         !
@@ -397,14 +381,11 @@ contains
 
                             ! Add mass matrix divided by (alpha*dt) to the block diagonal
                             imat = lhs%dom(idom)%lblks(ielem,itime)%get_diagonal()
-                            if (differentiate) then
+                            if (differentiate == dQ_DIFF) then
                                 lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend) = (lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)) + (data%mesh%domain(idom)%elems(ielem)%mass/(alpha*dt))
                             end if
 
-
-                            !
                             ! Assemble rhs
-                            !
                             temp_1 = matmul(data%mesh%domain(idom)%elems(ielem)%mass,delta_q%dom(idom)%vecs(ielem)%getvar(ivar,itime))/dt
                             temp_2 = rhs%dom(idom)%vecs(ielem)%getvar(ivar,itime) + temp_1
                             call rhs%dom(idom)%vecs(ielem)%setvar(ivar,itime,temp_2)
@@ -448,7 +429,7 @@ contains
         integer(ik),                                           intent(in)      :: niter
         real(rk),                                              intent(in)      :: residual_ratio
 
-        logical :: update
+        integer(ik) :: update
 
         ! Update lhs if:
         !   1: If matrix(lhs/A) hasn't been updated before
@@ -459,13 +440,17 @@ contains
             (niter > 6)                 .or. &
             (residual_ratio > 10._rk)   .or. &
             (self%force_update_lhs) ) then
-            update = .true.
+            !update = .true.
+            update = dQ_DIFF
+            self%lhs_updated = .true.
         else
-            update = .false.
+            !update = .false.
+            update = NO_DIFF
+            self%lhs_updated = .false.
         end if
 
         ! Store action
-        self%lhs_updated = update
+        !self%lhs_updated = update
 
         ! Turn off forced update
         self%force_update_lhs = .false.

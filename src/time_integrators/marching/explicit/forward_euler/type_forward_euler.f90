@@ -1,8 +1,7 @@
 module type_forward_euler
     use mod_kinds,              only: rk,ik
+    use mod_constants,          only: NO_DIFF
     use mod_spatial,            only: update_space
-!    use mod_update_grid,        only: update_grid
-
     use type_time_integrator_marching,  only: time_integrator_marching_t
     use type_chidg_data,                only: chidg_data_t
     use type_nonlinear_solver,          only: nonlinear_solver_t
@@ -109,7 +108,7 @@ contains
             !
             !call update_grid(data)
             call data%update_grid()
-            call update_space(data, differentiate=.false.)
+            call update_space(data, differentiate=NO_DIFF)
             call self%residual_norm%push_back(rhs%norm(ChiDG_COMM))
 
 

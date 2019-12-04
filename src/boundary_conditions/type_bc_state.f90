@@ -517,12 +517,12 @@ contains
         integer(ik) :: patch_ID, face_ID, elem_ID, patch_ID_coupled, face_ID_coupled,   &
                        idomain_g, idomain_l, ielement_g, ielement_l, iface,             &
                        bc_IRANK, bc_NRANK, ierr, iproc, nbc_elements,                   &
-                       ielem, nfields, nterms_s, dof_start, dof_local_start, ngq, ibc
+                       ielem, nfields, nterms_s, nterms_c, dof_start, dof_local_start, ngq, ibc
 
         integer(ik) :: idomain_g_coupled, idomain_l_coupled, ielement_g_coupled, ielement_l_coupled, &
                        iface_coupled, proc_coupled, send_size_a, send_size_b, send_size_c, send_size_d
 
-        integer(ik) :: etype, nnodes, nterms_c, ntime, pelem_ID, interpolation_level,    &
+        integer(ik) :: etype, nnodes, ntime, pelem_ID, interpolation_level,    &
                        coordinate_system, element_location(5), element_data(9), spacedim, inode
 
         real(rk),       allocatable :: interp_coords_def(:,:)
@@ -544,16 +544,12 @@ contains
             mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling = 'Global'
             do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
-                !
                 ! Loop through, initialize coupling with all other patches/faces
-                !
                 do patch_ID_coupled = 1,mesh%bc_patch_group(group_ID)%npatches()
                     do face_ID_coupled = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%nfaces()
 
 
-                        !
                         ! Get block-element index of current face_ID_coupled
-                        !
                         idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_g()
                         idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_l()
                         ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_g(face_ID_coupled)
@@ -563,6 +559,8 @@ contains
 
                         nfields           = mesh%domain(idomain_l)%elems(ielement_l)%nfields
                         nterms_s          = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
+                        nterms_c          = mesh%domain(idomain_l)%elems(ielement_l)%nterms_c
+                        coordinate_system = mesh%domain(idomain_l)%elems(ielement_l)%coordinate_system
                         dof_start         = mesh%domain(idomain_l)%elems(ielement_l)%dof_start
                         dof_local_start   = mesh%domain(idomain_l)%elems(ielement_l)%dof_local_start
                         total_area        = mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area
@@ -570,10 +568,7 @@ contains
                         interp_coords_def = mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def
 
 
-
-                        !
                         ! For the face (patch_ID,face_ID) add the element on (patch_ID_coupled,face_ID_coupled)
-                        !
                         call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
                                                                                                         idomain_l,  &
                                                                                                         ielement_g, &
@@ -582,15 +577,17 @@ contains
                                                                                                         IRANK)
 
 
-                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g,       &
-                                                                                                             ielement_g,      &
-                                                                                                             nfields,         &
-                                                                                                             ntime,           &
-                                                                                                             nterms_s,        &
-                                                                                                             dof_start,       &
-                                                                                                             dof_local_start, &
-                                                                                                             total_area,      &
-                                                                                                             areas,           &
+                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g,         &
+                                                                                                             ielement_g,        &
+                                                                                                             nfields,           &
+                                                                                                             ntime,             &
+                                                                                                             nterms_s,          &
+                                                                                                             nterms_c,          &
+                                                                                                             coordinate_system, &
+                                                                                                             dof_start,         &
+                                                                                                             dof_local_start,   &
+                                                                                                             total_area,        &
+                                                                                                             areas,             &
                                                                                                              interp_coords_def)
 
                     end do ! face_ID_couple
@@ -600,16 +597,12 @@ contains
         end do ! patch_ID
 
 
-        !
         ! Get bc_NRANK, bc_IRANK from bc_COMM
-        !
         call MPI_Comm_Size(bc_COMM, bc_NRANK, ierr)
         call MPI_Comm_Rank(bc_COMM, bc_IRANK, ierr)
 
 
-        !
         ! Initialize coupling with faces on other processors
-        !
         do iproc = 0,bc_NRANK-1
 
 
@@ -797,6 +790,8 @@ contains
                                                                                                                  nfields,               &
                                                                                                                  ntime,                 &
                                                                                                                  nterms_s,              &
+                                                                                                                 nterms_c,              &
+                                                                                                                 coordinate_system,     &
                                                                                                                  dof_start,             &
                                                                                                                  NO_ID,                 &
                                                                                                                  total_area,            &
@@ -840,28 +835,20 @@ contains
                        ielement_g, ielement_l, iface, nfields, nterms_s,  &
                        dof_start
 
-
-
-        !
         ! For each patch, loop through faces and set default element coupling.
         ! Default is that each face is coupled only with its owner element.
         ! So, strictly local coupling.
-        !
         do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
             do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
-                !
                 ! Get block-element index of current iface_bc
-                !
                 idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
                 idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
                 ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
                 ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
                 iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
                 
-                !
                 ! Add the element index as the only dependency.
-                !
                 call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
                                                                                                 idomain_l,  &
                                                                                                 ielement_g, &
@@ -876,6 +863,8 @@ contains
                                                                                             mesh%domain(idomain_l)%elems(ielement_l)%nfields,                   &
                                                                                             mesh%domain(idomain_l)%elems(ielement_l)%ntime,                     &
                                                                                             mesh%domain(idomain_l)%elems(ielement_l)%nterms_s,                  &
+                                                                                            mesh%domain(idomain_l)%elems(ielement_l)%nterms_c,                  &
+                                                                                            mesh%domain(idomain_l)%elems(ielement_l)%coordinate_system,         &
                                                                                             mesh%domain(idomain_l)%elems(ielement_l)%dof_start,                 &
                                                                                             mesh%domain(idomain_l)%elems(ielement_l)%dof_local_start,           &
                                                                                             mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area,          &

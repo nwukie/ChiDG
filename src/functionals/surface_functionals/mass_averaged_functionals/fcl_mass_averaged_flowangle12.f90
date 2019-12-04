@@ -175,9 +175,9 @@ contains
         
         
         ! Store in cache 
-        call cache%set_value(u1_flux,  'u1 flux',  'reference',worker%function_info)
-        call cache%set_value(u2_flux,  'u2 flux',  'reference',worker%function_info)
-        call cache%set_value(mass_flux,'mass flux','reference',worker%function_info)
+        call cache%set_value(worker%mesh,u1_flux,  'u1 flux',  'reference',worker%function_info)
+        call cache%set_value(worker%mesh,u2_flux,  'u2 flux',  'reference',worker%function_info)
+        call cache%set_value(worker%mesh,mass_flux,'mass flux','reference',worker%function_info)
 
     end subroutine compute_functional
     !******************************************************************************************
@@ -206,16 +206,17 @@ contains
     !!                               since the parallel communication already happened 
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine finalize_functional(self,cache) 
+    subroutine finalize_functional(self,worker,cache) 
         class(mass_averaged_flowangle12_t), intent(inout)   :: self
+        type(chidg_worker_t),               intent(in)      :: worker
         type(functional_cache_t),           intent(inout)   :: cache
 
         type(AD_D)        :: u1_flux, u2_flux, mass_flux, MA_u1, MA_u2, angle_rad, angle_deg
         
         ! Compute MA velocities
-        u1_flux   = cache%get_value('u1 flux',  'reference')
-        u2_flux   = cache%get_value('u2 flux',  'reference')
-        mass_flux = cache%get_value('mass flux','reference')
+        u1_flux   = cache%get_value(worker%mesh,'u1 flux',  'reference')
+        u2_flux   = cache%get_value(worker%mesh,'u2 flux',  'reference')
+        mass_flux = cache%get_value(worker%mesh,'mass flux','reference')
 
         MA_u1 = u1_flux/mass_flux
         MA_u2 = u2_flux/mass_flux
@@ -229,7 +230,7 @@ contains
 
 
         ! Store MA flow angle
-        call cache%set_value(angle_deg,'MA flow angle','reference')
+        call cache%set_value(worker%mesh,angle_deg,'MA flow angle','reference')
 
 
     end subroutine finalize_functional

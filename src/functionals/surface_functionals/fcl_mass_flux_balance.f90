@@ -160,7 +160,7 @@ contains
         mass_flux = integrate_surface(worker,mass)
 
         ! Store in cache 
-        call cache%set_value(mass_flux,'mass flux 1','auxiliary',worker%function_info) 
+        call cache%set_value(worker%mesh,mass_flux,'mass flux 1','auxiliary',worker%function_info) 
     
     end subroutine compute_auxiliary
     !******************************************************************************************
@@ -231,7 +231,7 @@ contains
         mass_flux = integrate_surface(worker,mass)
         
         ! Store in cache 
-        call cache%set_value(mass_flux,'mass flux 2','reference',worker%function_info)
+        call cache%set_value(worker%mesh,mass_flux,'mass flux 2','reference',worker%function_info)
 
     end subroutine compute_functional
     !******************************************************************************************
@@ -250,16 +250,17 @@ contains
     !!                               since the parallel communication already happened 
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine finalize_functional(self,cache) 
+    subroutine finalize_functional(self,worker,cache) 
         class(mass_flux_balance_t),     intent(inout)   :: self
+        type(chidg_worker_t),           intent(in)      :: worker
         type(functional_cache_t),       intent(inout)   :: cache
 
         type(AD_D)        :: mass_flux_aux, mass_flux_ref
         
-        mass_flux_aux = cache%get_value('mass flux 1','auxiliary')
-        mass_flux_ref = cache%get_value('mass flux 2','reference')
+        mass_flux_aux = cache%get_value(worker%mesh,'mass flux 1','auxiliary')
+        mass_flux_ref = cache%get_value(worker%mesh,'mass flux 2','reference')
 
-        call cache%set_value(mass_flux_ref+mass_flux_aux,'mass flux balance','reference')
+        call cache%set_value(worker%mesh,mass_flux_ref+mass_flux_aux,'mass flux balance','reference')
 
 
     end subroutine finalize_functional

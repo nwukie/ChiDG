@@ -229,6 +229,13 @@ module mod_constants
 
 
     !
+    ! Variables being linearized (used in face/elemen interpolation)
+    !
+    integer(ik),    parameter   :: PRIMARY   = 1
+    integer(ik),    parameter   :: AUXILIARY = 2
+
+
+    !
     ! Floating-point tolerance
     !
     real(rk),   parameter       :: RKTOL = 20._rk * epsilon(1._rk)    ! Real-Kind Tolerance. Floating-point tolerance, one order of magnitude larger than machine precision.

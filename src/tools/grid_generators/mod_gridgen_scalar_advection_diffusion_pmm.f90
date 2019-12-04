@@ -65,6 +65,7 @@ contains
 
         character(len=8)                            :: bc_face_strings(6)
         character(:),   allocatable                 :: bc_face_string
+        integer(ik)                                 :: npoints(3)
         class(prescribed_mesh_motion_function_t), allocatable   :: pmmf
 
 
@@ -87,14 +88,21 @@ contains
         elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,order=1,idomain=1)
 
 
+        !
+        ! Get npoints in each direction for each block
+        !
+        npoints(1) = size(xcoords,1)
+        npoints(2) = size(xcoords,2)
+        npoints(3) = size(xcoords,3)
+
 
         !
         ! Add domains
         !
         if (present(equation_sets)) then
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get())
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian',equation_sets(1)%get())
         else
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Scalar Advection Diffusion ALE')
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian','Scalar Advection Diffusion ALE')
         end if
 
 
@@ -239,7 +247,7 @@ contains
     end subroutine create_mesh_file__scalar_advection_diffusion_pmm
     !******************************************************************************
 
-!>
+    !>
     !!
     !!  @author Nathan A. Wukie
     !!  @date   10/19/2016
@@ -274,6 +282,7 @@ contains
                                                            zmax_current
         character(len=8)                                :: bc_face_strings(6)
         character(:),   allocatable                     :: bc_face_string
+        integer(ik)                                     :: npoints_1(3), npoints_2(3)
         class(prescribed_mesh_motion_function_t), allocatable   :: pmmf
 
         !
@@ -368,14 +377,25 @@ contains
 
 
         !
+        ! Get npoints in each direction for each block
+        !
+        npoints_1(1) = size(xcoords1,1)
+        npoints_1(2) = size(xcoords1,2)
+        npoints_1(3) = size(xcoords1,3)
+        npoints_2(1) = size(xcoords2,1)
+        npoints_2(2) = size(xcoords2,2)
+        npoints_2(3) = size(xcoords2,3)
+
+
+        !
         ! Add domains
         !
         if ( present(equation_sets) ) then
-            call add_domain_hdf(file_id,'01',nodes1,elements1,'Cartesian',equation_sets(1)%get())
-            call add_domain_hdf(file_id,'02',nodes2,elements2,'Cartesian',equation_sets(2)%get())
+            call add_domain_hdf(file_id,'01',npoints_1,nodes1,elements1,'Cartesian',equation_sets(1)%get())
+            call add_domain_hdf(file_id,'02',npoints_2,nodes2,elements2,'Cartesian',equation_sets(2)%get())
         else
-            call add_domain_hdf(file_id,'01',nodes1,elements1,'Cartesian','Scalar Advection Diffusion ALE')
-            call add_domain_hdf(file_id,'02',nodes2,elements2,'Cartesian','Scalar Advection Diffusion ALE')
+            call add_domain_hdf(file_id,'01',npoints_1,nodes1,elements1,'Cartesian','Scalar Advection Diffusion ALE')
+            call add_domain_hdf(file_id,'02',npoints_2,nodes2,elements2,'Cartesian','Scalar Advection Diffusion ALE')
         end if
 
 

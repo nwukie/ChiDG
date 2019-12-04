@@ -1,7 +1,7 @@
 module type_newton
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ONE, TWO
+    use mod_constants,          only: ONE, TWO, NO_DIFF
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
     use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier
@@ -216,7 +216,7 @@ contains
                     ! Update state, update residual, compute residual norm 
                     qn = q0 + dq
                     data%sdata%q = qn
-                    call system%assemble(data,differentiate=.false.)
+                    call system%assemble(data,differentiate=NO_DIFF)
                     fn        = rhs%norm(ChiDG_COMM)
                     fn_fields = rhs%norm_fields(ChiDG_COMM)
 
@@ -494,7 +494,7 @@ contains
             data%sdata%q = qn
 
             ! Compute new function value and norm
-            call system%assemble(data,differentiate=.false.)
+            call system%assemble(data,differentiate=NO_DIFF)
 
 !           It could be reasonable to track the residual accounting for residual smoothing and ptc as described by 
 !           Mavriplis (2018), but it introduces some inconsistencies in other areas so we elect to track the residual of 

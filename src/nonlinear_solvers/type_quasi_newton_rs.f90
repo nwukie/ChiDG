@@ -1,7 +1,7 @@
 module type_quasi_newton_rs
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, TWO, DIAG
+    use mod_constants,          only: ZERO, ONE, TWO, DIAG, NO_DIFF
     use mod_hdfio,              only: write_fields_hdf
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
     use mod_io,                 only: verbosity
@@ -333,7 +333,7 @@ contains
                         ! Set working solution. Test residual at (q). Do not differentiate
                         !
                         q = qn
-                        call system%assemble(data,timing=timing,differentiate=.false.)
+                        call system%assemble(data,timing=timing,differentiate=NO_DIFF)
 
                         !
                         ! Compute new function value
@@ -467,7 +467,7 @@ contains
                         ! Set working solution. Test residual at (q). Do not differentiate
                         !
                         q = qn
-                        call system%assemble(data,timing=timing,differentiate=.false.)
+                        call system%assemble(data,timing=timing,differentiate=NO_DIFF)
 
                         !
                         ! Compute new function value

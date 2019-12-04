@@ -213,6 +213,61 @@
 !!  check_file_domains_hdf
 !!  check_file_ntimes_hdf
 !!
+!!
+!!  =====================================================================
+!!  Adjoint/functionals: 
+!!  ---------------------------------------------------------------------
+!!  "adjoint"
+!!  =====================================================================
+!!
+!!  get_adjoint_status_hdf
+!!  set_adjoint_status_hdf
+!!  
+!!  set_contains_adjoint_solution_hdf
+!!  get_contains_adjoint_solution_hdf
+!!
+!!  open_functional_group_hdf
+!!  close_functional_group_hdf
+!!
+!!  create_functional_group_hdf
+!!  remove_functional_group_hdf
+!!
+!!  create_functional_hdf
+!!  remove_functional_hdf
+!!  check_functional_exists_hdf  
+!!
+!!  get_nfunctionals_hdf
+!!  update_nfunctionals_hdf
+!!
+!!  get_functionals_names_hdf
+!!
+!!  set_functional_reference_geom_hdf
+!!  get_functional_reference_geom_hdf
+!!
+!!  set_functional_auxiliary_geom_hdf
+!!  get_functional_auxiliary_geom_hdf
+!!
+!!  set_objective_LS_hdf
+!!  get_functional_LS_hdf
+!!
+!!  copy_functionals
+!!
+!!
+!!  =====================================================================
+!!  Writing mesh sensitivities: 
+!!  ---------------------------------------------------------------------
+!!  
+!!  =====================================================================
+!!
+!!  initialize_file_xhdf
+!!  initialize_file_structure_xhdf  
+!!
+!!  crate_domain_xhdf
+!!
+!!  set_domain_sensitivites_xhdf 
+!!  set_domain_nodeinfo_xhdf  
+!! 
+!!  
 !****************************************************************************************
 module mod_hdf_utilities
 #include <messenger.h>
@@ -252,7 +307,7 @@ module mod_hdf_utilities
     ! HDF5 storage format
     !
     integer, parameter :: STORAGE_VERSION_MAJOR = 1
-    integer, parameter :: STORAGE_VERSION_MINOR = 7
+    integer, parameter :: STORAGE_VERSION_MINOR = 8
 
 
     ! Attribute sizes
@@ -315,8 +370,6 @@ contains
         if (HDF_is_open .and. (HDF_nfiles_open==0)) then
             call h5close_f(ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"close_hdf: h5close_f did not execute successfully.")
-!        else if (HDF_is_open .and. (HDF_nfiles_open/=0)) then
-!            call chidg_signal(FATAL,"close_hdf: tried to close HDF but files are still open.")
         end if
 
         HDF_is_open = .false.
@@ -374,6 +427,11 @@ contains
         ! Set contains status for grid/solution 
         call set_contains_grid_hdf(fid,"False")
         call set_contains_solution_hdf(fid,"False")
+
+
+        ! Set Adjoint_mode and contains adjoint_solution
+        call set_adjoint_status_hdf(fid,"OFF")
+        call set_contains_adjoint_solution_hdf(fid,"False")
 
 
         call h5fclose_f(fid,ierr)
@@ -591,151 +649,6 @@ contains
 
 
 
-
-
-
-
-!    !>  Check if an already existing HDF5 file has the correct structure to be use to write 
-!    !!  a new solution
-!    !!
-!    !!  Errors if incompatible.
-!    !!
-!    !!  @author Matteo Ugolotti
-!    !!  @date   02/20/2017
-!    !!
-!    !!  TODO: add check to the domains' attribute (dimensionality, equation-set)
-!    !!        Many other check can be implemented. This is the first step
-!    !-----------------------------------------------------------------------------------------
-!    subroutine check_file_structure_hdf(fid,data)
-!    
-!        integer(HID_T)      , intent(in)  :: fid
-!        type(chidg_data_t)  , intent(in)  :: data
-!        
-!        ! Check if the version is correct
-!        call check_file_storage_version_hdf(fid)
-!    
-!        ! Check if the number and names of the domains are correct
-!        call check_file_domains_hdf(fid,data)
-!        
-!        ! Check the number of time levels, and update it in case.
-!        call check_file_ntimes_hdf(fid,data)
-!
-!
-!    end subroutine check_file_structure_hdf
-!    !*****************************************************************************************
-
-
-
-
-
-
-
-
-
-!    !>  Check check that the ntimes attirbute of the existing file matches the  
-!    !!  a new data solution
-!    !!
-!    !!  Errors if incompatible.
-!    !!
-!    !!  @author Matteo Ugolotti
-!    !!  @date   02/20/2017
-!    !!
-!    !-----------------------------------------------------------------------------------------
-!    subroutine check_file_ntimes_hdf(fid,data)
-!        
-!        integer(HID_T)      , intent(in)    :: fid
-!        type(chidg_data_t)  , intent(in)    :: data
-!
-!        integer(ik)                         :: time_lev, ntimes
-!        character(len=1024),    allocatable :: msg
-!
-!        time_lev = get_ntimes_hdf(fid)
-!        ntimes   = data%ntime() - 1
-!    
-!
-!        if ( time_lev /= ntimes ) then
-!            
-!            msg = "The attribute ntimes in the existing  HDF5 fils is not up-to-date. It will automatically be updated"
-!            call chidg_signal(WARN, msg)
-!
-!            !update ntimes
-!            call set_ntimes_hdf(fid,ntimes)
-!
-!        end if
-!
-!
-!    end subroutine check_file_ntimes_hdf
-!    !*****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-!    !>  Check if the number of domains and name in an old HDF5 file are coherent with the
-!    !!  new solution
-!    !!
-!    !!  Errors if incompatible.
-!    !!
-!    !!  @author Matteo Ugolotti
-!    !!  @date   02/20/2017
-!    !!
-!    !!
-!    !!
-!    !-----------------------------------------------------------------------------------------
-!    subroutine check_file_domains_hdf(id,data)
-!
-!        integer(HID_T)      ,intent(in) :: id
-!        type(chidg_data_t)  ,intent(in) :: data
-!
-!        integer(ik)                        :: domain_number, idom, domain_check, dimension
-!        character(len=1024),   allocatable :: dom_names(:), domain_name, msg
-!        
-!        !
-!        ! check whether the number of domians is correct or not. IF it is, then 
-!        ! compare domains' names
-!        !
-!        
-!        domain_number = data%ndomains()
-!        domain_check  = get_ndomains_hdf(id)
-!
-!        if (domain_number /= domain_check) then
-!            msg = "The number of domains in the existing file and the number of domains that need to be stored &
-!                    do not match. Please, delete the existing HDF5 file."
-!            call chidg_signal(FATAL,msg)
-!        else
-!
-!            !
-!            ! check if the name of the domainis are correct
-!            !
-!            dom_names = get_domain_names_hdf(id)
-!
-!            do idom = 1, domain_number
-!                
-!                domain_name = "D_"//trim(data%info(idom)%name)
-!                        
-!                msg = "There exists a mismatch in a domain's name due to the overwriting of and existing HDF5 &
-!                       file. To avoid this delete the existing HDF5 file."
-!
-!                if ( domain_name /= dom_names(idom) ) call chidg_signal(FATAL,msg)
-!
-!            end do
-!        
-!        end if
-!        
-!
-!
-!    end subroutine check_file_domains_hdf
-!    !*****************************************************************************************
-
-
-
-
-
     !>  Set the major version index for a ChiDG-formatted HDF file
     !!
     !!  @author Nathan A. Wukie
@@ -885,10 +798,14 @@ contains
         call prop%set_ndomains(prop%ndomains)
 
         ! Check for Grid/Solution, domain names, and time integrator
-        prop%contains_grid     = get_contains_grid_hdf(fid)
-        prop%contains_solution = get_contains_solution_hdf(fid)
-        prop%domain_names      = get_domain_names_hdf(fid)
-        prop%time_integrator   = get_time_integrator_hdf(fid)
+        prop%contains_grid              = get_contains_grid_hdf(fid)
+        prop%contains_solution          = get_contains_solution_hdf(fid)
+        prop%domain_names               = get_domain_names_hdf(fid)
+        prop%time_integrator            = get_time_integrator_hdf(fid)
+        prop%adjoint_mode               = get_adjoint_status_hdf(fid)
+        prop%contains_adjoint_solution  = get_contains_adjoint_solution_hdf(fid)
+        prop%nfunctionals               = get_nfunctionals_hdf(fid) 
+        prop%istep                      = get_istep_hdf(fid) 
 
 
         ! Get order of coordinate and solution expansions
@@ -896,10 +813,9 @@ contains
             prop%order_c = get_domain_coordinate_orders_hdf(fid,prop%domain_names)
         end if
 
-        if ( prop%contains_solution ) then
+        if ( prop%contains_solution .or. prop%contains_adjoint_solution) then
             prop%order_s = get_domain_field_orders_hdf(fid)
         end if
-
 
 
         ! Compute number of terms in the polynomial expansions for each domain
@@ -1003,9 +919,10 @@ contains
     !!  @date   10/17/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine add_domain_hdf(fid,domain_name,nodes,elements,coord_system,equation_set)
+    subroutine add_domain_hdf(fid,domain_name,npoints,nodes,elements,coord_system,equation_set)
         integer(HID_T), intent(in)  :: fid
         character(*),   intent(in)  :: domain_name
+        integer(ik),    intent(in)  :: npoints(3)
         real(rk),       intent(in)  :: nodes(:,:)
         integer(ik),    intent(in)  :: elements(:,:)
         character(*),   intent(in)  :: coord_system
@@ -1041,6 +958,7 @@ contains
         call set_domain_coordinate_velocities_hdf(dom_id,vnodes)
         call set_domain_connectivity_hdf(dom_id,elements)
         call set_domain_equation_set_hdf(dom_id,trim(equation_set))
+        call set_domain_npoints_hdf(dom_id,npoints)
 
 
         ! Close Domain
@@ -1253,38 +1171,6 @@ contains
 
     end function get_ndomains_hdf
     !****************************************************************************************
-
-
-
-
-
-
-
-
-
-!    !>  Given a file identifier, return the time integrator name in a hdf5 file.
-!    !!
-!    !!  @author Mayank Sharma
-!    !!  @date   3/18/2017
-!    !!
-!    !!  @param[in]  fid     HDF file identifier
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    function get_time_integrator_hdf(fid) result(time_string)
-!        integer(HID_T), intent(in)  :: fid
-!        
-!        character(1024)             :: temp_string
-!        character(:),   allocatable :: time_string
-!        integer(ik)                 :: ierr
-!
-!        call h5ltget_attribute_string_f(fid, "/", "time_integrator", temp_string, ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"get_time_integrator_hdf: h5ltget_attribute_string_f & 
-!                                         had a problem getting the time integrator name")
-!        time_string = trim(temp_string)
-!
-!    end function get_time_integrator_hdf
-!    !****************************************************************************************
-
 
 
 
@@ -1648,6 +1534,124 @@ contains
 
     end subroutine set_domain_coordinates_hdf
     !***************************************************************************************
+
+
+
+
+
+
+
+
+    !>  For a domain, set the number of points in i,j and k direction
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   8/25/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_domain_npoints_hdf(dom_id,npoints)
+        integer(HID_T), intent(in)  :: dom_id
+        integer(ik),    intent(in)  :: npoints(3)
+
+        integer(HID_T)      :: grid_id
+        integer(ik)         :: ierr
+        logical             :: exists
+
+        ! Create a grid-group within the current block domain
+        exists = check_link_exists_hdf(dom_id,"Grid")
+        if (exists) then
+            call h5gopen_f(dom_id,"Grid", grid_id,ierr)
+        else
+            call h5gcreate_f(dom_id, "Grid", grid_id, ierr)
+        end if
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5gcreate_f")
+
+
+        ! Set number of points in each direction for the block
+        call h5ltset_attribute_int_f(grid_id,".","npoints_i", [npoints(1)],SIZE_ONE,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_npoints_hdf: Error setting 'npoints_i' attribute")
+
+        call h5ltset_attribute_int_f(grid_id,".","npoints_j", [npoints(2)],SIZE_ONE,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_npoints_hdf: Error setting 'npoints_j' attribute")
+
+        call h5ltset_attribute_int_f(grid_id,".","npoints_k", [npoints(3)],SIZE_ONE,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_npoints_hdf: Error setting 'npoints_k' attribute")
+
+         
+        ! Close Grid group
+        call h5gclose_f(grid_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_npoints_hdf: h5gclose_f")
+
+
+    end subroutine set_domain_npoints_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+    !>  For a domain, get the number of points in i, j, and k directions
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   8/26/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_domain_npoints_hdf(dom_id) result(npoints)
+        integer(HID_T), intent(in)  :: dom_id
+
+        integer(ik)             :: npoints(3)
+        
+        integer                 :: ierr
+        integer, dimension(1)   :: buf
+        integer(ik)             :: order
+        logical                 :: exists
+        integer(HID_T)          :: grid_id
+
+
+        ! Create a grid-group within the current block domain
+        exists = check_link_exists_hdf(dom_id,"Grid")
+        if (exists) then
+            call h5gopen_f(dom_id,"Grid", grid_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinates_hdf: h5gopen_f")
+        else
+            call chidg_signal(FATAL,"get_domain_coordinates_hdf: The current domain does not contain a 'Grid'.")
+        end if
+
+
+        ! Get points in i direction
+        call h5ltget_attribute_int_f(grid_id,".","npoints_i", buf, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinate_order_hdf: Error getting 'Coordinate Order' attribute")
+
+        npoints(1) = int(buf(1),kind=ik)
+
+
+        ! Get points in j direction
+        call h5ltget_attribute_int_f(grid_id,".","npoints_j", buf, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinate_order_hdf: Error getting 'Coordinate Order' attribute")
+
+        npoints(2) = int(buf(1),kind=ik)
+
+
+        ! Get points in k direction
+        call h5ltget_attribute_int_f(grid_id,".","npoints_k", buf, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinate_order_hdf: Error getting 'Coordinate Order' attribute")
+
+        npoints(3) = int(buf(1),kind=ik)
+
+
+        ! Close Grid group
+        call h5gclose_f(grid_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinates_her: h5gclose_f")
+
+
+    end function get_domain_npoints_hdf
+    !***************************************************************************************
+
+
+
+
 
 
 
@@ -4785,6 +4789,76 @@ contains
 
 
 
+    !>  Given a file identifier, set the current step index in a hdf5 file
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/9/2018
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  istep   Current step index
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_istep_hdf(fid,istep)
+        integer(HID_T),     intent(in)  :: fid
+        integer(ik),        intent(in)  :: istep
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(fid, "/", "istep", [istep], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_istep_hdf: Error h5ltget_attribute_int_f")
+
+
+    end subroutine set_istep_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return the step index from a hdf5 file
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/9/2018
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_istep_hdf(fid) result(istep)
+        integer(HID_T),     intent(in)  :: fid
+        
+        integer                         :: ierr
+        integer(ik)                     :: istep
+        integer(ik),    dimension(1)    :: buffer
+
+        call h5ltget_attribute_int_f(fid, "/", "istep", buffer, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_istep_hdf: h5ltget_attribute_double_f had a &
+                                        problem getting istep")
+        istep = int(buffer(1),kind=ik)
+
+
+    end function get_istep_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     !>  Given a file identifier, set nwrite in a hdf5 file
@@ -7547,6 +7621,1290 @@ contains
 
     end subroutine copy_mm_groups_hdf
     !***************************************************************************************
+
+
+
+
+
+
+
+
+
+!****************************************************************************************************************
+!
+!       ADJOINT/FUNCTIONALS RELATED PROCEDURES
+!
+!****************************************************************************************************************
+
+
+
+
+
+
+    
+    !>  Sets the status of the attribute "/Adjoint Mode"
+    !!
+    !!  Attribute: /Adjoint Mode
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   07/07/2017
+    !!
+    !----------------------------------------------------------------------------------------------
+    subroutine set_adjoint_status_hdf(fid,switch)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: switch
+
+        integer ::  ierr
+
+        ! Set the attribute Adjoint mode
+        call h5ltset_attribute_string_f(fid,"/","Adjoint mode",trim(switch),ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"set_adjoint_status_hdf - h5ltset_attribute_string_f")
+
+    end subroutine set_adjoint_status_hdf
+    !*********************************************************************************************
+    
+    
+    
+    
+    !>  Return the status of the attribute "/Adjoint Mode"
+    !!  If the attrbiute exists, it returns the status (ON/OFF -> true/false), it the attribute does not exist
+    !!  it creates the attribute and sets it to OFF
+    !!
+    !!  Attribute: /Adjoint Mode
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/08/2017
+    !!
+    !----------------------------------------------------------------------------------------------
+    function get_adjoint_status_hdf(fid) result(adj_status)
+        integer(HID_T),   intent(in)  :: fid
+        
+        integer(ik)     :: attribute_exists
+        logical         :: adj_status
+        character(len=3):: adj_attr_status
+        integer         :: ierr
+    
+
+        ! Check existance of the attribute
+        call check_attribute_exists_hdf(fid,"Adjoint mode")
+
+        ! If the attribute exists, check if it is ON or OFF
+        call h5ltget_attribute_string_f(fid,"/","Adjoint mode",adj_attr_status,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_adjoint_status_hdf - h5ltget_attribute_string_f")
+
+        ! Check status
+        if ( trim(adj_attr_status) == "ON" .or. trim(adj_attr_status) == "on" ) then
+            adj_status = .true.
+        else
+            adj_status = .false.
+        end if 
+
+
+    end function get_adjoint_status_hdf
+    !*********************************************************************************************
+
+
+
+
+
+
+
+    !>  Set status of file attribute "/Contains Adjoint Solution".
+    !!
+    !!  'Yes'/'No'
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   14/7/2017
+    !!
+    !!  @param[in]  fid             HDF5 file identifier.
+    !!  @result     adj_status      Logical indicating if ChiDG adjoint exists in file, fid.
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_contains_adjoint_solution_hdf(fid,adj_string)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: adj_string
+
+        integer(ik) :: ierr
+
+        call h5ltset_attribute_string_f(fid, "/", "Contains Adjoint Solution", adj_string, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_contains_adjoint_solution_hdf - h5ltset_attribute_string_f")
+
+    end subroutine set_contains_adjoint_solution_hdf
+    !****************************************************************************************
+
+
+
+
+
+    !>  Test if the file contains an Adjoint  Solution.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/14/2017
+    !!
+    !!  @param[in]  fid                 HDF5 file identifier.
+    !!  @result     adj_solution_status Logical indicating if ChiDG adjoint solution exists in file, fid.
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_contains_adjoint_solution_hdf(fid) result(adj_solution_status)
+        integer(HID_T), intent(in)  :: fid
+
+        logical             :: adj_solution_status, attr_exists
+        character(len=10)   :: adj_contains_solution_attr
+        integer             :: ierr, fail_status
+        
+        call check_attribute_exists_hdf(fid,"Contains Adjoint Solution","Soft Fail", fail_status)
+
+
+        ! Get attribute for "Contains Adjoint Solution"
+        call h5ltget_attribute_string_f(fid, "/", 'Contains Adjoint Solution', adj_contains_solution_attr, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_contains_adjoint_solution - h5ltget_attribute_string_f")
+
+
+        ! Test solution attribute
+        if (trim(adj_contains_solution_attr) == "True" .or. trim(adj_contains_solution_attr) == "true") then
+            adj_solution_status = .true.
+        else
+            adj_solution_status = .false.
+        end if
+
+
+    end function get_contains_adjoint_solution_hdf
+    !****************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/09/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    function open_functional_group_hdf(fid) result(fclgroup_id)
+        integer(HID_T),     intent(in)  :: fid
+
+        integer(ik)     :: ierr
+        integer(HID_T)  :: fclgroup_id
+
+        call h5gopen_f(fid,"Functionals",fclgroup_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"open_functional_group_hdf: Error opening Functionals group")
+
+    end function open_functional_group_hdf
+    !***************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/09/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine close_functional_group_hdf(fclgroup_id)
+        integer(HID_T), intent(in)  :: fclgroup_id
+
+        integer(ik)     :: ierr
+
+        call h5gclose_f(fclgroup_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"close_functional_group_hdf: Error closing Functional group")
+
+    end subroutine close_functional_group_hdf
+    !***************************************************************************************
+
+
+
+
+    !> This subroutine add the Functionals group if it does not exist yet. 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/09/2017
+    !!
+    !!  @param[in]          fid     HDF file identifier
+    !----------------------------------------------------------------------------------------
+    subroutine create_functional_group_hdf(fid)
+        integer(HID_T), intent(in)            :: fid
+
+        integer(HID_T)              :: group_id
+        integer(ik)                 :: ierr
+        logical                     :: group_exists
+        integer(ik),    parameter   :: init_nfunctionals=0
+
+        ! Check if Functional group exists
+        group_exists = check_link_exists_hdf(fid,"Functionals")
+
+        if (.not. group_exists) then
+
+            ! Create a new Functionals group
+            call h5gcreate_f(fid,"Functionals", group_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'open_functional_group_hdf: error creating new Functionals group')
+
+            ! Set 'nfunctionals'
+            call h5ltset_attribute_int_f(group_id, '.', 'nfunctionals',[init_nfunctionals],SIZE_ONE, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"open_functional_group_hdf: error setting the attribute 'nfunctionals'")
+            
+            ! Set 'time step'
+            call h5ltset_attribute_int_f(group_id, '.', 'Time step',[1],SIZE_ONE, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"open_functional_group_hdf: error setting the attribute 'time step'")
+
+            call h5gclose_f(group_id,ierr)
+       
+        end if
+
+
+    end subroutine create_functional_group_hdf
+    !****************************************************************************************
+
+
+
+
+
+    !> This subroutine remove the Functional group. 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/09/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine remove_functional_group_hdf(fid)
+        integer(HID_T), intent(in)            :: fid
+
+        integer(HID_T)              :: fcl_id
+        integer(ik)                 :: ierr
+        logical                     :: group_exists
+        integer(ik),    parameter   :: init_nfunctionals=0
+
+       ! Open Functional group
+       fcl_id = open_functional_group_hdf(fid)
+
+       ! Delete attributes
+       call delete_group_attributes_hdf(fcl_id)
+
+       ! Close Functional Group
+       call close_functional_group_hdf(fcl_id)
+
+       ! Unlink the Functional group
+       call h5gunlink_f(fid,"Functionals",ierr)
+       if (ierr/=0) call chidg_signal(FATAL,"remove_functional_group_hdf: error unlinking Functional group.")
+
+
+    end subroutine remove_functional_group_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+    !> This subroutine remove a functional from Functionals group
+    !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/09/2017
+    !!
+    !!  @param[in]  id          HID indetifier of the Functionals group
+    !!  @param[in]  obj_name    Name of the functional selected in chidg_edit
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine remove_functional_hdf(id,fcl_name)
+        integer(HID_T),     intent(in)  :: id
+        character(*),       intent(in)  :: fcl_name
+
+        integer(HID_T)          :: fcl_id
+        integer(ik)             :: ierr
+        integer(ik)             :: num_functionals
+        logical                 :: fcl_exists
+        integer, dimension(1)   :: buf
+        integer                 :: nmembers
+
+        ! Check if the input functional exists
+        fcl_exists = check_link_exists_hdf(id,fcl_name)
+
+
+        ! If exists, remove it
+        if(fcl_exists) then
+            
+            ! Open the functional group
+            call h5gopen_f(id,fcl_name,fcl_id,ierr)
+
+            ! Delete all attributes from the group
+            call delete_group_attributes_hdf(fcl_id)
+
+            ! Get number of groups linked to the current dataset
+            call h5gn_members_f(fcl_id,'.',nmembers,ierr)
+    
+            if (nmembers > 0) then
+                !TODO: use this if you add other groups in the dataset
+            end if
+            
+            ! Close the functional group
+            call h5gclose_f(fcl_id,ierr)
+
+            ! Unlink the functional group
+            call h5gunlink_f(id,fcl_name,ierr)
+            if (ierr/=0) call chidg_signal(FATAL,"remove_functional_hdf: error unlinking functional dataset.")
+
+            ! Update the 'nfunctionals' attribute in Functional group
+            call update_nfunctionals_hdf(id,'-',1)
+
+        end if
+         
+    
+    end subroutine remove_functional_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Copy functionals from one file to another file.
+    !!
+    !!  NOTE: if functional name already exists on fid_b, it is removed first.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   3/26/2019
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine copy_functionals_hdf(fid_a,fid_b)
+        integer(HID_T), intent(in)  :: fid_a
+        integer(HID_T), intent(in)  :: fid_b
+
+        integer(ik) :: igroup, ierr, nfunc
+
+        type(svector_t) :: functionals_names
+        type(string_t)  :: group_name
+
+        call write_line("Copying functionals...")
+
+
+        ! Delete Functional of target file if the exists 
+        nfunc = get_nfunctionals_hdf(fid_b)
+        if (nfunc /= 0) then
+            ! Remove 'Functionals' group in target if already exists
+            call remove_functional_group_hdf(fid_b)
+        end if
+
+
+        ! Copy all functionals, if they exist
+        !   - copy entire Functional group from file_a to file_b
+        nfunc = get_nfunctionals_hdf(fid_a)
+        if (nfunc /= 0) then
+            ! Copy group from fid_a to fid_b
+            call h5ocopy_f(fid_a,'Functionals',fid_b,'Functionals',ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"copy_functionals_hdf: error copying functionals.")
+        end if
+
+
+    end subroutine copy_functionals_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   10/17/2017
+    !!
+    !--------------------------------------------------------------------------------------------
+    function check_functional_exists_hdf(fid,func_name) result(exist_status)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: func_name
+
+        integer(ik)     :: ierr
+        logical         :: exist_status
+        integer(HID_T)  :: fcl_g
+        
+        ! Check if the user wants to exit rather than editing or removing a functional
+        if (trim(func_name)/="") then
+
+            ! Open functional group
+            fcl_g = open_functional_group_hdf(fid)
+
+            ! Check if hdf file contains the typed functional
+            call h5lexists_f(fcl_g, trim(func_name), exist_status, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"check_functional_exists_hdf: Error in call to h5lexists_f")
+
+            ! Close functional group
+            call close_functional_group_hdf(fcl_g) 
+
+        end if
+
+    end function check_functional_exists_hdf
+    !*********************************************************************************************
+
+
+
+
+    !> Update the attribute 'nfunctionals' in Functional group
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/09/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine update_nfunctionals_hdf(id,op,quantity)
+        integer(HID_T),     intent(in)  :: id
+        character(*),       intent(in)  :: op ! - or +
+        integer(ik),        intent(in)  :: quantity
+
+        integer(ik)             :: nfunctions
+        integer,    dimension(1):: buf
+        integer(ik)             :: ierr
+
+        ! Get Functionals group attribute "nfunctionals"
+        call h5ltget_attribute_int_f(id,'.','nfunctionals',buf,ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"update_nfunctionals_hdf: error in updating the number of functionals.")
+
+        nfunctions = buf(1)
+
+        ! Choose to add or subtract 'quantity'
+        select case (op)
+            case ('-')
+                nfunctions = nfunctions - quantity
+            case ('+')
+                nfunctions = nfunctions + quantity
+            case default
+        end select
+
+
+        call h5ltset_attribute_int_f(id,'.','nfunctionals',[nfunctions],SIZE_ONE,ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"update_nfunctionals_hdf: error in updating the number of functionals.")
+
+        
+        ! Check if the number of functionals is 0, if so set 'Ajoint mode' = OFF.
+        if (nfunctions == 0) then
+            call h5ltset_attribute_string_f(id,'/','Adjoint mode','OFF',ierr)
+        end if
+
+
+    end subroutine update_nfunctionals_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+    !> This subroutine creates a new group under Functionals group containing information about the
+    !! specific functional selected
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/09/2017
+    !!
+    !!  @param[in]  fid          HID indetifier of the file
+    !!  @param[in]  fcl_name    Name of the functional selected in chidg_edit
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine create_functional_hdf(fid,fcl_name)
+        integer(HID_T),     intent(in)  :: fid
+        character(*),       intent(in)  :: fcl_name
+
+        integer(HID_T)          :: fcl_id, fcl_g
+        integer(ik)             :: ierr
+        integer(ik)             :: num_functionals
+        logical                 :: fcl_exists
+        integer(ik), parameter  :: init_time_step=0
+        integer, dimension(1)   :: buf
+
+        ! Open functional group
+        fcl_g = open_functional_group_hdf(fid)
+
+        ! Check if the input functional already exists
+        fcl_exists = check_link_exists_hdf(fcl_g,fcl_name)
+
+        ! If it does not exist, create it
+        ! If exists, do nothing (TODO: probably need to change this at some point)
+        if(.not. fcl_exists) then
+
+
+            ! Create the group
+            call h5gcreate_f(fcl_g,fcl_name,fcl_id,ierr)
+            if (ierr/=0) call chidg_signal(FATAL,"create_functional_hdf: error creating new functional.")
+
+            ! Add attributes
+            call h5ltset_attribute_string_f(fcl_id,'.','Reference geometry','none',ierr)
+            if (ierr/=0) call chidg_signal(FATAL,"create_functional_hdf: error in adding an attribute.")
+            
+            call h5ltset_attribute_string_f(fcl_id,'.','Auxiliary geometry','none',ierr)
+            if (ierr/=0) call chidg_signal(FATAL,"create_functional_hdf: error in adding an attribute.")
+        
+            !call h5ltset_attribute_int_f(obj_id,'.','Time step',[init_time_step],SIZE_ONE,ierr)
+            !if (ierr/=0) call chidg_signal(FATAL,"create_functional_hdf: error in adding an attribute.")
+
+            call h5ltset_attribute_string_f(fcl_id,'.','Linear solver','none',ierr)
+            if (ierr/=0) call chidg_signal(FATAL,"create_functional_hdf: error in adding an attribute.")
+        
+            ! Increase the Functionals group attribute "nfunctionals"
+            call update_nfunctionals_hdf(fcl_g,'+',1)
+
+            call h5gclose_f(fcl_id,ierr)
+
+        end if
+    
+        call close_functional_group_hdf(fcl_g)
+
+    end subroutine create_functional_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !> This function read the attribute 'nfunctionals' in the Functionals group and returns it
+    !! 
+    !!  @author Matteo Ugolotti
+    !!  @date   05/09/2017
+    !!
+    !!  @param[in]  fid         HID identifier of the file
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_nfunctionals_hdf(fid) result(num_fcl)
+        integer(HID_T), intent(in)  :: fid
+        
+        integer(ik)              :: num_fcl
+        integer(HID_T)           :: fcl_id
+        integer(ik)              :: ierr
+        integer(ik), dimension(1):: buf
+        logical                  :: fcl_group_exists
+        
+        ! Check if the Functional group exists
+        fcl_group_exists = check_link_exists_hdf(fid,'Functionals')
+        
+
+        if (fcl_group_exists) then
+
+            ! Open Functional group
+            fcl_id =  open_functional_group_hdf(fid)
+
+            ! Get the attribute 'nfunctionals'
+            call h5ltget_attribute_int_f(fcl_id,'.','nfunctionals',buf,ierr)
+            if (ierr/=0) call chidg_signal(FATAL,"get_nfunctionals_hdf: error reading 'nfunctionals' attribute.")
+            
+            ! Return the number of functionals defined
+            num_fcl = buf(1)
+            
+            ! Close Functional group
+            call close_functional_group_hdf(fcl_id)
+        
+        else
+            
+            num_fcl = 0
+
+        end if
+
+    end function get_nfunctionals_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !> Get the names of the functionals
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @data   05/09/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_functionals_names_hdf(fid) result(names)
+        integer(HID_T),     intent(in)  :: fid
+
+        character(:),       allocatable     :: user_msg
+        type(svector_t)                     :: names
+        type(string_t)                      :: name
+        character(len=1024)                 :: name_str
+        integer(HSIZE_T)                    :: igrp
+        integer                             :: nfunctions
+        integer                             :: ifunc, ierr
+        integer(HID_T)                      :: fcl_id
+
+        ! Get number of functionals
+        nfunctions = get_nfunctionals_hdf(fid)
+
+        ! Open Functional group
+        fcl_id = open_functional_group_hdf(fid)
+
+        ! Loop through groups and read domain names
+        ifunc = 1
+        do igrp = 0,nfunctions-1
+
+            ! Get group name
+            !call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
+            !call h5lget_name_by_idx_f(fid,".",H5_INDEX_CRT_ORDER_F,H5_ITER_INC_F,igrp,gname,ierr)
+            call h5lget_name_by_idx_f(fcl_id,".",H5_INDEX_NAME_F,H5_ITER_INC_F,igrp,name_str,ierr)
+            user_msg = "get_functional_names_hdf: Error iterating through links to detect functionals."
+            if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+
+            ! Store name
+            call name%set(trim(name_str))
+            call names%push_back(name)
+
+            ifunc = ifunc + 1
+
+        end do
+        
+        ! Close Functional group
+        call close_functional_group_hdf(fcl_id)
+
+    end function get_functionals_names_hdf
+    !****************************************************************************************
+
+
+
+
+    !> This function returns the attribute 'Reference geometry' of the input functional name
+    !!
+    !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @data   05/09/2017
+    !!
+    !!  @param[in]  fid         HDF file identifier
+    !!  @param[in]  func_name   Name of the functionals
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_functional_reference_geom_hdf(fid,func_name) result(ref_geom)
+        integer(HID_T),     intent(in)  :: fid
+        character(*),       intent(in)  :: func_name
+        
+        character(len=1024)                 :: ref_geom
+        integer(HID_T)                      :: fcl_id,obj_id
+        integer                             :: ierr
+        
+        !  Open Functional group
+        fcl_id = open_functional_group_hdf(fid)
+        
+        ! Open functional dataset
+        call h5gopen_f(fcl_id,trim(func_name),obj_id,ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"get_functional_reference_geom_hdf: Error opening the functional dataset")
+        
+
+        call h5ltget_attribute_string_f(obj_id,".","Reference geometry",ref_geom,ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"get_functional_reference_geom_hdf: error reading 'Reference geometry' attribute.")
+
+        ! Close dataset
+        call h5gclose_f(obj_id,ierr) 
+        
+        ! Close Functional group
+        call close_functional_group_hdf(fcl_id)
+
+    end function get_functional_reference_geom_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+    !> Set the attribute 'Reference geometry' of the input functional name
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @data   05/09/2017
+    !!
+    !!  @param[in]  fid         File identifier
+    !!  @param[in]  func_name   Name of the functional
+    !!  @param[in]  string      String to set
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_functional_reference_geom_hdf(fid,func_name,string)
+        integer(HID_T),     intent(in)  :: fid
+        character(*),       intent(in)  :: func_name
+        character(*),       intent(in)  :: string
+
+        integer(HID_T)                      :: obj_id, fcl_id
+        integer                             :: ierr
+        
+        !  Open Functional group
+        fcl_id = open_functional_group_hdf(fid)
+        
+        ! Open functional dataset
+        call h5gopen_f(fcl_id,trim(func_name),obj_id,ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"set_functional_reference_geom_hdf: Error opening the functional dataset")
+        
+
+        call h5ltset_attribute_string_f(obj_id,".","Reference geometry",trim(string),ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"set_functional_reference_geom_hdf: error reading 'Reference geometry' attribute.")
+
+        ! Close functional
+        call h5gclose_f(obj_id,ierr) 
+        
+        ! Close Functional group
+        call close_functional_group_hdf(fcl_id)
+
+    end subroutine set_functional_reference_geom_hdf
+    !****************************************************************************************
+
+
+
+
+
+    !> This function returns the attribute 'Auxiliary geometry' of the input functional name
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @data   30/11/2017
+    !!
+    !!  @param[in]  fid         HDF file identifier
+    !!  @param[in]  func_name   Name of the functionals
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_functional_auxiliary_geom_hdf(fid,func_name) result(ref_geom)
+        integer(HID_T),     intent(in)  :: fid
+        character(*),       intent(in)  :: func_name
+        
+        character(len=1024)                 :: ref_geom
+        integer(HID_T)                      :: fcl_id,obj_id
+        integer                             :: ierr
+        
+        !  Open Functional group
+        fcl_id = open_functional_group_hdf(fid)
+        
+        ! Open functional dataset
+        call h5gopen_f(fcl_id,trim(func_name),obj_id,ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"get_functional_reference_geom_hdf: Error opening the functional dataset")
+        
+        call h5ltget_attribute_string_f(obj_id,".","Auxiliary geometry",ref_geom,ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"get_functional_auxiliary_geom_hdf: error reading 'Auxiliary geometry' attribute.")
+
+        ! Close dataset
+        call h5gclose_f(obj_id,ierr) 
+        
+        ! Close Functional group
+        call close_functional_group_hdf(fcl_id)
+
+    end function get_functional_auxiliary_geom_hdf
+    !****************************************************************************************
+
+
+
+
+
+    !> Set the attribute 'Auxiliary geometry' of the input functional name
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @data   30/11/2017
+    !!
+    !!  @param[in]  fid         File identifier
+    !!  @param[in]  func_name   Name of the functional
+    !!  @param[in]  string      String to set
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_functional_auxiliary_geom_hdf(fid,func_name,string)
+        integer(HID_T),     intent(in)  :: fid
+        character(*),       intent(in)  :: func_name
+        character(*),       intent(in)  :: string
+
+        integer(HID_T)                      :: obj_id, fcl_id
+        integer                             :: ierr
+        
+        !  Open Functional group
+        fcl_id = open_functional_group_hdf(fid)
+        
+        ! Open functional dataset
+        call h5gopen_f(fcl_id,trim(func_name),obj_id,ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"set_functional_auxiliary_geom_hdf: Error opening the functional dataset")
+        
+
+        call h5ltset_attribute_string_f(obj_id,".","Auxiliary geometry",trim(string),ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"set_functional_auxiliary_geom_hdf: error reading 'Auxiliary geometry' attribute.")
+
+        ! Close functional
+        call h5gclose_f(obj_id,ierr) 
+        
+        ! Close Functional group
+        call close_functional_group_hdf(fcl_id)
+
+    end subroutine set_functional_auxiliary_geom_hdf
+    !****************************************************************************************
+
+
+
+
+
+    !> This function returns the attribute 'Linear Solver' of the input functional name
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @data   05/09/2017
+    !!
+    !!  @param[in]  fid         HDF file identifier
+    !!  @param[in]  func_name   Name of the functional
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_functional_LS_hdf(fid,func_name) result(lin_sol)
+        integer(HID_T),     intent(in)  :: fid
+        character(*),       intent(in)  :: func_name
+        
+        character(len=1024)                 :: lin_sol
+        integer(HID_T)                      :: fcl_id,obj_id
+        integer                             :: ierr
+        
+        !  Open Functional group
+        fcl_id = open_functional_group_hdf(fid)
+        
+        ! Open functional dataset
+        call h5gopen_f(fcl_id,trim(func_name),obj_id,ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"get_functional_LS_hdf: Error opening the functional dataset")
+
+        call h5ltget_attribute_string_f(obj_id,".","Linear solver",lin_sol,ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"get_functional_LS_hdf: error reading 'Linear solver' attribute.")
+
+        ! Close dataset
+        call h5gclose_f(obj_id,ierr) 
+
+        ! Close Functional group
+        call close_functional_group_hdf(fcl_id)
+
+    end function get_functional_LS_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+    !> Set the attribute 'Linear Solver' of the input functional name
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @data   05/09/2017
+    !!
+    !!  @param[in]  fid         HDF file identifier
+    !!  @param[in]  func_name   Name of the functional
+    !!  @param[in]  string      String to set
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_functional_LS_hdf(fid,func_name,string)
+        integer(HID_T),     intent(in)  :: fid
+        character(*),       intent(in)  :: func_name
+        character(*),       intent(in)  :: string
+        
+        integer(HID_T)                      :: fcl_id,obj_id
+        integer                             :: ierr
+        
+        !  Open Functional group
+        fcl_id = open_functional_group_hdf(fid)
+        
+        ! Open functional dataset
+        call h5gopen_f(fcl_id,trim(func_name),obj_id,ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"set_functional_LS_hdf: Error opening the functional dataset")
+
+        call h5ltset_attribute_string_f(obj_id,".","Linear solver",trim(string),ierr)
+        if (ierr/=0) call chidg_signal(FATAL,"set_functional_LS_hdf: Error reading 'Linear solver' attribute.")
+
+        ! Close dataset
+        call h5gclose_f(obj_id,ierr) 
+
+        ! Close Functional group
+        call close_functional_group_hdf(fcl_id)
+
+    end subroutine set_functional_LS_hdf
+    !****************************************************************************************
+
+
+
+
+    !=======================================================================================================
+    !   Specialized routines for writing grid-node sensitivities to HDF
+    !=======================================================================================================
+
+
+
+
+
+    !>  Create a ChiDG-format file for mesh-sensitivities, with initialized format structure.
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   8/26/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine initialize_file_xhdf(filename)
+        character(*),   intent(in)  :: filename
+
+        character(:),   allocatable :: filename_init
+        integer(HID_T)              :: fid
+        integer(ik)                 :: ierr, loc
+        logical                     :: file_exists
+
+
+        filename_init = trim(filename)
+        
+
+        !
+        ! Check if input file already exists
+        !
+        file_exists = check_file_exists_hdf(filename_init)
+        if (file_exists) then
+            call write_line("Found "//trim(filename_init)//" that already exists. Deleting it to create new file...")
+            call delete_file(trim(filename_init))
+        end if
+
+
+        !
+        ! Create file
+        !
+        call open_hdf()
+        call h5fcreate_f(trim(filename_init), H5F_ACC_TRUNC_F, fid, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"initialize_xfile_hdf: Error h5fcreate_f.")
+        call write_line("File created: "//trim(filename_init))
+
+        !
+        ! Set storage formet
+        !
+        call set_storage_version_major_hdf(fid,STORAGE_VERSION_MAJOR)
+        call set_storage_version_minor_hdf(fid,STORAGE_VERSION_MINOR)
+        
+        !
+        ! Set contains status for grid/solution 
+        !
+        call set_contains_solution_hdf(fid,"False")
+
+        
+        call h5fclose_f(fid,ierr)
+
+    end subroutine initialize_file_xhdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/26/2018
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine initialize_file_structure_xhdf(fid,mesh)
+        integer(HID_T),     intent(in)  :: fid
+        type(mesh_t),       intent(in)  :: mesh
+
+        integer(ik)                 :: idom, eqn_ID
+        integer(HID_T)              :: domain_id
+        character(len=10)           :: domain_name
+
+        do idom = 1,size(mesh%npoints,1)
+
+            ! Create domain group
+            write(domain_name,'(I2.2)') idom
+            call create_domain_xhdf(fid,trim(domain_name))
+
+
+            ! Set additional attributes
+            domain_id = open_domain_hdf(fid,trim(domain_name))
+            call set_domain_npoints_hdf(domain_id,mesh%npoints(idom,:))
+            call close_domain_hdf(domain_id)
+    
+
+        end do !idom
+
+
+    end subroutine initialize_file_structure_xhdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Create a new Domain group.
+    !!
+    !!  Activities:
+    !!      - Create a new domain group for the grid block
+    !!      - Close the domain group
+    !!
+    !!  Convention:
+    !!      - Group Prefix: D_
+    !!      - Example: D_MyDomain
+    !!
+    !!  
+    !!  @author Matteo Ugolotti
+    !!  @date   8/26/2018
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine create_domain_xhdf(fid,domain_name)
+        integer(HID_T),     intent(in)  :: fid
+        character(*),       intent(in)  :: domain_name
+
+        integer(ik)     :: ierr
+        integer(HID_T)  :: domain_id, grid_id, var_id
+        logical         :: domain_exists
+
+        !
+        ! Check if the domain group already exists
+        !
+        domain_exists = check_link_exists_hdf(fid,"D_"//trim(domain_name))
+
+        
+        if (.not. domain_exists) then
+
+            ! Create domain group
+            call h5gcreate_f(fid, "D_"//trim(domain_name), domain_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_domain_xhdf: h5gcreate_f")
+
+            call h5gcreate_f(domain_id, "Grid", grid_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_domain_xhdf: h5gcreate_f")
+            call h5gclose_f(grid_id,ierr)
+            
+            call h5gcreate_f(domain_id, "Fields", var_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_domain_xhdf: h5gcreate_f")
+            call h5gclose_f(var_id,ierr)
+
+
+            ! Close domain
+            call close_domain_hdf(domain_id)
+
+        end if
+
+    end subroutine create_domain_xhdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+    !>  For a domain, set the domain coordinates
+    !!
+    !!  /D_domainname/Grid/Coordinate1
+    !!  /D_domainname/Grid/Coordinate2
+    !!  /D_domainname/Grid/Coordinate3
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   8/25/2018
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_domain_sensitivities_xhdf(dom_id,nodes_sens)
+        integer(HID_T), intent(in)  :: dom_id
+        real(rk),       intent(in)  :: nodes_sens(:,:)
+
+        integer(HID_T)      :: fields_id, xspace_id, yspace_id, zspace_id, xset_id, yset_id, zset_id
+        integer(HSIZE_T)    :: dims_rank_one(1)
+        integer(ik)         :: ipt, ierr
+        logical             :: exists
+
+        !
+        ! Create a grid-group within the current block domain
+        !
+        exists = check_link_exists_hdf(dom_id,"Fields")
+        if (exists) then
+            call h5gopen_f(dom_id,"Fields", fields_id,ierr)
+        else
+            call h5gcreate_f(dom_id, "Fields", fields_id, ierr)
+        end if
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivitites_xhdf: h5gcreate_f")
+
+
+
+        !
+        ! Re-order coordinates to be linear arrays
+        !
+        dims_rank_one = size(nodes_sens,1)
+
+
+        exists = check_link_exists_hdf(fields_id,"dJdx")
+        if (exists) then
+            !
+            ! Open 'Coordinate' data sets
+            !
+            call h5dopen_f(fields_id, "dJdx", xset_id, ierr, H5P_DEFAULT_F)
+            call h5dopen_f(fields_id, "dJdy", yset_id, ierr, H5P_DEFAULT_F)
+            call h5dopen_f(fields_id, "dJdz", zset_id, ierr, H5P_DEFAULT_F)
+
+        else
+
+            !
+            ! Create dataspaces for grid coordinates
+            !
+            call h5screate_simple_f(1, dims_rank_one, xspace_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5screate_simple_f")
+            call h5screate_simple_f(1, dims_rank_one, yspace_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5screate_simple_f")
+            call h5screate_simple_f(1, dims_rank_one, zspace_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5screate_simple_f")
+
+
+            !
+            ! Create datasets for grid coordinates
+            !
+            call h5dcreate_f(fields_id, "dJdx", H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5dcreate_f")
+            call h5dcreate_f(fields_id, "dJdy", H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5dcreate_f")
+            call h5dcreate_f(fields_id, "dJdz", H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5dcreate_f")
+
+
+            !
+            ! Close dataspaces
+            !
+            call h5sclose_f(xspace_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5sclose_f")
+            call h5sclose_f(yspace_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5sclose_f")
+            call h5sclose_f(zspace_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5sclose_f")
+
+
+
+        end if
+
+        !
+        ! Write coordinates to datasets
+        !
+        call h5dwrite_f(xset_id, H5T_NATIVE_DOUBLE, nodes_sens(:,1), dims_rank_one, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5dwrite_f")
+        call h5dwrite_f(yset_id, H5T_NATIVE_DOUBLE, nodes_sens(:,2), dims_rank_one, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5dwrite_f")
+        call h5dwrite_f(zset_id, H5T_NATIVE_DOUBLE, nodes_sens(:,3), dims_rank_one, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5dwrite_f")
+
+
+        !
+        ! Close datasets
+        !
+        call h5dclose_f(xset_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5dclose_f")
+        call h5dclose_f(yset_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5dclose_f")
+        call h5dclose_f(zset_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5dclose_f")
+
+
+        !
+        ! Close Grid group
+        !
+        call h5gclose_f(fields_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_sensitivities_xhdf: h5gclose_f")
+
+
+    end subroutine set_domain_sensitivities_xhdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Set the node info for a block.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/27/2018
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_domain_nodeinfo_xhdf(dom_id,nodes)
+        integer(HID_T), intent(in)  :: dom_id
+        integer(ik),    intent(in)  :: nodes(:,:)
+
+        integer(ik)         :: ierr
+        integer(HID_T)      :: node_set_id, node_space_id, grid_id
+        integer(HSIZE_T)    :: dims_rank_two(2)
+        logical             :: exists
+
+        !
+        ! Size node connectivities
+        !
+        dims_rank_two(1) = size(nodes,1)
+        dims_rank_two(2) = size(nodes,2)
+
+
+        !
+        ! Create a grid-group within the current block domain
+        !
+        exists = check_link_exists_hdf(dom_id,"Grid")
+        if (exists) then
+            call h5gopen_f(dom_id, "Grid", grid_id, ierr)
+        else
+            call h5gcreate_f(dom_id,"Grid", grid_id, ierr)
+        end if
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_nodeinfo_hdf: h5gcreate_f/h5gopen_f")
+
+
+        !
+        ! Create dataset for node connectivity: node_set_id
+        !
+        exists = check_link_exists_hdf(grid_id,"Nodes")
+        if (exists) then
+            call h5dopen_f(grid_id,"Nodes", node_set_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_nodeinfo_hdf: h5dopen_f")
+
+            !
+            ! Write node connectivities
+            !
+            call h5dwrite_f(node_set_id, H5T_NATIVE_INTEGER, nodes, dims_rank_two, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_nodeinfo_hdf: h5dwrite_f")
+
+        else
+            call h5screate_simple_f(2, dims_rank_two, node_space_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_nodeinfo_hdf: h5screate_simple_f")
+
+            call h5dcreate_f(grid_id, "Nodes", H5T_NATIVE_INTEGER, node_space_id, node_set_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_nodeinfo_hdf: h5dcreate_f")
+
+
+
+            !
+            ! Write node connectivities
+            !
+            call h5dwrite_f(node_set_id, H5T_NATIVE_INTEGER, nodes, dims_rank_two, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_nodeinfo_hdf: h5dwrite_f")
+
+            call h5sclose_f(node_space_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_nodeinfo_hdf: h5sclose_f")
+
+        end if
+
+
+        !
+        ! Close dataset, dataspace, Grid group
+        !
+        call h5dclose_f(node_set_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_nodeinfo_hdf: h5dclose_f")
+        call h5gclose_f(grid_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_nodeinfo_hdf: h5gclose_f")
+
+
+
+    end subroutine set_domain_nodeinfo_xhdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

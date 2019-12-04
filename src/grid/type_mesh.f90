@@ -52,6 +52,8 @@ module type_mesh
         type(octree_t)                      :: octree
         integer(ik),            allocatable :: nelems_per_domain(:)
 
+        ! Global data
+        integer(ik),            allocatable :: npoints(:,:)         ! [gobal_dom_id,(i,j,k)]
 
         ! Interpolation node set ('Uniform', 'Quadrature')
         character(:),           allocatable :: interpolation
@@ -79,12 +81,15 @@ module type_mesh
         ! Chimera
         procedure           :: assemble_chimera_data
 
+        ! Mesh Sensitivities
+        procedure, public   :: compute_derivatives_dx
+        procedure, public   :: release_derivatives_dx
+
         ! Octree
         procedure           :: set_global_nodes
         procedure           :: set_nelems_per_domain
         procedure           :: rbf_index_to_element_info
         procedure           :: global_to_local_indices
-
 
         ! Resouce management
         procedure           :: release
@@ -353,9 +358,10 @@ contains
     !>  Given a domain name, return the domain identifier so that it can be 
     !!  indexed in self%domains(:).
     !!
+    !!  Return NO_ID if no domain named 'domain_name' was found.
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   4/6/2017
-    !!
     !!
     !--------------------------------------------------------------------------------
     function get_domain_id(self,domain_name) result(domain_index)
@@ -366,7 +372,8 @@ contains
         integer(ik)  :: idom
         integer(ik)  :: domain_index
         
-        domain_index = 0
+        ! Default if not replaced with valid ID
+        domain_index = NO_ID
 
         do idom = 1,self%ndomains()
             if ( trim(domain_name) == trim(self%domain(idom)%name) ) then
@@ -376,10 +383,9 @@ contains
         end do
 
 
-        user_msg = "mesh%get_domain_index: No domain was found with a name &
-                    matching the incoming string"
-        if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,domain_name)
-
+!        user_msg = "mesh%get_domain_index: No domain was found with a name &
+!                    matching the incoming string"
+!        if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,domain_name)
 
     end function get_domain_id
     !********************************************************************************
@@ -650,6 +656,88 @@ contains
 
     end subroutine assemble_chimera_data
     !********************************************************************************
+
+
+
+
+
+    !>  Compute the differentiate interpolators for both current element and adjacent
+    !!  element face
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   12/12/2018
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine compute_derivatives_dx(self,elem_info,differentiate)
+        class(mesh_t),          intent(inout)   :: self
+        type(element_info_t),   intent(in)      :: elem_info
+        integer(ik),            intent(in)      :: differentiate
+
+        integer(ik) :: ielement_l, idomain_l 
+
+        call write_line("**********************   WARNING   ***********************")
+        call write_line("mesh%compute_derivatives_dx has not yet been implemented.")
+        call write_line("********************** END WARNING ***********************")
+
+! TODO: Uncomment and implement for adjointx
+!
+!        ! Compute only if we need mesh senstitivities
+!        if (differentiate == dX_DIFF) then
+!
+!            ielement_l = elem_info%ielement_l
+!            idomain_l  = elem_info%idomain_l
+!            
+!            ! Compute element and faces differentiated interpolators
+!            call self%domain(idomain_l)%compute_interpolations_dx(ielement_l)
+!
+!        end if
+
+    end subroutine compute_derivatives_dx
+    !*********************************************************************************
+
+
+
+
+
+
+    
+    !>  Release memory of differentiated interpolators for current element, current
+    !!  element's faces and neighbor's element faces. 
+    !!  
+    !!  @author Matteo Ugolotti 
+    !!  @date   12/12/2018
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine release_derivatives_dx(self,elem_info,differentiate)
+        class(mesh_t),          intent(inout)   :: self
+        type(element_info_t),   intent(in)      :: elem_info
+        integer(ik),            intent(in)      :: differentiate
+
+        integer(ik) :: ielement_l, idomain_l 
+
+        call write_line("**********************   WARNING   ***********************")
+        call write_line("mesh%release_derivatives_dx has not yet been implemented.")
+        call write_line("********************** END WARNING ***********************")
+
+! TODO: Uncomment and implement for adjointx
+!
+!        ! Release only if we need mesh senstitivities
+!        if (differentiate == dX_DIFF) then
+!
+!            ielement_l = elem_info%ielement_l
+!            idomain_l  = elem_info%idomain_l
+!            
+!            ! Realse element and faces differentiated interpolators
+!            call self%domain(idomain_l)%release_interpolations_dx(ielement_l)
+!
+!        end if
+
+    end subroutine release_derivatives_dx
+    !*********************************************************************************
+
+
+
+
 
 
 

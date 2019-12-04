@@ -1,7 +1,7 @@
 module type_solver_controller
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO
+    use mod_constants,          only: ZERO, dQ_DIFF
     use type_chidg_matrix,      only: chidg_matrix_t
     use type_preconditioner,    only: preconditioner_t
     use mpi_f08,                only: MPI_AllReduce, MPI_LOGICAL, MPI_LOR, mpi_comm
@@ -61,13 +61,15 @@ contains
         integer(ik),                intent(in)      :: niter
         real(rk),                   intent(in)      :: residual_ratio
 
-        logical :: update 
+        integer(ik) :: update 
         
         ! Default: update lhs
-        update = .true.
+        !update = .true.
+        update = dQ_DIFF
 
         ! Store action
-        self%lhs_updated = update
+        !self%lhs_updated = update
+        self%lhs_updated = .true.
 
     end function update_lhs
     !*************************************************************

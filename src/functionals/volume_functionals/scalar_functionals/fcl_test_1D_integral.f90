@@ -168,7 +168,7 @@ contains
         !
         ! Store in cache
         !
-        call cache%set_value(integral,'u integral','reference',worker%function_info) 
+        call cache%set_value(worker%mesh,integral,'u integral','reference',worker%function_info) 
 
     end subroutine compute_functional
     !******************************************************************************************

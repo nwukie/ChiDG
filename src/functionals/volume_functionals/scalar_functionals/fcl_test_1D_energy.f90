@@ -172,7 +172,7 @@ contains
         !
         ! Store in cache
         !
-        call cache%set_value(energy_integral,'kinetic energy','reference',worker%function_info) 
+        call cache%set_value(worker%mesh,energy_integral,'kinetic energy','reference',worker%function_info) 
 
     end subroutine compute_functional
     !******************************************************************************************

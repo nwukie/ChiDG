@@ -25,9 +25,10 @@ module type_time_manager
         real(rk),   allocatable :: freqs(:)     ! List of frequencies: freqs(nfreq)
         real(rk)                :: dt           ! Time interval
 
-        integer(ik)             :: itime  = 1   ! Current time index
-        integer(ik)             :: ntime  = 1   ! Number of time levels in HB (=1 for steady)
-        integer(ik)             :: nsteps = 1   ! Number of time steps in time_marching solution
+        integer(ik)             :: itime  = 1   ! Current time-spectral index
+        integer(ik)             :: ntime  = 1   ! Number of time-spectral levels (=1 for steady)
+        integer(ik)             :: istep  = 1   ! Current time-marching index
+        integer(ik)             :: nsteps = 1   ! Number of time-marching steps
         integer(ik)             :: nwrite = 0
         
         ! Harmonic Balance pseudo-spectral matrices

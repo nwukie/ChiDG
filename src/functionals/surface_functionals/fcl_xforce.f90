@@ -197,7 +197,7 @@ contains
         xforce = integrate_surface(worker,xforce_gq)
         
         ! Store in cache 
-        call cache%set_value(xforce,'xforce','reference',worker%function_info) 
+        call cache%set_value(worker%mesh,xforce,'xforce','reference',worker%function_info) 
 
     end subroutine compute_functional
     !******************************************************************************************

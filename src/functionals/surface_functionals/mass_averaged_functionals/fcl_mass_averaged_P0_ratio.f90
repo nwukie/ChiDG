@@ -203,8 +203,8 @@ contains
      
          
         ! Store in cache 
-        call cache%set_value(pressure_flux,   'pressure flux','auxiliary',worker%function_info) 
-        call cache%set_value(mass_flux,       'mass flux',    'auxiliary',worker%function_info) 
+        call cache%set_value(worker%mesh,pressure_flux,   'pressure flux','auxiliary',worker%function_info) 
+        call cache%set_value(worker%mesh,mass_flux,       'mass flux',    'auxiliary',worker%function_info) 
 
     
     end subroutine compute_auxiliary
@@ -238,17 +238,18 @@ contains
     !!                               since the parallel communication already happened 
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine finalize_auxiliary(self,cache)
-        class(mass_averaged_P0_ratio_t),  intent(inout)         :: self
-        type(functional_cache_t),               intent(inout)   :: cache
+    subroutine finalize_auxiliary(self,worker,cache)
+        class(mass_averaged_P0_ratio_t),    intent(inout)   :: self
+        type(chidg_worker_t),               intent(in)      :: worker
+        type(functional_cache_t),           intent(inout)   :: cache
 
         type(AD_D)        :: pressure_flux, mass_flux
         
         
-        pressure_flux    = cache%get_value('pressure flux','auxiliary')
-        mass_flux        = cache%get_value('mass flux',    'auxiliary')
+        pressure_flux    = cache%get_value(worker%mesh,'pressure flux','auxiliary')
+        mass_flux        = cache%get_value(worker%mesh,'mass flux',    'auxiliary')
 
-        call cache%set_value(pressure_flux/mass_flux,'MA pressure','auxiliary')
+        call cache%set_value(worker%mesh,pressure_flux/mass_flux,'MA pressure','auxiliary')
 
     end subroutine finalize_auxiliary
     !*********************************************************************************************
@@ -341,8 +342,8 @@ contains
         mass_flux =  integrate_surface_mass_weighted(worker)
         
         ! Store in cache 
-        call cache%set_value(pressure_flux,'pressure flux','reference',worker%function_info) 
-        call cache%set_value(mass_flux,    'mass flux',    'reference',worker%function_info) 
+        call cache%set_value(worker%mesh,pressure_flux,'pressure flux','reference',worker%function_info) 
+        call cache%set_value(worker%mesh,mass_flux,    'mass flux',    'reference',worker%function_info) 
 
     end subroutine compute_functional
     !******************************************************************************************
@@ -373,20 +374,21 @@ contains
     !!                               since the parallel communication already happened 
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine finalize_functional(self,cache) 
-        class(mass_averaged_P0_ratio_t),  intent(inout)         :: self
-        type(functional_cache_t),               intent(inout)   :: cache
+    subroutine finalize_functional(self,worker,cache) 
+        class(mass_averaged_P0_ratio_t),    intent(inout)   :: self
+        type(chidg_worker_t),               intent(in)      :: worker
+        type(functional_cache_t),           intent(inout)   :: cache
 
         type(AD_D)        :: pressure_flux, mass_flux, MA_ref_pressure, MA_aux_pressure
         
         ! Finilize functiona on reference geometry
-        pressure_flux    = cache%get_value('pressure flux','reference')
-        mass_flux        = cache%get_value('mass flux',    'reference')
+        pressure_flux    = cache%get_value(worker%mesh,'pressure flux','reference')
+        mass_flux        = cache%get_value(worker%mesh,'mass flux',    'reference')
         MA_ref_pressure  = pressure_flux/mass_flux
 
         ! Compute the final PRESSURE RATIO using auxiliary and reference pressures
-        MA_aux_pressure  = cache%get_value('MA pressure',  'auxiliary')
-        call cache%set_value(MA_ref_pressure/MA_aux_pressure,'MA pressure ratio','reference')
+        MA_aux_pressure  = cache%get_value(worker%mesh,'MA pressure',  'auxiliary')
+        call cache%set_value(worker%mesh,MA_ref_pressure/MA_aux_pressure,'MA pressure ratio','reference')
 
     end subroutine finalize_functional
     !*********************************************************************************************

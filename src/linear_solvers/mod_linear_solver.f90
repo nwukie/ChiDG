@@ -6,12 +6,12 @@ module mod_linear_solver
 
     use type_fgmres,                only: fgmres_t
     use type_petsc_linear,          only: petsc_linear_t
-    use type_fgmres_cgs_mg_correct, only: fgmres_cgs_mg_correct_t
+!    use type_fgmres_cgs_mg_correct, only: fgmres_cgs_mg_correct_t
     implicit none
 
     type(fgmres_t)                  :: FGMRES
     type(petsc_linear_t)            :: PETSC_LINEAR
-    type(fgmres_cgs_mg_correct_t)   :: FGMRES_CGS_MG_CORRECT
+!    type(fgmres_cgs_mg_correct_t)   :: FGMRES_CGS_MG_CORRECT
 
 contains
 
@@ -38,8 +38,8 @@ contains
             case ('petsc','PETSC')
                 allocate(lsolver, source=PETSC_LINEAR, stat=ierr)
 
-            case ('fgmres_cgs_mg_correct', 'FGMRES_CGS_MG_CORRECT')
-                allocate(lsolver, source=FGMRES_CGS_MG_CORRECT, stat=ierr)
+!            case ('fgmres_cgs_mg_correct', 'FGMRES_CGS_MG_CORRECT')
+!                allocate(lsolver, source=FGMRES_CGS_MG_CORRECT, stat=ierr)
 
             case default
                 call chidg_signal_one(FATAL,"create_linear_solver: linear solver string did not match any valid type",trim(lstring))

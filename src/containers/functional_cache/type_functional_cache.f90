@@ -1,7 +1,7 @@
 module type_functional_cache
 #include<messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, ONE, NO_ID, dQ_DIFF, dX_DIFF, NO_DIFF, dQ_DIFF
+    use mod_constants,          only: ZERO, ONE, NO_ID, dX_DIFF, NO_DIFF, dD_DIFF
     use type_geometry_cache,    only: geometry_cache_t
     use type_function_info,     only: function_info_t
     use type_mesh,              only: mesh_t
@@ -80,7 +80,14 @@ contains
         end select
 
         ! Create chidg vector model
-        call self%vector_model%init(mesh,1,differentiate)
+        if (differentiate == dX_DIFF) then
+            call self%vector_model%init(mesh,1,'grid differentiation')
+        else if (differentiate == dD_DIFF) then
+            call self%vector_model%init(mesh,1,'auxiliary differentiation')
+        else 
+            call self%vector_model%init(mesh,1,'primal differentiation')
+        end if
+
 
         ! Differentiation type
         self%dtype = differentiate
@@ -99,8 +106,9 @@ contains
     !!  @date   3/7/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine set_value(self,integral,int_name,geometry,fcn_info)
+    subroutine set_value(self,mesh,integral,int_name,geometry,fcn_info)
         class(functional_cache_t),              intent(inout)   :: self
+        type(mesh_t),                           intent(in)      :: mesh
         type(AD_D),                             intent(in)      :: integral
         character(*),                           intent(in)      :: int_name
         character(*),                           intent(in)      :: geometry
@@ -108,10 +116,10 @@ contains
 
         select case (geometry)
             case("reference")
-                call self%ref_cache%set_value(int_name,integral,self%vector_model,self%dtype,fcn_info)
+                call self%ref_cache%set_value(mesh,int_name,integral,self%vector_model,self%dtype,fcn_info)
 
             case("auxiliary")
-                call self%aux_cache%set_value(int_name,integral,self%vector_model,self%dtype,fcn_info)
+                call self%aux_cache%set_value(mesh,int_name,integral,self%vector_model,self%dtype,fcn_info)
 
             case default
                 call chidg_signal(FATAL,"functional_cache_t%set_value: incorrect 'geometry' reference.")
@@ -131,8 +139,9 @@ contains
     !!  @date   3/7/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    function get_value(self,int_name,geometry,fcn_info) result(integral)
+    function get_value(self,mesh,int_name,geometry,fcn_info) result(integral)
         class(functional_cache_t),              intent(inout)   :: self
+        type(mesh_t),                           intent(in)      :: mesh
         character(*),                           intent(in)      :: int_name
         character(*),                           intent(in)      :: geometry
         type(function_info_t),      optional,   intent(in)      :: fcn_info
@@ -141,10 +150,10 @@ contains
 
         select case (geometry)
             case("reference")
-                integral = self%ref_cache%get_value(int_name,self%vector_model,self%dtype,fcn_info)
+                integral = self%ref_cache%get_value(mesh,int_name,self%vector_model,self%dtype,fcn_info)
 
             case("auxiliary")
-                integral = self%aux_cache%get_value(int_name,self%vector_model,self%dtype,fcn_info)
+                integral = self%aux_cache%get_value(mesh,int_name,self%vector_model,self%dtype,fcn_info)
 
             case default
                 call chidg_signal(FATAL,"functional_cache_t%get_value: incorrect 'geometry' reference.")

@@ -293,14 +293,14 @@ contains
                     worker%function_info%seed = face_compute_seed(worker%mesh,          &
                                                                   elem_info%idomain_l,  &
                                                                   elem_info%ielement_l, &
-                                                                  iface,idepend,idiff)
+                                                                  iface,idepend,idiff,worker%itime)
                     call worker%set_face(iface)
                 
                 else if (self%component == 'element') then
                     worker%function_info%seed = element_compute_seed(worker%mesh,          & 
                                                                      elem_info%idomain_l,  &
                                                                      elem_info%ielement_l, &
-                                                                     idepend,idiff)
+                                                                     idepend,idiff,worker%itime)
                 end if 
                 
 
@@ -323,8 +323,8 @@ contains
             
             
             ! Finalize functional on auxiliary/reference geometry
-            if (compute_auxiliary) call func%finalize_auxiliary(self%cache)
-            if (compute_reference) call func%finalize_functional(self%cache)
+            if (compute_auxiliary) call func%finalize_auxiliary(worker,self%cache)
+            if (compute_reference) call func%finalize_functional(worker,self%cache)
 
         end associate
     
@@ -446,8 +446,8 @@ contains
         class(functional_cache_handler_t),  intent(inout)       :: self
 
         ! Deassociate pointers in functional cache handler
-        if (associated(self%cache))     nullify(self%cache)
-        if (associated(self%data))      nullify(self%data)
+        if (associated(self%cache)) nullify(self%cache)
+        if (associated(self%data))  nullify(self%data)
 
     end subroutine destructor
     !***************************************************************************************************

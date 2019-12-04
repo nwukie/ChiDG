@@ -219,7 +219,6 @@ contains
 
     !>  Set reference geometry of the evaluator
     !!
-    !!
     !!  @author Matteo Ugolotti
     !!  @date   02/12/2017
     !!
@@ -525,8 +524,9 @@ contains
     !!  @date   05/11/2017
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine finalize_auxiliary(self,cache)
+    subroutine finalize_auxiliary(self,worker,cache)
         class(evaluator_t),         intent(inout)   :: self
+        type(chidg_worker_t),       intent(in)      :: worker
         type(functional_cache_t),   intent(inout)   :: cache
 
 
@@ -561,8 +561,9 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine finalize_functional(self,cache) 
+    subroutine finalize_functional(self,worker,cache) 
         class(evaluator_t),         intent(inout)   :: self
+        type(chidg_worker_t),       intent(in)      :: worker
         type(functional_cache_t),   intent(inout)   :: cache
 
 

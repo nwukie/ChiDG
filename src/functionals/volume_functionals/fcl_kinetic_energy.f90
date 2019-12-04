@@ -215,13 +215,14 @@ contains
     !!                               functional (ie after parallel communication).     
     !!
     !---------------------------------------------------------------------------------------------
-    function finalize_functional(self,cache) result (res)
+    function finalize_functional(self,worker,cache) result (res)
         class(kinetic_energy_t),    intent(inout)   :: self
+        type(chidg_worker_t),       intent(in)      :: worker
         type(integral_cache_t),     intent(inout)   :: cache    
 
         type(AD_D)      :: res
 
-        res = cache%get_value('kinetic energy')
+        res = cache%get_value(worker%mesh,'kinetic energy')
 
 
     end function finalize_functional

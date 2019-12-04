@@ -33,6 +33,7 @@ module type_element_coupling_data
 
         
         ! Element data
+        integer(ik)                 :: coordinate_system
         integer(ik)                 :: nfields     = 0
         integer(ik)                 :: ntime       = 0
         integer(ik)                 :: nterms_s    = 0
@@ -122,27 +123,29 @@ contains
     !!  @date   4/18/2017
     !!
     !----------------------------------------------------------------------
-    subroutine set_data(self,nfields,ntime,nterms_s,nnodes_r,dof_start,dof_local_start,total_area,areas,quad_pts)
+    subroutine set_data(self,nfields,ntime,nterms_s,nnodes_r,coordinate_system,dof_start,dof_local_start,total_area,areas,quad_pts)
         class(element_coupling_data_t), intent(inout)   :: self
         integer(ik),                    intent(in)      :: nfields
         integer(ik),                    intent(in)      :: ntime
         integer(ik),                    intent(in)      :: nterms_s
         integer(ik),                    intent(in)      :: nnodes_r
+        integer(ik),                    intent(in)      :: coordinate_system
         integer(ik),                    intent(in)      :: dof_start
         integer(ik),                    intent(in)      :: dof_local_start
         real(rk),                       intent(in)      :: total_area
         real(rk),                       intent(in)      :: areas(:)
         type(point_t),                  intent(in)      :: quad_pts(:)
 
-        self%nfields         = nfields
-        self%ntime           = ntime
-        self%nterms_s        = nterms_s
-        self%nnodes_r        = nnodes_r
-        self%dof_start       = dof_start
-        self%dof_local_start = dof_local_start
-        self%total_area      = total_area
-        self%areas           = areas
-        self%quad_pts        = quad_pts
+        self%nfields           = nfields
+        self%ntime             = ntime
+        self%nterms_s          = nterms_s
+        self%nnodes_r          = nnodes_r
+        self%coordinate_system = coordinate_system
+        self%dof_start         = dof_start
+        self%dof_local_start   = dof_local_start
+        self%total_area        = total_area
+        self%areas             = areas
+        self%quad_pts          = quad_pts
 
     end subroutine set_data
     !**********************************************************************

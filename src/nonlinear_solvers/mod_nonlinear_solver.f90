@@ -8,7 +8,7 @@ module mod_nonlinear_solver
     use type_newton,            only: newton_t
     use type_newton_subiter,    only: newton_subiter_t
     use type_petsc_nonlinear,   only: petsc_nonlinear_t
-    use type_jfnk,              only: jfnk_t
+!    use type_jfnk,              only: jfnk_t
     use type_quasi_newton_sst,  only: quasi_newton_sst_t
     use type_quasi_newton_rs,   only: quasi_newton_rs_t
     implicit none
@@ -18,7 +18,7 @@ module mod_nonlinear_solver
     type(newton_t)              :: NEWTON
     type(newton_subiter_t)      :: NEWTON_SUBITER
     type(petsc_nonlinear_t)     :: PETSC_NONLINEAR
-    type(jfnk_t)                :: JFNK 
+!    type(jfnk_t)                :: JFNK 
     type(quasi_newton_sst_t)    :: QUASI_NEWTON_SST
     type(quasi_newton_rs_t)     :: QUASI_NEWTON_RS
 
@@ -56,8 +56,8 @@ contains
             case ('petsc','PETSC')
                 allocate(instance, source=PETSC_NONLINEAR)
 
-            case ('jfnk','Jfnk','JFNK')
-                allocate(instance, source=JFNK)
+!            case ('jfnk','Jfnk','JFNK')
+!                allocate(instance, source=JFNK)
 
             case ('quasi_newton_sst','Quasi_Newton_SST','quasi-newton-sst','Quasi-Newton-SST')
                 allocate(instance, source=QUASI_NEWTON_SST)

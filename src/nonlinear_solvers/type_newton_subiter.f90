@@ -1,7 +1,7 @@
 module type_newton_subiter
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ONE, TWO
+    use mod_constants,          only: ONE, TWO, NO_DIFF
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
     use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier
@@ -264,7 +264,7 @@ contains
                         ! Update state, update residual, compute residual norm 
                         qn = q_sub_iterate+ dq
                         data%sdata%q = qn
-                        call system%assemble(data,differentiate=.false.)
+                        call system%assemble(data,differentiate=NO_DIFF)
 
                         if (self%ptc)    rhs = rhs + pseudo_transient_scaling(data,cfln,data%sdata%dq)
                         if (self%smooth) rhs = rhs + f_smooth
@@ -647,7 +647,7 @@ contains
             data%sdata%q = qn
 
             ! Compute new function value and norm
-            call system%assemble(data,differentiate=.false.)
+            call system%assemble(data,differentiate=NO_DIFF)
 
             fn_pure = data%sdata%rhs%norm(ChiDG_COMM)
             ! Add globalization contributions

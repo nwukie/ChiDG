@@ -203,7 +203,7 @@ contains
         yforce = integrate_surface(worker,yforce_gq)
 
         ! Store in cache 
-        call cache%set_value(yforce,'yforce','reference',worker%function_info) 
+        call cache%set_value(worker%mesh,yforce,'yforce','reference',worker%function_info) 
 
     end subroutine compute_functional
     !******************************************************************************************

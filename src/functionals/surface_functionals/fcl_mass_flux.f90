@@ -164,7 +164,7 @@ contains
         mass_flux = integrate_surface(worker,mass)
        
         ! Store in cache 
-        call cache%set_value(mass_flux,'mass flux','reference',worker%function_info)
+        call cache%set_value(worker%mesh,mass_flux,'mass flux','reference',worker%function_info)
 
     end subroutine compute_functional
     !******************************************************************************************

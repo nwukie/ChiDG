@@ -32,22 +32,8 @@ contains
 
 
 
-
-    !>  Generate smooth bump grid file + boundary conditions for Euler equations.
+    !>
     !!
-    !!
-    !!  x = -1.5              x = 1.5
-    !!     |                     |
-    !!     v                     v
-    !!
-    !!     .---------------------.      y = 0.8
-    !!     |                     |
-    !!     |         ---         |
-    !!     .--------/   \--------.      y = 0.0625 e^(-25*x*x)
-    !!
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   10/19/2016
     !!
     !!
     !-----------------------------------------------------------------------------
@@ -68,6 +54,7 @@ contains
         integer(ik),        allocatable             :: elements(:,:), faces(:,:)
         class(bc_state_t),  allocatable             :: inlet, outlet, wall
         real(rk),           allocatable, dimension(:,:,:)   :: xcoords, ycoords, zcoords
+        integer(ik)                                 :: npoints(3)
 
 
         character(len=8)                            :: bc_face_strings(6)
@@ -92,15 +79,21 @@ contains
         nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
         elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,order=4,idomain=1)
 
+        !
+        ! Get number of points in each direction of the block
+        !
+        npoints(1) = size(xcoords,1)
+        npoints(2) = size(xcoords,2)
+        npoints(3) = size(xcoords,3)
 
 
         !
         ! Add domains
         !
         if (present(equation_sets)) then
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get())
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian',equation_sets(1)%get())
         else
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Euler ALE')
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian','Euler ALE')
         end if
 
 

@@ -324,13 +324,14 @@ contains
     !!  @param[in]  activity   Initialization activity specification.
     !!
     !-----------------------------------------------------------------------------------------
-    recursive subroutine init(self,activity,interpolation,level)
+    recursive subroutine init(self,activity,interpolation,level,storage)
         class(chidg_t), intent(inout)           :: self
         character(*),   intent(in)              :: activity
         character(*),   intent(in), optional    :: interpolation
         integer(ik),    intent(in), optional    :: level
+        character(*),   intent(in), optional    :: storage
 
-        character(:),   allocatable :: user_msg
+        character(:),   allocatable :: user_msg, storage_type
         character(:),   allocatable :: interpolation_in
         integer(ik)                 :: level_in, ierr
 
@@ -405,7 +406,13 @@ contains
 
             ! Initialize solver storage initialization: vectors, matrices, etc.
             case ('storage')
-                call self%data%initialize_solution_solver()
+                
+                if (present(storage)) then
+                    storage_type = trim(storage)
+                else
+                    storage_type = 'primal storage'
+                end if
+                call self%data%initialize_solution_solver(trim(storage_type))
 
 
             ! Allocate components, based on input or default input data
@@ -660,7 +667,9 @@ contains
     !!  @param[in]  equation_set    Optionally, specify the equation set to be initialized 
     !!                              instead of
     !!
-    !!  TODO: Generalize spacedim
+    !!  Read npoints for each domain and store in mesh%npoints
+    !!  @author Matteo Ugolotti
+    !!  @date   8/28/2018
     !!
     !-----------------------------------------------------------------------------------------
     subroutine read_mesh_grids(self,grid_file,equation_set, partitions_in)
@@ -677,6 +686,7 @@ contains
         character(:),       allocatable     :: domain_equation_set
         type(meshdata_t),   allocatable     :: meshdata(:)
         integer(ik)                         :: idom, iread, ierr, ielem, eqn_ID, ii, ndoms, nelems, nnodes
+        integer(ik),        allocatable     :: npoints(:,:)
 
         integer(ik), allocatable    :: nelems_per_domain(:),nnodes_per_domain(:)
         real(rk),    allocatable    :: rbf_radius_recv(:,:), rbf_center_recv(:,:),rbf_radius_sendv(:,:), rbf_center_sendv(:,:), global_nodes(:,:)
@@ -795,6 +805,19 @@ contains
                                             eqn_ID )
 
         end do !idom
+
+
+
+        ! Each processor store the number of points for each block, even though the
+        ! block does not belong to the partition managed by the processor
+        do iread = 0,NRANK-1
+            if ( iread == IRANK ) then
+                call read_grid_npoints_hdf(grid_file,npoints)
+                self%data%mesh%npoints = npoints
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
+
 
 
         ! Sync
@@ -1472,6 +1495,9 @@ contains
         nsteps = self%data%time_manager%nsteps
         call write_line("Step","System residual", columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
         do istep = 1,nsteps
+
+            ! update time_manager
+            self%data%time_manager%istep = istep
 
 
             ! Report to file: report from mod_io

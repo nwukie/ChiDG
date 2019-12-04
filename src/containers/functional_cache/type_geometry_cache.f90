@@ -110,7 +110,8 @@ contains
                 
                 ! Each geometry is a mesh domain
                 domain_name = geometries%data_(igeom)%get()
-                domain_ID   = mesh%get_domain_id(domain_name,'soft')
+                !domain_ID   = mesh%get_domain_id(domain_name,'soft')
+                domain_ID   = mesh%get_domain_id(domain_name)
                 if (domain_ID == NO_ID) cycle
 
                 nelems      = mesh%domain(domain_ID)%get_nelements_local()
@@ -261,8 +262,9 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine set_value(self,int_name,value_add,vec_model,dtype,fcn_info)
+    subroutine set_value(self,mesh,int_name,value_add,vec_model,dtype,fcn_info)
         class(geometry_cache_t),               intent(inout)   :: self
+        type(mesh_t),                          intent(in)      :: mesh
         character(*),                          intent(in)      :: int_name
         type(AD_D),                            intent(in)      :: value_add
         type(chidg_vector_t),                  intent(in)      :: vec_model
@@ -291,9 +293,9 @@ contains
         
         ! Set 
         if ( present(fcn_info) ) then
-            call self%integral_cache(int_ID)%set_value(value_add,vec_model,fcn_info)
+            call self%integral_cache(int_ID)%set_value(mesh,value_add,vec_model,fcn_info)
         else
-            call self%integral_cache(int_ID)%set_value(value_add,vec_model,dtype)
+            call self%integral_cache(int_ID)%set_value(mesh,value_add,vec_model,dtype)
         end if
 
 
@@ -313,8 +315,9 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    function get_value(self,int_name,vec_model,dtype,fcn_info) result(integral)
+    function get_value(self,mesh,int_name,vec_model,dtype,fcn_info) result(integral)
         class(geometry_cache_t),               intent(inout)   :: self
+        type(mesh_t),                          intent(in)      :: mesh
         character(*),                          intent(in)      :: int_name
         type(chidg_vector_t),                  intent(in)      :: vec_model
         integer(ik),                           intent(in)      :: dtype
@@ -335,9 +338,9 @@ contains
 
         ! Set 
         if ( present(fcn_info) ) then
-            integral = self%integral_cache(int_ID)%get_value(fcn_info)
+            integral = self%integral_cache(int_ID)%get_value(mesh,fcn_info)
         else
-            integral = self%integral_cache(int_ID)%get_value(vec_model,dtype)
+            integral = self%integral_cache(int_ID)%get_value(mesh,vec_model,dtype)
         end if
 
     end function get_value

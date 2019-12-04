@@ -143,15 +143,21 @@ contains
     !!  @date   2/1/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine initialize_solution_solver(self)
-        class(chidg_data_t),     intent(inout)   :: self
+    subroutine initialize_solution_solver(self,storage_type)
+        class(chidg_data_t),    intent(inout)   :: self
+        character(*),           intent(in)      :: storage_type
 
         integer(ik) :: idom, ndom, ierr, eqn_ID
 
         type(equationset_function_data_t),  allocatable :: function_data(:)
+        type(storage_flags_t)                           :: storage_flags
 
 
         call write_line("Initialize: matrix/vector allocation...", io_proc=GLOBAL_MASTER)
+
+        ! Determine storage flags based on the type of simulation we are about to run
+        call storage_flags%set(storage_type,self%sdata%nauxiliary_fields())
+
         ! Assemble array of function_data from the eqnset array to pass to the solver data 
         ! structure for initialization
         ndom = self%mesh%ndomains()
@@ -164,10 +170,19 @@ contains
             function_data(idom) = self%eqnset(eqn_ID)%function_data
         end do
 
+!        ! Initialize solver data 
+!        call self%sdata%init(self%mesh, function_data)
 
-        ! Initialize solver data 
-        call self%sdata%init(self%mesh, function_data)
-
+        ! Initialize necessary solver containers
+        call self%sdata%init(self%mesh,function_data,storage_flags)
+        call self%sdata%init_adjoint(self%functional_group%n_functionals(),self%time_manager%nsteps,self%mesh,storage_flags)
+        call self%sdata%init_adjointx(self%functional_group%n_functionals(),self%time_manager%nsteps,self%mesh,storage_flags)
+        call self%sdata%init_adjointbc(self%functional_group%n_functionals(),self%time_manager%nsteps,self%mesh,storage_flags)
+        
+        ! Allocate solver data functional container (when functional are computed w/o adjoint)
+        if (self%functional_group%compute_functionals) then
+            call self%sdata%init_functional(self%functional_group%n_functionals())
+        end if
 
     end subroutine initialize_solution_solver
     !***************************************************************************************

@@ -102,6 +102,7 @@ module type_chidg_vector
 !        procedure,  public  :: ndomains
 !        procedure,  public  :: restrict
 !        procedure,  public  :: prolong
+        procedure, public   :: nentries     ! TODO: TEST
                                                                     
 
         final               :: destroy
@@ -1573,6 +1574,42 @@ contains
     !****************************************************************************************
 
 
+
+
+    !>  Return number of entries in the processor-local part of the vector.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   12/02/2019
+    !!
+    !!  TODO: TEST
+    !!
+    !----------------------------------------------------------------------------------------
+    function nentries(self) result(nentries_)
+        class(chidg_vector_t),  intent(inout)   :: self
+
+        integer(ik) :: idom, ielem
+
+        PetscReal      :: nentries_
+        PetscErrorCode :: perr
+
+
+        nentries_ = 0
+        if (allocated(self%wrapped_petsc_vector)) then
+
+            call VecGetLocalSize(self%wrapped_petsc_vector%petsc_vector, nentries_, perr)
+
+        else
+
+            do idom = 1,size(self%dom)
+                do ielem = 1,size(self%dom(idom)%vecs)
+                    nentries_ = nentries_ + self%dom(idom)%vecs(ielem)%nentries()
+                end do !ielem
+            end do !idom
+
+        end if
+
+    end function nentries
+    !****************************************************************************************
 
 
 !    !>

@@ -136,10 +136,11 @@ contains
     !!  @date   9/3/2018
     !!
     !-------------------------------------------------------------------------
-    subroutine set(self,storage_type,compute_auxiliary)
+    subroutine set(self,storage_type,nauxiliary_fields)
         class(storage_flags_t),  intent(inout)  :: self
         character(*),            intent(in)     :: storage_type
-        logical,                 intent(in)     :: compute_auxiliary 
+        integer(ik),             intent(in)     :: nauxiliary_fields
+     !   logical,                 intent(in)     :: compute_auxiliary 
 
         call self%clear()
 
@@ -173,7 +174,8 @@ contains
 
                 self%func_check         = .true.
 
-                if (compute_auxiliary) then
+                !if (compute_auxiliary) then
+                if (nauxiliary_fields > 0) then
                     self%Rd             = .true.
                     self%Rd_trans       = .true.
                     self%vRd            = .true.
@@ -195,7 +197,8 @@ contains
 
                 self%func_check         = .true.
                 
-                if (compute_auxiliary) then
+                !if (compute_auxiliary) then
+                if (nauxiliary_fields > 0) then
                     self%wAx             = .true.
                 end if
 

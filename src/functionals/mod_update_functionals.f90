@@ -44,14 +44,12 @@ contains
         
 
         ! Initialize Chidg Worker references
-        call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, cache)
+        call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, data%time_manager, cache)
 
 
         ! Communicate solution vector
         call comm_timer%start()
-        call data%sdata%q%comm_send()
-        call data%sdata%q%comm_recv()
-        call data%sdata%q%comm_wait()
+        call data%sdata%q%assemble()
         call comm_timer%stop()
 
         ! Set time info to worker

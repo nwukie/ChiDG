@@ -187,8 +187,8 @@ contains
         cell_count           = ONE
         
         ! Store in cache 
-        call cache%set_value(ave_dynamic_pressure,'dynamic pressure','auxiliary',worker%function_info) 
-        call cache%set_value(cell_count,          'cell count',      'auxiliary',worker%function_info) 
+        call cache%set_value(worker%mesh,ave_dynamic_pressure,'dynamic pressure','auxiliary',worker%function_info) 
+        call cache%set_value(worker%mesh,cell_count,          'cell count',      'auxiliary',worker%function_info) 
     
     end subroutine compute_auxiliary
     !******************************************************************************************
@@ -217,16 +217,17 @@ contains
     !!                               since the parallel communication already happened 
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine finalize_auxiliary(self,cache)
+    subroutine finalize_auxiliary(self,worker,cache)
         class(xforce_coeff_t),      intent(inout)   :: self
+        type(chidg_worker_t),       intent(in)      :: worker
         type(functional_cache_t),   intent(inout)   :: cache
         
         type(AD_D)        :: dynamic_pressure, cell_count
         
-        dynamic_pressure = cache%get_value('dynamic pressure','auxiliary')
-        cell_count       = cache%get_value('cell count',      'auxiliary')
+        dynamic_pressure = cache%get_value(worker%mesh,'dynamic pressure','auxiliary')
+        cell_count       = cache%get_value(worker%mesh,'cell count',      'auxiliary')
 
-        call cache%set_value(dynamic_pressure/cell_count,'dynamic pressure','auxiliary')
+        call cache%set_value(worker%mesh,dynamic_pressure/cell_count,'dynamic pressure','auxiliary')
 
     end subroutine finalize_auxiliary
     !*********************************************************************************************
@@ -326,7 +327,7 @@ contains
 
         
         ! Store in cache 
-        call cache%set_value(xforce,'xforce','reference',worker%function_info)
+        call cache%set_value(worker%mesh,xforce,'xforce','reference',worker%function_info)
 
     end subroutine compute_functional
     !******************************************************************************************
@@ -354,16 +355,17 @@ contains
     !!  param[inout]       cache     cache contains the overall iintegrals value at this point,
     !!                               since the parallel communication already happened 
     !---------------------------------------------------------------------------------------------
-    subroutine finalize_functional(self,cache) 
+    subroutine finalize_functional(self,worker,cache) 
         class(xforce_coeff_t),      intent(inout)   :: self
+        type(chidg_worker_t),       intent(in)      :: worker
         type(functional_cache_t),   intent(inout)   :: cache
 
         type(AD_D)        :: xforce, dynamic_pressure
         
-        xforce           = cache%get_value('xforce',          'reference')
-        dynamic_pressure = cache%get_value('dynamic pressure','auxiliary')
+        xforce           = cache%get_value(worker%mesh,'xforce',          'reference')
+        dynamic_pressure = cache%get_value(worker%mesh,'dynamic pressure','auxiliary')
 
-        call cache%set_value(xforce/dynamic_pressure,'Fx coefficient','reference')
+        call cache%set_value(worker%mesh,xforce/dynamic_pressure,'Fx coefficient','reference')
 
     end subroutine finalize_functional
     !*********************************************************************************************

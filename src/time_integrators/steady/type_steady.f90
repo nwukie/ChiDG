@@ -1,9 +1,8 @@
 module type_steady
 #include <messenger.h>
     use mod_kinds,                      only: rk,ik
-    use mod_constants,                  only: ZERO
+    use mod_constants,                  only: ZERO, dQ_DIFF
     use mod_spatial,                    only: update_space
-!    use mod_update_grid,                only: update_grid
     use mod_chidg_mpi,                  only: GLOBAL_MASTER
 
     use type_time_integrator_steady,    only: time_integrator_steady_t
@@ -30,16 +29,11 @@ module type_steady
     !----------------------------------------------------------------------------------------
     type, extends(time_integrator_steady_t), public :: steady_t
 
-
-
     contains
-
         procedure   :: init
         procedure   :: step
-
     end type steady_t
     !****************************************************************************************
-
 
 
 
@@ -52,16 +46,10 @@ module type_steady
     !----------------------------------------------------------------------------------------
     type, extends(system_assembler_t), public :: assemble_steady_t
 
-
     contains
-
         procedure   :: assemble
-
     end type assemble_steady_t
     !****************************************************************************************
-
-
-
 
 
 
@@ -141,14 +129,14 @@ contains
     subroutine assemble(self,data,differentiate,timing)
         class(assemble_steady_t),   intent(inout)               :: self
         type(chidg_data_t),         intent(inout)               :: data
-        logical,                    intent(in)                  :: differentiate
+        integer(ik),                intent(in)                  :: differentiate
         real(rk),                   intent(inout),  optional    :: timing
 
         integer(ik) :: eqn_ID, idom, ielem, itime, imat, ifield, irow_start, icol_start, nterms, nfields, ifield_row, ifield_col
         real(rk),   allocatable     :: elem_field(:), elem_res(:)
 
         call data%sdata%rhs%clear()
-        if (differentiate) call data%sdata%lhs%clear()
+        if (differentiate == dQ_DIFF) call data%sdata%lhs%clear()
 
         ! Steady equation, so we only need the spatial operators computed.
         data%time_manager%itime = 1

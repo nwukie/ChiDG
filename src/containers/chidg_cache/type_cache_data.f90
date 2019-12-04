@@ -57,11 +57,12 @@ contains
         integer(ik),            intent(in)              :: idomain_l
         integer(ik),            intent(in)              :: ielement_l
         integer(ik),            intent(in), optional    :: iface
-        logical,                intent(in), optional    :: differentiate
+        !logical,                intent(in), optional    :: differentiate
+        integer(ik),            intent(in), optional    :: differentiate
 
         integer(ik)                 :: nprimary_fields,nmodel_fields, ntotal_fields, ierr, &
                                        ChiID, donor_idomain, ifield, iprimary_field, imodel_field, &
-                                       nauxiliary_fields, iauxiliary_field, eqn_ID
+                                       iadjoint_field, nadjoint_fields, nauxiliary_fields, iauxiliary_field, eqn_ID
         logical                     :: interior_face, chimera_face, boundary_face, reallocate
         character(:),   allocatable :: field, user_msg
 
@@ -109,12 +110,12 @@ contains
                 nprimary_fields   = prop(eqn_ID)%nprimary_fields()
                 nauxiliary_fields = prop(eqn_ID)%nauxiliary_fields()
                 nmodel_fields     = prop(eqn_ID)%nmodel_fields()
+                nadjoint_fields   = prop(eqn_ID)%nadjoint_fields()
             case ('face interior')
                 nprimary_fields   = prop(eqn_ID)%nprimary_fields()
                 nauxiliary_fields = prop(eqn_ID)%nauxiliary_fields()
                 nmodel_fields     = prop(eqn_ID)%nmodel_fields()
-
-
+                nadjoint_fields   = prop(eqn_ID)%nadjoint_fields()
             case ('face exterior')
 
                 interior_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
@@ -125,6 +126,7 @@ contains
                     nprimary_fields   = prop(eqn_ID)%nprimary_fields()
                     nauxiliary_fields = prop(eqn_ID)%nauxiliary_fields()
                     nmodel_fields     = prop(eqn_ID)%nmodel_fields()
+                    nadjoint_fields   = prop(eqn_ID)%nadjoint_fields()
                 else if (chimera_face) then
                     ChiID = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
                     ! To handle different fields on either side of the chimera boundary,
@@ -135,6 +137,7 @@ contains
                     nprimary_fields   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%elem_info%nfields
                     nauxiliary_fields = prop(eqn_ID)%nauxiliary_fields()
                     nmodel_fields     = prop(eqn_ID)%nmodel_fields()
+                    nadjoint_fields   = prop(eqn_ID)%nadjoint_fields()
                 else
                     call chidg_signal(FATAL,"cache_data: Face type wasn't recognized")
                 end if
@@ -154,7 +157,7 @@ contains
         !
         ! Compute total number of fields to store
         !
-        ntotal_fields = nprimary_fields + nauxiliary_fields + nmodel_fields
+        ntotal_fields = nprimary_fields + nauxiliary_fields + nmodel_fields + nadjoint_fields
 
 
         !
@@ -179,7 +182,6 @@ contains
             ifield = ifield + 1
         end do
 
-
         ! Resize model fields
         do imodel_field = 1,prop(eqn_ID)%nmodel_fields()
             field = prop(eqn_ID)%get_model_field_name(imodel_field)
@@ -187,10 +189,16 @@ contains
             ifield = ifield + 1
         end do
 
-
         ! Resize auxiliary fields
         do iauxiliary_field = 1,prop(eqn_ID)%nauxiliary_fields()
             field = prop(eqn_ID)%get_auxiliary_field_name(iauxiliary_field)
+            call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
+            ifield = ifield + 1
+        end do
+
+        ! Resize adjoint fields
+        do iadjoint_field = 1,prop(eqn_ID)%nadjoint_fields()
+            field = prop(eqn_ID)%get_adjoint_field_name(iadjoint_field)
             call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
             ifield = ifield + 1
         end do
@@ -224,33 +232,21 @@ contains
         character(:),   allocatable :: user_msg
         integer(ik)                 :: field_index
 
-        !
         ! Get field index in the cache
-        !
         field_index = self%get_field_index(field)
 
-        !
         ! Check incoming field was found
-        !
         user_msg = "cache_data%set_data: The incoming field being set in the cache &
                     was not found. Check that the field being stored is included in &
                     an operator_t or model_t with something like &
                     model%add_model_field('My Field')."
         if (field_index == NO_ID) call chidg_signal_one(FATAL,user_msg,trim(field))
 
-        
-        !
         ! Store field to cache
-        !
         call self%fields(field_index)%set_data(cache_data,data_type,idirection,seed)
-
 
     end subroutine set_data
     !*******************************************************************************
-
-
-
-
 
 
 
@@ -259,7 +255,6 @@ contains
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/8/2016
-    !!
     !!
     !--------------------------------------------------------------------------------
     function get_data(self,field,cache_type,idirection,seed) result(cache_data)
@@ -283,26 +278,19 @@ contains
         if (field_index == NO_ID) call chidg_signal_one(FATAL,user_msg,field)
 
 
-
-        !
         ! Try to find data for field_index that was linearized wrt seed
-        !
         select case (trim(cache_type))
-            case('value')
-                
 
+            case('value')
                 ! Try to find value differentiated wrt seed.
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%value_seeds)
                     
-                    !has_seed = (self%fields(field_index)%value_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                    !           (self%fields(field_index)%value_seeds(iseed)%ielement_g == seed%ielement_g)
                     has_seed = (self%fields(field_index)%value_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
                                (self%fields(field_index)%value_seeds(iseed)%ielement_g == seed%ielement_g) .and. &
                                (self%fields(field_index)%value_seeds(iseed)%itime      == seed%itime)
 
                     if (has_seed) then
-            
                         cache_data = self%fields(field_index)%value(:,iseed)
                         seed_found = .true.
                         exit
@@ -310,29 +298,21 @@ contains
 
                 end do
 
-
                 ! If the current component doesn't have a linearization wrt seed, just take any
                 ! values and zero out autodiff
                 if (.not. seed_found) then
                     cache_data = self%fields(field_index)%value(:,1)
-
-
                     do igq = 1,size(cache_data)
                         cache_data(igq)%xp_ad_ = ZERO
                     end do
                 end if
 
 
-
             case('gradient')
-
-
                 ! Try to find gradient differentiated wrt seed.
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%gradient_seeds)
                     
-                    !has_seed = (self%fields(field_index)%gradient_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                    !           (self%fields(field_index)%gradient_seeds(iseed)%ielement_g == seed%ielement_g)
                     has_seed = (self%fields(field_index)%gradient_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
                                (self%fields(field_index)%gradient_seeds(iseed)%ielement_g == seed%ielement_g) .and. &
                                (self%fields(field_index)%gradient_seeds(iseed)%itime      == seed%itime)
@@ -345,17 +325,14 @@ contains
 
                 end do
 
-
                 ! If the current component doesn't have a linearization wrt seed, just take any
                 ! gradient and zero out autodiff
                 if (.not. seed_found) then
                     cache_data = self%fields(field_index)%gradient(:,idirection,1)
-
                     do igq = 1,size(cache_data)
                         cache_data(igq)%xp_ad_ = ZERO
                     end do
                 end if
-
 
 
             case('lift face')
@@ -364,8 +341,6 @@ contains
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%lift_seeds)
                     
-                    !has_seed = (self%fields(field_index)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                    !           (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
                     has_seed = (self%fields(field_index)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
                                (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g) .and. &
                                (self%fields(field_index)%lift_seeds(iseed)%itime      == seed%itime)
@@ -395,8 +370,6 @@ contains
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%lift_seeds)
                     
-                    !has_seed = (self%fields(field_index)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                    !           (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
                     has_seed = (self%fields(field_index)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
                                (self%fields(field_index)%lift_seeds(iseed)%ielement_g == seed%ielement_g) .and. &
                                (self%fields(field_index)%lift_seeds(iseed)%itime      == seed%itime)
@@ -428,10 +401,7 @@ contains
 
         end select
 
-
-
         if (.not. allocated(cache_data(1)%xp_ad_) ) call chidg_signal_two(FATAL,"get_data: derivatives not allocated",trim(field),trim(cache_type))
-
 
     end function get_data
     !*********************************************************************************

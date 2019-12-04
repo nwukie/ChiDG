@@ -261,23 +261,24 @@ contains
         if ( ineighbor_element_l /= NO_INTERIOR_NEIGHBOR ) then
             if ( .not. parallel_neighbor ) then
 
-                elem_info_n = element_info(idomain_g       = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,         &
-                                           idomain_l       = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,         &
-                                           ielement_g      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,        &
-                                           ielement_l      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,        &
-                                           iproc           = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,             &
-                                           pelem_ID        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_pelem_ID,         &
-                                           eqn_ID          = NO_ID,                                                                     &
-                                           nfields         = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nfields,          &
-                                           ntime           = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_ntime,            &
-                                           nterms_s        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,         &
-                                           nterms_c        = NO_DATA,                                                                   &
-                                           dof_start       = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start,        &
-                                           dof_local_start = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_local_start,  &
-                                           recv_comm       = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,                  &
-                                           recv_domain     = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,                &
-                                           recv_element    = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_element,               &
-                                           recv_dof        = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_dof)
+                elem_info_n = element_info(idomain_g         = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,         &
+                                           idomain_l         = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,         &
+                                           ielement_g        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,        &
+                                           ielement_l        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,        &
+                                           iproc             = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,             &
+                                           pelem_ID          = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_pelem_ID,         &
+                                           coordinate_system = mesh%domain(idomain_l)%faces(ielement_l,iface)%coordinate_system,          &
+                                           eqn_ID            = NO_ID,                                                                     &
+                                           nfields           = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nfields,          &
+                                           ntime             = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_ntime,            &
+                                           nterms_s          = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,         &
+                                           nterms_c          = NO_DATA,                                                                   &
+                                           dof_start         = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start,        &
+                                           dof_local_start   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_local_start,  &
+                                           recv_comm         = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,                  &
+                                           recv_domain       = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,                &
+                                           recv_element      = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_element,               &
+                                           recv_dof          = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_dof)
 
 
                 ! Get neighbor face: we have already decided it is a proc-local, interior face, 

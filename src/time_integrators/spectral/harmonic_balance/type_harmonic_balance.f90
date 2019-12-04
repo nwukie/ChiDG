@@ -2,7 +2,7 @@ module type_harmonic_balance
 #include<messenger.h>
     use messenger,                      only: write_line
     use mod_kinds,                      only: rk,ik
-    use mod_constants,                  only: NO_FACE, NO_ID, ZERO
+    use mod_constants,                  only: NO_FACE, NO_ID, ZERO, dQ_DIFF
     use mod_spatial,                    only: update_space
 
     use type_time_integrator_spectral,  only: time_integrator_spectral_t
@@ -127,7 +127,7 @@ contains
     subroutine assemble(self,data,differentiate,timing)
         class(assemble_harmonic_balance_t),   intent(inout)               :: self
         type(chidg_data_t),                   intent(inout)               :: data
-        logical,                              intent(in)                  :: differentiate
+        integer(ik),                          intent(in)                  :: differentiate
         real(rk),                             intent(inout), optional     :: timing
 
         integer(ik)             :: itime_outer, itime_inner, idom, ielem, ifield, ierr, ntime, &
@@ -140,7 +140,7 @@ contains
         
         associate ( rhs => data%sdata%rhs, lhs => data%sdata%lhs, q => data%sdata%q )
         call rhs%clear()
-        if (differentiate) call lhs%clear()
+        if (differentiate == dQ_DIFF) call lhs%clear()
 
 
         ! Set local variables equal to the values set in time_manager
@@ -198,6 +198,7 @@ contains
                                        elem_info%ielement_l, &
                                        elem_info%nfields,    &
                                        elem_info%nterms_s,   &
+                                       elem_info%nterms_c,   &
                                        IRANK,                &
                                        itime_inner,          &
                                        elem_info%dof_start,  &
@@ -207,7 +208,7 @@ contains
 
                         ! Store HB contribution for all fields to lhs at one time
                         if (itime_inner /= itime_outer) then
-                            if (differentiate) call lhs%store_element(hb_mat,elem_info,seed,itime_outer)
+                            if (differentiate == dQ_DIFF) call lhs%store_element(hb_mat,elem_info,seed,itime_outer)
                         end if
 
 
@@ -221,7 +222,7 @@ contains
 
         ! Assemble RHS, LHS after HB contributions
         call data%sdata%rhs%assemble()
-        if (differentiate) call data%sdata%lhs%assemble()
+        if (differentiate == dQ_DIFF) call data%sdata%lhs%assemble()
 
 
     end subroutine assemble

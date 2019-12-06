@@ -1,14 +1,13 @@
 module test_interpolate_general_mod
     use pfunit_mod
     use type_chidg,                 only: chidg_t
-    use type_element_info,          only: element_info_t
     use type_function_info,         only: function_info_t
     use type_function,              only: function_t
 
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  ME, NEIGHBOR, IO_DESTINATION, VOLUME_ADVECTIVE_FLUX
+                                  ME, NEIGHBOR, IO_DESTINATION, VOLUME_ADVECTIVE_FLUX, CARTESIAN
     use mod_function,       only: create_function
     use mod_interpolate,    only: interpolate_general_autodiff
     use mod_test_utilities, only: create_mesh_file
@@ -210,6 +209,7 @@ contains
                                          ielement_l   = 15,    &
                                          nfields      = 1,     &
                                          nterms_s     = 8,     &
+                                         nnodes_r     = 8,     &
                                          iproc        = IRANK, &
                                          itime        = itime, &
                                          dof_start    = 112,   & 

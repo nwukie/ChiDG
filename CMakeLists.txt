@@ -6,6 +6,7 @@ set(ChiDG_VERSION_MAJOR 0)
 set(ChiDG_VERSION_MINOR 2)
 set(ChiDG_VERSION_PATCH 0)
 
+
 #-----------------------------------------------------------------------------------
 #                           Check for bad CMake version
 #-----------------------------------------------------------------------------------
@@ -16,7 +17,6 @@ if ( (CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION EQUAL 6 AND CMAKE_PATC
     message(FATAL_ERROR "cmake versions 3.6.0, 3.6.1, 3.6.2, 3.7.0, and 3.7.2 have regressions that \
                          break the build. Please use a different version of cmake.")
 endif()
-
 
 
 #-----------------------------------------------------------------------------------
@@ -187,7 +187,6 @@ set(MPI_C_COMPILER $ENV{MPI_C_COMPILER})
 set(MPI_CXX_COMPILER $ENV{MPI_CXX_COMPILER})
 
 
-#find_package(MPI REQUIRED COMPONENTS Fortran)
 find_package(MPI REQUIRED COMPONENTS CXX Fortran)
 include_directories(${MPI_Fortran_INCLUDE_PATH})
 include_directories(${MPI_CXX_INCLUDE_PATH})
@@ -252,10 +251,16 @@ find_package(LAPACK REQUIRED)
 
 if (LAPACK_FOUND)
     set(LAPACK_DIRECTORIES)
+
+    message(STATUS "    BLAS Libraries: ")
+    foreach (L ${BLAS_LIBRARIES})
+        message(STATUS "        " ${L})
+    endforeach()
     message(STATUS "    LAPACK Libraries: ")
     foreach (L ${LAPACK_LIBRARIES})
         message(STATUS "        " ${L})
     endforeach()
+
 
 
     # Write test program to file.
@@ -483,12 +488,6 @@ set(ExternalProjectCMakeArgs
     -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-    # Fix rpath link error
-    #-DCMAKE_SKIP_BUILD_RPATH=FALSE
-    #-DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE
-    #-DCMAKE_INSTALL_RPATH=${PROJECT_BINARY_DIR}/external/tioga
-    #-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE
-    #-DCMAKE_SKIP_RPATH=TRUE
     -DTIOGA_HAS_NODEGID=OFF
     -DBUILD_TIOGA_EXE=OFF
     -DBUILD_GRIDGEN_EXE=OFF
@@ -513,15 +512,7 @@ if (NOT TIOGA_TAR)
     add_dependencies(tioga git_update)
 endif()
 
-             
-#if (APPLE)
-#    set(TIOGA_LIBRARIES ${PROJECT_BINARY_DIR}/external/tioga/lib/libtioga.dylib)
-#else()
-#    set(TIOGA_LIBRARIES ${PROJECT_BINARY_DIR}/external/tioga/lib/libtioga.so)
-#endif()
-
 set(TIOGA_LIBRARIES ${PROJECT_BINARY_DIR}/external/tioga/lib/libtioga.a)
-
 set(TIOGA_INCLUDE_DIR ${PROJECT_BINARY_DIR}/external/tioga/include)
 include_directories(${TIOGA_INCLUDE_DIR})
 

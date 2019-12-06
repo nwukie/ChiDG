@@ -26,7 +26,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO,ONE,TWO,THREE,PI,FOUR,FIVE,SIX,SEVEN, &
                                   EIGHT,NINE,TEN,XI_MIN,XI_MAX,ETA_MIN, &
-                                  ZETA_MIN,ZETA_MAX,IO_DESTINATION
+                                  ZETA_MIN,ZETA_MAX,IO_DESTINATION,dQ_DIFF
     use mod_io,             only: time_integrator,frequencies
     use type_chidg,         only: chidg_t
     use type_chidg_matrix,  only: chidg_matrix_t
@@ -80,7 +80,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
 
 
     ! Contribute harmonic balance terms
-    call chidg%time_integrator%system%assemble(chidg%data,.true.)
+    call chidg%time_integrator%system%assemble(chidg%data,dQ_DIFF)
 
 
     ! Initialize chidg_matrix and corresponding chidg_vector data
@@ -184,7 +184,7 @@ subroutine test_chidg_matrix_operator_chimera_HB_mv()
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,THREE,FOUR,FIVE,SIX,SEVEN,PI, &
                                       EIGHT,NINE,TEN,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX, &
-                                      ZETA_MIN,ZETA_MAX,IO_DESTINATION  
+                                      ZETA_MIN,ZETA_MAX,IO_DESTINATION,dQ_DIFF
     use mod_io,                 only: time_integrator,frequencies   
     use type_chidg,             only: chidg_t
     use type_chidg_matrix,      only: chidg_matrix_t
@@ -249,7 +249,7 @@ subroutine test_chidg_matrix_operator_chimera_HB_mv()
 
 
     ! Contribute harmonic balance terms
-    call chidg%time_integrator%system%assemble(chidg%data,.true.)
+    call chidg%time_integrator%system%assemble(chidg%data,dQ_DIFF)
 
     !
     ! Initialize chidg_matrix and corresponding chidg_vector data

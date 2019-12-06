@@ -116,6 +116,7 @@ contains
                 call set_time_integrator_hdf(fid, trim(data%time_manager%get_name()))
                 call set_times_hdf(          fid, [data%time_manager%t]             )
                 call set_time_step_hdf(      fid, data%time_manager%dt              )
+                call set_istep_hdf(          fid, data%time_manager%istep           )
                 call set_nsteps_hdf(         fid, data%time_manager%nsteps          )
                 call set_nwrite_hdf(         fid, data%time_manager%nwrite          )
                 call close_file_hdf(fid)

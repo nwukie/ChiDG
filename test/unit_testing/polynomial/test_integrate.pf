@@ -3,7 +3,7 @@ subroutine test_integrate_boundary_constant()
     use pfunit_mod
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ONE, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  BOUNDARY_ADVECTIVE_FLUX, IO_DESTINATION, NO_ID
+                                  BOUNDARY_ADVECTIVE_FLUX, IO_DESTINATION, NO_ID, CARTESIAN
     use mod_integrate,      only: integrate_boundary_scalar_flux
 
     use type_chidg,                 only: chidg_t
@@ -82,6 +82,7 @@ subroutine test_integrate_boundary_constant()
                    ielement_l=1,        &
                    nfields=1,           &
                    nterms_s=1,          &
+                   nnodes_r=8,          &
                    iproc=0,             &
                    itime=1,             &
                    dof_start=0,         &
@@ -96,6 +97,7 @@ subroutine test_integrate_boundary_constant()
                              ielement_l=1,      &
                              iproc=0,           &
                              pelem_ID=NO_ID,    &
+                             coordinate_system=CARTESIAN, &
                              eqn_ID=1,          &
                              nfields=1,         &
                              ntime=1,           &

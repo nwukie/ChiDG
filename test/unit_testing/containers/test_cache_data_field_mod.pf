@@ -20,6 +20,7 @@
 module test_cache_data_field_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: dQ_DIFF
     use type_chidg,                 only: chidg_t
     use type_cache_data_field,      only: cache_data_field_t
     use mod_test_utilities,         only: create_mesh_file
@@ -136,7 +137,7 @@ contains
                                                    idomain,                         &
                                                    ielem,                           &
                                                    iface,                           &
-                                                   differentiate=.true.)
+                                                   differentiate=dQ_DIFF)
 
 
         !
@@ -183,7 +184,7 @@ contains
                                                   idomain,                          &
                                                   ielem,                            &
                                                   iface,                            &
-                                                  differentiate=.true.)
+                                                  differentiate=dQ_DIFF)
 
 
         !
@@ -254,7 +255,7 @@ contains
                                                   idomain,                          &
                                                   ielem,                            &
                                                   iface,                            &
-                                                  differentiate=.true.)
+                                                  differentiate=dQ_DIFF)
 
 
         !
@@ -301,7 +302,7 @@ contains
                                                   idomain,                              &
                                                   ielem,                                &
                                                   iface,                                &
-                                                  differentiate=.true.)
+                                                  differentiate=dQ_DIFF)
 
 
         !
@@ -370,7 +371,7 @@ contains
                                                   self%chidg%data%eqnset(:)%prop,   &
                                                   idomain,                          &
                                                   ielem,                            &
-                                                  differentiate=.true.)
+                                                  differentiate=dQ_DIFF)
 
 
         !
@@ -414,7 +415,7 @@ contains
                                                   self%chidg%data%eqnset(:)%prop,   &
                                                   idomain,                          &
                                                   ielem,                            &
-                                                  differentiate=.true.)
+                                                  differentiate=dQ_DIFF)
 
 
         !

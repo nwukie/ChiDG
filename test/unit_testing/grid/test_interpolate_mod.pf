@@ -11,7 +11,7 @@ module test_interpolate_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  ME, NEIGHBOR, IO_DESTINATION, VOLUME_ADVECTIVE_FLUX, NO_ID
+                                  ME, NEIGHBOR, IO_DESTINATION, VOLUME_ADVECTIVE_FLUX, NO_ID, CARTESIAN
     use mod_function,       only: create_function
     use mod_interpolate,    only: interpolate_face_standard, interpolate_face_autodiff, &
                                   interpolate_element_standard, interpolate_element_autodiff
@@ -275,6 +275,7 @@ contains
                                          ielement_l   = 15,    &
                                          nfields      = 1,     &
                                          nterms_s     = 8,     &
+                                         nnodes_r     = 8,     &
                                          iproc        = IRANK, &
                                          itime        = itime, &
                                          dof_start    = 112,   &
@@ -357,6 +358,7 @@ contains
                                          ielement_l   = 15,    &
                                          nfields      = 1,     &
                                          nterms_s     = 8,     &
+                                         nnodes_r     = 8,     &
                                          iproc        = IRANK, &
                                          itime        = itime, &
                                          dof_start    = 112,   &
@@ -443,6 +445,7 @@ contains
                                          ielement_l   = 14,    &
                                          nfields      = 1,     &
                                          nterms_s     = 8,     &
+                                         nnodes_r     = 8,     &
                                          iproc        = IRANK, &
                                          itime        = itime, &
                                          dof_start    = 104,   &
@@ -528,6 +531,7 @@ contains
                                          ielement_l   = 14,    &
                                          nfields      = 1,     &
                                          nterms_s     = 8,     &
+                                         nnodes_r     = 8,     &
                                          iproc        = IRANK, &
                                          itime        = itime, &
                                          dof_start    = 104,   &
@@ -627,6 +631,7 @@ contains
                                     ielement_l   = 15,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 112,   &
@@ -644,6 +649,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -730,6 +736,7 @@ contains
                                     ielement_l   = 15,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 112,   &
@@ -748,6 +755,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -833,6 +841,7 @@ contains
                                     ielement_l   = 14,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 104,   &
@@ -850,6 +859,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -939,6 +949,7 @@ contains
                                     ielement_l   = 14,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 104,   &
@@ -956,6 +967,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -1051,6 +1063,7 @@ contains
                                     ielement_l   = 15,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 112,   &
@@ -1068,6 +1081,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -1156,6 +1170,7 @@ contains
                                     ielement_l   = 15,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 112,   &
@@ -1172,6 +1187,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -1259,6 +1275,7 @@ contains
                                     ielement_l   = 13,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 96,    &
@@ -1276,6 +1293,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -1363,6 +1381,7 @@ contains
                                     ielement_l   = 13,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 96,    &
@@ -1380,6 +1399,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &

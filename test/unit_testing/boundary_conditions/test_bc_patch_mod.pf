@@ -1,7 +1,7 @@
 module test_bc_patch_mod
     use pfunit_mod
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: IO_DESTINATION
+    use mod_constants,      only: IO_DESTINATION, CARTESIAN
     use type_chidg,         only: chidg_t
     use type_bc_patch,      only: bc_patch_t
     implicit none
@@ -276,7 +276,8 @@ contains
                                        ielement_g,  ielement_l,  &
                                        proc, patch_face, iface,  &
                                        nfields, nterms_s, ntime, &
-                                       dof_start, dof_local_start
+                                       dof_start, dof_local_start, &
+                                       nterms_c, coordinate_system
         real(rk)                    :: total_area
         real(rk),       allocatable :: areas(:)
         real(rk)                    :: quad_pts(4,3)
@@ -305,6 +306,8 @@ contains
         nfields         = 1
         ntime           = 1
         nterms_s        = 8
+        nterms_c        = 8
+        coordinate_system = CARTESIAN
         dof_start       = 24
         dof_local_start = 24
         total_area      = 1._rk
@@ -325,15 +328,17 @@ contains
                                                       iface,        &
                                                       proc)
 
-        call bc_patch%set_coupled_element_data(patch_face,idomain_g,        &
-                                                          ielement_g,       &
-                                                          nfields,          &
-                                                          ntime,            &
-                                                          nterms_s,         &
-                                                          dof_start,        &
-                                                          dof_local_start,  &
-                                                          total_area,       &
-                                                          areas,            &
+        call bc_patch%set_coupled_element_data(patch_face,idomain_g,         &
+                                                          ielement_g,        &
+                                                          nfields,           &
+                                                          ntime,             &
+                                                          nterms_s,          &
+                                                          nterms_c,          &
+                                                          coordinate_system, &
+                                                          dof_start,         &
+                                                          dof_local_start,   &
+                                                          total_area,        &
+                                                          areas,             &
                                                           quad_pts)
 
 
@@ -373,6 +378,8 @@ contains
         nfields         = 1
         ntime           = 1
         nterms_s        = 8
+        nterms_c        = 8
+        coordinate_system = CARTESIAN
         dof_start       = 1
         dof_local_start = 1
         total_area      = 1._rk
@@ -398,6 +405,8 @@ contains
                                                           nfields,          &
                                                           ntime,            &
                                                           nterms_s,         &
+                                                          nterms_c,          &
+                                                          coordinate_system, &
                                                           dof_start,        &
                                                           dof_local_start,  &
                                                           total_area,       &

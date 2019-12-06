@@ -3,7 +3,7 @@ module test_function_status_mod
     use mod_kinds,                      only: ik, rk
     use mod_constants,                  only: XI_MIN, XI_MAX, ETA_MIN, &
                                               ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                              NFUNCTION_TYPES, NFACES, NBLK, IO_DESTINATION, ZERO, NO_ID
+                                              NFUNCTION_TYPES, NFACES, NBLK, IO_DESTINATION, ZERO, NO_ID, CARTESIAN
     use type_chidg,                     only: chidg_t
     use type_domain_connectivity,       only: domain_connectivity_t
     use type_equationset_function_data, only: equationset_function_data_t
@@ -346,6 +346,7 @@ subroutine test_function_status__compute(this)
                              ielement_l=2,       &
                              iproc=0,            &
                              pelem_ID=NO_ID,     &
+                             coordinate_system=CARTESIAN, &
                              eqn_ID=1,           &
                              nfields=1,          &
                              ntime=1,            &
@@ -471,17 +472,13 @@ subroutine test_function_status__linearize(this)
     !
     ! Initialize elem_info and function_info containers to pass to function_status%compute_function
     !
-    !elem_info%idomain_g  = 1
-    !elem_info%idomain_l  = 1
-    !elem_info%ielement_g = 2
-    !elem_info%ielement_l = 2
-    !elem_info%iface      = 2
     elem_info = element_info(idomain_g=1,       &
                              idomain_l=1,       &
                              ielement_g=2,      &
                              ielement_l=2,      &
                              iproc=0,           &
                              pelem_ID=NO_ID,    &
+                             coordinate_system=CARTESIAN, &
                              eqn_ID=1,          &
                              nfields=1,         &
                              ntime=1,           &

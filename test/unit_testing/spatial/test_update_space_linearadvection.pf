@@ -30,7 +30,7 @@ subroutine test_update_space_linearadvection()
 
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, &
-                                  IO_DESTINATION
+                                  IO_DESTINATION, dQ_DIFF
 
     use type_chidg,         only: chidg_t
     use type_function,      only: function_t
@@ -141,10 +141,10 @@ subroutine test_update_space_linearadvection()
     ! Call update_space
     !
     call write_line("ChiDG - A: Updating Space")
-    call update_space(chidgA%data,differentiate=.true.)
+    call update_space(chidgA%data,differentiate=dQ_DIFF)
 
     call write_line("ChiDG - B: Updating Space")
-    call update_space(chidgB%data,differentiate=.true.)
+    call update_space(chidgB%data,differentiate=dQ_DIFF)
 
 
 

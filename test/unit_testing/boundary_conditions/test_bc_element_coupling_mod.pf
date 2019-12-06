@@ -1,7 +1,7 @@
 module test_bc_element_coupling_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: IO_DESTINATION
+    use mod_constants,              only: IO_DESTINATION, CARTESIAN
     use mod_chidg_mpi,              only: IRANK
     use type_chidg,                 only: chidg_t
     use type_bc_element_coupling,   only: bc_element_coupling_t
@@ -112,21 +112,24 @@ contains
         integer(ik)                 :: idomain_g,   idomain_l,          &
                                        ielement_g,  ielement_l, iface,  &
                                        nfields, nterms_s, dof_start,    &
-                                       ntime, dof_local_start
+                                       ntime, dof_local_start, nterms_c, &
+                                       coordinate_system
         real(rk)                    :: total_area
         real(rk),       allocatable :: areas(:)
         type(point_t),  allocatable :: quad_pts(:)
 
-        idomain_g       = 2
-        idomain_l       = 1
-        ielement_g      = 4
-        ielement_l      = 2
-        iface           = 3
-        nfields         = 2
-        ntime           = 1
-        nterms_s        = 8
-        dof_start       = 24
-        dof_local_start = 24
+        idomain_g         = 2
+        idomain_l         = 1
+        ielement_g        = 4
+        ielement_l        = 2
+        iface             = 3
+        nfields           = 2
+        ntime             = 1
+        nterms_s          = 8
+        nterms_c          = 8
+        coordinate_system = CARTESIAN
+        dof_start         = 24
+        dof_local_start   = 24
         total_area = 1._rk
         areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
         quad_pts   = [ point_t(0.1_rk,0.2_rk,0.3_rk), &
@@ -138,7 +141,7 @@ contains
         ! THIS IS BEING TESTED
         !
         call coupling%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,IRANK)
-        call coupling%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
+        call coupling%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,nterms_c,coordinate_system,dof_start,dof_local_start,total_area,areas,quad_pts)
 
 
         !
@@ -192,11 +195,11 @@ contains
         class(test_bc_element_coupling),    intent(inout)   :: self
 
         type(bc_element_coupling_t) :: coupling
-        integer(ik)                 :: idomain_g,   idomain_l,  &
-                                       ielement_g,  ielement_l, &
-                                       iface, proc, nfields,    &
-                                       nterms_s, dof_start, ntime, &
-                                       dof_local_start
+        integer(ik)                 :: idomain_g,   idomain_l,          &
+                                       ielement_g,  ielement_l,         &
+                                       iface, proc, nfields,            &
+                                       nterms_s, nterms_c, dof_start,   &
+                                       ntime, dof_local_start, coordinate_system
         real(rk)                    :: total_area
         real(rk),       allocatable :: areas(:)
         type(point_t),  allocatable :: quad_pts(:)
@@ -210,7 +213,9 @@ contains
         ntime           = 1
         dof_start       = 0
         dof_local_start = 0
-        nterms_s   = 8
+        nterms_s        = 8
+        nterms_c        = 8
+        coordinate_system = CARTESIAN
         total_area = 1._rk
         areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
         quad_pts   = [ point_t(0.1_rk,0.2_rk,0.3_rk), &
@@ -223,7 +228,7 @@ contains
         ! THIS IS BEING TESTED
         !
         call coupling%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
-        call coupling%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
+        call coupling%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,nterms_c,coordinate_system,dof_start,dof_local_start,total_area,areas,quad_pts)
 
 
         idomain_g  = 3
@@ -235,6 +240,8 @@ contains
         ntime      = 1
         dof_start  = 8
         nterms_s   = 8
+        nterms_c   = 8
+        coordinate_system = CARTESIAN
         total_area = 1._rk
         areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
         quad_pts   = [ point_t(0.1_rk,0.2_rk,0.3_rk), &
@@ -247,7 +254,7 @@ contains
         ! THIS IS BEING TESTED
         !
         call coupling%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
-        call coupling%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
+        call coupling%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,nterms_c,coordinate_system,dof_start,dof_local_start,total_area,areas,quad_pts)
 
 
 

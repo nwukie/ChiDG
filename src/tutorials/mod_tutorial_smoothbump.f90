@@ -300,15 +300,15 @@ contains
         !
         gridfile            = 'smooth_bump_setup.h5'
         solutionfile_out    = 'smooth_bump_setup.h5'
-        solution_order      = 3
-        gq_rule             = 2
+        solution_order      = 1
+        gq_rule             = 3
         time_integrator     = 'steady'
-        nonlinear_solver    = 'quasi-newton'
+        nonlinear_solver    = 'newton'
         cfl0                = 1.0
         ntol                = 1.e-5
         linear_solver       = 'fgmres'
         ltol                = 1.e-9
-        preconditioner      = 'ILU0'
+        preconditioner      = 'RASILU0'
         initial_fields(1:5) = [1.19, 100.0, 0.0, 0.0, 250000.0]
 
 

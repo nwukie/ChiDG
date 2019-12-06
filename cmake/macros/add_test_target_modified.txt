@@ -74,7 +74,8 @@ macro (add_test_target target_subdirectory test_type)
     #------------------------------------------------------------------------------------------
 	set(_test_sources)
     foreach (_test ${ARGN})
-
+         
+    	# Get filename without extension (NAME_WE)
     	get_filename_component(filename ${_test} NAME_WE)
 
         # Get directory associated with filename
@@ -98,8 +99,6 @@ macro (add_test_target target_subdirectory test_type)
 	set_source_files_properties(${PF_ROOT}/include/driver.F90 PROPERTIES GENERATED 1)
 	
 
-
-
     #-------------------------------------------------------------------------------------------------------
     #
 	#   Define test target and link with pfunit and chidg libraries. These targets are
@@ -109,30 +108,11 @@ macro (add_test_target target_subdirectory test_type)
     #
 	#-------------------------------------------------------------------------------------------------------
 	add_executable(${target_name} EXCLUDE_FROM_ALL ${PF_ROOT}/include/driver.F90 ${_test_sources} )
-	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a chidg_library -lstdc++ -lpthread ${MPI_Fortran_LIBRARIES} ${METIS_LIBRARIES})
+	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a chidg_library -lstdc++)
     	
-
-    # BLAS libraries tend not to get rpath set properly for some reason
-    # Here, we set it explicitly so when we run tests, they don't fail.
-    # Underlying problem here is that on OSX with SIP, DYLD_LIBRARY_PATH
-    # does not get propagated to processes called from system directories.
-    # So, when we run 'make test' after regenerating, it likely doesn't 
-    # have the right paths available to find all libraries unless they are
-    # explicitly linked into the executable, which is what we are doing here.
-    foreach(L ${BLAS_LIBRARIES})
-        get_filename_component(LIBDIR ${L} DIRECTORY)
-        set(_BLAS_DIRECTORIES ${_BLAS_DIRECTORIES} ${LIBDIR})
-    endforeach()
-    list(REMOVE_DUPLICATES _BLAS_DIRECTORIES)
-
-
 	set_target_properties(${target_name} PROPERTIES 
-                                         BUILD_RPATH "${_BLAS_DIRECTORIES}"
-                                         INSTALL_RPATH "${_BLAS_DIRECTORIES}"
-                                         COMPILE_FLAGS "-DUSE_MPI=True -DBUILD_ROBUST=True ${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
-                                         LINK_FLAGS    "${CMAKE_Fortran_LINK} ${MPI_Fortran_LINK_FLAGS}"
-                                         )
-	
+                             COMPILE_FLAGS "-DUSE_MPI=True -DBUILD_ROBUST=True ${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
+                             LINK_FLAGS    "${CMAKE_Fortran_LINK} ${MPI_Fortran_LINK_FLAGS}")
 	
     # Add test executable to the 'check' target. This allows the test to be build with 'make check'
     add_dependencies(check ${target_name} chidg_library)
@@ -153,8 +133,6 @@ macro (add_test_target target_subdirectory test_type)
                  COMMAND ${test_driver} $<TARGET_FILE:${target_name}> ${run_options})
     endif()
 			 
-
-
 
 
 #	 #-------------------------------------------------------------------------------------------------------

@@ -9,7 +9,7 @@ module test_interpolate_chimera_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  NEIGHBOR, IO_DESTINATION, NO_ID
+                                  NEIGHBOR, IO_DESTINATION, NO_ID, CARTESIAN
     use mod_chidg_mpi,      only: IRANK
     use mod_DNAD_tools,     only: compute_neighbor_element_l, compute_neighbor_face
     use mod_interpolate,    only: interpolate_face_standard, interpolate_face_autodiff
@@ -166,6 +166,7 @@ contains
                                     ielement_l   = 2,     &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 8,     &
@@ -183,6 +184,7 @@ contains
                                      ielement_l      = ielem,   &
                                      iproc           = 0,       &
                                      pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID          = 1,       &
                                      nfields         = 1,       &
                                      ntime           = 1,       &
@@ -269,6 +271,7 @@ contains
                                     ielement_l   = 2,     &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 8,     &
@@ -286,6 +289,7 @@ contains
                                      ielement_l      = ielem,   &
                                      iproc           = 0,       &
                                      pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID          = 1,       &
                                      nfields         = 1,       &
                                      ntime           = 1,       &
@@ -370,6 +374,7 @@ contains
                                     ielement_l   = 1,     &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 40,    &
@@ -388,6 +393,7 @@ contains
                                      ielement_l      = ielem,   &
                                      iproc           = 0,       &
                                      pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID          = 1,       &
                                      nfields         = 1,       &
                                      ntime           = 1,       &
@@ -480,6 +486,7 @@ contains
                                     ielement_l   = 1,     &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 40,    &
@@ -497,6 +504,7 @@ contains
                                      ielement_l      = ielem,   &
                                      iproc           = 0,       &
                                      pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID          = 1,       &
                                      nfields         = 1,       &
                                      ntime           = 1,       &

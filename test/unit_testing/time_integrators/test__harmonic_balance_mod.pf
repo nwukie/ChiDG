@@ -10,7 +10,7 @@ module test__harmonic_balance_mod
 #include<messenger.h>
     use pfunit_mod
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO,ONE,TWO,PI,IO_DESTINATION
+    use mod_constants,          only: ZERO,ONE,TWO,PI,IO_DESTINATION,dQ_DIFF
     use mod_io                 
     use type_chidg,             only: chidg_t
     use type_meshdata,          only: meshdata_t
@@ -318,7 +318,7 @@ contains
             ! Perform harmonic balance assemble operation
             ! THIS IS BEING TESTED
             !
-            call assemble_HB%assemble(chidg%data,differentiate=.true.)
+            call assemble_HB%assemble(chidg%data,differentiate=dQ_DIFF)
 
 
             !

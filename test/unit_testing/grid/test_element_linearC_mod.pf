@@ -58,7 +58,8 @@ contains
                                            ineighbor_element_g, ineighbor_element_l,    &
                                            ineighbor_face, ineighbor_proc,              &
                                            ineighbor_nfields, ineighbor_nterms_s,       &
-                                           ineighbor_ntime, ineighbor_dof_start, ineighbor_dof_local_start
+                                           ineighbor_nterms_c, ineighbor_ntime,         &
+                                           ineighbor_dof_start, ineighbor_dof_local_start
         
         
         call this%chidg%start_up('core')
@@ -127,26 +128,27 @@ contains
         ineighbor_proc            = 0
         ineighbor_nfields         = 2
         ineighbor_nterms_s        = 8
+        ineighbor_nterms_c        = 8
         ineighbor_dof_start       = 1
         ineighbor_dof_local_start = 1
         call this%faces(XI_MIN)%set_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,             &
                                                      ineighbor_element_l,ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
-                                                     ineighbor_nterms_s,ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
+                                                     ineighbor_nterms_s,ineighbor_nterms_c,ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
         call this%faces(XI_MAX)%set_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,             &
                                                      ineighbor_element_l,ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
-                                                     ineighbor_nterms_s,ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
+                                                     ineighbor_nterms_s,ineighbor_nterms_c,ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
         call this%faces(ETA_MIN)%set_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,             &
                                                      ineighbor_element_l,ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
-                                                     ineighbor_nterms_s,ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
+                                                     ineighbor_nterms_s,ineighbor_nterms_c,ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
         call this%faces(ETA_MAX)%set_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,             &
                                                      ineighbor_element_l,ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
-                                                     ineighbor_nterms_s,ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
+                                                     ineighbor_nterms_s,ineighbor_nterms_c,ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
         call this%faces(ZETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,             &
                                                      ineighbor_element_l,ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
-                                                     ineighbor_nterms_s,ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
+                                                     ineighbor_nterms_s,ineighbor_nterms_c,ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
         call this%faces(ZETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,             &
                                                      ineighbor_element_l,ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
-                                                     ineighbor_nterms_s,ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
+                                                     ineighbor_nterms_s,ineighbor_nterms_c,ineighbor_proc,ineighbor_dof_start,ineighbor_dof_local_start)
         
         call this%faces(XI_MIN)%init_sol(this%elem)
         call this%faces(XI_MAX)%init_sol(this%elem)

@@ -51,7 +51,8 @@ contains
         type(chidg_t)                       :: chidg
         type(file_properties_t)             :: file_props
         character(:),           allocatable :: time_string, solution_file_prefix, plt_filename
-        integer(ik)                         :: nterms_s, solution_order
+        integer(ik)                         :: nterms_s, solution_order, nfunctionals
+        logical                             :: primary_solution, adjoint_solution
 
 
         ! Initialize ChiDG environment
@@ -60,9 +61,12 @@ contains
 
 
         ! Get nterms_s 
-        file_props  = get_properties_hdf(solution_file)
-        nterms_s    = file_props%nterms_s(1)
-        time_string = file_props%time_integrator
+        file_props       = get_properties_hdf(solution_file)
+        nterms_s         = file_props%nterms_s(1)
+        time_string      = file_props%time_integrator
+        primary_solution = file_props%contains_primary_fields
+        adjoint_solution = file_props%contains_adjoint_fields
+        nfunctionals     = file_props%nfunctionals
 
         solution_order = 0
         do while (solution_order*solution_order*solution_order < nterms_s)
@@ -78,8 +82,11 @@ contains
 
 
         ! Read grid/solution modes and time integrator options from HDF5
-        call chidg%read_mesh(grid_file, interpolation='Uniform', level=OUTPUT_RES)
-        call chidg%read_fields(solution_file)
+        call chidg%read_mesh(grid_file, 'primal storage', interpolation='Uniform', level=OUTPUT_RES)
+        call chidg%data%set_fields_post(primary_solution,adjoint_solution,nfunctionals)
+
+        if (primary_solution) call chidg%read_fields(solution_file,'primary')
+        if (adjoint_solution) call chidg%read_fields(solution_file,'adjoint')
 
         ! Process for getting wall distance
         call chidg%process()
@@ -87,7 +94,10 @@ contains
         ! Get post processing data (q_out)
         call chidg%time_integrator%initialize_state(chidg%data)
         call chidg%time_integrator%read_time_options(chidg%data,solution_file,'process')
-        call chidg%time_integrator%process_data_for_output(chidg%data)
+        if (primary_solution) call chidg%time_integrator%process_data_for_output(chidg%data)
+
+        ! Move solution vector from v_in to v, v is initialized here for post-processing
+        call chidg%data%sdata%adjoint%process_adjoint_solution()
 
 
         ! Write solution
@@ -98,7 +108,6 @@ contains
 
         ! Close ChiDG
         call chidg%shut_down('core')
-
 
 
     end subroutine chidg_post_hdf2tec
@@ -157,8 +166,13 @@ contains
 
 
         ! Read grid/solution modes and time integrator options from HDF5
-        call chidg%read_mesh(grid_file, interpolation='Uniform', level=OUTPUT_RES)
-        call chidg%read_fields(solution_file)
+        call chidg%read_mesh(grid_file, 'primal storage', interpolation='Uniform', level=OUTPUT_RES)
+
+
+        call chidg%data%set_fields_post(file_props%contains_primary_fields,file_props%contains_adjoint_fields,file_props%nfunctionals)
+
+        if (file_props%contains_primary_fields) call chidg%read_fields(solution_file,'primary')
+        if (file_props%contains_adjoint_fields) call chidg%read_fields(solution_file,'adjoint')
 
 
         ! Process for getting wall distance
@@ -175,7 +189,7 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_post_hdf2tec_new: error in MPI_Barrier.')
         end do
 
-        call chidg%time_integrator%process_data_for_output(chidg%data)
+        if (file_props%contains_primary_fields) call chidg%time_integrator%process_data_for_output(chidg%data)
 
         ! Write solution
         solution_file_prefix = get_file_prefix(solution_file,'.h5')

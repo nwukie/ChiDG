@@ -3,7 +3,7 @@
 module type_densematrix
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: NO_PROC
+    use mod_constants,  only: NO_PROC, ZERO, dQ_DIFF, dD_DIFF, dX_DIFF, NO_DIFF
     implicit none
 
 
@@ -56,6 +56,7 @@ module type_densematrix
         integer(ik)             :: nfields
         integer(ik)             :: nrows_
         integer(ik)             :: ncols_
+        integer(ik)             :: nnodes_r     ! Used for grid-node sensitivities storage
         real(rk),   allocatable :: mat(:,:)
 
     contains
@@ -77,6 +78,7 @@ module type_densematrix
         procedure :: get_recv_comm
         procedure :: get_recv_domain
         procedure :: get_recv_element
+        procedure :: mat_transpose      ! return imat transposed
 
         ! Setters
         procedure :: resize             ! resize matrix storage
@@ -116,8 +118,7 @@ contains
     !!  @param[in]  eparent     Integer index of parent element
     !!
     !------------------------------------------------------------------------------------------
-    !subroutine init(self,idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
-    subroutine init(self,nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,tparent)
+    subroutine init(self,nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,tparent,nnodes_r,spec)
         class(densematrix_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms
         integer(ik),            intent(in)      :: nfields
@@ -127,20 +128,38 @@ contains
         integer(ik),            intent(in)      :: eparent_l
         integer(ik),            intent(in)      :: parent_proc
         integer(ik),            intent(in)      :: tparent
+        integer(ik),            intent(in)      :: nnodes_r
+        integer(ik),            intent(in)      :: spec
 
         integer(ik) :: ierr, idim, jdim
 
-        !
         ! Compute size
-        !
-        self%nterms  = nterms
-        self%nfields = nfields
-        idim = nterms * nfields
-        jdim = nterms * nfields
+        if (spec == dQ_DIFF .or. spec == NO_DIFF) then
+            ! Standard flow jacobian storage
+            self%nterms  = nterms
+            self%nfields = nfields
+            idim = nterms * nfields
+            jdim = nterms * nfields
+        else if (spec == dX_DIFF) then
+            ! Mesh jacobian storage
+            self%nterms   = nterms
+            self%nfields  = nfields
+            self%nnodes_r = nnodes_r
+            idim = nterms * nfields
+            jdim = nnodes_r * 3
+        else if (spec == dD_DIFF) then
+            ! wall_distance jacobian
+            self%nterms   = nterms
+            self%nfields  = nfields 
+            idim = nterms * nfields
+            jdim = nterms * 1
+        else
+            call chidg_signal_one(FATAL,"densematrix_t%init: specialization not recognized", spec)
+        end if
 
-        !
+
+
         ! Set parents
-        !
         self%dparent_g_   = dparent_g
         self%dparent_l_   = dparent_l
         self%eparent_g_   = eparent_g
@@ -148,24 +167,18 @@ contains
         self%parent_proc_ = parent_proc
         self%tparent_     = tparent
 
-        !
         ! Set matrix size
-        !
         self%nrows_ = idim
         self%ncols_ = jdim
 
-        !
         ! Allocate block storage
         ! Check if storage was already allocated and reallocate if necessary
-        !
         if ( allocated(self%mat) ) deallocate(self%mat)
         allocate(self%mat(idim,jdim),stat=ierr)
         if (ierr /= 0) call AllocationError
 
-        !
         ! Initialize to zero
-        !
-        self%mat = 0._rk
+        self%mat = ZERO
 
     end subroutine init
     !*******************************************************************************************
@@ -402,24 +415,14 @@ contains
 
         integer(ik) :: ierr
 
-
-        !
         ! Set matrix size
-        !
         self%nrows_ = idim
         self%ncols_ = jdim
 
-
-        !
         ! Allocate block storage
         ! Check if storage was already allocated and reallocate if necessary
-        !
-        if (allocated(self%mat)) then
-            deallocate(self%mat)
-            allocate(self%mat(idim,jdim),stat=ierr)
-        else
-            allocate(self%mat(idim,jdim),stat=ierr)
-        end if
+        if (allocated(self%mat)) deallocate(self%mat)
+        allocate(self%mat(idim,jdim),stat=ierr)
         if (ierr /= 0) call AllocationError
 
     end subroutine resize
@@ -705,6 +708,24 @@ contains
 
 
 
+    !>  mat_transpose
+    !!
+    !!  This returns the transpose dense_matrix: trans
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/02/2017
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function mat_transpose(self) result(trans)
+        class(densematrix_t),   intent(inout)   :: self
+
+        real(rk),   allocatable  :: trans(:,:)
+        
+        trans = transpose(self%mat)
+
+    end function mat_transpose
+    !******************************************************************************************
 
 
 

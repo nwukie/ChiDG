@@ -1,11 +1,9 @@
-!>  asdf
+!>  Compute forces on bc_patch_group
 !!
 !!  @author Nathan A. Wukie
 !!  @date   3/8/2017
 !!
-!!
-!! Usage:   chidg airfoil 'chidgfile'
-!!
+!! Usage:   chidg forces 'chidgfile'
 !!
 !---------------------------------------------------------------------------------------------
 module mod_chidg_forces
@@ -24,22 +22,13 @@ module mod_chidg_forces
     use DNAD_D
     implicit none
 
-
-
-
-
-
-
 contains
-
 
 
     !>  Post-processing tool for computing airfoil relevant quantities.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   3/8/2017
-    !!
-    !!
     !!
     !-----------------------------------------------------------------------------------
     subroutine chidg_forces(filename,patch_group)
@@ -107,10 +96,10 @@ contains
         ! Initialize solution data storage
         ! Read grid data from file
         gridfile = filename
-        call chidg%read_mesh(filename)
+        call chidg%read_mesh(filename,'primal storage')
 
         ! Read solution modes from HDF5
-        call chidg%read_fields(filename)
+        call chidg%read_fields(filename,'primary')
         
         ! Process for getting wall distance
         call chidg%process()

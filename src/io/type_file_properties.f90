@@ -13,10 +13,10 @@ module type_file_properties
     !------------------------------------------------------------------------------------------------------------
     type, public :: file_properties_t
 
-        logical     :: contains_grid             = .false.
-        logical     :: contains_solution         = .false.
-        logical     :: adjoint_mode              = .false.
-        logical     :: contains_adjoint_solution = .false.
+        logical     :: contains_grid           = .false.
+        logical     :: contains_primary_fields = .false.
+        logical     :: contains_adjoint_fields = .false.
+        logical     :: adjoint_mode            = .false.
 
         integer(ik)                      :: ndomains = 0      !< Number of domains in the file
         character(len=1024)              :: time_integrator   !< Time integrator name

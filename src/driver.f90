@@ -23,7 +23,7 @@ program driver
     ! Actions
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
-    use mod_chidg_post,         only: chidg_post, chidg_post_vtk, chidg_post_matplotlib
+    use mod_chidg_post,         only: chidg_post, chidg_post_vtk
     use mod_chidg_forces,       only: chidg_forces
     use mod_chidg_clone,        only: chidg_clone
     use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec_new
@@ -87,7 +87,7 @@ program driver
         call chidg%set('Solution Order'  , integer_input=solution_order                )
 
         ! Read grid and boundary condition data
-        call chidg%read_mesh(gridfile)
+        call chidg%read_mesh(gridfile,storage='primal storage')
 
         ! Initialize solution
         !   1: 'none', init fields with values from mod_io module variable initial_fields(:)
@@ -424,24 +424,10 @@ program driver
                 call get_command_argument(2,tutorial)
                 call tutorial_driver(trim(tutorial))
 
-
-! EXPERIMENTAL
-!            case ('matplotlib')
-!                call chidg%start_up('mpi')
-!                call chidg%start_up('core',header=.false.)
-!                if (narg /= 3) call chidg_signal(FATAL,"The 'matplotlib' action expects: chidg matplotlib gridfile.h5solutionfile.h5")
-!                call get_command_argument(2,grid_file)
-!                call get_command_argument(3,solution_file)
-!                call chidg_post_matplotlib(trim(grid_file),trim(solution_file))
-!            case ('eigen')
-!                call chidg%start_up('mpi')
-!                call chidg%start_up('core',header=.false.)
-!                call compute_euler_eigenmodes()
-
             case default
                 call chidg%start_up('mpi')
                 call chidg%start_up('core',header=.false.)
-                call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' 'inputs' and 'forces'.")
+                call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'inputs' and 'forces'.")
         end select
 
 

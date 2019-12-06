@@ -2,7 +2,7 @@ module type_domain_matrix
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: DIAG, ZERO, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, &
-                                      NFACES, CHIMERA, NO_INTERIOR_NEIGHBOR
+                                      NFACES, CHIMERA, NO_INTERIOR_NEIGHBOR, dQ_DIFF, dD_DIFF, dX_DIFF
     use type_mesh,              only: mesh_t
     use type_densematrix,       only: densematrix_t
     use type_densematrix_vector,only: densematrix_vector_t
@@ -115,7 +115,8 @@ contains
                                        imat_trans, ChiID, ndonors, max_coupled_elems,   &
                                        ncoupled_elems, icoupled_elem, icoupled_elem_bc, &
                                        ielem_bc, ibc, imat, group_ID, patch_ID,         &
-                                       face_ID, elem_ID, idomain_l, ielement_l, itime_couple
+                                       face_ID, elem_ID, idomain_l, ielement_l, itime_couple, &
+                                       nnodes_r, spec
         logical                     :: new_elements, chimera_face, more_donors,         &
                                        already_added, contains_chimera_face,            &
                                        block_initialized, lower_block, upper_block,     &
@@ -134,36 +135,54 @@ contains
                 init_chimera = .true.
                 init_bc      = .true.
                 init_hb      = .true.
+                spec         = dQ_DIFF
 
             case ('L','l','Lower','lower')
                 blocks       = [XI_MIN,ETA_MIN,ZETA_MIN]
                 init_chimera = .false.
                 init_bc      = .false.
                 init_hb      = .false.
+                spec         = dQ_DIFF
 
             case ('U','u','Upper','upper')
                 blocks       = [XI_MAX,ETA_MAX,ZETA_MAX]
                 init_chimera = .false.
                 init_bc      = .false.
                 init_hb      = .false.
+                spec         = dQ_DIFF
 
             case ('LD','ld','LowerDiagonal','lowerdiagonal')
                 blocks       = [XI_MIN,ETA_MIN,ZETA_MIN,DIAG]
                 init_chimera = .false.
                 init_bc      = .false.
                 init_hb      = .false.
+                spec         = dQ_DIFF
                 
             case ('UD','ud','UpperDiagonal','upperdiagonal')
                 blocks       = [XI_MAX,ETA_MAX,ZETA_MAX,DIAG]
                 init_chimera = .false.
                 init_bc      = .false.
                 init_hb      = .false.
+                spec         = dQ_DIFF
 
             case ('D', 'd', 'Diagonal', 'diagonal')
                 blocks       = [DIAG]
                 init_chimera = .false.
                 init_bc      = .false.
                 init_hb      = .false.
+                spec         = dQ_DIFF
+
+            case ('dX','dx','DX')
+                blocks       = [XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG]
+                init_chimera = .true.
+                init_bc      = .true.
+                spec         = dX_DIFF
+
+            case ('dD','dd','DD')
+                blocks       = [XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG]
+                init_chimera = .true.
+                init_bc      = .true.
+                spec         = dD_DIFF
 
             case default
                 call chidg_signal(FATAL,'domain_matrix%init: unrecognized matrix type')
@@ -246,23 +265,22 @@ contains
                         eparent_g   = mesh%domain(idom)%elems(ielem)%ielement_g
                         eparent_l   = mesh%domain(idom)%elems(ielem)%ielement_l
                         parent_proc = IRANK
+                        nnodes_r    = mesh%domain(idom)%elems(ielem)%nterms_c
                     else
                         dparent_g   = mesh%domain(idom)%faces(ielem,iblk)%ineighbor_domain_g
                         dparent_l   = mesh%domain(idom)%faces(ielem,iblk)%ineighbor_domain_l
                         eparent_g   = mesh%domain(idom)%faces(ielem,iblk)%ineighbor_element_g
                         eparent_l   = mesh%domain(idom)%faces(ielem,iblk)%ineighbor_element_l
                         parent_proc = mesh%domain(idom)%faces(ielem,iblk)%ineighbor_proc
+                        nnodes_r    = mesh%domain(idom)%faces(ielem,iblk)%ineighbor_nnodes_r
                     end if
 
 
-
-                    !
                     ! Call initialization procedure if parent is not 0 (0 meaning there is no parent, probably a boundary)
-                    !
                     if (eparent_l /= NO_INTERIOR_NEIGHBOR) then
 
                         ! Initialize dense block
-                        call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
+                        call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime,nnodes_r,spec)
                         call self%lblks(ielem,itime)%push_back(temp_blk)
 
                         ! Store data about number of equations and number of terms in solution expansion
@@ -271,11 +289,8 @@ contains
                         self%ldata(ielem,3) = mesh%domain(idom)%elems(ielem)%ntime
 
 
-                        !
                         ! If off-diagonal, store block index as 'upper' or 'lower'
-                        !
                         ! TODO: Add consideration for ntime and how that affects upper/lower status.
-                        !
                         lower_block = ( (parent_proc == IRANK .and. eparent_l < ielem) .or. (parent_proc < IRANK) )
                         upper_block = ( (parent_proc == IRANK .and. eparent_l > ielem) .or. (parent_proc > IRANK) )
 
@@ -309,21 +324,15 @@ contains
 
                     do iface = 1,NFACES
 
-                        !
                         ! If facetype is CHIMERA
-                        !
                         chimera_face = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
                         if (chimera_face) then
 
-                            !
                             ! Get ChiID and number of donor elements
-                            !
                             ChiID   = mesh%domain(idom)%faces(ielem,iface)%ChiID
                             ndonors = mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
 
-                            !
                             ! Call block initialization for each Chimera donor
-                            !
                             do idonor = 1,ndonors
                                 dparent_g   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_g
                                 dparent_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%idomain_l
@@ -332,11 +341,10 @@ contains
                                 parent_proc = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%iproc
                                 nfields     = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%nfields
                                 nterms_s    = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%nterms_s
+                                nnodes_r    = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%nterms_c
 
 
-                                !
                                 ! Check if block initialization was already called for current donor
-                                !
                                 already_added = .false.
                                 do imat = 1,self%chi_blks(ielem,itime)%size()
                                     
@@ -352,11 +360,9 @@ contains
                                 end do
 
                             
-                                !
                                 ! If a block for the donor element hasn't yet been initialized, call initialization procedure
-                                !
                                 if (.not. already_added) then
-                                    call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
+                                    call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime,nnodes_r,spec)
                                     call self%chi_blks(ielem,itime)%push_back(temp_blk)
 
                                 end if
@@ -407,29 +413,23 @@ contains
                                     self%bc_blks(ielement_l,itime)%mass       = mesh%domain(idomain_l)%elems(ielement_l)%mass
 
 
-
-                                    !
                                     ! Compute size of coupling matrix
-                                    !
                                     nfields  = mesh%domain(idomain_l)%elems(ielement_l)%nfields
                                     nterms_s = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
 
 
-                                    !
                                     ! Get indices for coupled element
-                                    !
                                     dparent_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(elem_ID)
                                     dparent_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(elem_ID)
                                     eparent_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(elem_ID)
                                     eparent_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(elem_ID)
                                     parent_proc = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(elem_ID)
+                                    nnodes_r    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nnodes_r(elem_ID)
 
 
-                                    !
                                     ! We need to check that we dont try to add the local element more than once.
                                     ! For example, if an element had two different boundary conditions on different
                                     ! faces, they would both try to add the local element.
-                                    !
                                     already_added = .false.
                                     do imat = 1,self%bc_blks(ielement_l,itime)%size()
                                         
@@ -445,12 +445,9 @@ contains
                                     end do
 
 
-
-                                    !
                                     ! Call initialization, store initialized matrix to bc_blks
-                                    !
                                     if (.not. already_added) then
-                                        call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
+                                        call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime,nnodes_r,spec)
                                         call self%bc_blks(ielement_l,itime)%push_back(temp_blk)
                                     end if
 
@@ -494,11 +491,12 @@ contains
                     eparent_g   = mesh%domain(idom)%elems(ielem)%ielement_g
                     eparent_l   = mesh%domain(idom)%elems(ielem)%ielement_l
                     parent_proc = IRANK
+                    nnodes_r    = mesh%domain(idom)%elems(ielem)%nterms_c
 
                     ! Call initialization, store initialized matrix to hb_blks
                     do itime_couple = 1,mesh%domain(idom)%ntime
                         if (itime_couple /= itime) then
-                            call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime_couple)
+                            call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime_couple,nnodes_r,spec)
                             call self%hb_blks(ielem,itime)%push_back(temp_blk)
                         end if
                     end do !itime_couple
@@ -545,6 +543,7 @@ contains
                                                 eparent_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(elem_ID)
                                                 eparent_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(elem_ID)
                                                 parent_proc = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(elem_ID)
+                                                nnodes_r    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nnodes_r(elem_ID)
 
                                                 ! We need to check that we dont try to add the local element more than once.
                                                 ! For example, if an element had two different boundary conditions on different
@@ -566,7 +565,7 @@ contains
 
                                                 ! Call initialization, store initialized matrix to hb_blks
                                                 if (.not. already_added) then
-                                                    call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime_couple)
+                                                    call temp_blk%init(nterms_s,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime_couple,nnodes_r,spec)
                                                     call self%hb_blks(ielement_l,itime)%push_back(temp_blk)
                                                 end if
 
@@ -588,11 +587,7 @@ contains
 
 
 
-
-
-        ! 
         ! Initialize transpose data
-        !
         select case (trim(mtype))
             case ('full','Full','FULL')
 
@@ -605,9 +600,7 @@ contains
                                     ! Get parent element of off-diagonal block
                                     eparent_l = self%lblks(ielem,itime)%eparent_l(imat)
 
-                                    !
                                     ! Find block index of transposed location in parent lblks
-                                    !
                                     do imat_trans = 1,self%lblks(eparent_l,itime)%size()
                                         ! Make sure the block we are seaching is on-proc
                                         if ( self%lblks(eparent_l,itime)%parent_proc(imat_trans) == IRANK ) then

@@ -83,6 +83,11 @@ module type_chidg_data
         procedure   :: get_equation_set_name
         procedure   :: nequation_sets
 
+        procedure   :: clear_io_fields              ! Clear all io fields
+        procedure   :: set_fields_post              ! Set up the fields (io/primary/adjoint) for post
+        procedure   :: set_fields_adjoint           ! Set up adjoint fields for reading adj solution
+        procedure   :: reset_fields                 ! Reset the fields as standard (primary fields only)
+
 
         ! Initialization procedure for solution data. Execute after all domains are added.
         procedure   :: initialize_solution_domains
@@ -1541,18 +1546,181 @@ contains
 
         integer(ik) :: idom
 
-
         if ( trim(selection) == 'grid' ) then
-
             do idom = 1,self%mesh%ndomains()
                 call write_line('Domain ', idom, '  :  ', self%mesh%domain(idom)%nelem, ' Elements', io_proc=IRANK)
             end do
-
         else
 
         end if
 
     end subroutine report
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Add clear io_fields in eqnset(:)%prop
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   10/6/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine clear_io_fields(self)
+        class(chidg_data_t),    intent(inout)  :: self
+
+        integer(ik) :: idom, eqn_ID
+        character(:), allocatable   :: user_msg
+
+        do idom = 1,self%mesh%ndomains()
+            eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
+            call self%eqnset(eqn_ID)%prop%clear_io_fields()
+        end do
+
+    end subroutine clear_io_fields
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Set fields based on the type/s of solution to post process 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   10/31/2017
+    !!
+    !!  Added capability for n different functionals.
+    !!  This means we will have neqns*nfunctionals adjoint variables  
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   10/31/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_fields_post(self,primary_sol,adjoint_sol,nfunctionals)
+        class(chidg_data_t),    intent(inout)  :: self
+        logical,                intent(in)     :: primary_sol
+        logical,                intent(in)     :: adjoint_sol
+        integer(ik),            intent(in)     :: nfunctionals
+
+        integer(ik) :: idom, eqn_ID
+        character(:), allocatable   :: user_msg, sol_type
+
+
+
+        if ( primary_sol .and. .not.(adjoint_sol) ) sol_type = 'primary'
+        if ( adjoint_sol .and. .not.(primary_sol) ) sol_type = 'adjoint'
+        if ( primary_sol .and.       adjoint_sol  ) sol_type = 'primary+adjoint'
+
+        select case (trim(sol_type))
+            
+            case ('primary')
+                
+                ! Nothing to do since all the fields are already setup by default
+
+            case ('adjoint')
+
+                ! order matters here!
+
+                do idom = 1,self%mesh%ndomains()
+                    eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
+                    ! Clear io_fields
+                    call self%eqnset(eqn_ID)%prop%clear_io_fields()
+                    ! Add adjoint fields to adjoint_fields
+                    call self%eqnset(eqn_ID)%prop%add_adjoint_fields(nfunctionals)
+                    ! Add adjoint_fields also to io_fields
+                    call self%eqnset(eqn_ID)%prop%add_adjoint_fields_to_io_fields()
+                    ! Clear primary fields, so that cache_handler does not update primary fields
+                    call self%eqnset(eqn_ID)%prop%clear_primary_fields()
+                    ! Clear model fields, so that chace_handler does not update model fields
+                    call self%eqnset(eqn_ID)%prop%clear_model_fields()
+                end do
+
+            case ('primary+adjoint')
+
+                do idom = 1,self%mesh%ndomains()
+                    eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
+                    ! Add adjoint fields to adjoint_fields and io_fields
+                    call self%eqnset(eqn_ID)%prop%add_adjoint_fields(nfunctionals)
+                    ! Add adjoint_fields also to io_fields
+                    call self%eqnset(eqn_ID)%prop%add_adjoint_fields_to_io_fields()
+                end do
+
+            case default
+
+                user_msg = "chidg_data%fields_post: combination of solution not recognized"
+                call chidg_signal(FATAL,user_msg)
+                
+
+        end select
+
+
+    end subroutine set_fields_post
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Set adjoint fields based on primary fields and n number of functionals.
+    !!  This allows chidg to read in multiple adjoint solution for each functional
+    !!  mainly for comuting the mesh-sensitivities.
+    !!
+    !!  Since no io is necessary the adjoint fields are not added to io fields. 
+    !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/8/2018
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_fields_adjoint(self,nfunctionals)
+        class(chidg_data_t),    intent(inout)  :: self
+        integer(ik),            intent(in)     :: nfunctionals
+
+        integer(ik) :: idom, eqn_ID
+
+        ! Add adjoint fields corresponding to primary fields
+        do idom = 1,self%mesh%ndomains()
+            eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
+            call self%eqnset(eqn_ID)%prop%add_adjoint_fields(nfunctionals)
+        end do
+
+    end subroutine set_fields_adjoint
+    !****************************************************************************************
+
+
+
+
+
+    !>  Reset fields to default.
+    !!  This is used in ChiDG AdjointX after the fields have been altered for reading
+    !!  the adjoint solutions.
+    !!
+    !!  However, to allow chace_handler to compute the correct mesh-sensitivities we
+    !!  need to remove the adjoint fields.  
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/8/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine reset_fields(self)
+        class(chidg_data_t),    intent(inout)  :: self
+
+        integer(ik) :: idom, eqn_ID
+
+        ! Remove adjoint fields corresponding to primary fields
+        do idom = 1,self%mesh%ndomains()
+            eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
+            call self%eqnset(eqn_ID)%prop%clear_adjoint_fields()
+        end do
+
+    end subroutine reset_fields
     !****************************************************************************************
 
 

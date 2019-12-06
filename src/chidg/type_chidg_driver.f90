@@ -71,21 +71,29 @@ contains
     !!  @date   6/25/2017
     !!
     !----------------------------------------------------------------------------------
-    module subroutine auxiliary_driver(chidg,chidg_aux,case,grid_file,aux_file)
+    module subroutine auxiliary_driver(chidg,chidg_aux,case,solver_type,grid_file,aux_file)
         type(chidg_t),  intent(inout)   :: chidg
         type(chidg_t),  intent(inout)   :: chidg_aux
         character(*),   intent(in)      :: case
+        character(*),   intent(in)      :: solver_type
         character(*),   intent(in)      :: grid_file
         character(*),   intent(in)      :: aux_file
 
         select case(trim(case))
             case('Wall Distance')
-                call wall_distance_driver(chidg         = chidg,        &
-                                          wall_distance = chidg_aux,    &
-                                          grid_file     = grid_file,    &
-                                          aux_file      = aux_file)
 
-        end select
+                select case(trim(solver_type))
+                    case ('primal problem', 'primal solver', 'primal')
+                        call wall_distance_primal_driver(chidg         = chidg,        &
+                                                         wall_distance = chidg_aux,    &
+                                                         grid_file     = grid_file,    &
+                                                         aux_file      = aux_file)
+
+                    case default
+                       call chidg_signal_one(FATAL,"chidg_driver_t%auxiliary_driver: solver type found.", trim(solver_type)) 
+                end select !Solver type
+
+        end select !Problem type
 
     end subroutine auxiliary_driver
     !**********************************************************************************
@@ -112,7 +120,7 @@ contains
     !!  @param[in]  order           Polynomial order, the field will be computed with.
     !!
     !-------------------------------------------------------------------------------------
-    subroutine wall_distance_driver(chidg,wall_distance,grid_file,aux_file)
+    subroutine wall_distance_primal_driver(chidg,wall_distance,grid_file,aux_file)
         type(chidg_t),  intent(inout)   :: chidg
         type(chidg_t),  intent(inout)   :: wall_distance
         character(*),   intent(in)      :: grid_file
@@ -127,6 +135,7 @@ contains
         integer(ik)                     :: iorder, p, aux_field_index, wd_nterms_s, ierr, iproc
         type(file_properties_t)         :: wd_props
         logical                         :: wd_file_exists, have_wd_field
+        type(functional_group_t)        :: functionals
 
 
         ! chidg%init('mpi') should have already been called by another ChiDG instance.
@@ -193,12 +202,14 @@ contains
         !
         ! Solid walls get dirichlet zero bc.
         ! All other families get neumann zero bc.
-        call wall_distance%read_mesh(grid_file, equation_set = 'Wall Distance : p-Poisson',  &
+        call wall_distance%read_mesh(grid_file, storage      = 'primal storage',             &
+                                                equation_set = 'Wall Distance : p-Poisson',  &
                                                 bc_wall      = dirichlet_zero,               &
                                                 bc_inlet     = neumann_zero,                 &
                                                 bc_outlet    = neumann_zero,                 &
                                                 bc_symmetry  = neumann_zero,                 &
-                                                bc_farfield  = neumann_zero )
+                                                bc_farfield  = neumann_zero,                 &
+                                                functionals  = functionals)
 
 
         ! Initialize wall_distance with chidg order in case we are going to read in a solution.
@@ -355,7 +366,7 @@ contains
         call chidg%read_auxiliary_field(aux_file,field='u',store_as='Wall Distance : p-Poisson')
 
 
-    end subroutine wall_distance_driver
+    end subroutine wall_distance_primal_driver
     !**************************************************************************************
 
 

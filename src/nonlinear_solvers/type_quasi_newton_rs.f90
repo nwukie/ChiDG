@@ -2,7 +2,6 @@ module type_quasi_newton_rs
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG, NO_DIFF
-    use mod_hdfio,              only: write_fields_hdf
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
     use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier

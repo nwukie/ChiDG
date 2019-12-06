@@ -798,14 +798,14 @@ contains
         call prop%set_ndomains(prop%ndomains)
 
         ! Check for Grid/Solution, domain names, and time integrator
-        prop%contains_grid              = get_contains_grid_hdf(fid)
-        prop%contains_solution          = get_contains_solution_hdf(fid)
-        prop%domain_names               = get_domain_names_hdf(fid)
-        prop%time_integrator            = get_time_integrator_hdf(fid)
-        prop%adjoint_mode               = get_adjoint_status_hdf(fid)
-        prop%contains_adjoint_solution  = get_contains_adjoint_solution_hdf(fid)
-        prop%nfunctionals               = get_nfunctionals_hdf(fid) 
-        prop%istep                      = get_istep_hdf(fid) 
+        prop%contains_grid           = get_contains_grid_hdf(fid)
+        prop%contains_primary_fields = get_contains_solution_hdf(fid)
+        prop%contains_adjoint_fields = get_contains_adjoint_solution_hdf(fid)
+        prop%domain_names            = get_domain_names_hdf(fid)
+        prop%time_integrator         = get_time_integrator_hdf(fid)
+        prop%adjoint_mode            = get_adjoint_status_hdf(fid)
+        prop%nfunctionals            = get_nfunctionals_hdf(fid) 
+        prop%istep                   = get_istep_hdf(fid) 
 
 
         ! Get order of coordinate and solution expansions
@@ -813,7 +813,7 @@ contains
             prop%order_c = get_domain_coordinate_orders_hdf(fid,prop%domain_names)
         end if
 
-        if ( prop%contains_solution .or. prop%contains_adjoint_solution) then
+        if ( prop%contains_primary_fields .or. prop%contains_adjoint_fields) then
             prop%order_s = get_domain_field_orders_hdf(fid)
         end if
 

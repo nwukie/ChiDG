@@ -6,20 +6,30 @@ module type_chidg
     use mod_models,                 only: register_models
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
+    use mod_functional,             only: register_functionals
     use mod_prescribed_mesh_motion_function, only: register_prescribed_mesh_motion_functions
     use mod_radial_basis_function,  only: register_radial_basis_functions
     use mod_force,                  only: report_forces
     use mod_hole_cutting,           only: compute_iblank
-
-
     use mod_grid,                   only: initialize_grid
-    use type_svector,               only: svector_t
     use mod_string,                 only: get_file_extension, string_t, get_file_prefix
+    use mod_time,                   only: time_manager_global
+    use mod_chimera,                only: clear_donor_cache
+    use mod_communication,          only: establish_neighbor_communication, &
+                                          establish_chimera_communication
+    use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize,   &
+                                          IRANK, NRANK, ChiDG_COMM
+    use mod_tecio,                  only: write_tecio_file
+    use mod_partitioners,           only: partition_connectivity, send_partitions, &
+                                          recv_partition
+    use mod_datafile_io,            only: write_functionals_file, write_BC_sensitivities_file
+    use mod_update_functionals,     only: update_functionals
+    use mod_hdfio
+    use mod_hdf_utilities
+
 
     use type_chidg_data,            only: chidg_data_t
-    use type_chidg_vector
     use type_time_integrator,       only: time_integrator_t
-    use mod_time,                   only: time_manager_global
     use type_linear_solver,         only: linear_solver_t
     use type_nonlinear_solver,      only: nonlinear_solver_t
     use type_preconditioner,        only: preconditioner_t
@@ -27,9 +37,12 @@ module type_chidg
     use type_domain_patch_data,     only: domain_patch_data_t
     use type_bc_state_group,        only: bc_state_group_t
     use type_bc_state,              only: bc_state_t
+    use type_functional_group,      only: functional_group_t
     use type_dict,                  only: dict_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
+    use type_svector,               only: svector_t
+    use type_chidg_vector
 
     !use mod_time_integrators,       only: create_time_integrator
     use mod_time_integrators,       only: time_integrator_factory, register_time_integrators
@@ -37,24 +50,13 @@ module type_chidg
     use mod_nonlinear_solver,       only: create_nonlinear_solver
     use mod_preconditioner,         only: create_preconditioner
 
-    use mod_chimera,                only: clear_donor_cache
-    use mod_communication,          only: establish_neighbor_communication, &
-                                          establish_chimera_communication
-    use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize,   &
-                                          IRANK, NRANK, ChiDG_COMM
-
-    use mod_hdfio
-    use mod_hdf_utilities
-    use mod_tecio,                  only: write_tecio_file
-    use mod_partitioners,           only: partition_connectivity, send_partitions, &
-                                          recv_partition
     use mpi_f08
     use mod_io
 
-
+    ! TODO: consider relocating these
     use type_mesh_motion_domain_data,   only: mesh_motion_domain_data_t
     use type_mesh_motion_group_wrapper, only: mesh_motion_group_wrapper_t
-    use type_octree,                    only: octree_t
+!    use type_octree,                    only: octree_t
     implicit none
 
 
@@ -127,18 +129,27 @@ module type_chidg
         procedure       :: write_mesh
         procedure       :: read_fields
         procedure       :: write_fields
+        procedure       :: write_primary_fields
+        procedure       :: write_adjoint_fields
         procedure       :: read_auxiliary_field
         procedure       :: produce_visualization
+
+
+        procedure       :: write_functionals
+        procedure       :: read_functionals
+        procedure       :: write_vol_sensitivities
+        procedure       :: write_BC_sensitivities
 
     end type chidg_t
     !*****************************************************************************************
 
 
     interface
-        module subroutine auxiliary_driver(chidg,chidg_aux,case,grid_file,aux_file)
+        module subroutine auxiliary_driver(chidg,chidg_aux,case,solver_type,grid_file,aux_file)
             type(chidg_t),  intent(inout)   :: chidg
             type(chidg_t),  intent(inout)   :: chidg_aux
             character(*),   intent(in)      :: case
+            character(*),   intent(in)      :: solver_type
             character(*),   intent(in)      :: grid_file
             character(*),   intent(in)      :: aux_file
         end subroutine auxiliary_driver
@@ -594,23 +605,29 @@ contains
     !!  boundar functions are overridden with neumann boundary conditions.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine read_mesh(self,grid_file,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic, partitions_in, interpolation, level)
-        class(chidg_t),     intent(inout)               :: self
-        character(*),       intent(in)                  :: grid_file
-        character(*),       intent(in),     optional    :: equation_set
-        class(bc_state_t),  intent(in),     optional    :: bc_wall
-        class(bc_state_t),  intent(in),     optional    :: bc_inlet
-        class(bc_state_t),  intent(in),     optional    :: bc_outlet
-        class(bc_state_t),  intent(in),     optional    :: bc_symmetry
-        class(bc_state_t),  intent(in),     optional    :: bc_farfield
-        class(bc_state_t),  intent(in),     optional    :: bc_periodic
-        type(partition_t),  intent(in),     optional    :: partitions_in(:)
-        character(*),       intent(in),     optional    :: interpolation
-        integer(ik),        intent(in),     optional    :: level
+    subroutine read_mesh(self,grid_file,storage,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic, partitions_in, interpolation, level,functionals)
+        class(chidg_t),             intent(inout)           :: self
+        character(*),               intent(in)              :: grid_file
+        character(*),               intent(in), optional    :: storage
+        character(*),               intent(in), optional    :: equation_set
+        class(bc_state_t),          intent(in), optional    :: bc_wall
+        class(bc_state_t),          intent(in), optional    :: bc_inlet
+        class(bc_state_t),          intent(in), optional    :: bc_outlet
+        class(bc_state_t),          intent(in), optional    :: bc_symmetry
+        class(bc_state_t),          intent(in), optional    :: bc_farfield
+        class(bc_state_t),          intent(in), optional    :: bc_periodic
+        type(partition_t),          intent(in), optional    :: partitions_in(:)
+        character(*),               intent(in), optional    :: interpolation
+        integer(ik),                intent(in), optional    :: level
+        type(functional_group_t),   intent(in), optional    :: functionals
 
+        character(:), allocatable :: selected_storage
 
         call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('Reading mesh... ', io_proc=GLOBAL_MASTER)
+
+        selected_storage = 'primal storage'
+        if (present(storage)) selected_storage = trim(storage)
 
         ! Run pre-processor to compute iblank 
         call compute_iblank(grid_file,ChiDG_COMM)
@@ -632,9 +649,11 @@ contains
         ! Read mesh motion information.
         call self%read_mesh_motions(grid_file)
 
+        ! Read functionals.
+        call self%read_functionals(grid_file,functionals)
 
         ! Initialize data
-        call self%init('all',interpolation,level)
+        call self%init('all',interpolation,level,selected_storage)
 
 
         ! Mesh size fields + smoothing
@@ -1027,6 +1046,43 @@ contains
     !*****************************************************************************************
 
 
+    !>  Read functionals from grid file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/14/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine read_functionals(self,gridfile,functionals)
+        class(chidg_t),             intent(inout)               :: self
+        character(*),               intent(in)                  :: gridfile
+        type(functional_group_t),   intent(in),     optional    :: functionals
+
+        integer(ik)         :: ierr,iread
+
+        call write_line(' ',                                  ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('   Reading functionals... ', ltrim=.false., io_proc=GLOBAL_MASTER)
+
+        if (present(functionals)) then
+            ! Use input functionals (this is for auxiliary problems) 
+            self%data%functional_group = functionals
+
+        else
+
+            ! Read functionals from file 
+            do iread = 0,NRANK-1
+                if ( iread == IRANK ) then
+                    call read_functionals_hdf(gridfile,self%data)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+            end do
+
+        end if
+
+        call write_line('   Done reading functionals.', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line(' ',                            ltrim=.false., io_proc=GLOBAL_MASTER)
+
+    end subroutine read_functionals
+    !*****************************************************************************************
 
 
 
@@ -1037,19 +1093,46 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  solutionfile    String containing a solution file name, including extension.
+    !!  @author Matteo Ugolotti
+    !!  @date   9/14/2017
+    !!
+    !!  Added option to read in primary fields and/or adjoint fields
+    !!  IF not specified, it reads in primary fields only
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine read_fields(self,file_name)
+    subroutine read_fields(self,file_name,field_type)
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: file_name
+        character(*),       intent(in), optional    :: field_type
+
+        character(:),   allocatable :: option
 
         call write_line(' ',                            ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line(' Reading solution... ',        ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_line('   reading from: ', file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
 
-        ! Read solution from hdf file
-        call read_fields_hdf(file_name,self%data)
+        option = 'primary'
+        if (present(field_type)) option = trim(field_type)
+            
+        select case (trim(option))
+            case ('primary')
+                call write_line("   reading primary fields from: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
+                call read_primary_fields_hdf(file_name,self%data)
+
+            case ('adjoint')
+                call write_line("   reading adjoint fields from: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
+                call read_adjoint_fields_hdf(file_name,self%data)
+
+            case ('all')
+                call write_line("   reading primary fields from: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
+                call read_primary_fields_hdf(file_name,self%data)
+
+                call write_line("   reading adjoint fields from: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
+                call read_adjoint_fields_hdf(file_name,self%data)
+
+            case default
+                call chidg_signal_one(FATAL,'chidg%read_fields: Invalid field_type.',trim(option))
+
+        end select
 
         call write_line('Done reading solution.', io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,       io_proc=GLOBAL_MASTER)
@@ -1236,11 +1319,6 @@ contains
 
 
 
-
-
-
-
-
     !>  Write solution to file.
     !!
     !!  @author Nathan A. Wukie
@@ -1250,23 +1328,229 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine write_fields(self,file_name)
+    subroutine write_fields(self,file_name,field_type)
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: file_name
+        character(*),       intent(in), optional    :: field_type
 
+        character(:),   allocatable :: option
 
         call write_line(' ', ltrim=.false.,     io_proc=GLOBAL_MASTER)
-        call write_line('Writing solution... ', io_proc=GLOBAL_MASTER)
+        call write_line('Writing fields... ', io_proc=GLOBAL_MASTER)
         call write_line("   writing to:", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
 
-        call write_fields_hdf(self%data,file_name)
-        call self%time_integrator%write_time_options(self%data,file_name)
+        option = 'primary'
+        if (present(field_type)) option = trim(field_type)
 
-        call write_line("Done writing solution.", io_proc=GLOBAL_MASTER)
+        select case (trim(option))
+            case('primary')
+                call self%write_primary_fields(file_name)
+            case('adjoint')
+                call self%write_adjoint_fields(file_name)
+            case('X sensitivities')
+                ! Write grid_node sensitivities
+                call self%write_vol_sensitivities(file_name)
+            case('Xs sensitivities')
+                ! Write surface-normal grid-node sensitivities
+                !TODO: call self%write_xs_sensitivities(file_name)
+            case('BC sensitivities')
+                ! Write BC parametric sensitivities
+                call self%write_BC_sensitivities(file_name)
+            case default
+            call chidg_signal_one(WARN,'chidg%write_solution: Invalid field_type  string.',trim(field_type))
+        end select
+
+        ! Write functionals
+        call self%write_functionals(file_name)
+
+        call write_line("Done writing fields.", io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,       io_proc=GLOBAL_MASTER)
 
     end subroutine write_fields
     !*****************************************************************************************
+
+
+
+
+
+    !>  Write primary fields to file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/4/2019
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine write_primary_fields(self,file_name)
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: file_name
+
+        character(:),   allocatable :: option
+
+        call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('Writing primary fields... ', io_proc=GLOBAL_MASTER)
+        call write_line("   writing to:", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
+
+        call write_primary_fields_hdf(self%data,file_name)
+        call self%time_integrator%write_time_options(self%data,file_name)
+
+        call write_line("Done writing primary fields.", io_proc=GLOBAL_MASTER)
+        call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
+
+    end subroutine write_primary_fields
+    !*****************************************************************************************
+
+
+
+    !>  Write adjoint fields to file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/4/2019
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine write_adjoint_fields(self,file_name,field_type)
+        class(chidg_t), intent(inout)           :: self
+        character(*),   intent(in)              :: file_name
+        character(*),   intent(in), optional    :: field_type
+
+        character(:),   allocatable :: option
+
+        call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('Writing adjoint fields... ', io_proc=GLOBAL_MASTER)
+        call write_line("   writing to:", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
+
+        call write_adjoint_fields_hdf(self%data,file_name)
+        call self%time_integrator%write_time_options(self%data,file_name)
+
+        call write_line("Done writing adjoint fields.", io_proc=GLOBAL_MASTER)
+        call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
+
+    end subroutine write_adjoint_fields
+    !*****************************************************************************************
+
+
+
+
+    !>  Write solution functionals to file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/17/2017
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine write_functionals(self,file_name)
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: file_name
+
+        logical     :: write_func
+
+        write_func = self%data%sdata%functional%check_functional_stored() 
+
+        if (write_func) then
+
+            ! Call grid reader based on file extension
+            call write_line("   writing functionals to   :", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
+        
+            ! Write functionals to hdf
+            call write_functionals_hdf(self%data,file_name)
+            
+            ! Write functionals to .dat file
+            call write_functionals_file(self%data)
+
+        end if
+
+    end subroutine write_functionals
+    !*****************************************************************************************
+
+
+
+
+
+    !>  Write volume sensitivites 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/10/2018
+    !!
+    !!  @param[in]  prefix    String containing the prefix name 'dJ/dX_'.
+    !!                        The prefix will be completed with functional name and extension.
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine write_vol_sensitivities(self,prefix)
+        class(chidg_t),     intent(inout)   :: self
+        character(*),       intent(in)      :: prefix
+        
+        integer(ik)                 :: ifunc
+        character(:),   allocatable :: filename
+        type(string_t)              :: func_name
+
+        ! Only the MASTER rank has all the information about all grid-nodes
+        if (IRANK == GLOBAL_MASTER) then
+        
+            ! Write volume grid-node sensitivities for each functional, one at the time
+            do ifunc = 1,self%data%functional_group%n_functionals()
+
+                func_name = self%data%functional_group%fcl_entities(ifunc)%func%name%replace(' ','_')
+                filename  = trim(prefix) // func_name%get() 
+
+                ! Write solution for ifunc 
+                call write_line("   writing X-sensitivities for functional: ", func_name%get(), ltrim=.false., io_proc=GLOBAL_MASTER)
+
+                call chidg_signal(FATAL,"chidg%write_vol_sensitivities: sub-called procedures not yet implemented.")
+!                ! Write sensitivities to HDF file
+!                call write_x_sensitivities_hdf(self%data,ifunc,filename)
+!
+!                ! Write sensitivities to plot3d file
+!                call write_x_sensitivities_plot3d(self%data,ifunc,filename)
+
+            end do !ifunc
+
+        end if
+
+    end subroutine write_vol_sensitivities
+    !*****************************************************************************************
+
+
+
+
+
+    !>  Write BC paramteric sensitivites 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/26/2018
+    !!
+    !!  @param[in]  prefix    String containing the prefix name 'grad_'.
+    !!                        The prefix will be completed with functional name and extension.
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine write_BC_sensitivities(self,prefix)
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: prefix
+        
+        integer(ik)                 :: ifunc
+        character(:),   allocatable :: filename
+        type(string_t)              :: func_name
+
+        ! Only the MASTER rank writes out the gradient
+        if (IRANK == GLOBAL_MASTER) then
+        
+            ! Write volume grid-node sensitivities for each functional, one at the time
+            do ifunc = 1,self%data%functional_group%n_functionals()
+
+                func_name = self%data%functional_group%fcl_entities(ifunc)%func%name%replace(' ','_')
+                filename  = trim(prefix) // func_name%get() 
+
+                ! Write solution for ifunc 
+                call write_line("   writing BC gradient for functional: ", func_name%get(), ltrim=.false., io_proc=GLOBAL_MASTER)
+
+                ! Write sensitivities to .dat file
+                call write_BC_sensitivities_file(self%data,ifunc,filename)
+
+            end do !ifunc
+
+        end if
+
+    end subroutine write_BC_sensitivities
+    !*****************************************************************************************
+
+
 
 
 
@@ -1317,7 +1601,7 @@ contains
 
         ! Read grid/solution modes and time integrator options from HDF5
         self%grid_file = grid_file
-        call self%read_mesh(grid_file, interpolation='Uniform', level=OUTPUT_RES, equation_set=equation_set)
+        call self%read_mesh(grid_file, storage='primal', interpolation='Uniform', level=OUTPUT_RES, equation_set=equation_set)
         call self%read_fields(solution_file)
 
 
@@ -1362,15 +1646,19 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine process(self)
-        class(chidg_t), intent(inout)   :: self
+    subroutine process(self,solver_type)
+        class(chidg_t), intent(inout)           :: self
+        character(*),   intent(in), optional    :: solver_type
 
 
-        character(:),   allocatable :: user_msg
+        character(:),   allocatable :: user_msg, solver
         integer(ik)                 :: ifield, ierr, iproc
         type(svector_t)             :: auxiliary_fields_local
         type(string_t)              :: field_name
         logical                     :: has_wall_distance, all_have_wall_distance
+
+        solver = 'primal problem'
+        if (present(solver_type)) solver = trim(solver_type)
 
 
         auxiliary_fields_local = self%data%get_auxiliary_field_names()
@@ -1394,8 +1682,9 @@ contains
         if (all_have_wall_distance) then
             allocate(self%auxiliary_environment, stat=ierr)
             if (ierr /= 0) call AllocationError
-            call auxiliary_driver(self,self%auxiliary_environment,'Wall Distance', grid_file = trim(self%grid_file),    &
-                                                                                   aux_file  = 'wall_distance.h5')
+            call auxiliary_driver(self,self%auxiliary_environment,'Wall Distance', solver,          &
+                                                                  grid_file = trim(self%grid_file), &
+                                                                  aux_file  = 'wall_distance.h5')
         end if
         !*************************************************************************************
 
@@ -1450,7 +1739,7 @@ contains
 
         ! Prerun processing
         !   : Getting/computing auxiliary fields etc.
-        call self%process()
+        call self%process('primal problem')
 
 
         ! Initialize algorithms

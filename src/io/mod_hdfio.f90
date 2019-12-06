@@ -9,35 +9,40 @@
 !!  write_grids_hdf
 !!
 !!  read_boundaryconditions_hdf
-!!      read_patches_hdf
-!!      read_bc_state_groups_hdf
+!!      - read_patches_hdf
+!!      - read_bc_state_groups_hdf
 !!
 !!  write_boundaryconditions_hdf
-!!      write_patches_hdf
-!!      write_bc_state_groups_hdf
+!!      - write_patches_hdf
+!!      - write_bc_state_groups_hdf
 !!
-!!  read_fields_hdf
-!!      read_domain_field_hdf
-!!
+!!  read_primary_fields_hdf
+!!  read_adjoint_fields_hdf  
 !!  read_auxiliary_field_hdf
+!!      - read_domain_field_hdf
 !!
-!!  write_fields_hdf
-!!      write_domain_field_hdf
+!!
+!!  write_primary_fields_hdf
+!!  write_adjoint_fields_hdf
+!!      - write_domain_primary_field_hdf
+!!      - write_domain_adjoint_field_hdf
 !!
 !!  read_equations_hdf
 !!  write_equations_hdf
 !!
-!!  read_prescribedmeshmotion_hdf
-!!      read_pmm_groups_hdf
-!!      read_pmm_domain_data_hdf
+!!  read_mesh_motion_hdf
+!!      - read_mm_domain_data_hdf
+!!      - read_mm_groups_hdf
 !!
-!!  write_prescribedmeshmotion_hdf
-!!      write_pmm_groups_hdf
-!!      write_pmm_domain_data_hdf
+!!  write_mesh_motion_hdf
+!!      write_mm_groups_hdf
+!!      write_mm_domain_data_hdf
 !!
 !!  read_global_connectivity_hdf
 !!  TODO: write_global_connectivity_hdf
 !!
+!!  read_functionals_hdf 
+!!  write_functionals_hdf 
 !!  
 !!  copy_configuration_hdf
 !!
@@ -67,6 +72,9 @@ module mod_hdfio
     use type_bc_state,              only: bc_state_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
+    use type_functional_group,      only: functional_group_t
+    use type_evaluator,             only: evaluator_t
+    use mod_functional,             only: create_functional
 
     use iso_c_binding,              only: c_ptr
     use mod_hdf_utilities
@@ -284,7 +292,7 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine read_fields_hdf(filename,data)
+    subroutine read_primary_fields_hdf(filename,data)
         character(*),       intent(in)              :: filename
         type(chidg_data_t), intent(inout)           :: data
 
@@ -367,7 +375,7 @@ contains
         call data%sdata%q_in%assemble()
 
 
-    end subroutine read_fields_hdf
+    end subroutine read_primary_fields_hdf
     !****************************************************************************************
 
 
@@ -636,7 +644,7 @@ contains
     !!  @date   2/22/2017
     !!
     !----------------------------------------------------------------------------------------
-    subroutine write_fields_hdf(data,file_name,field)
+    subroutine write_primary_fields_hdf(data,file_name,field)
         type(chidg_data_t), intent(inout)           :: data
         character(*),       intent(in)              :: file_name
         character(*),       intent(in), optional    :: field
@@ -724,7 +732,7 @@ contains
                             field_index = data%eqnset(eqn_ID)%prop%get_primary_field_index(trim(field))
 
                             if (field_index /= 0) then
-                                call write_domain_field_hdf(domain_id,data,field,itime)
+                                call write_domain_primary_field_hdf(domain_id,data,field,itime)
                             end if
 
                         else
@@ -733,7 +741,7 @@ contains
                             nfields = data%eqnset(eqn_ID)%prop%nprimary_fields()
                             do ifield = 1,nfields
                                 field_name = trim(data%eqnset(eqn_ID)%prop%get_primary_field_name(ifield))
-                                call write_domain_field_hdf(domain_id,data,field_name,itime)
+                                call write_domain_primary_field_hdf(domain_id,data,field_name,itime)
                             end do ! ifield
                         end if
 
@@ -751,10 +759,137 @@ contains
             call MPI_Barrier(ChiDG_COMM,ierr)
         end do
 
-    end subroutine write_fields_hdf
+    end subroutine write_primary_fields_hdf
     !*****************************************************************************************
 
-   
+
+
+
+
+
+    !> Write adjoint solution modes to HDF file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/20/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine write_adjoint_fields_hdf(data,file_name,field)
+        type(chidg_data_t), intent(inout)           :: data
+        character(*),       intent(in)              :: file_name
+        character(*),       intent(in), optional    :: field
+
+
+        character(:),   allocatable     :: field_name, domain_name, time_string
+        integer(HID_T)                  :: fid, domain_id
+        integer(HSIZE_T)                :: adim, nfreq, ntime
+        integer(ik)                     :: idom, ieqn, neqns, iwrite, &
+                                           time, field_index, iproc, eqn_ID
+        integer                         :: ierr, order_s
+        logical                         :: file_exists
+        integer(ik)                     :: itime
+        real(rk),       allocatable     :: freq(:), time_lev(:)
+
+        ! Check for file existence
+        file_exists = check_file_exists_hdf(file_name)
+
+        ! Make sure q is assembled so it doesn't trigger a collective operation
+        ! inside of a sequential operation
+        call data%sdata%q%assemble()
+
+
+        ! Create new file if necessary
+        !   Barrier makes sure everyone has called file_exists before
+        !   one potentially gets created by another processor
+        call MPI_Barrier(ChiDG_COMM,ierr)
+        if (.not. file_exists) then
+
+
+                ! Create a new file
+                if (IRANK == GLOBAL_MASTER) then
+                    call initialize_file_hdf(file_name)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+
+
+                ! Initialize the file structure.
+                do iproc = 0,NRANK-1
+                    if (iproc == IRANK) then
+                        fid = open_file_hdf(file_name)
+                        call initialize_file_structure_hdf(fid,data%mesh)
+                        call close_file_hdf(fid)
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
+                end do
+
+        end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
+
+
+
+        ! Each process, write its own portion of the solution
+        do iwrite = 0,NRANK-1
+            if ( iwrite == IRANK ) then
+
+                fid = open_file_hdf(file_name)
+
+                ! Write solution for each domain
+                do idom = 1,data%mesh%ndomains()
+
+                    domain_name = data%mesh%domain(idom)%name
+                    eqn_ID      = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has same eqn_ID
+                    domain_id   = open_domain_hdf(fid,trim(domain_name))
+                    
+                    ! Write domain attributes: solution order, equation set
+                    adim = 1
+                    order_s = 0
+                    do while ( order_s*order_s*order_s /= data%mesh%domain(idom)%nterms_s )
+                       order_s = order_s + 1 
+                    end do
+                    order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
+
+
+                    ! Set some data about the block: solution order + equation set
+                    call set_domain_field_order_hdf(domain_id,order_s)
+                    
+
+                    ! Loop through time levels
+                    do itime = 1,data%ntime()
+
+                        ! If specified, only write specified field.
+                        if (present(field)) then
+                            field_index = data%eqnset(eqn_ID)%prop%get_primary_field_index(trim(field))
+
+                            if (field_index /= 0) then
+                                call write_domain_adjoint_field_hdf(domain_id,data,field,itime)
+                            end if
+
+                        ! Else, write each field in the file.
+                        else
+                            ! For each field: get the name, write to file
+                            neqns = data%eqnset(eqn_ID)%prop%nprimary_fields()
+                            do ieqn = 1,neqns
+                                field_name = trim(data%eqnset(eqn_ID)%prop%get_primary_field_name(ieqn))
+                                call write_domain_adjoint_field_hdf(domain_id,data,field_name,itime)
+                            end do ! ieqn
+                        end if
+
+                    end do ! itime
+
+                    call close_domain_hdf(domain_id)
+
+                end do ! idom
+
+                call set_contains_adjoint_solution_hdf(fid,"True")
+                call close_file_hdf(fid)
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
+
+    end subroutine write_adjoint_fields_hdf
+    !*****************************************************************************************
+
+
    
    
    
@@ -988,7 +1123,7 @@ contains
     !!  Expanded the dataspace to include all the time levels
     !!
     !----------------------------------------------------------------------------------------
-    subroutine write_domain_field_hdf(domain_id,data,field_name,itime,attribute_name,attribute_value)
+    subroutine write_domain_primary_field_hdf(domain_id,data,field_name,itime,attribute_name,attribute_value)
         integer(HID_T),     intent(in)              :: domain_id
         type(chidg_data_t), intent(inout)           :: data
         character(*),       intent(in)              :: field_name
@@ -1028,7 +1163,7 @@ contains
         ! Set dimensions of dataspace to write
         domain_name = get_domain_name_hdf(domain_id)
         idom        = data%get_domain_index(domain_name)
-        if (idom == NO_ID) call chidg_signal_one(FATAL, 'write_domain_field_hdf: domain not found.', trim(domain_name))
+        if (idom == NO_ID) call chidg_signal_one(FATAL, 'write_domain_primary_field_hdf: domain not found.', trim(domain_name))
 
         nelem_g     = data%mesh%domain(idom)%get_nelements_global()
         nterms_s    = data%mesh%domain(idom)%nterms_s
@@ -1118,10 +1253,181 @@ contains
         call h5gclose_f(gid,ierr)       ! Close Domain/Field group
 
 
-    end subroutine write_domain_field_hdf
+    end subroutine write_domain_primary_field_hdf
     !****************************************************************************************
 
 
+
+
+
+
+
+
+
+
+    !>  write hdf5 adjoint field to a domain.
+    !!
+    !!  loads the equation set and solution order and calls solution
+    !!  initialization procedure for each domain. searches for the given field and time
+    !!  instance.
+    !!
+    !!  copied and adapted from write_domain_primary_field_hdf
+    !!
+    !!  @author matteo ugolotti
+    !!  @date   8/8/2018
+    !!
+    !!      @param[in]  data        chidg_data_t instance containing grid and solution.
+    !!      @param[in]  domain_id   hdf5 file identifier.
+    !!      @param[in]  field_name  character string of the field name to be read.
+    !!      @param[in]  itime       integer of the time instance for the current field
+    !!                          to be read.
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine write_domain_adjoint_field_hdf(domain_id,data,field_name,itime,attribute_name,attribute_value)
+        integer(HID_T),     intent(in)              :: domain_id
+        type(chidg_data_t), intent(inout)           :: data
+        character(*),       intent(in)              :: field_name
+        integer(ik),        intent(in)              :: itime
+        character(*),       intent(in), optional    :: attribute_name
+        real(rk),           intent(in), optional    :: attribute_value
+
+        type(H5O_INFO_T) :: info
+        integer(HID_T)   :: gid, sid, did, crp_list, memspace, filespace
+        integer(HSIZE_T) :: edims(2), maxdims(3), dims(3), dimsm(3), dimsc(3), &
+                            start(3), count(3)
+
+        type(element_info_t)    :: elem_info
+
+        integer                             :: ndims, ibuf(1)
+        character(100)                      :: cbuf, var_grp, ctime
+        character(:),   allocatable         :: domain_name, wrt_field_name
+        real(rdouble),  allocatable, target :: var(:,:,:)
+        type(c_ptr)                         :: cp_var
+        character(1)                        :: ifunc_string
+
+        logical     :: DataExists, ElementsEqual, exists
+        integer(ik) :: type, ierr, ndomains,    &
+                       order, ifield, ielem, idom, nelem_g, &
+                       nterms_s, ntime, ifunc, nfuncs, istep
+
+        ! Open the Domain/Fields group
+        call h5lexists_f(domain_id, "Fields", exists, ierr)
+        if (exists) then
+            call h5gopen_f(domain_id, "Fields", gid, ierr, H5P_DEFAULT_F)
+        else
+            call h5gcreate_f(domain_id, "Fields", gid, ierr)
+        end if
+        if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: Domain/Fields group did not open properly.")
+
+
+        ! Set dimensions of dataspace to write
+        domain_name = get_domain_name_hdf(domain_id)
+        idom        = data%get_domain_index(domain_name)
+        if (idom == NO_ID) call chidg_signal_one(FATAL, 'write_domain_field_hdf: domain not found.', trim(domain_name))
+
+        nelem_g     = data%mesh%domain(idom)%get_nelements_global()
+        nterms_s    = data%mesh%domain(idom)%nterms_s
+        ndims       = 3
+        ntime       = data%ntime()
+
+        ! Assemble field buffer matrix that gets written to file
+        allocate(var(nterms_s,1,1))
+
+        ! Loop and store the ajoint variables for each functional
+        nfuncs = size(data%sdata%adjoint%v,1)
+        istep  = data%time_manager%istep !current time step 
+
+        do ifunc = 1,nfuncs
+        
+            ! Define adjoint variable name 
+            write(ifunc_string, "(I1)") ifunc
+            wrt_field_name = 'adjoint_' //  trim(field_name) // '_' // ifunc_string
+
+            ! Set the dimensions of the dataspace to write in
+            dims(1:3)    = [nterms_s, nelem_g, ntime]
+            maxdims(1:3) = H5S_UNLIMITED_F
+
+
+            ! Modify dataset creation properties, i.e. enable chunking in order to append
+            ! dataspace, if needed.
+            dimsc = [1, nelem_g, 1]  ! Chunk size
+
+            call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5pcreate_f error enabling chunking.")
+
+            call h5pset_chunk_f(crp_list, ndims, dimsc, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5pset_chunk_f error setting chunk properties.")
+
+
+            ! Reset dataspace size if necessary
+            call h5lexists_f(gid, trim(wrt_field_name), exists, ierr)
+            if (exists) then
+
+                ! Open the existing dataset
+                call h5dopen_f(gid, trim(wrt_field_name), did, ierr, H5P_DEFAULT_F)
+                if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: field does not exist or was not opened correctly.")
+
+                ! Extend dataset if necessary
+                call h5dset_extent_f(did, dims, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5dset_extent_f.")
+
+                ! Update existing dataspace ID since it may have been expanded
+                call h5dget_space_f(did, sid, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5dget_space_f.")
+
+            else
+
+                ! Create a new dataspace
+                call h5screate_simple_f(ndims,dims,sid,ierr,maxdims)
+                if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: h5screate_simple_f.")
+
+                ! Create a new dataset
+                call h5dcreate_f(gid, trim(wrt_field_name), H5T_NATIVE_DOUBLE, sid, did, ierr, crp_list)
+                if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: h5dcreate_f.")
+
+            end if ! dataspace exists
+
+
+            do ielem = 1,data%mesh%domain(idom)%nelem
+
+                elem_info = data%mesh%get_element_info(idom,ielem)
+
+                ! get domain-global element index
+                start = [1-1,elem_info%ielement_g-1,itime-1]   ! 0-based
+                count = [nterms_s, 1, 1]
+
+                ! Select subset of dataspace - sid
+                call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
+
+                ! Create a memory dataspace
+                dimsm(1) = size(var,1)
+                dimsm(2) = size(var,2)
+                dimsm(3) = size(var,3)
+                call h5screate_simple_f(ndims,dimsm,memspace,ierr)
+
+                ! Write modes
+                ifield = data%eqnset(elem_info%eqn_ID)%prop%get_primary_field_index(field_name)
+                !var(:,1,1) = real(data%sdata%q%get_field(elem_info,ifield,itime),rdouble)
+                !var(:,1,1) = real(data%sdata%adjoint%v(ifunc,istep)%dom(idom)%vecs(ielem)%getvar(ifield,itime),rdouble)
+                var(:,1,1) = real(data%sdata%adjoint%v(ifunc,istep)%get_field(elem_info,ifield,itime),rdouble)
+                cp_var = c_loc(var(1,1,1))
+
+                call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)
+                call h5sclose_f(memspace,ierr)
+
+            end do !ielem
+
+            call h5pclose_f(crp_list, ierr) ! Close dataset creation property
+            call h5dclose_f(did,ierr)       ! Close Field datasets
+            call h5sclose_f(sid,ierr)       ! Close Field dataspaces
+
+        end do !ifunc
+
+        call h5gclose_f(gid,ierr)       ! Close Domain/Field group
+
+
+    end subroutine write_domain_adjoint_field_hdf
+    !****************************************************************************************
 
 
 
@@ -1613,6 +1919,213 @@ contains
     end subroutine write_equations_hdf
     !****************************************************************************************
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Read functionals from .h5 file and store in fcl_group.
+    !!
+    !!  This is called by chidg_t and the filename is the gridfile, whereas the fcl_group argument
+    !!  is chidg%data%functional_group
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/15/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine read_functionals_hdf(filename,data)
+        character(*),         intent(in)      :: filename
+        class(chidg_data_t),  intent(inout)   :: data
+        
+        integer(HID_T)      :: fid
+        integer(ik)         :: nfunctions, astep, ifcl
+        integer(ik)         :: ierr
+        character(len=1024),    allocatable :: ref_geom, aux_geom
+        type(svector_t)                     :: names
+        class(evaluator_t),     allocatable :: fcl_temp
+
+        ! Open gridfile
+        fid = open_file_hdf(filename)
+        
+        ! Get number of functionals entered
+        nfunctions = get_nfunctionals_hdf(fid)
+
+        ! If no functional is required, do nothing
+        if (nfunctions /= 0) then
+        
+            ! Initialize functional_group%fcl_state
+            call data%functional_group%init(nfunctions)
+        
+            ! Get functional names to be read
+            names = get_functionals_names_hdf(fid)
+
+            do ifcl = 1,nfunctions
+                
+                ! Read all the information relatie to the ifcl
+                ref_geom = get_functional_reference_geom_hdf(fid,names%data_(ifcl)%get())
+                aux_geom = get_functional_auxiliary_geom_hdf(fid,names%data_(ifcl)%get())
+
+                ! Create concrete functional
+                call create_functional(names%data_(ifcl)%get(),fcl_temp)
+                allocate(data%functional_group%fcl_entities(ifcl)%func, source = fcl_temp, stat=ierr)
+                if (ierr/=0) call AllocationError
+                
+                ! Add attributes
+                call data%functional_group%fcl_entities(ifcl)%func%set_ref_geom(trim(ref_geom))
+                call data%functional_group%fcl_entities(ifcl)%func%set_aux_geom(trim(aux_geom))
+                data%functional_group%fcl_entities(ifcl)%func%ID = ifcl
+
+                ! Initialize integral storage and check functional information completeness
+                call data%functional_group%fcl_entities(ifcl)%func%check()
+
+            end do
+        
+        end if
+
+        ! Close gridfile
+        call close_file_hdf(fid)
+
+    end subroutine read_functionals_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+    !> Write functionals to HDF file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/17/2017
+    !!
+    !!  @param[in]      filename    Character string of the file to be written to
+    !!  @param[inout]   data        chidg_data_t containing solution to be written
+    !!
+    !!  TODO: ADD PARALLEL CAPABILITY, ONLY SERIAL AS OF NOW!!!
+    !!  TODO: think about adding a initialize_file_functional_structure_hdf routine
+    !----------------------------------------------------------------------------------------
+    subroutine write_functionals_hdf(data,file_name)
+        type(chidg_data_t), intent(in)              :: data
+        character(*),       intent(in)              :: file_name
+
+        character(:),   allocatable     :: func_name, ref_geom, aux_geom
+        integer(HID_T)                  :: fid, fcl_id, fcld_id, did, sid
+        integer(HSIZE_T)                :: dims(2)
+        integer                         :: ierr
+        logical                         :: file_exists, exists
+        integer(ik)                     :: ntime, ifunc, ndims, iproc, iwrite
+        real(rk),       allocatable     :: func_data(:)
+
+        ! Check for file existence
+        file_exists = check_file_exists_hdf(file_name)
+
+        ! Create new file if necessary
+        !   Barrier makes sure everyone has called file_exists before
+        !   one potentially gets created by another processor
+        call MPI_Barrier(ChiDG_COMM,ierr)
+        if (.not. file_exists) then
+
+                ! Create a new file
+                if (IRANK == GLOBAL_MASTER) then
+                    call initialize_file_hdf(file_name)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+
+                ! Initialize the file structure.
+                do iproc = 0,NRANK-1
+                    if (iproc == IRANK) then
+                        fid = open_file_hdf(file_name)
+                        call initialize_file_structure_hdf(fid,data%mesh)
+                        call close_file_hdf(fid)
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
+                end do
+
+        end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
+
+
+        ! Only the master rank writes the functional to hdf
+        if ( IRANK == GLOBAL_MASTER ) then
+
+            ! Open hdf file
+            fid = open_file_hdf(file_name)
+            
+            ! Create functional group if it does not exist yet
+            call create_functional_group_hdf(fid)
+
+            do ifunc = 1,data%sdata%functional%nfunc()
+
+                func_name = data%functional_group%fcl_entities(ifunc)%func%get_name()
+                ref_geom  = data%functional_group%fcl_entities(ifunc)%func%get_ref_geom()
+                aux_geom  = data%functional_group%fcl_entities(ifunc)%func%get_aux_geom()
+                ntime     = 1 ! Each hdf file contains the functional of that time instance
+                ndims     = 2
+                dims(1:2) = [1,ntime]
+               
+                ! Check if the functional exists, if not create it
+                call create_functional_hdf(fid,trim(func_name))
+                
+                ! Set reference and auxiliary geometries
+                call set_functional_reference_geom_hdf(fid,trim(func_name),trim(ref_geom))
+                call set_functional_auxiliary_geom_hdf(fid,trim(func_name),trim(aux_geom))
+
+                ! Open Functional group
+                fcl_id = open_functional_group_hdf(fid)
+
+                ! Open functional
+                call h5gopen_f(fcl_id,trim(func_name),fcld_id,ierr)
+                
+                ! Reset dataspace size if necessary
+                exists = check_link_exists_hdf(fcld_id,trim(func_name))
+                if (exists) then
+                    ! Open the existing dataset
+                    call h5dopen_f(fcld_id, trim(func_name), did, ierr, H5P_DEFAULT_F)
+                    if (ierr /= 0) call chidg_signal(FATAL,"write_functional_hdf: functional does not exist or was not opened correctly")
+
+                else
+                    ! Create a new dataspace
+                    call h5screate_simple_f(ndims,dims,sid,ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"write_functional_hdf: h5screate_simple_f")
+
+
+                    ! Create a new dataset
+                    call h5dcreate_f(fcld_id, trim(func_name), H5T_NATIVE_DOUBLE, sid, did, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"write_functional_hdf: h5dcreate_f")
+                
+                    ! Close dataspace
+                    call h5sclose_f(sid,ierr)
+                    if (ierr /=0 ) call chidg_signal(FATAL,"write_functional_HDF: h5sclose_f")
+                
+                end if
+
+                ! Retrive data
+                func_data = data%sdata%functional%get_func(ifunc,data%time_manager%istep)
+
+                ! Write data to dataset
+                call h5dwrite_f(did, H5T_NATIVE_DOUBLE, func_data, dims, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL, "write_functional_hdf: h5dwrite_f.")
+
+                call h5dclose_f(did, ierr)
+                call h5gclose_f(fcld_id,ierr)
+                call h5gclose_f(fcl_id,ierr)
+            end do !ifunc
+            
+            call close_file_hdf(fid)
+
+        end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
+    
+    end subroutine write_functionals_hdf
+    !*****************************************************************************************
 
 
 

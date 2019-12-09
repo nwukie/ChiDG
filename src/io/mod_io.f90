@@ -19,6 +19,7 @@ module mod_io
     character(len=100),     save    :: gridfile         = 'none'
     character(len=100),     save    :: solutionfile_in  = 'none'
     character(len=100),     save    :: solutionfile_out = 'none'
+    character(len=100),     save    :: adjointfile_out  = 'none'
 
     ! Space
     character(len=100),     save    :: basis            = 'legendre'
@@ -140,7 +141,8 @@ module mod_io
     ! Namelist Groups
     namelist /files/                    gridfile,           &
                                         solutionfile_in,    &
-                                        solutionfile_out
+                                        solutionfile_out,   &
+                                        adjointfile_out
 
     namelist /space/                    basis,              &
                                         solution_order,     &

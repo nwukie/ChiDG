@@ -210,6 +210,7 @@ contains
                     call register_equation_builders()
                     call register_time_integrators()
                     call register_radial_basis_functions()
+                    call register_functionals()
                     call initialize_grid()
                     self%envInitialized = .true.
 

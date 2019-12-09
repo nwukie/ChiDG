@@ -17,10 +17,6 @@ module mod_chidg_edit_boundaryconditions
     implicit none
 
 
-
-contains
-
-
     !-----------------------------------------------------------------------------------------
     !!
     !!  chidg_edit_boundaryconditions
@@ -38,13 +34,11 @@ contains
     !!  print_bc_state_properties
     !!  print_bc_state_property_options
     !!
-    !!
-    !!
-    !!
-    !!
-    !!
     !-----------------------------------------------------------------------------------------
 
+
+
+contains
 
 
 
@@ -76,13 +70,11 @@ contains
             call print_bc_overview(fid)
 
 
-            !
             ! Print command options, accept user input.
-            !
             command = "1: Edit Boundary State Groups, 2: Edit Boundary Patches, (0: Exit, ?: Help)"
             call write_line(' ')
-            call write_line(command,color='blue')
-
+            call write_line('Select command:')
+            call write_line('   ',command,color='blue')
 
 
             if (print_help) then
@@ -100,9 +92,7 @@ contains
             read(*,'(A1024)', iostat=ierr) selection
 
 
-            !
             ! Direct user-selection
-            !
             select case(trim(selection))
                 case('1')
                     call chidg_edit_boundarycondition_states(fid)
@@ -159,9 +149,7 @@ contains
 
 
             select case(selection)
-                !
                 ! Create group
-                !
                 case(1)
                     command = "Enter group name: "
                     call write_line(' ')
@@ -171,9 +159,7 @@ contains
                     call create_bc_state_group_hdf(fid,group_name)
                     call chidg_edit_boundarycondition_state_group(fid,group_name)
 
-                !
                 ! Edit group
-                !
                 case(2)
                     edit_group = .true.
                     open_group = .true.
@@ -198,9 +184,7 @@ contains
                         if (open_group) call chidg_edit_boundarycondition_state_group(fid,group_name)
                     end do
                 
-                !
                 ! Remove group
-                !
                 case(3)
                     command = "Enter group name: "
                     call write_line(' ')
@@ -257,9 +241,7 @@ contains
             edit_state_group = .true.
             do while(edit_state_group)
 
-                !
                 ! Refresh display
-                !
                 call chidg_clear_screen()
                 call print_overview(fid)
                 call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))
@@ -1348,17 +1330,12 @@ contains
         real(rdouble),   dimension(1)                :: buf
 
 
-
-        !
         ! Get property function
-        !
         call h5ltget_attribute_string_f(bcprop, ".", 'Function', fcn, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"print_property_options: error retrieving property function name")
 
 
-        !
         ! Get number of attributes attached to the group id
-        !
         call h5oget_info_f(bcprop, h5_info, ierr)
         nattr = h5_info%num_attrs
         if (ierr /= 0) call chidg_signal(FATAL,"print_property_options: error getting current number of attributes.")
@@ -1368,10 +1345,7 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-
-        !
         ! Gather any existing attributes and their values
-        !
         if ( nattr > 0 ) then
             idx = 0
             do iattr = 1,nattr
@@ -1400,10 +1374,8 @@ contains
         end if
 
 
-        !
         ! Print the gathered property options. Except the function attribute, which exists for all
         ! properties and was printed above.
-        !
         lines_printed = 0
         do iattr = 1,nattr
 

@@ -54,6 +54,7 @@ module type_solverdata
         ! Auxiliary fields
         type(string_t),         allocatable :: auxiliary_field_name(:)
         type(chidg_vector_t),   allocatable :: auxiliary_field(:)
+        logical                             :: compute_auxiliary
 
         ! Time information
         real(rk),       allocatable :: dt(:,:)         ! Element-local time-step, (ndomains,maxelems)

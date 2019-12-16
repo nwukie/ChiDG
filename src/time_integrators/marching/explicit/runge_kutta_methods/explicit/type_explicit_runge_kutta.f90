@@ -54,13 +54,9 @@ module type_explicit_runge_kutta
     type, extends(time_integrator_marching_t), public :: explicit_runge_kutta_t
 
 
-
     contains
-
         procedure   :: init
         procedure   :: step
-
-
     end type explicit_runge_kutta_t
     !*********************************************************************************************************************
 
@@ -215,20 +211,6 @@ contains
 
     end subroutine step
     !*********************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -23,10 +23,11 @@ module type_linear_solver
         real(rk)        :: tol  = 1.e-8_rk              !< Absolute convergence tolerance
         real(rk)        :: rtol = 1.e-10_rk             !< Relative convergence tolerance
         integer(ik)     :: niter = 0                    !< Number of iterations
-        integer(ik)     :: nmax  = -1                 !< Max number of iterations, default=-1 (unlimited)
+        integer(ik)     :: nmax  = -1                   !< Max number of iterations, default=-1 (unlimited)
         integer(ik)     :: nkrylov = 2000               !< Size of Krylov subspace
         character(3)    :: orthogonalization = 'CGS'    !< Orthogonalization algorithm: 'CGS', 'MGS'
         integer(ik)     :: silence = 0                  
+        real(rk)        :: residual_norm
 
 
         ! Parameters for inner iterative solver(preconditioning)

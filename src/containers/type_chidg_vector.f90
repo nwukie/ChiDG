@@ -67,6 +67,7 @@ module type_chidg_vector
         procedure(vector_store_interface),     pointer, pass   :: set_field         => chidg_set_field
         procedure(vector_setfields_interface), pointer, pass   :: set_fields        => chidg_set_fields
         procedure(vector_store_interface),     pointer, pass   :: add_field         => chidg_add_field
+        procedure(vector_setfields_interface), pointer, pass   :: add_fields        => chidg_add_fields
         procedure(vector_getfield_interface),  pointer, pass   :: select_get_field  => chidg_get_field
         procedure(vector_getfields_interface), pointer, pass   :: select_get_fields => chidg_get_fields
         procedure(vector_self_interface),      pointer, pass   :: clear             => chidg_clear_vector
@@ -577,6 +578,29 @@ contains
 
 
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   12/14/2019
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine chidg_add_fields(self,values,element_info)
+        class(chidg_vector_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: values(:)
+        type(element_info_t),   intent(in)      :: element_info
+
+        if (any(ieee_is_nan(values))) print*, 'adding NaN!'
+
+        ! Access current field and add new contribution
+        self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%vec = self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%vec + values
+
+    end subroutine chidg_add_fields
+    !**************************************************************************************
+
+
+
+
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -684,6 +708,39 @@ contains
     !***********************************************************************************
 
 
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   12/14/2019
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine petsc_add_fields(self,values,element_info)
+        class(chidg_vector_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: values(:)
+        type(element_info_t),   intent(in)      :: element_info
+
+        PetscErrorCode          :: ierr, i
+        PetscInt                :: istart
+        PetscInt, allocatable   :: indices(:)
+
+        !istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
+        istart = element_info%dof_start 
+        indices = [(i, i=istart,(istart+(element_info%nterms_s*element_info%nfields*element_info%ntime)-1),1)]
+
+        ! Decrement by 1 for 0-based indexing
+        indices = indices - 1
+
+        call VecSetValues(self%wrapped_petsc_vector%petsc_vector,size(values),indices,values,ADD_VALUES,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_add_vector: error calling VecSetValues.')
+
+        ! Indicate needs assembled
+        self%petsc_needs_assembled = .true.
+
+    end subroutine petsc_add_fields
+    !***********************************************************************************
 
 
 
@@ -2191,6 +2248,7 @@ contains
         vec%set_field         => chidg_set_field
         vec%set_fields        => chidg_set_fields
         vec%add_field         => chidg_add_field
+        vec%add_fields        => chidg_add_fields
         vec%select_get_field  => chidg_get_field
         vec%select_get_fields => chidg_get_fields
         vec%assemble          => chidg_assemble_vector
@@ -2206,6 +2264,7 @@ contains
         vec%set_field         => petsc_set_field
         vec%set_fields        => petsc_set_fields
         vec%add_field         => petsc_add_field
+        vec%add_fields        => petsc_add_fields
         vec%select_get_field  => petsc_get_field
         vec%select_get_fields => petsc_get_fields
         vec%assemble          => petsc_assemble_vector

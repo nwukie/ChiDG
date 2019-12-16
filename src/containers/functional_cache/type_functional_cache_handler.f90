@@ -97,8 +97,7 @@ contains
         integer(ik),                        intent(in)          :: ifunc
         character(*),                       intent(in)          :: geom_feature
         integer(ik),                        intent(in)          :: differentiate
-   
-        
+
         ! Initialize functional_cache_handler 
         call self%init(data,fcl_cache,ifunc,geom_feature,differentiate)
         
@@ -242,9 +241,8 @@ contains
    
         type(element_info_t)        :: elem_info
         type(cache_handler_t)       :: worker_cache_handler
-        integer(ik)                 :: idepend, ientity, idiff, iface, ierr
+        integer(ik)                 :: idepend, ientity, idiff, iface, ierr, idomain_l, ielement_l
         logical                     :: compute_auxiliary, compute_reference
-
 
         associate (func => self%data%functional_group%fcl_entities(self%ifunc)%func )
 
@@ -252,24 +250,21 @@ contains
             compute_auxiliary = ( self%geom == 'auxiliary' )
             compute_reference = ( self%geom == 'reference' )
 
-
             ! Loop through all the entities initialized (elements/faces) 
             do ientity = 1,self%cache%nentities(self%geom)
 
                 ! Update the worker
                 if (compute_auxiliary) then
-                    elem_info%idomain_g  = self%cache%aux_cache%idomain_g%at(ientity)
-                    elem_info%idomain_l  = self%cache%aux_cache%idomain_l%at(ientity)
-                    elem_info%ielement_g = self%cache%aux_cache%ielement_g%at(ientity)
-                    elem_info%ielement_l = self%cache%aux_cache%ielement_l%at(ientity)
-                    iface                = self%cache%aux_cache%iface%at(ientity)
+                    idomain_l  = self%cache%aux_cache%idomain_g%at(ientity)
+                    ielement_l = self%cache%aux_cache%ielement_l%at(ientity)
+                    iface      = self%cache%aux_cache%iface%at(ientity)
                 else
-                    elem_info%idomain_g  = self%cache%ref_cache%idomain_g%at(ientity)
-                    elem_info%idomain_l  = self%cache%ref_cache%idomain_l%at(ientity)
-                    elem_info%ielement_g = self%cache%ref_cache%ielement_g%at(ientity)
-                    elem_info%ielement_l = self%cache%ref_cache%ielement_l%at(ientity)
-                    iface                = self%cache%ref_cache%iface%at(ientity)
+                    idomain_l  = self%cache%ref_cache%idomain_l%at(ientity)
+                    ielement_l = self%cache%ref_cache%ielement_l%at(ientity)
+                    iface      = self%cache%ref_cache%iface%at(ientity)
                 end if
+
+                elem_info = worker%mesh%get_element_info(idomain_l,ielement_l)
                 call worker%set_element(elem_info)
 
 
@@ -317,10 +312,8 @@ contains
 
             end do !ientity
 
-
             ! Communicate integrals through processors
             call self%cache%comm(self%geom)
-            
             
             ! Finalize functional on auxiliary/reference geometry
             if (compute_auxiliary) call func%finalize_auxiliary(worker,self%cache)
@@ -404,11 +397,18 @@ contains
 
             ! Update local integrals with overall value coming from all ranks and store
             ! dQ derivatives in the sdata%adjoint%Jq
-            if (store_derivatives_dQ) self%data%sdata%adjoint%Jq(self%ifunc) = func%store_deriv(self%cache)
+            if (store_derivatives_dQ) then
+                self%data%sdata%adjoint%Jq(self%ifunc) = func%store_deriv(self%cache)
+                call self%data%sdata%adjoint%Jq(self%ifunc)%assemble()
+            end if
+
 
             ! Update local integrals with overall value coming from all ranks and store
             ! dX derivatives in the Jx(ifunc) vector
-            if (store_derivatives_dX) self%data%sdata%adjointx%Jx(self%ifunc) = func%store_deriv(self%cache)
+            if (store_derivatives_dX) then
+                self%data%sdata%adjointx%Jx(self%ifunc) = func%store_deriv(self%cache)
+                call self%data%sdata%adjoint%Jq(self%ifunc)%assemble()
+            end if
 
 
             ! Store real value of the functional

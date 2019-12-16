@@ -1,10 +1,10 @@
 module type_chidg_adjoint
 #include<messenger.h>
-
-    use type_chidg_vector,      only: chidg_vector_t
-    use type_chidg_matrix,      only: chidg_matrix_t
+    use type_chidg_vector,      only: chidg_vector_t, chidg_vector
+    use type_chidg_matrix,      only: chidg_matrix_t, chidg_matrix
     use mod_kinds,              only: ik, rk
     use mod_constants,          only: ZERO, dD_DIFF 
+    use mod_io,                 only: backend
     use type_mesh,              only: mesh_t
     use type_svector,           only: svector_t
     use type_storage_flags,     only: storage_flags_t
@@ -57,7 +57,7 @@ module type_chidg_adjoint
 
         procedure       :: init
         procedure       :: init_vector
-        procedure       :: check_adjoint_stored
+!        procedure       :: check_adjoint_stored
         procedure       :: process_adjoint_solution
         procedure       :: process_primal_solution
         procedure       :: store_solver_info
@@ -89,67 +89,47 @@ contains
 
         integer(ik)     :: ierr
 
-        if (sflags%v) then
-            if (allocated(self%v)) deallocate (self%v)
-            allocate( self%v(nfunc,nstep), stat=ierr )
-            if (ierr/=0) call AllocationError
-        end if
+        ! Deallocate any data previously allocated
+        call self%release()
 
-        if (sflags%q_time) then
-            if (allocated(self%q_time)) deallocate (self%q_time)
-            allocate( self%q_time(nstep), stat=ierr )
-            if (ierr/=0) call AllocationError
-        end if
+        ! Default, no error
+        ierr = 0
 
-        if (sflags%Jq) then
-            if (allocated(self%Jq)) deallocate (self%Jq)
-            allocate( self%Jq(nfunc), stat=ierr )
-            if (ierr/=0) call AllocationError
-        end if
+        if (sflags%v) allocate( self%v(nfunc,nstep), stat=ierr )
+        if (ierr/=0) call AllocationError
 
-        if (sflags%solver_iter) then
-            if (allocated(self%solver_iter)) deallocate (self%solver_iter)
-            allocate( self%solver_iter(nfunc,nstep), stat=ierr )
-            if (ierr/=0) call AllocationError
-        end if
+        if (sflags%q_time) allocate( self%q_time(nstep), stat=ierr )
+        if (ierr/=0) call AllocationError
 
-        if (sflags%solver_time) then
-            if (allocated(self%solver_time)) deallocate (self%solver_time)
-            allocate( self%solver_time(nfunc,nstep), stat=ierr )
-            if (ierr/=0) call AllocationError
-        end if
+        if (sflags%Jq) allocate( self%Jq(nfunc), stat=ierr )
+        if (ierr/=0) call AllocationError
 
-        if (sflags%solver_err) then
-            if (allocated(self%solver_err)) deallocate (self%solver_err)
-            allocate( self%solver_err(nfunc,nstep), stat=ierr )
-            if (ierr/=0) call AllocationError
-        end if
+        if (sflags%solver_iter) allocate( self%solver_iter(nfunc,nstep), stat=ierr )
+        if (ierr/=0) call AllocationError
+
+        if (sflags%solver_time) allocate( self%solver_time(nfunc,nstep), stat=ierr )
+        if (ierr/=0) call AllocationError
+
+        if (sflags%solver_err) allocate( self%solver_err(nfunc,nstep), stat=ierr )
+        if (ierr/=0) call AllocationError
         
         
         self%primary_adjoint_initialized = .true.
     
         
-        !
         ! Auxiliary adjoint storage
         !   assumption: only one auxiliary field (wall_distance)
-        !
         if (sflags%vRd) then
-            if (allocated(self%vRd)) deallocate (self%vRd)
             allocate( self%vRd(1,nfunc), stat=ierr )
             if (ierr/=0) call AllocationError
             self%auxiliary_adjoint_initialized = .true.
         end if
         
         if (sflags%Rd) then
-            if (allocated(self%Rd)) deallocate (self%Rd)
             allocate( self%Rd(1), stat=ierr )
             if (ierr/=0) call AllocationError
         end if
 
-
-
-
-    
     end subroutine init
     !************************************************************************************
 
@@ -177,20 +157,23 @@ contains
         if (sflags%v) then
             do ifunc = 1,size(self%v,1)
                 do istep = 1,size(self%v,2)
-                     call self%v(ifunc,istep)%init(mesh,ntime)
+                    self%v(ifunc,istep) = chidg_vector(trim(backend)) 
+                    call self%v(ifunc,istep)%init(mesh,ntime)
                 end do !istep
             end do !ifunc
         end if
         
         if (sflags%q_time) then
             do istep = 1,size(self%q_time,1)
-                 call self%q_time(istep)%init(mesh,ntime)
+                self%q_time(istep) = chidg_vector(trim(backend)) 
+                call self%q_time(istep)%init(mesh,ntime)
             end do !istep
         end if
 
         if (sflags%Jq) then
             do ifunc = 1,size(self%Jq,1)
-                 call self%Jq(ifunc)%init(mesh,ntime)
+                self%Jq(ifunc) = chidg_vector(trim(backend)) 
+                call self%Jq(ifunc)%init(mesh,ntime)
             end do !ifunc
         end if
  
@@ -201,13 +184,15 @@ contains
             do iaux = 1,size(self%vRd,1)
                 do ifunc = 1,size(self%vRd,2)
                      !call self%vRd(iaux,ifunc)%init(mesh,ntime,specialization)
-                     call self%vRd(iaux,ifunc)%init(mesh,ntime,'auxiliary differentiation')
+                    self%vRd(iaux,ifunc) = chidg_vector(trim(backend)) 
+                    call self%vRd(iaux,ifunc)%init(mesh,ntime,'auxiliary differentiation')
                 end do !istep
             end do !ifunc
         end if
     
         if (sflags%Rd) then
             do iaux = 1,size(self%Rd)
+                self%Rd(iaux) = chidg_matrix(trim(backend)) 
                 call self%Rd(iaux)%init(mesh,mtype='dD')
                 call self%Rd(iaux)%init_recv(self%vRd(1,1))
                 if (sflags%Rd_trans) self%Rd(iaux)%transposed = .true.
@@ -226,45 +211,45 @@ contains
 
 
 
-    !>  Check if at least one chidg_vector of adjoint variables 
-    !!  Return .true. if at least one adjoint variable vector is stored
-    !!
-    !!  @author Matteo Ugolotti
-    !!  @date   7/14/2017
-    !!
-    !!
-    !------------------------------------------------------------------------------------
-    function check_adjoint_stored(self) result(stat)
-        class(chidg_adjoint_t),     intent(in)   :: self
-        
-        logical     :: stat,not_zero
-        integer(ik) :: idom,ielem,iterm
-
-        stat = .false.
-
-        if ( self%primary_adjoint_initialized ) then
-
-            ! check if v(1,1) is ZERO, if the chidg_vector is ZERO then nothing 
-            ! has been written in any of the chidg_vectors belonging to v
-            do idom = 1, size(self%v(1,1)%dom)
-                do ielem = 1, size(self%v(1,1)%dom(idom)%vecs)
-                   do iterm = 1,size(self%v(1,1)%dom(idom)%vecs(ielem)%vec)
-                        
-                        not_zero = ( self%v(1,1)%dom(idom)%vecs(ielem)%vec(iterm) /= ZERO ) 
-                        if (not_zero) then
-                            stat = .true.
-                            exit
-                        end if
-
-                    end do !iterm 
-                end do !ielem
-            end do !idom
-
-        end if
-
-
-    end function check_adjoint_stored 
-    !************************************************************************************
+!    !>  Check if at least one chidg_vector of adjoint variables 
+!    !!  Return .true. if at least one adjoint variable vector is stored
+!    !!
+!    !!  @author Matteo Ugolotti
+!    !!  @date   7/14/2017
+!    !!
+!    !!
+!    !------------------------------------------------------------------------------------
+!    function check_adjoint_stored(self) result(stat)
+!        class(chidg_adjoint_t),     intent(in)   :: self
+!        
+!        logical     :: stat,not_zero
+!        integer(ik) :: idom,ielem,iterm
+!
+!        stat = .false.
+!
+!        if ( self%primary_adjoint_initialized ) then
+!
+!            ! check if v(1,1) is ZERO, if the chidg_vector is ZERO then nothing 
+!            ! has been written in any of the chidg_vectors belonging to v
+!            do idom = 1, size(self%v(1,1)%dom)
+!                do ielem = 1, size(self%v(1,1)%dom(idom)%vecs)
+!                   do iterm = 1,size(self%v(1,1)%dom(idom)%vecs(ielem)%vec)
+!                        
+!                        not_zero = ( self%v(1,1)%dom(idom)%vecs(ielem)%vec(iterm) /= ZERO ) 
+!                        if (not_zero) then
+!                            stat = .true.
+!                            exit
+!                        end if
+!
+!                    end do !iterm 
+!                end do !ielem
+!            end do !idom
+!
+!        end if
+!
+!
+!    end function check_adjoint_stored 
+!    !************************************************************************************
 
 
 
@@ -294,12 +279,12 @@ contains
     subroutine process_primal_solution(self,q_in,istep)
         class(chidg_adjoint_t),     intent(inout)   :: self
         type(chidg_vector_t),       intent(in)      :: q_in
-        integer(ik),    optional,   intent(in)      :: istep
+        integer(ik),                intent(in)      :: istep
         
-        logical         :: storage_available
+        logical :: storage_available
 
         ! Check if there is room to store the new input primal solution
-        storage_available = ( istep .le. size(self%q_time) )
+        storage_available = ( istep <= size(self%q_time) )
         if (.not. storage_available) then
             call chidg_signal(FATAL,'adjoint%process_primal_solution: the last primal    &
                                      solution read in cannot be stored in q_time vector. &
@@ -310,7 +295,8 @@ contains
         end if
 
         ! Copy q_in over to q_time(istep)
-        self%q_time(istep) = q_in     
+        self%q_time(istep) = q_in
+        call self%q_time(istep)%assemble()
         
     end subroutine process_primal_solution
     !************************************************************************************
@@ -508,62 +494,20 @@ contains
     !!  @author Matteo Ugolotti
     !!  @date   9/13/2017
     !!
-    !!
     !------------------------------------------------------------------------------------
     subroutine release(self)
         class(chidg_adjoint_t),     intent(inout)   :: self
 
-        integer(ik) :: i,j
-        
-        if (allocated(self%v)) then
-            do i = 1,size(self%v,1)
-                do j = 1,size(self%v,2)
-                    call self%v(i,j)%release()
-                end do
-            end do
-            deallocate (self%v)
-        end if
+        if (allocated(self%v))      deallocate(self%v)
+        if (allocated(self%v_in))   deallocate(self%v_in)
+        if (allocated(self%q_time)) deallocate(self%q_time)
+        if (allocated(self%Jq))     deallocate(self%Jq)
+        if (allocated(self%Rd))     deallocate(self%Rd)
+        if (allocated(self%vRd))    deallocate(self%vRd)
 
-        if (allocated(self%v_in)) then
-            do i = 1,size(self%v_in)
-                call self%v_in(i)%release()
-            end do
-            deallocate (self%v_in)
-        end if 
-
-        if (allocated(self%q_time)) then
-            do i = 1,size(self%q_time)
-                call self%q_time(i)%release()
-            end do
-            deallocate (self%q_time)
-        end if
-
-        if (allocated(self%Jq)) then
-            do i = 1,size(self%Jq)
-                call self%Jq(i)%release() 
-            end do 
-            deallocate (self%Jq)
-        end if
-
-        if (allocated(self%Rd)) then
-            do i = 1,size(self%Rd) 
-                call self%Rd(i)%release()
-            end do
-            deallocate (self%Rd)
-        end if
-
-        if (allocated(self%vRd)) then
-            do i = 1,size(self%vRd,1)
-                do j = 1,size(self%vRd,2)
-                    call self%vRd(i,j)%release()
-                end do
-            end do
-            deallocate (self%vRd)
-        end if
-
-        if (allocated(self%solver_iter))    deallocate (self%solver_iter)
-        if (allocated(self%solver_time))    deallocate (self%solver_time)
-        if (allocated(self%solver_err))     deallocate (self%solver_err)
+        if (allocated(self%solver_iter)) deallocate(self%solver_iter)
+        if (allocated(self%solver_time)) deallocate(self%solver_time)
+        if (allocated(self%solver_err))  deallocate(self%solver_err)
 
     end subroutine release
     !************************************************************************************

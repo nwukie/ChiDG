@@ -6,4 +6,5 @@ add_subdirectory(scalar_advection_diffusion)
 add_subdirectory(scalar_advection_diffusion_ale)
 add_subdirectory(scalar_advection_ale)
 add_subdirectory(fluid)
+add_subdirectory(adjoint)
 

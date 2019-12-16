@@ -18,6 +18,7 @@ module type_time_manager
         
         !Time scheme
         character(len=100)      :: time_scheme  ! 'steady'
+        character(len=100)      :: scheme_type  ! 'steady', 'time-marching', 'spectral'
 
         ! Unsteady time parameter
         real(rk)                :: t            ! Current time
@@ -40,6 +41,7 @@ module type_time_manager
         procedure   :: init         ! Initialization procedure to store all the time information needed
         procedure   :: set_name     ! Procedure to set the name of the time_integrator used
         procedure   :: get_name     ! Procedure to get the neme of the time_integrator used
+        procedure   :: get_type     ! Procedure to get the type of the time_integrator used
 
     end type time_manager_t
     !------------------------------------------------------------------------------------------
@@ -87,6 +89,7 @@ contains
                 self%ntime  = 1
                 self%nsteps = 1
                 self%nwrite = 0     ! don't write intermediate file
+                self%scheme_type= 'steady'
                 if (.not. allocated(self%freqs)) then
                     allocate(self%freqs(0), stat=ierr)
                     if (ierr /= 0) call AllocationError
@@ -121,6 +124,7 @@ contains
                     allocate(self%freqs(0), stat=ierr)
                     if (ierr /= 0) call AllocationError
                 end if
+                self%scheme_type = 'time-marching'
 
 
             
@@ -131,9 +135,10 @@ contains
                   'harmonic_balance', 'HB')
                 
                 call self%set_name(time_integrator)
-                self%nsteps = 1
-                self%nwrite = 0     ! don't write intermediate file
-                self%dt     = ZERO
+                self%nsteps      = 1
+                self%nwrite      = 0     ! don't write intermediate file
+                self%dt          = ZERO
+                self%scheme_type = 'spectral'
 
 
                 ! Verify that at least one frequency has been passed in
@@ -241,6 +246,25 @@ contains
     end function get_name
     !-----------------------------------------------------------------------------------------
 
+
+
+
+    !> Get scheme_type of the time integrator 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/9/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_type(self) result(res)
+        class(time_manager_t),  intent(inout)   :: self
+        
+        character(:),   allocatable :: res
+
+        res = trim(self%scheme_type)
+
+    end function get_type
+    !-----------------------------------------------------------------------------------------
 
 
 end module type_time_manager

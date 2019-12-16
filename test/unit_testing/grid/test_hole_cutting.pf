@@ -223,8 +223,10 @@ subroutine test_hole_cutting_cylinder_single_grid()
     connectivity1_p  = c_loc(connectivity1(1,1))
     xyz1_p           = c_loc(xyz1(1))
     iblank1_p        = c_loc(iblank1(1))
-    wall_nodes1_p    = c_loc(wall_nodes1(1))
-    overset_nodes1_p = c_loc(overset_nodes1(1))
+    !wall_nodes1_p    = c_loc(wall_nodes1(1))
+    !overset_nodes1_p = c_loc(overset_nodes1(1))
+    wall_nodes1_p    = c_null_ptr ! since size(wall_nodes1) == 0
+    overset_nodes1_p = c_null_ptr ! since size(overset_nodes1) == 0
 
     connectivity2_p  = c_loc(connectivity2(1,1))
     xyz2_p           = c_loc(xyz2(1))
@@ -346,8 +348,8 @@ subroutine test_hole_cutting_cylinder_overlap_grid()
                        nelem_xi, nelem_eta, nelem_zeta, ielem, ielem_xi, ielem_eta, ielem_zeta, node_start, ierr
 
     type(c_ptr) :: connectivity1_p, xyz1_p, iblank1_p, wall_nodes1_p, overset_nodes1_p
-    type(c_ptr) :: connectivity2_p, xyz2_p, iblank2_p, wall_nodes2_p, overset_nodes2_p
-    type(c_ptr) :: connectivity3_p, xyz3_p, iblank3_p, wall_nodes3_p, overset_nodes3_p
+!    type(c_ptr) :: connectivity2_p, xyz2_p, iblank2_p, wall_nodes2_p, overset_nodes2_p
+!    type(c_ptr) :: connectivity3_p, xyz3_p, iblank3_p, wall_nodes3_p, overset_nodes3_p
     type(c_ptr) :: connectivityc_p, xyzc_p, iblankc_p, wall_nodesc_p, overset_nodesc_p
 
     real(c_double) :: r_in, r_out, r, theta, z, x, y, x_max, x_min, y_max, y_min, z_max, z_min, tol
@@ -397,6 +399,7 @@ subroutine test_hole_cutting_cylinder_overlap_grid()
     nvertices_per_element1 = 8
 
     allocate(xyz1(3*nnodes1), iblank1(nnodes1), wall_nodes1(nwall_nodes1), overset_nodes1(noverset_nodes1), connectivity1(nvertices_per_element1,nelements1))
+    !allocate(xyz1(3*nnodes1), iblank1(nnodes1), wall_nodes1(1), overset_nodes1(1), connectivity1(nvertices_per_element1,nelements1))
 
 
     x_min  = -2._rk
@@ -618,15 +621,19 @@ subroutine test_hole_cutting_cylinder_overlap_grid()
     !     \---. .---/                 \---. .---/
     !
     !-------------------------------------------------------------
+    bidc = 2
+    btagc = 2
+    nelement_typesc = 1
+
     xyzc           = [xyz2, xyz3]
     wall_nodesc    = [wall_nodes2,    nnodes2 + wall_nodes3]
     overset_nodesc = [overset_nodes2, nnodes2 + overset_nodes3]
     iblankc        = [iblank2, iblank3]
 
-    nnodesc         = nnodes2         + nnodes3
-    nwall_nodesc    = nwall_nodes2    + nwall_nodes3
-    noverset_nodesc = noverset_nodes2 + noverset_nodes3
-    nelementsc      = nelements2      + nelements3
+    nnodesc                = nnodes2         + nnodes3
+    nwall_nodesc           = nwall_nodes2    + nwall_nodes3
+    noverset_nodesc        = noverset_nodes2 + noverset_nodes3
+    nelementsc             = nelements2      + nelements3
     nvertices_per_elementc = nvertices_per_element2
 
     allocate(connectivityc(nvertices_per_elementc,nelementsc), stat=ierr)
@@ -638,20 +645,8 @@ subroutine test_hole_cutting_cylinder_overlap_grid()
     connectivity1_p  = c_loc(connectivity1(1,1))
     xyz1_p           = c_loc(xyz1(1))
     iblank1_p        = c_loc(iblank1(1))
-    wall_nodes1_p    = c_loc(wall_nodes1(1))
-    overset_nodes1_p = c_loc(overset_nodes1(1))
-
-    connectivity2_p  = c_loc(connectivity2(1,1))
-    xyz2_p           = c_loc(xyz2(1))
-    iblank2_p        = c_loc(iblank2(1))
-    wall_nodes2_p    = c_loc(wall_nodes2(1))
-    overset_nodes2_p = c_loc(overset_nodes2(1))
-
-    connectivity3_p  = c_loc(connectivity3(1,1))
-    xyz3_p           = c_loc(xyz3(1))
-    iblank3_p        = c_loc(iblank3(1))
-    wall_nodes3_p    = c_loc(wall_nodes3(1))
-    overset_nodes3_p = c_loc(overset_nodes3(1))
+    wall_nodes1_p    = c_null_ptr ! since size(wall_nodes1) == 0
+    overset_nodes1_p = c_null_ptr ! since size(overset_nodes1) == 0
 
     connectivityc_p  = c_loc(connectivityc(1,1))
     xyzc_p           = c_loc(xyzc(1))
@@ -993,13 +988,16 @@ subroutine test_hole_cutting_overlapping_interior_grids()
     connectivity1_p  = c_loc(connectivity1(1,1))
     xyz1_p           = c_loc(xyz1(1))
     iblank1_p        = c_loc(iblank1(1))
-    wall_nodes1_p    = c_loc(wall_nodes1(1))
-    overset_nodes1_p = c_loc(overset_nodes1(1))
+    !wall_nodes1_p    = c_loc(wall_nodes1(1))       
+    !overset_nodes1_p = c_loc(overset_nodes1(1))    
+    wall_nodes1_p    = c_null_ptr   ! because size(wall_nodes1) == 0
+    overset_nodes1_p = c_null_ptr   ! because size(overset_nodes1) == 0
 
     connectivity2_p  = c_loc(connectivity2(1,1))
     xyz2_p           = c_loc(xyz2(1))
     iblank2_p        = c_loc(iblank2(1))
-    wall_nodes2_p    = c_loc(wall_nodes2(1))
+    !wall_nodes2_p    = c_loc(wall_nodes2(1))
+    wall_nodes2_p    = c_null_ptr   ! because size(wall_nodes2) == 0
     overset_nodes2_p = c_loc(overset_nodes2(1))
 
     ! Register blocks

@@ -66,10 +66,6 @@ module integration_smoothbump_mod
     logical         :: run_setup = .true.
 
 
-!    public  :: smoothbump
-
-
-
     !>  This parameter initialize the state for each test
     !!
     !!  @author Nathan A. Wukie
@@ -176,37 +172,6 @@ contains
                 end do
             end do
         end do
-
-
-!
-!        nelem_xi  = [24, 24, 24, 24, &
-!                     48, 48, 48, 48]
-!
-!        nelem_eta = [12, 12, 12, 12, &
-!                     24, 24, 24, 24]
-!
-!        files = [string_t('smoothbump_24x12x2.h5'), &
-!                 string_t('smoothbump_24x12x2.h5'), &
-!                 string_t('smoothbump_24x12x2.h5'), &
-!                 string_t('smoothbump_24x12x2.h5'), &
-!                 string_t('smoothbump_48x24x2.h5'), &
-!                 string_t('smoothbump_48x24x2.h5'), &
-!                 string_t('smoothbump_48x24x2.h5'), &
-!                 string_t('smoothbump_48x24x2.h5')  &
-!                 ]
-!
-!        P = [0, 1, 2, 3, &
-!             0, 1, 2, 3]
-!
-!
-!        !Initialize the test case container with the parameter
-!        allocate(params(size(files)))
-!        do icase = 1,size(files)
-!            params(icase)%nelem_xi    = nelem_xi(icase)
-!            params(icase)%nelem_eta   = nelem_eta(icase)
-!            params(icase)%gridfile    = files(icase)%str
-!            params(icase)%P           = P(icase)
-!        end do
 
     end function getParameters
     !*******************************************************************************************

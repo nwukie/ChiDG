@@ -2,12 +2,14 @@ module type_integral_cache
 #include<messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO, ONE, NO_ID, NO_DIFF
+    use mod_io,                 only: backend
     use type_mesh,              only: mesh_t
     use type_svector,           only: svector_t
     use mod_string,             only: string_t
+    use type_element_info,      only: element_info_t
     use type_seed,              only: seed_t
     use mod_differentiate,      only: get_nderiv
-    use type_chidg_vector,      only: chidg_vector_t
+    use type_chidg_vector,      only: chidg_vector_t, chidg_vector
     use type_function_info,     only: function_info_t
     use DNAD_D
     implicit none
@@ -103,6 +105,7 @@ contains
 
         ! Initialize real value of the integral
         self%integral_value = ZERO
+        self%integral_deriv = chidg_vector(trim(backend))
 
         ! Set initialized flag
         self%derivatives_initialized = .false.
@@ -130,7 +133,7 @@ contains
         type(chidg_vector_t),       intent(in)      :: vec_model 
         type(function_info_t),      intent(in)      :: fcn_info
          
-        integer(ik)     :: itime 
+        type(element_info_t)    :: elem_info
             
         ! Accumulate integral real value, this has to be done for any kind of differentiation
         self%integral_value = self%integral_value + integral%x_ad_
@@ -141,23 +144,16 @@ contains
 
             ! Initialize chidg_vector of derivatives if not yet done
             if ( .not. self%derivatives_initialized ) then
-                itime = 1
                 self%integral_deriv = vec_model
                 self%derivatives_initialized = .true.
             end if
 
-            associate( int_derivs  => self%integral_deriv%dom(fcn_info%seed%idomain_l)%vecs(fcn_info%seed%ielement_l)%vec )
-            
-                ! Sanity check of vec size and set derivatives
-                if ( size(int_derivs) == size(integral%xp_ad_) ) then
-                    int_derivs = int_derivs + integral%xp_ad_
-                else
-                    call chidg_signal(FATAL,"type_integral_cache.f90: the size of the integral derivatives does not match the worker derivatives size. Implementation Error!")
-                end if
+            elem_info = mesh%get_element_info(fcn_info%seed%idomain_l,fcn_info%seed%ielement_l)
+            call self%integral_deriv%add_fields(integral%xp_ad_,elem_info)
 
-            end associate
-
+!            call self%integral_deriv%assemble()
         end if
+
 
     end subroutine set_entity_value
     !***************************************************************************************************
@@ -190,19 +186,25 @@ contains
         type(mesh_t),               intent(in)      :: mesh
         type(function_info_t),      intent(in)      :: fcn_info
          
-        type(AD_D)      :: integral
-        integer(ik)     :: nderivs
+        type(element_info_t)    :: elem_info
+        type(AD_D)              :: integral
+        integer(ik)             :: nderivs
 
+        call self%integral_deriv%assemble()
 
         ! Allocate result
         integral = AD_D(get_nderiv(fcn_info))
         
         ! Assign real value
         integral = self%integral_value
+
+        ! Get element_info structure
+        elem_info = mesh%get_element_info(fcn_info%seed%idomain_l, fcn_info%seed%ielement_l)
         
         ! Assign derivatives, if NO_DIFF then self.derivatives_initialized == .false.
         if (self%derivatives_initialized) then
-            integral%xp_ad_ = self%integral_deriv%dom(fcn_info%seed%idomain_l)%vecs(fcn_info%seed%ielement_l)%vec 
+            !integral%xp_ad_ = self%integral_deriv%dom(fcn_info%seed%idomain_l)%vecs(fcn_info%seed%ielement_l)%vec 
+            integral%xp_ad_ = self%integral_deriv%get_fields(elem_info)
         end if
 
     end function get_entity_value
@@ -232,6 +234,7 @@ contains
         integer(ik),                intent(in)      :: dtype
         
         integer(ik)             :: istart, iend, idom, ielem
+        type(element_info_t)    :: elem_info
        
         ! Initialize istart and iend indeces
         istart = 0
@@ -251,30 +254,37 @@ contains
         
         
             ! Loop thorugh domains and elements
-            !do idom = 1,self%integral_deriv%ndomains()
-                !do ielem = 1,self%integral_deriv%dom(idom)%nelements()
             do idom = 1,mesh%ndomains()
                 do ielem = 1,mesh%domain(idom)%nelements()
-                    
-                    associate( int_derivs  => self%integral_deriv%dom(idom)%vecs(ielem) )
-                        call chidg_signal(FATAL,"integral_cache%set_global_value: needs updated for petsc storage!")
 
-                        ! Find correspondent derivatives in the AD_D vector
-                        istart = iend + 1
-                        iend   = iend + int_derivs%nentries()
-                        
-                        ! Set derivatives, check vec size
-                        if ( int_derivs%nentries() == size(integral%xp_ad_(istart:iend)) ) then
-                            int_derivs%vec = integral%xp_ad_(istart:iend)
-                        else
-                            call chidg_signal(FATAL,"type_integral_cache.f90: the size of the integral derivatives does not match the worker derivatives size. Implementation Error!")
-                        end if
+                    ! Find correspondent derivatives in the AD_D vector
+                    elem_info = mesh%get_element_info(idom,ielem)
+                    istart = elem_info%dof_local_start
+                    iend   = istart + elem_info%nfields*elem_info%nterms_s*elem_info%ntime - 1
 
-                    end associate
+                    call self%integral_deriv%set_fields(integral%xp_ad_(istart:iend),elem_info)
+
+!                    associate( int_derivs  => self%integral_deriv%dom(idom)%vecs(ielem) )
+!                        call chidg_signal(FATAL,"integral_cache%set_global_value: needs updated for petsc storage!")
+!
+!                        ! Find correspondent derivatives in the AD_D vector
+!                        istart = iend + 1
+!                        iend   = iend + int_derivs%nentries()
+!                        
+!                        ! Set derivatives, check vec size
+!                        if ( int_derivs%nentries() == size(integral%xp_ad_(istart:iend)) ) then
+!                            !int_derivs%vec = integral%xp_ad_(istart:iend)
+!                            int_derivs%vec = integral%xp_ad_(istart:iend)
+!                        else
+!                            call chidg_signal(FATAL,"type_integral_cache.f90: the size of the integral derivatives does not match the worker derivatives size. Implementation Error!")
+!                        end if
+!
+!                    end associate
                     
                 end do !ielem
             end do !idom 
 
+!            call self%integral_deriv%assemble()
         end if !NO_DIFF
                     
     end subroutine set_global_value
@@ -304,10 +314,11 @@ contains
         type(chidg_vector_t),       intent(in)      :: vec_model
         integer(ik),                intent(in)      :: dtype
          
+        type(element_info_t)    :: elem_info
         type(AD_D)              :: integral
-
         integer(ik)             :: istart, iend, idom, ielem, nderivs
 
+        call self%integral_deriv%assemble()
 
         ! Allocate result
         if (dtype /= NO_DIFF) then
@@ -317,7 +328,8 @@ contains
             ! from the auxiliary/reference geometry, and it only knows the overall integral real value
             ! from the communication process.
             if (.not. self%derivatives_initialized) then
-                self%integral_deriv = vec_model
+                !self%integral_deriv = vec_model
+                call self%integral_deriv%assemble()
             end if
             nderivs  = self%integral_deriv%nentries()
             integral = AD_D(nderivs)
@@ -341,21 +353,28 @@ contains
             do idom = 1,mesh%ndomains()
                 do ielem = 1,mesh%domain(idom)%nelements()
                     
-                    associate( int_derivs  => self%integral_deriv%dom(idom)%vecs(ielem) )
-                        call chidg_signal(FATAL,"integral_cache%get_global_value: needs updated for petsc storage!")
+                    elem_info = mesh%get_element_info(idom,ielem)
+                    istart = elem_info%dof_local_start
+                    iend   = istart + elem_info%nfields*elem_info%nterms_s*elem_info%ntime - 1
 
-                        ! Find correspondent derivatives in the AD_D vector
-                        istart = iend + 1
-                        iend   = iend + int_derivs%nentries()
-                        
-                        ! Set derivatives, check vec size
-                        if ( int_derivs%nentries() == size(integral%xp_ad_(istart:iend)) ) then
-                            integral%xp_ad_(istart:iend) = int_derivs%vec 
-                        else
-                            call chidg_signal(FATAL,"type_integral_cache.f90: the size of the integral derivatives does not match the worker derivatives size. Implementation Error!")
-                        end if
+                    integral%xp_ad_(istart:iend) = self%integral_deriv%get_fields(elem_info)
 
-                    end associate
+
+!                    associate( int_derivs  => self%integral_deriv%dom(idom)%vecs(ielem) )
+!                        call chidg_signal(FATAL,"integral_cache%get_global_value: needs updated for petsc storage!")
+!
+!                        ! Find correspondent derivatives in the AD_D vector
+!                        istart = iend + 1
+!                        iend   = iend + int_derivs%nentries()
+!                        
+!                        ! Set derivatives, check vec size
+!                        if ( int_derivs%nentries() == size(integral%xp_ad_(istart:iend)) ) then
+!                            integral%xp_ad_(istart:iend) = int_derivs%vec 
+!                        else
+!                            call chidg_signal(FATAL,"type_integral_cache.f90: the size of the integral derivatives does not match the worker derivatives size. Implementation Error!")
+!                        end if
+!
+!                    end associate
                     
                 end do !ielem
             end do !idom 

@@ -2,8 +2,9 @@ module type_geometry_cache
 #include<messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO, ONE, NO_ID, dQ_DIFF, dX_DIFF, NO_DIFF, dQ_DIFF
+    use mod_io,                 only: backend
     use type_mesh,              only: mesh_t
-    use type_chidg_vector,      only: chidg_vector_t
+    use type_chidg_vector,      only: chidg_vector_t, chidg_vector
     use type_ivector,           only: ivector_t
     use type_svector,           only: svector_t
     use type_integral_cache,    only: integral_cache_t
@@ -387,6 +388,7 @@ contains
             ! This is need if a proc has no entities from this geometry
             if (dtype /= NO_DIFF) then
                 self%integral_cache(int_ID)%integral_deriv = vec_model
+                call self%integral_cache(int_ID)%integral_deriv%assemble()
                 self%integral_cache(int_ID)%derivatives_initialized = .true.
             end if
 
@@ -483,6 +485,7 @@ contains
         ! Get integral ID 
         int_ID = self%get_id(integral_name)
 
+
         ! If the integral is not initialized, call error
         if (int_ID == 0) then
             call chidg_signal_one(FATAL,"type_geometry_cache%get_deriv: integral has not been computed yet.",trim(integral_name))
@@ -492,8 +495,14 @@ contains
         if ( .not. self%integral_cache(int_ID)%derivatives_initialized ) then
             call chidg_signal_one(FATAL,"type_geometry_cache%get_deriv: integral has no derivatives.",trim(integral_name))
         end if
+
+        ! Assemble derivatives
+        call self%integral_cache(int_ID)%integral_deriv%assemble()
         
+        integral = chidg_vector(trim(backend))
         integral = self%integral_cache(int_ID)%integral_deriv
+
+        call integral%assemble()
 
     end function get_deriv
     !***************************************************************************************************

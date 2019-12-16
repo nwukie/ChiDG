@@ -1526,6 +1526,7 @@ contains
 
         call self%mesh%release()
         call self%sdata%release()
+        call self%functional_group%release()
 
     end subroutine release
     !****************************************************************************************

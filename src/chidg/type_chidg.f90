@@ -1,6 +1,6 @@
 module type_chidg
 #include <messenger.h>
-    use mod_constants,              only: NFACES, ZERO, ONE, TWO, NO_ID, OUTPUT_RES
+    use mod_constants,              only: NFACES, ZERO, ONE, TWO, NO_ID, OUTPUT_RES, dD_DIFF
     use mod_equations,              only: register_equation_builders
     use mod_operators,              only: register_operators
     use mod_models,                 only: register_models
@@ -23,7 +23,9 @@ module type_chidg
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
     use mod_datafile_io,            only: write_functionals_file, write_BC_sensitivities_file
+    use mod_spatial,                only: update_space
     use mod_update_functionals,     only: update_functionals
+    use operator_chidg_mv,          only: chidg_mv
     use mod_hdfio
     use mod_hdf_utilities
 
@@ -56,7 +58,6 @@ module type_chidg
     ! TODO: consider relocating these
     use type_mesh_motion_domain_data,   only: mesh_motion_domain_data_t
     use type_mesh_motion_group_wrapper, only: mesh_motion_group_wrapper_t
-!    use type_octree,                    only: octree_t
     implicit none
 
 
@@ -118,6 +119,7 @@ module type_chidg
         ! Run
         procedure       :: process
         procedure       :: run
+        procedure       :: run_adjoint
         procedure       :: reporter
 
         ! IO
@@ -285,7 +287,6 @@ contains
                 case ('mpi')
                     call chidg_mpi_finalize()
                 case ('core')   ! All except mpi
-                    call log_finalize()
                     call close_hdf()
 
                     ! Tear down. Maybe things need deallocated from another library 
@@ -302,6 +303,7 @@ contains
                     ! Release storage
                     call self%data%release()
 
+                    call log_finalize()
                 case default
                     call chidg_signal(FATAL,"chidg%shut_down: invalid shut_down string")
             end select
@@ -382,7 +384,7 @@ contains
                 call self%init('bc - postcomm')
 
                 ! matrix/vector
-                call self%init('storage')
+                call self%init('storage',storage=storage)
 
             ! Initialize domain data that depend on the solution expansion
             case ('domains')
@@ -711,6 +713,10 @@ contains
         integer(ik), allocatable    :: nelems_per_domain(:),nnodes_per_domain(:)
         real(rk),    allocatable    :: rbf_radius_recv(:,:), rbf_center_recv(:,:),rbf_radius_sendv(:,:), rbf_center_sendv(:,:), global_nodes(:,:)
 
+        integer(ik)         :: ifield
+        type(svector_t)     :: auxiliary_fields_local
+        type(string_t)      :: field_name
+        logical             :: has_wall_distance, all_have_wall_distance
 
         call write_line(' ',                           ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('   Reading domain grids... ', ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -880,6 +886,29 @@ contains
         end if
         !!!-------------------------  REVISIT  --------------------------------!!!
 
+
+
+
+
+
+        ! Detect if auxiliary variables are required
+        auxiliary_fields_local = self%data%get_auxiliary_field_names()
+
+        ! Rule for 'Wall Distance'
+        !   1: Detect if proc requires auxiliary field 'Wall Distance : p-Poisson' be provided.
+        !   2: Detect if all procs require 'Wall Distance : p-Poisson'. MPI_AllReduce
+        ! This is also needed to initialize the storage for the auxiliary adjoint variables
+        !-------------------------------------------------------------------------------------
+        has_wall_distance = .false.
+        do ifield = 1,auxiliary_fields_local%size()
+            field_name = auxiliary_fields_local%at(ifield)
+            has_wall_distance = (field_name%get() == 'Wall Distance : p-Poisson')
+            if (has_wall_distance) exit
+        end do !ifield
+
+        ! Save the search as a flag
+        call MPI_AllReduce(has_wall_distance, all_have_wall_distance, 1, MPI_LOGICAL, MPI_LOR, ChiDG_COMM, ierr)
+        self%data%sdata%compute_auxiliary = all_have_wall_distance
 
 
         call write_line('   Done reading domains grids... ', ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -1358,7 +1387,7 @@ contains
                 ! Write BC parametric sensitivities
                 call self%write_BC_sensitivities(file_name)
             case default
-            call chidg_signal_one(WARN,'chidg%write_solution: Invalid field_type  string.',trim(field_type))
+            call chidg_signal_one(WARN,'chidg%write_fields: Invalid field_type  string.',trim(field_type))
         end select
 
         ! Write functionals
@@ -1729,15 +1758,13 @@ contains
 
         class(chidg_t), pointer :: chidg
     
-
         call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
         call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
-        call write_line("           Running ChiDG simulation...             ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("           Running ChiDG primal problem...         ", io_proc=GLOBAL_MASTER, delimiter='none')
         call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
         call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
 
         
-
         ! Prerun processing
         !   : Getting/computing auxiliary fields etc.
         call self%process('primal problem')
@@ -1802,19 +1829,21 @@ contains
 
 
             ! Report at final time
-            if ( (option_write_report) .and. (istep == nsteps) ) then
-                call self%reporter(report)
-            end if
+            if ( (option_write_report) .and. (istep == nsteps) ) call self%reporter(report)
 
-           
 
             ! Write solution every nwrite steps
             if (wcount == self%data%time_manager%nwrite) then
+
+                ! Check if functional computation is needed, if so compute functionals
+                if (self%data%functional_group%compute_functionals) call self%time_integrator%compute_functionals(self%data)
+
                 if (self%data%time_manager%t < 1.) then
                     write(filename, "(A,F8.6,A3)") trim(prefix)//'_', self%data%time_manager%t, '.h5'
                 else
                     write(filename, "(A,F0.6,A3)") trim(prefix)//'_', self%data%time_manager%t, '.h5'
                 end if
+
                 call self%write_mesh(filename)
                 call self%write_fields(filename)
                 wcount = 0
@@ -1829,6 +1858,8 @@ contains
 
         ! Write the final solution to hdf file
         if (option_write_final) then
+            ! Check if functional computation is needed, if so compute functionals
+            if (self%data%functional_group%compute_functionals) call self%time_integrator%compute_functionals(self%data)
             call self%write_mesh(solutionfile_out)
             call self%write_fields(solutionfile_out)
         end if
@@ -1860,6 +1891,133 @@ contains
     end subroutine run
     !*****************************************************************************************
 
+
+
+
+
+
+    !>  Run ChiDG Adjoint simulation
+    !!
+    !!      - This routine passes the domain data, linear solver, and 
+    !!        preconditioner components to the time integrator adjoint solver.
+    !!
+    !!  Optional input parameters:
+    !!      write_initial   control writing initial solution to file. Default: .false.
+    !!      write_final     control writing final solution to file. Default: .true.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/12/2017
+    !!
+    !!  TODO: check if this works for unsteady adjoint
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine run_adjoint(self,write_final)
+        class(chidg_t), intent(inout)           :: self
+        logical,        intent(in), optional    :: write_final
+
+        character(100)              :: filename
+        character(:),   allocatable :: prefix, scheme_type
+        integer(ik)                 :: istep, nsteps, ierr, iread, ifunc
+        logical                     :: option_write_initial, option_write_final,    &
+                                       steady, spectral
+
+
+        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("       Running ChiDG adjoint problem...            ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+
+
+        associate ( adjoint => self%data%sdata%adjoint )
+        
+            ! Prerun processing
+            !   : Getting/computing auxiliary fields etc.
+            call self%process('primal problem')
+
+            ! Initialize algorithms
+            call self%init('algorithms')
+
+            ! Check optional incoming parameters
+            option_write_final   = .true.
+            if (present(write_final))   option_write_final   = write_final
+
+            ! Get the prefix in the file name in case of multiple output files
+            prefix = get_file_prefix(adjointfile_out,'.h5')       
+
+
+            ! Set the time manager initial time correctly
+            steady   = .false.
+            spectral = .false.
+            nsteps      = self%data%time_manager%nsteps
+            scheme_type = self%data%time_manager%get_type()
+            if (scheme_type == 'steady')     steady   = .true. 
+            if (scheme_type == 'spectral')   spectral = .true.
+            if ( steady .or. spectral ) then
+                self%data%time_manager%t = 0
+            else
+                self%data%time_manager%t = self%data%time_manager%dt*nsteps
+            end if
+
+
+            ! Start adjoint variables computation 
+            ! NuTE: Adjoint variables are computed backward in time!
+            do istep = nsteps,1,-1
+                
+                ! Print diagnostics
+                call write_line(' ')
+                call write_line('Start computing primary adjoint variables for time instance ', self%data%time_manager%t ,' ...', io_proc=GLOBAL_MASTER)
+                
+                ! Pass istep to time_manager
+                self%data%time_manager%istep = istep
+
+                ! Compute adjoint variables
+                call self%time_integrator%compute_adjoint(self%data,self%linear_solver, &
+                                                            self%preconditioner)
+
+                ! Write the adjoint solution to hdf file for each step
+                if (option_write_final) then
+                    if ( steady .or. spectral) then
+                        write(filename, "(A,A3)") trim(prefix),'.h5'
+                    else if (self%data%time_manager%t < 1.) then
+                        write(filename, "(A,F8.6,A3)") trim(prefix)//'_', self%data%time_manager%t, '.h5'
+                    else
+                        write(filename, "(A,F0.6,A3)") trim(prefix)//'_', self%data%time_manager%t, '.h5'
+                    end if
+                    call self%write_mesh(trim(filename))
+                    call self%write_fields(trim(filename),'adjoint')
+                end if
+            
+                ! Start accumulation RHS of auxiliary adjoint equations if needed
+                ! Assuming only one auxiliary problem: wall_distance
+                if (self%data%sdata%compute_auxiliary) then 
+                 
+                    call write_line('Start computing RHS of auxiliary adjoint equations...', io_proc=GLOBAL_MASTER)
+                    ! Update space: distance field linearization
+                    call update_space(self%data,differentiate=dD_DIFF)
+
+                    do ifunc = 1,self%data%sdata%functional%nfunc()
+                        adjoint%vRd(1,ifunc) = adjoint%vRd(1,ifunc) - chidg_mv(adjoint%Rd(1),adjoint%v(ifunc,istep),adjoint%vRd(1,ifunc))
+                    end do
+                    
+                    call write_line('Done computing RHS of auxiliary adjoint equations.', io_proc=GLOBAL_MASTER)
+                
+                end if
+
+
+                ! Increment backward in time
+                ! TODO: this might be moved into the time_integrator%compute_adjoint routine
+                self%data%time_manager%t = self%data%time_manager%t - self%data%time_manager%dt
+
+            end do !istep backward
+        
+            ! Compute auxiliary adjoint variables
+            call self%process('adjoint problem')
+
+        end associate
+
+    end subroutine run_adjoint
+    !*****************************************************************************************
 
 
 

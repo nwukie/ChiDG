@@ -1,12 +1,12 @@
 module fcl_test_1D_energy
 #include <messenger.h>
-
     use mod_kinds,                  only: ik, rk
+    use mod_io,                     only: backend
     use type_evaluator,             only: evaluator_t
     use type_chidg_worker,          only: chidg_worker_t
     use mod_constants,              only: HALF, ONE, TWO
     use type_functional_cache,      only: functional_cache_t
-    use type_chidg_vector,          only: chidg_vector_t
+    use type_chidg_vector,          only: chidg_vector_t, chidg_vector
     use mod_functional_operators
     
     use DNAD_D
@@ -53,36 +53,22 @@ contains
 
 
 
-
-
-
-
     !>  Initialize the functional
-    !!
     !!
     !!  @author Matteo Ugolotti
     !!  @date   05/11/2017
-    !!
     !!
     !------------------------------------------------------------------------------------------
     subroutine init(self)
         class(test_1D_energy_t), intent(inout)   :: self
 
-
-        !
         ! Start defining the evaluator information
-        !
         call self%set_name("Test 1D Energy")
         call self%set_eval_type("Functional")
         call self%set_int_type("VOLUME INTEGRAL")
-        
 
     end subroutine init
     !******************************************************************************************
-
-
-
-
 
 
 
@@ -93,7 +79,6 @@ contains
     !!  @author Matteo Ugolotti
     !!  @date   12/17/2017
     !!
-    !!
     !------------------------------------------------------------------------------------------
     subroutine check(self)
         class(test_1D_energy_t), intent(inout)   :: self
@@ -103,9 +88,7 @@ contains
         logical                         :: ref_geoms_exceed, aux_geoms_exceed
 
 
-        !
         ! Check that the functional has all the information needed
-        ! 
         ref_geoms = self%n_ref_geom()
         aux_geoms = self%n_aux_geom()
 
@@ -147,31 +130,19 @@ contains
         type(chidg_worker_t),       intent(inout)   :: worker
         type(functional_cache_t),   intent(inout)   :: cache
 
-        integer(ik)             :: idomain_g, ielement_g, iface, ierr
-        
         type(AD_D), allocatable, dimension(:) :: u, Ek
         type(AD_D)                            :: energy_integral
 
-        
-        ! 
         ! Get primary fields
-        !
         u = worker%get_field('u','value','element')
         
-        !
         ! Compute Kinetic Energy
-        !
         Ek = HALF * u * u
 
-        !
         ! Compute integral over the volume of the functional
-        !
         energy_integral = integrate_volume(worker,Ek)
 
-        
-        !
         ! Store in cache
-        !
         call cache%set_value(worker%mesh,energy_integral,'kinetic energy','reference',worker%function_info) 
 
     end subroutine compute_functional
@@ -179,9 +150,6 @@ contains
 
 
 
-
-
-    
     
     
     !>  Store the real value of the actual final functional integral 
@@ -222,17 +190,15 @@ contains
         type(functional_cache_t),   intent(inout)   :: cache
 
         type(chidg_vector_t)       :: res
-        
+
+        res = chidg_vector(trim(backend))
         
         res = cache%ref_cache%get_deriv('kinetic energy')
 
+        call res%assemble()
+
     end function store_deriv
     !*********************************************************************************************
-
-
-
-
-
 
 
 

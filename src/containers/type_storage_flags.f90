@@ -140,7 +140,6 @@ contains
         class(storage_flags_t),  intent(inout)  :: self
         character(*),            intent(in)     :: storage_type
         integer(ik),             intent(in)     :: nauxiliary_fields
-     !   logical,                 intent(in)     :: compute_auxiliary 
 
         call self%clear()
 
@@ -160,6 +159,7 @@ contains
             case('adjoint storage')
 
                 self%q                  = .true. 
+                self%q_in               = .true. 
                 self%rhs                = .true. 
                 self%lhs                = .true. 
                 self%function_status    = .true. 
@@ -184,6 +184,7 @@ contains
             case('adjointx storage')
 
                 self%q                  = .true. 
+                self%q_in               = .true. 
                 self%function_status    = .true. 
 
                 self%v                  = .true.
@@ -205,6 +206,7 @@ contains
             case('adjointbc storage')
 
                 self%q                  = .true. 
+                self%q_in               = .true. 
                 self%function_status    = .true. 
 
                 self%v                  = .true.

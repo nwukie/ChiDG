@@ -137,6 +137,17 @@ macro (add_test_target target_subdirectory test_type)
     # Add test executable to the 'check' target. This allows the test to be build with 'make check'
     add_dependencies(check ${target_name} chidg_library)
 
+    # Add post-build code-sign if desired
+    if (APPLE AND CODESIGN) 
+        add_custom_command(TARGET ${target_name} 
+                           POST_BUILD 
+                           #COMMAND "codesign -f -s ${CODESIGN_CERTIFICATE} ${target_name}"
+                           COMMAND codesign -f -s b0146w0020530.rz.afrl-wrs.hpc.mil\ Code\ Signing\ Certificate ${target_name}
+                           WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+                           )
+    endif()
+
+
 
 	#-------------------------------------------------------------------------------------------------------
     #

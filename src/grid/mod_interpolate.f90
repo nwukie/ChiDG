@@ -113,17 +113,10 @@ contains
                     default interpolator for 'value' interpolations."
         if (present(interpolator) .and. (interpolation_type /= 'value')) call chidg_signal(FATAL,user_msg)
 
-
-
-        !
         ! Get number of derivatives to initialize for automatic differentiation
-        !
         nderiv = get_interpolation_nderiv(mesh,fcn_info%seed)
 
-
-        !
         ! Determine nterms from interpolator matrix
-        !
         nterms = mesh%domain(idom)%elems(ielem)%basis_s%nterms_i()
 
         ! Allocate qdiff buffer and initialize derivative allocations + zero
@@ -134,25 +127,17 @@ contains
         end do
         qdiff = ZERO
 
-
-        !
         ! Retrieve modal coefficients representing ifield in vector to 'qtmp'
-        !
         qtmp = vector%get_field(elem_info,ifield,itime)
 
-
-        !
         ! 1: If mode_min,mode_max are present, use a subset of the expansion modes.
         ! 2: If not present, use the entire expansion.
-        !
         if (present(mode_min) .and. present(mode_max)) then
             qdiff(mode_min:mode_max) = qtmp(mode_min:mode_max)
         else
             qdiff(1:nterms) = qtmp(1:nterms)
         end if
 
-
-        !
         ! If the current element is being differentiated (ielem == ielem_seed)
         ! then copy the solution modes to local AD variable and seed derivatives
         !
@@ -176,10 +161,7 @@ contains
         end if
 
 
-
-        !
         ! Select interpolation type
-        !
         select case (interpolation_type)
             case('value')
                 if (present(interpolator)) then
@@ -598,21 +580,18 @@ contains
 
         elem_info = mesh%get_element_info(idomain_l,ielement_l)
 
-        !
         ! Use quadrature instance to compute variable at quadrature nodes.
         ! This takes the form of a matrix multiplication of the quadrature matrix
         ! with the array of modes for the given variable.
-        !
         select case (interpolation_type)
             case('value')
-                !var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
                 var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'), q%get_field(elem_info,ifield,itime))
             case('grad1')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad1,      q%get_field(elem_info,ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad1, q%get_field(elem_info,ifield,itime))
             case('grad2')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad2,      q%get_field(elem_info,ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad2, q%get_field(elem_info,ifield,itime))
             case('grad3')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad3,      q%get_field(elem_info,ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad3, q%get_field(elem_info,ifield,itime))
             case default
                 call chidg_signal(FATAL,"interpolate_element_standard: invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
         end select

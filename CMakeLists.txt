@@ -77,9 +77,12 @@ elseif (CMAKE_Fortran_COMPILER_ID MATCHES GNU)
 
     # Set compile/link flags
     set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -ffree-form \
-                                     -ffree-line-length-none -fbacktrace \
-                                     -fstack-protector -fcheck=bounds \
+                                     -ffree-line-length-none \
+                                     -fbacktrace \
+                                     -fcheck=bounds \
+                                     -fstack-protector \
                                      -g")    
+#                                     -fstack-protector -fcheck=bounds \
 
     # GCC9 has regression that causes internal compiler error using
     # fexternal-blas and O3. Removing fexternal-blas for GCC9

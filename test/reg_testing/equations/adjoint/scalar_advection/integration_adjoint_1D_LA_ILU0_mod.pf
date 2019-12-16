@@ -1,0 +1,1616 @@
+!--------------------------------------------------------------------------------
+!
+!           Test a 1D linear advection adjoint problem with a source term:
+!               - Primal solution (u)
+!               - Adjoint solution (v) for "Kinetic Energy" objective function
+!
+!   div(c*u) = S
+!
+!   Linear advection Flux Definition:
+!       F(u) = c*u
+!
+!   advection Coefficient Model:
+!       c(u) = 1.0
+!
+!   Source Definition:
+!       S(x) = 4*cos(4x)
+!
+!   Boundary conditions are:
+!       Dirichlet U(x=0) = 0
+!
+!   Analytical Primal Solution is:
+!       U(x) = sin(4x)     for x in [0,1]
+!
+!   Adjoint objective function
+!       integral[(U(x)^2)/2] from 0 to 1
+!
+!   Adjoint solution
+!       v(x) = 1/4*[cos(4x)-cos(4)]    
+!
+!   Reference:
+!       See Matteo's notes
+!
+!
+!   Tests that are being run here:
+!       - Run the primal calculation on multiple grids with order of accuracy 2-5
+!       - Run the adjpint calculation on mulitple grids with order of accuracy 2-5
+!       - Test for convergence in 1 Newton iteration for primal problem(linear problem)
+!       - Test convergence rates for spatial orders of accuracy of primal problem
+!       - Test convergence rates for spatial orders of accuracy of adjoint problem
+!       - Test convergence rates for spatial orders of accuracy of the functional
+!
+!--------------------------------------------------------------------------------
+module integration_adjoint_1D_LA_ILU0_mod
+#include <messenger.h>
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_chidg,             only: chidg_t
+    use type_chidg_data,        only: chidg_data_t
+    use mod_string,             only: string_t
+    use type_bc_state,          only: bc_state_t
+    use type_bc_state_group,    only: bc_state_group_t
+    use mod_bc,                 only: create_bc
+    use type_function,          only: function_t
+    use type_ivector,           only: ivector_t
+    use mod_function,           only: create_function
+    use mod_interpolate,        only: interpolate_element_standard
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
+    use type_file_properties,   only: file_properties_t
+    use mod_hdf_utilities,      only: get_properties_hdf 
+
+    use mod_functional,         only: create_functional
+    use type_evaluator,         only: evaluator_t
+    use type_functional_group,  only: functional_group_t
+
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
+    use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
+    use mod_io
+
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+    use DNAD_D
+
+    ! Imports for defining a new operator and model
+    use mod_operators,          only: operator_factory
+    use type_operator,          only: operator_t
+    use mod_models,             only: model_factory
+    use type_model,             only: model_t
+
+    ! Imports for defining a new equation builder
+    use mod_equations,                  only: equation_set_factory
+    use type_equation_builder,          only: equation_builder_t
+    use type_equation_set,              only: equation_set_t
+    implicit none
+
+
+    ! Store the nonlinear convergence for each test case. This is used 
+    ! to test the nonlinear convergence between a case running on
+    ! a different number of procs.
+    !
+    ! p = primal, a = adjoint, f = functional
+    !
+    ! Procs: 1, 2, 3
+    !
+    type(ivector_t) :: p_nsteps_convergence(3,2,4)          ! nprocs, ngrids, norders
+    type(ivector_t) :: p_nsteps_convergence_chimera(3,2,4)  ! nprocs, ngrids, norders
+    real(rk)        :: p_error(3,2,4)                       ! nprocs, ngrids, norders
+    real(rk)        :: p_error_chimera(3,2,4)               ! nprocs, ngrids, norders
+    real(rk)        :: a_error(3,2,4)                       ! nprocs, ngrids, norders
+    real(rk)        :: a_error_chimera(3,2,4)               ! nprocs, ngrids, norders
+    real(rk)        :: f_error(3,2,4)                       ! nprocs, ngrids, norders
+    real(rk)        :: f_error_chimera(3,2,4)               ! nprocs, ngrids, norders
+
+    public  :: adjoint_linear_advection_1D
+
+
+
+
+
+
+    !>  A custom source term for the current test case
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/2/2018
+    !!
+    !!  S(x) = 4*cos(4x)
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(operator_t), public :: test_LA_volume_source_t
+
+
+    contains
+
+        procedure   :: init    => init_source
+        procedure   :: compute => compute_source
+
+    end type test_LA_volume_source_t
+    !***************************************************************************************
+
+
+
+
+    !>  The advection coefficient model.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/2/2018
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(model_t), public :: testing_1D_linear_advection_model_t
+
+    contains
+
+        procedure   :: init    => init_model
+        procedure   :: compute => compute_model
+
+    end type testing_1D_linear_advection_model_t
+    !***************************************************************************************
+
+
+
+
+
+
+    !>  A new equation set builder to build a linear advection equation set with the 
+    !!  new custom volume source.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/2/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    type, extends(equation_builder_t), public :: test_linear_advection_builder_t
+
+
+    contains
+
+        procedure   :: init => init_builder
+        procedure   :: build
+
+    end type test_linear_advection_builder_t
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  This parameter initialize the state for each test
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/2/2018
+    !!
+    !-------------------------------------------------------------------------------
+    @TestParameter
+    type, extends(MpiTestParameter) :: case_grid_order
+        integer(ik)                 :: nelem_xi
+        character(:),   allocatable :: gridtype     ! singleblock, chimera
+        character(:),   allocatable :: gridfile 
+        integer(ik)                 :: order
+    contains
+        procedure   :: toString
+    end type case_grid_order
+    !*******************************************************************************
+
+
+
+
+
+
+
+    !>  Main testing fixture with test components that get initialized for each test
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/2/2018
+    !!
+    !-------------------------------------------------------------------------------
+    @TestCase(testParameters={getParameters()}, constructor=newTest)
+    type, extends(MpiTestCase) :: adjoint_linear_advection_1D
+
+        integer(ik)                 :: nelem_xi
+        character(:),   allocatable :: gridtype
+        character(:),   allocatable :: gridfile
+        integer(ik)                 :: order
+
+        type(chidg_t)   :: chidg
+        type(chidg_t)   :: chidg_adj
+        type(mpi_comm)  :: ChiDG_COMM
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type adjoint_linear_advection_1D
+    !*******************************************************************************
+
+
+
+
+contains
+
+    !-------------------------------------------------------------------------------
+    !                           Volume Source Methods
+    !-------------------------------------------------------------------------------
+
+    !>  Initialize the new volume source operator.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/2/2018
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init_source(self)
+        class(test_LA_volume_source_t),   intent(inout)      :: self
+
+        ! Set operator name
+        call self%set_name("Test Linear Advection Constant Volume Source")
+
+        ! Set operator type
+        call self%set_operator_type("Volume Diffusive Flux")
+
+        ! Set operator equations
+        call self%add_primary_field("u")
+
+    end subroutine init_source
+    !********************************************************************************
+
+
+
+    !>  Implement the volume source definition.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/2/2018
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine compute_source(self,worker,prop)
+        class(test_LA_volume_source_t),     intent(inout)   :: self
+        type(chidg_worker_t),               intent(inout)   :: worker
+        class(properties_t),                intent(inout)   :: prop
+
+        type(AD_D), allocatable, dimension(:)   :: source, x
+        logical         :: use_lift
+
+        !
+        ! Interpolate solution to quadrature nodes
+        !
+        use_lift = .false.
+        source = worker%get_field('u','grad1','element',use_lift)
+
+        
+        x = worker%x('volume')
+        source = dcos(FOUR*x) * real(4,rk)
+
+        !
+        ! Integrate volume flux
+        !
+        call worker%integrate_volume_source('u',source)
+
+
+    end subroutine compute_source
+    !***************************************************************************************
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------------
+    !                       Scalar Advection Coefficient Model Methods
+    !----------------------------------------------------------------------------------------
+
+    !>  Initialize scalar advectionn coefficient model with name and model field being 
+    !!  provided.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/2/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_model(self)
+        class(testing_1D_linear_advection_model_t),    intent(inout)   :: self
+
+        call self%set_name('Testing 1D Linear Advection :: Coefficient Model')
+        call self%set_dependency('f(Q-)')
+
+        call self%add_model_field('Scalar Advection Velocity-1')
+        call self%add_model_field('Scalar Advection Velocity-2')
+        call self%add_model_field('Scalar Advection Velocity-3')
+
+    end subroutine init_model
+    !****************************************************************************************
+
+
+
+    !>  Implement the function for providing the scalar advection coefficient field.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/2/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine compute_model(self,worker)
+        class(testing_1D_linear_advection_model_t), intent(in)      :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
+
+        type(AD_D), allocatable, dimension(:)   :: u, cx_model, cy_model, cz_model
+
+        u = worker%get_field('u', 'value')
+
+        ! Initialize derivative array
+        cx_model = u
+        cy_model = u
+        cz_model = u
+
+        cx_model = ONE
+        cy_model = ZERO
+        cz_model = ZERO
+
+        call worker%store_model_field('Scalar Advection Velocity-1', 'value', cx_model)
+        call worker%store_model_field('Scalar Advection Velocity-2', 'value', cy_model)
+        call worker%store_model_field('Scalar Advection Velocity-3', 'value', cz_model)
+
+
+    end subroutine compute_model
+    !****************************************************************************************
+
+
+
+
+
+    
+    !----------------------------------------------------------------------------------------
+    !                           Builder Methods for new equation set
+    !----------------------------------------------------------------------------------------
+
+
+    !>  Initialize the new linear advection builder.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/2/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_builder(self)
+        class(test_linear_advection_builder_t),   intent(inout)  :: self
+
+        call self%set_name("Test Adjoint 1D Linear Advection")
+
+    end subroutine init_builder
+    !****************************************************************************************
+
+    
+
+
+
+    !>  Implement the linear advection builder definition.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/2/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    function build(self,blueprint) result(linear_advection_eqn)
+        class(test_linear_advection_builder_t), intent(in)  :: self
+        character(*),                           intent(in)  :: blueprint
+
+        type(equation_set_t)                :: linear_advection_eqn
+        
+
+        !
+        ! Set equationset name.
+        !
+        call linear_advection_eqn%set_name("Test Adjoint 1D Linear Advection")
+
+        !
+        ! Add spatial operators
+        !
+        call linear_advection_eqn%add_operator('Scalar Advection Boundary Average Operator')
+        call linear_advection_eqn%add_operator('Scalar Advection Volume Operator')
+        call linear_advection_eqn%add_operator('Scalar Advection LaxFriedrichs Operator')
+        call linear_advection_eqn%add_operator('Scalar Advection BC Operator')
+        call linear_advection_eqn%add_operator("Test Linear Advection Constant Volume Source")
+
+        !
+        ! Add model for 'compute_mu' scalar coefficient
+        !
+        call linear_advection_eqn%add_model("Testing 1D Linear Advection :: Coefficient Model")
+
+
+    end function build
+    !***************************************************************************************
+
+
+
+
+
+
+    !-------------------------------------------------------------------------------
+    !                               Test methods
+    !-------------------------------------------------------------------------------
+
+
+
+    !> Parameter constructors
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function newTest(test_parameter) result(test)
+        type(case_grid_order),  intent(in)          :: test_parameter
+        type(adjoint_linear_advection_1D)    :: test
+
+        test%nelem_xi   = test_parameter%nelem_xi
+        test%gridtype   = test_parameter%gridtype
+        test%gridfile   = test_parameter%gridfile
+        test%order      = test_parameter%order
+
+    end function newTest
+    !******************************************************************************
+
+
+    !> Parameter initialization
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function getParameters() result(params)
+        type(case_grid_order), allocatable :: params(:)
+    
+        integer(ik),        allocatable :: nelem_xi(:)
+        type(string_t),     allocatable :: gridtype(:)
+        type(string_t),     allocatable :: files(:)
+        integer(ik),        allocatable :: orders(:)
+        integer(ik) :: icase
+
+
+        nelem_xi = [ 6 , 6 , 6 , &
+                     10, 10, 10, &
+                     6 , 6 , 6 , &
+                     10, 10, 10  &
+                     ]
+
+        gridtype = [ string_t("singleblock"), &
+                     string_t("singleblock"), &
+                     string_t("singleblock"), &
+                     string_t("singleblock"), &
+                     string_t("singleblock"), &
+                     string_t("singleblock"), &
+                     string_t("chimera"),     &
+                     string_t("chimera"),     &
+                     string_t("chimera"),     &
+                     string_t("chimera"),     &
+                     string_t("chimera"),     &
+                     string_t("chimera")      &
+                     ]
+
+
+
+        files = [ string_t("1D_linear_advection_6x1x1.h5"),         &
+                  string_t("1D_linear_advection_6x1x1.h5"),         &
+                  string_t("1D_linear_advection_6x1x1.h5"),         &
+                  string_t("1D_linear_advection_10x1x1.h5"),         &
+                  string_t("1D_linear_advection_10x1x1.h5"),         &
+                  string_t("1D_linear_advection_10x1x1.h5"),         &
+                  string_t("1D_linear_advection_6x1x1_chimera.h5"), &
+                  string_t("1D_linear_advection_6x1x1_chimera.h5"), &
+                  string_t("1D_linear_advection_6x1x1_chimera.h5"), &
+                  string_t("1D_linear_advection_10x1x1_chimera.h5"), &
+                  string_t("1D_linear_advection_10x1x1_chimera.h5"), &
+                  string_t("1D_linear_advection_10x1x1_chimera.h5")  &
+                  ]
+
+
+        orders = [ 2, 3, 4, &
+                   2, 3, 4, &
+                   2, 3, 4, &
+                   2, 3, 4  &
+                   ]
+
+
+        !Initialize the test case container with the parameter
+        allocate(params(size(files)))
+        do icase = 1,size(files)
+            params(icase)%nelem_xi  = nelem_xi(icase)
+            params(icase)%gridtype  = gridtype(icase)%str
+            params(icase)%gridfile  = files(icase)%str
+            params(icase)%order     = orders(icase)
+        end do
+
+    end function getParameters
+    !****************************************************************************************
+
+
+
+    !>  Reporting the parameters of the test
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function toString(this) result(string)
+        class (case_grid_order),    intent(in)  :: this
+        character(:), allocatable   :: string
+
+        character(len=200) :: buffer
+
+        write(buffer,'( "(nelem_xi, gridtype, order)=","(", I2,",", A10,",", I1, ")" )') this%nelem_xi, this%gridtype, this%order
+        string = trim(buffer)
+
+    end function toString
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Set up test routine.
+    !!
+    !!  This routine reads the grid file, sets up boundary conditions, initializes storage
+    !!  and sets the appropriate configuration options.
+    !!  This routine also gets the numer of processors and the correct MPI communicator for 
+    !!  the test.
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(adjoint_linear_advection_1D),  intent(inout)   :: this
+
+        class(function_t),  allocatable :: fcn
+        type(string_t)                  :: group_names(2,6)
+        type(bc_state_group_t)          :: bc_state_groups(3)
+        class(bc_state_t),  allocatable :: bc_state
+        class(evaluator_t), allocatable :: fcl_temp
+        type(functional_group_t)        :: fcl_group
+        type(file_properties_t)         :: file_props
+
+        type(testing_1D_linear_advection_model_t)   :: advection_coefficient_model
+        type(test_LA_volume_source_t)               :: source_test_linear_advection
+        type(test_linear_advection_builder_t)       :: builder_test_linear_advection
+
+
+        integer(ik) :: npes_index, grid_index, order_index, iproc, ierr
+        real(rk)    :: p_computed_error
+        
+        
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+        !********************
+        !
+        !   PRIMAL RUN
+        !   primal chidg entity
+        !
+        !*********************
+
+            !
+            ! Initialize ChiDG environment
+            !
+            call this%chidg%start_up('mpi',this%ChiDG_COMM)
+            call this%chidg%start_up('core')
+
+
+
+            !-------------------------------------------------------------------------------
+            !               Initialize and register the advection coefficient model
+            !-------------------------------------------------------------------------------
+            call advection_coefficient_model%init()
+            call model_factory%register(advection_coefficient_model)
+
+
+
+            !-------------------------------------------------------------------------------
+            !
+            !                 Initialize and register the source operator
+            !
+            !   This has to be done before the equation set builder because it needs to be
+            !   able to find this operator.
+            !
+            !-------------------------------------------------------------------------------
+            call source_test_linear_advection%init()
+            call operator_factory%register(source_test_linear_advection)
+
+
+
+            !-------------------------------------------------------------------------------
+            !
+            !                 Initialize and register equation set builder
+            !
+            !-------------------------------------------------------------------------------
+            call builder_test_linear_advection%init()
+            call equation_set_factory%register(builder_test_linear_advection%build('default'))
+
+
+
+            !------------------------------------------------------------------------------
+            !
+            ! Define input data here that is normally read through the namelist input file
+            !
+            ! As a result, we don't call chidg%init('io')
+            !
+            !------------------------------------------------------------------------------
+            basis            = "legendre"
+            gq_rule          = 3
+            time_integrator  = "steady"
+            nonlinear_solver = "newton"
+            linear_solver    = "fgmres"
+            preconditioner   = "ILU0"
+            IO_DESTINATION   = "file"
+            !------------------------------------------------------------------------------
+
+
+            ! Set timescheme options to pass during initialization
+            !call toptions%set("dt", 0.1_rk) ! means nothing here
+            !call toptions%set("nsteps",100)
+            !call toptions%set("nwrite",0)
+
+
+            ! Set linear solver options to pass during initialization
+            call loptions%set("tol",1.e-15_rk)
+
+            ! Set nonlinear solver options
+            call noptions%set("tol",5.e-11_rk)
+            call noptions%set("cfl0",1.0_rk)
+            call noptions%set("nsteps",100)
+
+
+
+
+            !
+            ! Create mesh
+            !
+            if (IRANK == GLOBAL_MASTER) then
+
+                bc_state_groups(1)%name = "Left Boundary"
+                call create_bc("Scalar Value",bc_state)
+                call bc_state%set_fcn_option("Value","val",ZERO)
+                call bc_state_groups(1)%add_bc_state(bc_state)
+
+                bc_state_groups(2)%name = "Extrapolation"
+                call create_bc("Scalar Extrapolate", bc_state)
+                call bc_state_groups(2)%add_bc_state(bc_state)
+
+
+                if (this%gridtype == 'chimera') then
+
+
+                    group_names(1,:) = [string_t("Left Boundary") , &
+                                        string_t("Empty")         , &
+                                        string_t("Extrapolation") , &
+                                        string_t("Extrapolation") , &
+                                        string_t("Extrapolation") , &
+                                        string_t("Extrapolation")]
+
+                    group_names(2,:) = [string_t("Empty")         , &
+                                        string_t("Extrapolation") , &
+                                        string_t("Extrapolation") , &
+                                        string_t("Extrapolation") , &
+                                        string_t("Extrapolation") , &
+                                        string_t("Extrapolation")]
+
+
+                    ! Define functional
+                    call create_functional("Test 1D Energy",fcl_temp)
+                    call fcl_temp%set_ref_geom("01,02")
+                    call fcl_group%add_functional(fcl_temp)
+
+
+                    call create_mesh_file('D2 NxNxN M1',this%gridfile,equation_sets   = [string_t("Test Adjoint 1D Linear Advection"),  &
+                                                                                         string_t("Test Adjoint 1D Linear Advection")], &
+                                                                      group_names     = group_names,                            &
+                                                                      bc_state_groups = bc_state_groups,                        &
+                                                                      nelem_xi        = this%nelem_xi,                          &
+                                                                      nelem_eta       = 1,                                      &
+                                                                      nelem_zeta      = 1,                                      &
+                                                                      functionals     = fcl_group)
+
+                else
+
+
+                    group_names(1,:) = [string_t("Left Boundary") , &
+                                        string_t("Extrapolation") , &
+                                        string_t("Extrapolation") , &
+                                        string_t("Extrapolation") , &
+                                        string_t("Extrapolation") , &
+                                        string_t("Extrapolation")]
+                    
+                    ! Define functional
+                    call create_functional("Test 1D Energy",fcl_temp)
+                    call fcl_temp%set_ref_geom("01")
+                    call fcl_group%add_functional(fcl_temp)
+
+
+                    call create_mesh_file('D1 NxNxN',this%gridfile,equation_sets   = [string_t("Test Adjoint 1D Linear Advection")],    &
+                                                                   group_names     = group_names,                               &
+                                                                   bc_state_groups = bc_state_groups,                           &
+                                                                   nelem_xi        = this%nelem_xi,                             &
+                                                                   nelem_eta       = 1,                                         &
+                                                                   nelem_zeta      = 1,                                         &
+                                                                   functionals     = fcl_group)
+
+                end if
+
+            end if
+
+
+
+            !
+            ! Set ChiDG components
+            !
+            call this%chidg%set('Solution Order',   integer_input=this%order)
+            call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+            call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+            call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+            call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+
+
+            !
+            ! Read grid
+            !
+            call this%chidg%read_mesh(this%gridfile,'primal storage')
+
+
+
+            !
+            ! Initialize solution
+            !
+            call create_function(fcn,'constant')
+            call fcn%set_option('val',0.1_rk)
+            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+
+
+
+
+            npes_index  = get_npes_index(NRANK)
+            grid_index  = get_grid_index(this%nelem_xi)
+            order_index = get_order_index(this%order)
+
+
+
+            !!
+            !! Run ChiDG simulation
+            !!
+            call this%chidg%run(write_initial=.false., write_final=.false.)
+
+            !
+            ! Store the number of nonlinear iterations that the solution converged in. Problem 
+            ! is linear so it should converge in 1 Newton Step. Really, just the solution 
+            ! of 1 linear system of equations.
+            !
+            if (this%gridtype == 'singleblock') then
+                p_nsteps_convergence(npes_index,grid_index,order_index)         = this%chidg%nonlinear_solver%newton_iterations
+            elseif (this%gridtype == 'chimera') then
+                p_nsteps_convergence_chimera(npes_index,grid_index,order_index) = this%chidg%nonlinear_solver%newton_iterations 
+            end if
+
+
+            !
+            ! Compute error
+            !
+            p_computed_error = compute_1D_linear_advection_error(this%chidg%data,this%ChiDG_COMM)
+
+            !
+            ! Store the computed error for the current case
+            !
+            if (this%gridtype == 'singleblock') then
+                p_error(npes_index,grid_index,order_index)         = p_computed_error
+            elseif (this%gridtype == 'chimera') then
+                p_error_chimera(npes_index,grid_index,order_index) = p_computed_error
+            end if
+
+
+            !
+            ! Write out primal solution
+            !
+            call this%chidg%write_solution(this%gridfile,'primary fields')
+
+           
+   
+    
+        !********************
+        !
+        !   ADJOINT RUN
+        !   Adjoint chidg entity
+        !
+        !*********************
+
+
+            !-------------------------------------------------------------------------------
+            !
+            !   Here chidg_adj is setup. Models, source, and equations will be read in from
+            !   the final written file of the primal solution, together with the primal 
+            !   solution itself. This is what is typically done in a routine adjoint run.
+            !
+            !-------------------------------------------------------------------------------
+            
+            
+            
+            !------------------------------------------------------------------------------
+            !
+            ! Define input data here that is normally read through the namelist input file
+            !
+            ! As a result, we don't call chidg%init('io')
+            !
+            !------------------------------------------------------------------------------
+            basis            = "legendre"
+            gq_rule          = 3
+            time_integrator  = "steady"
+            nonlinear_solver = "newton"
+            linear_solver    = "fgmres"
+            preconditioner   = "ILU0"
+            IO_DESTINATION   = "file"
+            !------------------------------------------------------------------------------
+
+
+            ! Set linear solver options to pass during initialization
+            call loptions%set("tol",1.e-15_rk)
+
+            ! Set nonlinear solver options
+            call noptions%set("tol",5.e-11_rk)
+            call noptions%set("cfl0",1.0_rk)
+            call noptions%set("nsteps",100)
+
+
+
+            !
+            ! Set ChiDG components
+            !
+            call this%chidg_adj%set('Solution Order',   integer_input=this%order)
+            call this%chidg_adj%set('Time Integrator',  algorithm=time_integrator)
+            call this%chidg_adj%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+            call this%chidg_adj%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+            call this%chidg_adj%set('Preconditioner',   algorithm=preconditioner)
+
+
+            !
+            ! Read grid
+            !
+            call this%chidg_adj%read_mesh(this%gridfile,'adjoint storage')
+
+            !
+            ! Read Primal Solution
+            !
+            call this%chidg_adj%read_fields(this%gridfile,'CFD')
+            
+            
+            !            
+            ! Process primal solution for adjoint 
+            !
+            do iproc = 0,NRANK-1
+                if (iproc == IRANK) then
+                    file_props  = get_properties_hdf(this%gridfile)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+            end do
+            call this%chidg_adj%data%sdata%adjoint%process_primal_solution( &
+                                    this%chidg_adj%data%sdata%q_in,file_props%istep)
+
+
+
+
+    end subroutine SetUp
+    !*****************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   6/7/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(adjoint_linear_advection_1D),  intent(inout)   :: this
+
+        ! Close ChiDG
+        call this%chidg_adj%shut_down('core')
+        call this%chidg%shut_down('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+            call delete_file("functional_output.txt")
+        end if
+
+    end subroutine tearDown
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Run the adjoint simulation.
+    !!
+    !!      - compute the adjoint error, test against the reference values.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   6/7/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1,2,3])
+    subroutine run_calculations(self)
+        class(adjoint_linear_advection_1D),  intent(inout)   :: self
+
+        real(rk)    :: a_computed_error,f_computed_error
+        integer(ik) :: npes_index, grid_index, order_index
+
+
+        npes_index  = get_npes_index(NRANK)
+        grid_index  = get_grid_index(self%nelem_xi)
+        order_index = get_order_index(self%order)
+
+        !!
+        !! Run ChiDG Adjoint simulation
+        !!
+        call self%chidg_adj%run_adjoint(write_final=.false.)
+
+
+        !
+        ! Compute adjoint error
+        !
+        a_computed_error = compute_1D_linear_advection_adjoint_error(self%chidg_adj%data,self%ChiDG_COMM)
+
+        !
+        ! Compute functional error
+        !
+        f_computed_error = compute_1D_linear_advection_functional_error(self%chidg_adj%data,self%ChiDG_COMM)
+        
+        !
+        ! Store the computed error for the current case
+        !
+        if (self%gridtype == 'singleblock') then
+            a_error(npes_index,grid_index,order_index)         = a_computed_error
+            f_error(npes_index,grid_index,order_index)         = f_computed_error
+        elseif (self%gridtype == 'chimera') then
+            a_error_chimera(npes_index,grid_index,order_index) = a_computed_error
+            f_error_chimera(npes_index,grid_index,order_index) = f_computed_error
+        end if
+
+
+
+
+    end subroutine run_calculations
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Access the stored number of steps convergence data(module global variable) and confirm
+    !!  that all simulations converged in 1 step.
+    !!
+    !!  This assumes that the 'run_calculations' routine has already been executed for all cases
+    !!  and numbers of processors to that the 'p_nsteps_convergence' variable has been populated.
+    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
+    !!  there is a guaruntee that this can't change.
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_conv_conforming(self)
+        class(adjoint_linear_advection_1D),  intent(inout)   :: self
+
+        integer(ik)             :: inpes, igrid, iorder, nsteps
+
+
+        do inpes = 1,3
+            do igrid = 1,2
+                do iorder = 1,3
+
+                    ! Test that the current convergence for the processor count matches the serial convergence
+                    nsteps = p_nsteps_convergence(inpes,igrid,iorder)%size()
+                    @assertEqual(1, nsteps)
+
+                end do
+            end do
+        end do
+
+
+    end subroutine test_conv_conforming
+    !*****************************************************************************************
+
+
+
+
+
+    !>  Access the stored number of steps convergence data(module global variable) and confirm
+    !!  that all simulations converged in 1 step.
+    !!
+    !!  This assumes that the 'run_calculations' routine has already been executed for all cases
+    !!  and numbers of processors to that the 'p_nsteps_convergence' variable has been populated.
+    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
+    !!  there is a guaruntee that this can't change.
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_conv_chimera(self)
+        class(adjoint_linear_advection_1D),  intent(inout)   :: self
+
+        integer(ik)             :: inpes, igrid, iorder, nsteps
+
+        do inpes = 1,3
+            do igrid = 1,2
+                do iorder = 1,3
+
+                    ! Test that the current convergence for the processor count matches the serial convergence
+                    nsteps = p_nsteps_convergence_chimera(inpes,igrid,iorder)%size()
+
+                    @assertEqual(1, nsteps)
+
+                end do
+            end do
+        end do
+
+    end subroutine test_conv_chimera
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/16/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_err_conforming(self)
+        class(adjoint_linear_advection_1D),  intent(inout)   :: self
+
+        integer(ik) :: inpes, igrid, iorder
+        real(rk)    :: error_previous, error_current, mesh_parameter_previous,  &
+                       mesh_parameter_current, convergence_rate, tol, ftol
+
+        tol  = 0.1_rk
+        ftol = 0.3_rk
+
+
+        do inpes = 1,3
+            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
+                do iorder = 1,3
+
+
+                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
+                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
+
+                    
+                    !
+                    ! Compute primal convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                    !
+                    error_previous = p_error(inpes,igrid-1,iorder)
+                    error_current  = p_error(inpes,igrid  ,iorder)
+                    
+                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
+                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+
+                
+                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
+                    
+
+                    !
+                    ! Compute adjoint convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                    !
+                    error_previous = a_error(inpes,igrid-1,iorder)
+                    error_current  = a_error(inpes,igrid  ,iorder)
+                    
+                    
+                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
+                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+
+                
+                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
+
+                    !
+                    ! Compute functional convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                    !
+                    error_previous = f_error(inpes,igrid-1,iorder)
+                    error_current  = f_error(inpes,igrid  ,iorder)
+                    
+                    
+                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
+                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+                
+                    @assertGreaterThan(convergence_rate, real(2*iorder+1,rk)-ftol)
+                    @assertLessThan(convergence_rate, real(2*iorder+1,rk)+ftol)
+
+                end do
+            end do
+        end do
+
+
+    end subroutine test_err_conforming
+    !*****************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/16/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_err_chimera(self)
+        class(adjoint_linear_advection_1D),  intent(inout)   :: self
+
+        integer(ik) :: inpes, igrid, iorder
+        real(rk)    :: error_previous, error_current, mesh_parameter_previous, &
+                       mesh_parameter_current, convergence_rate, tol, ftol
+
+        tol  = 0.1_rk
+        ftol = 0.3_rk
+
+        do inpes = 1,3
+            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
+                do iorder = 1,3
+
+                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
+                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
+
+                    
+                    !
+                    ! Compute primal convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                    !
+                    error_previous = p_error_chimera(inpes,igrid-1,iorder)
+                    error_current  = p_error_chimera(inpes,igrid  ,iorder)
+
+                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
+                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+
+                
+                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
+
+                    !
+                    ! Compute adjoint convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                    !
+                    error_previous = a_error_chimera(inpes,igrid-1,iorder)
+                    error_current  = a_error_chimera(inpes,igrid  ,iorder)
+
+                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
+                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+
+                
+                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
+
+                    !
+                    ! Compute functional convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                    !
+                    error_previous = f_error_chimera(inpes,igrid-1,iorder)
+                    error_current  = f_error_chimera(inpes,igrid  ,iorder)
+                    
+                    
+                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
+                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+
+                
+                    @assertGreaterThan(convergence_rate, real(2*iorder+1,rk)-ftol)
+                    @assertLessThan(convergence_rate, real(2*iorder+1,rk)+ftol)
+                end do
+            end do
+        end do
+
+
+    end subroutine test_err_chimera
+    !*****************************************************************************************
+
+
+
+
+
+
+    !>  Function to compute the error in the 1D scalar advection equation.
+    !!
+    !!  The error is computed as the L2-Norm of the difference in the analytical and
+    !!  numerical solutions integrated over the domain.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/16/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    function compute_1D_linear_advection_error(data,ChiDG_COMM) result(error)
+        type(chidg_data_t), intent(inout)   :: data
+        type(mpi_comm),     intent(in)      :: ChiDG_COMM
+
+        real(rk), allocatable, dimension(:) :: &
+            u_dg, u_analytical, x_gq, gq_error_squared
+
+
+        integer(ik) :: iu
+        integer(ik) :: ielem, idom, ierr, itime
+        real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
+
+
+        associate (mesh   => data%mesh,     &
+                   sdata  => data%sdata,    &
+                   eqnset => data%eqnset,   &
+                   prop   => data%eqnset(1)%prop)
+
+
+            !
+            ! Get equation indices
+            !
+            iu = prop%get_primary_field_index("u")
+
+
+            !
+            ! Zero error accumulator
+            !
+            error_squared_sum = ZERO
+
+
+
+            !
+            ! Loop over elements and accumulate error
+            !
+            itime = 1
+            do idom = 1,data%mesh%ndomains()
+                do ielem = 1,data%mesh%domain(idom)%nelem
+
+
+                    !
+                    ! Compute the analytical solution at the quadrature nodes
+                    !
+                    x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
+                    u_analytical = dsin(FOUR*x_gq) 
+                    !
+                    ! Interpolate DG numerical solution
+                    !
+                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,itime,'value')
+
+
+                    !
+                    ! Compute error
+                    !                    
+                    gq_error_squared = (u_analytical - u_dg)**TWO
+
+
+                    !
+                    ! Integrate error
+                    !
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+
+
+                    !
+                    ! Accumulate error from each element
+                    !
+                    error_squared_sum = error_squared_sum + element_error_squared
+
+
+                end do ! ielem
+            end do ! idom
+
+
+        end associate
+
+
+
+        ! Reduce the total error across processors
+        call MPI_AllReduce(error_squared_sum,error_squared_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+
+        ! Sqrt of the reduced error
+        error = sqrt(error_squared_sum_reduced)
+
+    end function compute_1D_linear_advection_error
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Function to compute the adjoint error in the 1D scalar advection equation.
+    !!
+    !!  The error is computed as the L2-Norm of the difference in the analytical and
+    !!  numerical solutions integrated over the domain.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/5/2018
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    function compute_1D_linear_advection_adjoint_error(data,ChiDG_COMM) result(error)
+        type(chidg_data_t), intent(inout)   :: data
+        type(mpi_comm),     intent(in)      :: ChiDG_COMM
+
+        real(rk), allocatable, dimension(:) :: &
+            v_dg, v_analytical, x_gq, gq_error_squared
+
+
+        integer(ik) :: iu
+        integer(ik) :: ielem, idom, ierr, itime
+        real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
+
+
+        associate (mesh   => data%mesh,     &
+                   sdata  => data%sdata,    &
+                   eqnset => data%eqnset,   &
+                   prop   => data%eqnset(1)%prop)
+
+
+            !
+            ! Get equation indices
+            !
+            iu = prop%get_primary_field_index("u")
+
+
+            !
+            ! Zero error accumulator
+            !
+            error_squared_sum = ZERO
+
+
+
+            !
+            ! Loop over elements and accumulate error
+            !
+            itime = 1
+            do idom = 1,data%mesh%ndomains()
+                do ielem = 1,data%mesh%domain(idom)%nelem
+
+
+                    !
+                    ! Compute the analytical solution at the quadrature nodes
+                    !
+                    x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
+                    v_analytical = ONE/FOUR*(dcos(FOUR*x_gq)-dcos(FOUR))
+                    !
+                    ! Interpolate DG numerical solution
+                    !
+                    v_dg = interpolate_element_standard(mesh,sdata%adjoint%v(1,1),idom,ielem,iu,itime,'value')
+
+
+                    !
+                    ! Compute error
+                    !                    
+                    gq_error_squared = (v_analytical - v_dg)**TWO
+
+
+                    !
+                    ! Integrate error
+                    !
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+
+
+                    !
+                    ! Accumulate error from each element
+                    !
+                    error_squared_sum = error_squared_sum + element_error_squared
+
+
+                end do ! ielem
+            end do ! idom
+
+
+        end associate
+
+
+
+        ! Reduce the total error across processors
+        call MPI_AllReduce(error_squared_sum,error_squared_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+
+        ! Sqrt of the reduced error
+        error = sqrt(error_squared_sum_reduced)
+
+    end function compute_1D_linear_advection_adjoint_error
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Function to compute the functional error in the 1D scalar advection equation.
+    !!
+    !!  The error is computed as the absolute value of the difference in the analytical and
+    !!  numerical solutions integrated over the domain.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/5/2018
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    function compute_1D_linear_advection_functional_error(data,ChiDG_COMM) result(error)
+        type(chidg_data_t), intent(inout)   :: data
+        type(mpi_comm),     intent(in)      :: ChiDG_COMM
+
+        real(rk)    :: func_dg, func_analytical, error_abs
+
+
+        integer(ik) :: iu
+        integer(ik) :: ielem, idom, ierr, itime
+        real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
+
+
+        if (IRANK == GLOBAL_MASTER) then
+        
+        
+        associate (mesh   => data%mesh,     &
+                   sdata  => data%sdata,    &
+                   eqnset => data%eqnset,   &
+                   prop   => data%eqnset(1)%prop)
+
+            
+                func_dg = sdata%functional%func(1)%at(1)
+                func_analytical = 0.219082554793_rk
+
+                !
+                ! Functional error
+                !
+                error_abs = abs(func_dg-func_analytical)
+
+        end associate
+
+        end if
+        
+        ! Sqrt of the reduced error
+        error = error_abs
+        
+    end function compute_1D_linear_advection_functional_error
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/16/2016
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function mesh_parameter(igrid,iorder) result(param)
+        integer(ik),    intent(in)  :: igrid
+        integer(ik),    intent(in)  :: iorder
+
+        integer(ik) :: nelem, nterms_1d
+        real(rk)    :: param
+
+        select case (igrid)
+            case(1)
+                nelem = 6
+            case(2)
+                nelem = 10
+            case default
+                call chidg_signal(FATAL,"integration_1D_linear_advection_mod%mesh_parameter: invalid igrid")
+        end select
+
+
+        select case (iorder)
+            case(1) ! iorder = 1  =>  order = 2
+                nterms_1d = (iorder+1)
+            case(2)
+                nterms_1d = (iorder+1)
+            case(3)
+                nterms_1d = (iorder+1)
+            case(4)
+                nterms_1d = (iorder+1)
+            case default
+                call chidg_signal(FATAL,"integration_1D_linear_advection_mod%mesh_parameter: invalid iorder")
+        end select
+
+
+        param = ONE/(real(nelem,rk)*real(nterms_1d,rk))
+
+    end function mesh_parameter
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    ! Utility for returning the index associated with a certain number of procs
+    !------------------------------------------------------------------------------
+    function get_npes_index(numproc) result(inpes)
+        integer(ik), intent(in) :: numproc
+
+        integer(ik) :: inpes
+
+        select case (numproc)
+            case(1)
+                inpes = 1
+            case(2)
+                inpes = 2
+            case(3)
+                inpes = 3
+        end select
+
+    end function get_npes_index
+    !******************************************************************************
+
+
+
+    ! Utility for returning the index associated with a certain grid file
+    !------------------------------------------------------------------------------
+    function get_grid_index(nelem) result(igrid)
+        integer(ik),    intent(in)  :: nelem
+
+        integer(ik) :: igrid
+
+        select case (nelem)
+            case(6)
+                igrid = 1
+            case(10)
+                igrid = 2
+        end select
+
+    end function get_grid_index
+    !******************************************************************************
+
+
+
+    ! Utility for returning the index associated with a certain order of accuracy
+    !------------------------------------------------------------------------------
+    function get_order_index(order) result(iorder)
+        integer(ik), intent(in) :: order
+
+        integer(ik) :: iorder
+
+        select case (order)
+            case(2)
+                iorder = 1
+            case(3)
+                iorder = 2
+            case(4)
+                iorder = 3
+            case(5)
+                iorder = 4
+        end select
+
+    end function get_order_index
+    !******************************************************************************
+
+
+
+
+
+
+end module integration_adjoint_1D_LA_ILU0_mod

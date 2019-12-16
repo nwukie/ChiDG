@@ -1,10 +1,11 @@
 module type_evaluator
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
+    use mod_io,                 only: backend
     use type_chidg_worker,      only: chidg_worker_t
     use type_svector,           only: svector_t
     use mod_string,             only: string_t
-    use type_chidg_vector,      only: chidg_vector_t
+    use type_chidg_vector,      only: chidg_vector_t, chidg_vector
     use type_functional_cache,  only: functional_cache_t
     
     use DNAD_D
@@ -606,6 +607,8 @@ contains
         type(functional_cache_t),   intent(inout)   :: cache
         
         type(chidg_vector_t)    :: res 
+
+        res = chidg_vector(trim(backend))
 
     end function store_deriv
     !*********************************************************************************************

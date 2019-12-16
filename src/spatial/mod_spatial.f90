@@ -71,7 +71,6 @@ contains
         call data%sdata%function_status%clear()
 
 
-
         ! Communicate solution vector
         call comm_timer%start()
         call data%sdata%q%assemble()
@@ -90,7 +89,6 @@ contains
         call data%sdata%function_status%clear()
 
 
-
         ! Set time info on chidg_worker
         worker%itime = data%time_manager%itime
         worker%t     = data%time_manager%t
@@ -105,9 +103,11 @@ contains
                 eqn_ID = worker%mesh%domain(idom)%elems(ielem)%eqn_ID
                 associate ( domain => data%mesh%domain(idom), eqnset => data%eqnset(eqn_ID) )
 
+
                 ! Set local element
                 elem_info = worker%mesh%get_element_info(idom,ielem)
                 call worker%set_element(elem_info)
+
 
                 !! Compute differential interpolator for mesh sensititivites
                 !call worker%mesh%compute_derivatives_dx(elem_info,differentiate)

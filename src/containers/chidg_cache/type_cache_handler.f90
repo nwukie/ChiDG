@@ -113,10 +113,7 @@ contains
 
         type(AD_D), allocatable, dimension(:) :: grad1_mom3, grad2_mom3, grad3_mom3
 
-
-        !
         ! Check for valid indices
-        !
         valid_indices = (worker%element_info%idomain_l /= 0) .and. &
                         (worker%element_info%ielement_l /= 0) .and. &
                         (worker%itime /= 0)
@@ -124,15 +121,10 @@ contains
         if (.not. valid_indices) call chidg_signal(FATAL,"cache_handler%update: Bad domain/element/time indices were detected during update.")
 
 
-        !
         ! Store lift indicator in worker
-        !
         worker%contains_lift = lift
 
-
-        !
         ! Check for valid components
-        !
         select case(trim(components))
             case('all')
                 update_interior_faces = .true.
@@ -159,9 +151,7 @@ contains
         end select
 
 
-        !
         ! Set range of faces to update
-        !
         if (face == NO_ID) then
             face_min = 1        ! Update all faces
             face_max = NFACES
@@ -171,9 +161,7 @@ contains
         end if
 
 
-        !
         ! Resize cache
-        !
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
         call self%timer_resize%start()
@@ -181,17 +169,13 @@ contains
         call self%timer_resize%stop()
 
 
-        !
         ! Determine if we want to update gradient terms in the cache
-        !
         eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         compute_gradients = (allocated(equation_set(eqn_ID)%volume_diffusive_operator)   .or. &
                              allocated(equation_set(eqn_ID)%boundary_diffusive_operator) )
 
 
-        !
         ! Update fields
-        !
         call self%timer_primary%start()
         call self%update_auxiliary_fields(worker,equation_set,bc_state_group,differentiate)
         call self%update_primary_fields(  worker,equation_set,bc_state_group,differentiate,compute_gradients,update_element,update_interior_faces,update_exterior_faces,face_min,face_max)
@@ -321,7 +305,6 @@ contains
                                                        idepend, ieqn, idiff
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
-
 
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
@@ -477,7 +460,7 @@ contains
         integer(ik),                intent(in)      :: differentiate
         logical,                    intent(in)      :: compute_gradients
 
-        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, &
+        integer(ik)                                 :: idepend, ifield, idomain_l, ielement_l, &
                                                        iface, idiff, eqn_ID
         character(:),   allocatable                 :: field
         real(rk),       allocatable                 :: ale_Dinv(:,:,:)
@@ -516,11 +499,12 @@ contains
         worker%function_info%idepend = idepend
         worker%function_info%type    = PRIMARY 
         worker%function_info%dtype   = differentiate
-        do ieqn = 1,worker%mesh%domain(idomain_l)%nfields
-            field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
+        do ifield = 1,worker%mesh%domain(idomain_l)%nfields
+
+            field = worker%prop(eqn_ID)%get_primary_field_name(ifield)
 
             ! Interpolate modes to nodes on undeformed element
-            value_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'value')
+            value_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ifield,worker%itime,'value')
 
             ! Get ALE transformation data
             ale_g = worker%get_det_jacobian_grid_element('value')
@@ -536,9 +520,9 @@ contains
             ! Interpolate Grad(U)
             if (compute_gradients) then
                 ! Interpolate modes to nodes on undeformed element
-                grad1_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad1')
-                grad2_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
-                grad3_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
+                grad1_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ifield,worker%itime,'grad1')
+                grad2_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ifield,worker%itime,'grad2')
+                grad3_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ifield,worker%itime,'grad3')
 
                 ! Get ALE transformation data
                 ale_g_grad1 = worker%get_det_jacobian_grid_element('grad1')
@@ -562,7 +546,8 @@ contains
 
             end if
 
-        end do !ieqn
+        end do !ifield
+
 
     end subroutine update_primary_element
     !*****************************************************************************************
@@ -593,7 +578,7 @@ contains
         integer(ik),                intent(in)      :: differentiate
         logical,                    intent(in)      :: compute_gradients
 
-        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, idiff, eqn_ID
+        integer(ik)                                 :: idepend, ifield, idomain_l, ielement_l, iface, idiff, eqn_ID
         character(:),   allocatable                 :: field
         real(rk),       allocatable                 :: ale_Dinv(:,:,:)
         real(rk),       allocatable, dimension(:)   :: ale_g, ale_g_grad1, ale_g_grad2, ale_g_grad3
@@ -635,17 +620,17 @@ contains
         worker%function_info%type    = PRIMARY 
         worker%function_info%dtype   = differentiate
         eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
-        do ieqn = 1,worker%mesh%domain(idomain_l)%nfields
+        do ifield = 1,worker%mesh%domain(idomain_l)%nfields
 
-            field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
+            field = worker%prop(eqn_ID)%get_primary_field_name(ifield)
 
             
             ! Interpolate modes to nodes on undeformed element
             ! NOTE: we always need to compute the graduent for interior faces for boundary conditions.
-            value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ieqn,worker%itime,'value',ME)
-            grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ieqn,worker%itime,'grad1',ME)
-            grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ieqn,worker%itime,'grad2',ME)
-            grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ieqn,worker%itime,'grad3',ME)
+            value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'value',ME)
+            grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad1',ME)
+            grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad2',ME)
+            grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad3',ME)
 
 
             ! Get ALE transformation data
@@ -673,7 +658,7 @@ contains
             call worker%cache%set_data(field,'face interior',grad2_u,'gradient',2,worker%function_info%seed,iface)
             call worker%cache%set_data(field,'face interior',grad3_u,'gradient',3,worker%function_info%seed,iface)
 
-        end do !ieqn
+        end do !ifield
 
 
     end subroutine update_primary_interior
@@ -848,7 +833,7 @@ contains
         integer(ik),                intent(in)              :: differentiate
         type(svector_t),            intent(in), optional    :: bc_parameters
 
-        integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
+        integer(ik)                 :: idepend, idomain_l, ielement_l, iface, ndepend, &
                                        istate, bc_ID, group_ID, patch_ID, face_ID, eqn_ID, itime_start, itime_end, itime_couple
         character(:),   allocatable :: field
 

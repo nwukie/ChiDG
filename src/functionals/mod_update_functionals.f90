@@ -41,11 +41,10 @@ contains
         integer(ik)                 :: ifunc, nfunc
         character(:),   allocatable :: func_name
         type(timer_t)               :: comm_timer, func_timer
-        
 
+        
         ! Initialize Chidg Worker references
         call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, data%time_manager, cache)
-
 
         ! Communicate solution vector
         call comm_timer%start()
@@ -56,10 +55,8 @@ contains
         worker%itime = data%time_manager%itime
         worker%t     = data%time_manager%t
 
-        
         ! Get overall number of functionals
         nfunc = data%functional_group%n_functionals()
-
 
         ! Compute functionals one by one
         do ifunc = 1,nfunc
@@ -78,7 +75,6 @@ contains
             call write_line('Functionals compute time: ',func_timer%elapsed(),delimiter=' ',io_proc=GLOBAL_MASTER,silence=(verbosity<3))
 
         end do !i_func
-
 
     end subroutine update_functionals
     !********************************************************************************
@@ -118,13 +114,11 @@ contains
         type(functional_cache_handler_t)     :: functional_cache_handler
         type(functional_cache_t)             :: functional_cache
         
-        
         ! Update auxiliary        
         call functional_cache_handler%update(worker,functional_cache,data,ifunc,'auxiliary',differentiate)
 
         ! Update reference        
         call functional_cache_handler%update(worker,functional_cache,data,ifunc,'reference',differentiate)
-
 
     end subroutine update_functional
     !********************************************************************************

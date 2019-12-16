@@ -471,7 +471,7 @@ contains
         call send_line()
 
         call print_line_separator()
-        call write_line('Functional', 'Reference geometry', 'Auxiliary geometry', 'Linear lolver', delimiter='  :  ', columns=.True., column_width=20)
+        call write_line('Functional', 'Reference geometry', 'Auxiliary geometry', 'Linear solver', delimiter='  :  ', columns=.True., column_width=20)
         call print_line_separator()
         
         ! Check if any functional is registered

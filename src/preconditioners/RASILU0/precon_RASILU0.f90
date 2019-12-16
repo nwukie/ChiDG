@@ -477,8 +477,12 @@ contains
         if (self%petsc_initialized) then
         !******  petsc  implementation  ******!
 
-            call PCApply(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
-            if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%apply: error calling PCApply.')
+            if (A%transposed) then
+                call PCApplyTranspose(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
+            else
+                call PCApply(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
+            end if
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%apply: error calling PCApply.')
             z%petsc_needs_assembled = .true.
 
 

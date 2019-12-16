@@ -61,9 +61,11 @@ module mod_hdfio
     use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC, NO_ID
     use mod_bc,                     only: create_bc
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
+    use mod_io,                     only: backend
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
+    use type_chidg_vector,          only: chidg_vector_t, chidg_vector
     use type_chidg_data,            only: chidg_data_t
     use type_meshdata,              only: meshdata_t
     use type_element_info,          only: element_info_t, element_info
@@ -402,7 +404,7 @@ contains
         integer                         :: ierr
 
         real(rk),           allocatable :: times(:)
-        integer(ik)                     :: idom, ndomains, ieqn, neqns, itime, ntime, eqn_ID, iread
+        integer(ik)                     :: idom, ndomains, ifield, neqns, itime, ntime, eqn_ID, iread
         integer(ik)                     :: nfunc, nstep, ifunc
         character(:),       allocatable :: field_name, user_msg, domain_name
         logical                         :: file_exists, contains_adjoint_solution
@@ -443,8 +445,11 @@ contains
         if (allocated(data%sdata%adjoint%v_in)) deallocate (data%sdata%adjoint%v_in)
         allocate( data%sdata%adjoint%v_in(nfunc), stat=ierr)
         if (ierr/=0) call AllocationError
+
         do ifunc = 1,nfunc
+            data%sdata%adjoint%v_in(ifunc) = chidg_vector(trim(backend))
             call data%sdata%adjoint%v_in(ifunc)%init(data%mesh,ntime)
+            call data%sdata%adjoint%v_in(ifunc)%set_ntime(ntime)
         end do
 
 
@@ -466,11 +471,11 @@ contains
                         
                         ! Loop thorugh the adjoint fields (a set of each functional) 
                         eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has the same eqn_ID
-                        do ieqn = 1,data%eqnset(eqn_ID)%prop%nadjoint_fields()
-                            field_name = trim(data%eqnset(eqn_ID)%prop%get_adjoint_field_name(ieqn))
-                            ifunc      = data%eqnset(eqn_ID)%prop%adjoint_fields(ieqn)%get_functional_ID()
+                        do ifield = 1,data%eqnset(eqn_ID)%prop%nadjoint_fields()
+                            field_name = trim(data%eqnset(eqn_ID)%prop%get_adjoint_field_name(ifield))
+                            ifunc      = data%eqnset(eqn_ID)%prop%adjoint_fields(ifield)%get_functional_ID()
                             call read_domain_field_hdf(data,domain_id,field_name,itime,'Adjoint',ifunc=ifunc)
-                        end do ! ieqn
+                        end do ! ifield
 
                         call close_domain_hdf(domain_id)
 
@@ -483,27 +488,13 @@ contains
             call MPI_Barrier(ChiDG_COMM,ierr)
         end do ! iread
 
+        ! Assemble
+        do ifunc = 1,nfunc
+            call data%sdata%adjoint%v_in(ifunc)%assemble()
+        end do
 
     end subroutine read_adjoint_fields_hdf
     !****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

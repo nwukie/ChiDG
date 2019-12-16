@@ -2,10 +2,11 @@ module type_functional_cache
 #include<messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO, ONE, NO_ID, dX_DIFF, NO_DIFF, dD_DIFF
+    use mod_io,                 only: backend
     use type_geometry_cache,    only: geometry_cache_t
     use type_function_info,     only: function_info_t
     use type_mesh,              only: mesh_t
-    use type_chidg_vector,      only: chidg_vector_t
+    use type_chidg_vector,      only: chidg_vector_t, chidg_vector
     use type_svector,           only: svector_t
     use DNAD_D
     implicit none
@@ -66,6 +67,7 @@ contains
         character(*),               intent(in)          :: integral_type
         integer(ik),                intent(in)          :: differentiate
 
+        self%vector_model = chidg_vector(trim(backend))
         
         ! Initialize spcific geometry cache
         select case (geometry)

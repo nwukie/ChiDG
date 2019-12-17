@@ -1,0 +1,135 @@
+! Test nvector_t
+!
+!   @author Matteo Ugolotti
+!   @date   9/25/2018
+!------------------------------------------------------------------------------------
+
+
+
+
+@Test
+subroutine test_nvector__push_back__tennodes()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use mod_constants,  only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, CARTESIAN
+    use type_nvector,   only: nvector_t
+    use type_node,      only: node_t
+    implicit none
+
+    type(nvector_t)         :: vec
+    real(rk)                :: tol, ref_value, coords(3), sens(3), ref_sens(3), ref_coords(3)
+    integer(ik)             :: i
+    type(node_t)            :: nodes(9), node_temp
+    real(rk), allocatable   :: nodes_coords(:,:), nodes_sens(:,:), nodes_domains(:), nodes_id(:)
+
+    tol = 1.e-13_rk
+
+    !
+    ! Reduce buffer size from default (50) to 5 to test increase_capacity
+    !
+    vec%buffer_ = 5
+
+    !
+    ! Define node by node
+    !
+    do i = 1,9
+        coords = real(i,rk)
+        sens   = real(i+1,rk)
+        call nodes(i)%init_node(i,1,CARTESIAN,coords,sens)
+    end do
+
+    !
+    ! Push back the 9 nodes  randomly
+    !
+    call vec%push_back(nodes(4))
+    call vec%push_back(nodes(7))
+    call vec%push_back(nodes(9))
+    call vec%push_back(nodes(1))
+    call vec%push_back(nodes(3))
+    call vec%push_back(nodes(2))
+    call vec%push_back(nodes(5))
+    call vec%push_back(nodes(6))
+    call vec%push_back(nodes(8))
+
+    !
+    ! TEST: size and capacity
+    !
+    @assertEqual(9 ,vec%size())
+    @assertEqual(10,vec%capacity())
+
+
+    !
+    ! TEST: at function
+    !
+    node_temp = vec%at(5)
+    @assertEqual(THREE,node_temp%x(),tol)
+    node_temp = vec%at(8)
+    ref_sens  = SEVEN
+    @assertEqual(ref_sens,node_temp%get_sensitivities(),tol)
+
+
+    !
+    ! TEST: search_by_coords
+    !
+    ref_coords = TWO
+    @assertEqual(6,vec%search_by_coords(ref_coords,2))
+    ref_coords = NINE
+    @assertEqual(3,vec%search_by_coords(ref_coords,9))
+
+
+    !
+    ! TEST: reorder_by_index
+    !
+    call vec%reorder_by_index()
+    do i = 1,9
+        @assertEqual(i,vec%data(i)%node_ID_l)
+    end do
+
+
+    !
+    ! TEST: get_nodes_coords
+    !
+    nodes_coords = vec%get_nodes_coords()
+    do i = 1,9
+        ref_coords = real(i,rk) 
+        @assertEqual(ref_coords,nodes_coords(i,:),tol)
+    end do
+
+
+    !
+    ! TEST: get_nodes_coords
+    !
+    nodes_sens = vec%get_nodes_sensitivities()
+    do i = 1,9
+        ref_sens = real(i+1,rk) 
+        @assertEqual(ref_sens,nodes_sens(i,:),tol)
+    end do
+
+    !
+    ! TEST: get_nodes_domain_g
+    !
+    nodes_domains = vec%get_nodes_domain_g()
+    do i = 1,9
+        @assertEqual(1,nodes_domains(i))
+    end do
+
+    !
+    ! TEST: get_nodes_ID
+    !
+    nodes_id = vec%get_nodes_ID()
+    do i = 1,9
+        @assertEqual(i,nodes_id(i))
+    end do
+
+
+end subroutine
+
+
+
+
+
+
+
+
+
+

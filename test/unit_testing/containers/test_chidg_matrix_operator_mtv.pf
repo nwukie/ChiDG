@@ -1,0 +1,780 @@
+!>  Compute a matrix vector multiplication between a transposed chidgMatrix and 
+!!  chidgVector instances that have been initialized with Chimera grid blocks.
+!!
+!!  The grid block configurations are shown here: 
+!!      - Block1 is 2x2x2 and symmetric.
+!!      - Block2 is 2x2x2 and its center y-constant plane is translated down.
+!!
+!!     Block 1               Block 2
+!!  .-----.-----.         .-----.-----.
+!!  |     |     |         |     |     |
+!!  |     |     |         |     |     |
+!!  .-----.-----.         |     |     |
+!!  |     |     |         .-----.-----.
+!!  |     |     |         |     |     |
+!!  .-----.-----.         .-----.-----.
+!!
+!!
+!!  These blocks overlap, so that there is Chimera communication between the blocks:
+!!
+!!        Block 1       Block 2
+!!        .-----.---.-.---.-----.            
+!!        |     |   | |   |     |            
+!!        |     |   | |   |     |            
+!!        .-----.---|-.   |     |            
+!!        |     |   .-|---.-----.            
+!!        |     |   | |   |     |            
+!!        .-----.---.-.---.-----.            
+!!      
+!!
+!!
+!!  @author: Matteo Ugolotti
+!!  @data:  05/04/2017
+!!
+!!  Taken from test_chidg_matrix_operator_mv.pf
+!!
+!*****************************************************************************************
+@Test
+subroutine test_chidg_matrix_operator_mtv()
+    use pfunit_mod
+
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, &
+                                  EIGHT, NINE, TEN, DIAG, XI_MIN, XI_MAX, ETA_MIN, &
+                                  ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION, dX_DIFF
+
+    use type_chidg,         only: chidg_t
+    use type_chidg_matrix,  only: chidg_matrix_t
+    use type_chidg_vector,  only: chidg_vector_t
+    use type_meshdata,      only: meshdata_t
+    use mod_bc,             only: create_bc
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
+
+    use operator_chidg_mv,  only: transposed_chidg_matrix_vector_product
+    implicit none
+
+
+    type(chidg_t)                   :: chidg
+    type(meshdata_t),   allocatable :: meshdata(:)
+    integer(ik)                     :: idom, spacedim, nterms_s, idiag, idom_d, ielem_d, itime, ielem
+    real(rk), dimension(8)          :: bref_1, bref_2, bref_3, bref_4
+    real(rk)                        :: tol
+    character(:),       allocatable :: filename
+
+    type(chidg_matrix_t)             :: A
+    type(chidg_vector_t)             :: x, b
+
+
+    tol             = 1.e-13_rk
+    spacedim        = 3
+    nterms_s        = 8
+    IO_DESTINATION  = 'file'
+    
+
+    !
+    ! Initialize ChiDG
+    !
+    call chidg%start_up('core')
+
+
+    !
+    ! Create grid file
+    !
+    filename = "D2E8M1_overlapping_nonmatching.h5"
+    call create_mesh_file("D2 E8 M1 : Overlapping : NonMatching", filename)
+
+
+    !
+    ! Set the order of accuracy for the solution
+    !
+    call chidg%set('Solution Order', integer_input=2)
+
+
+    !
+    ! Get grid points
+    !
+    call chidg%read_mesh(filename,'primal storage')
+
+
+
+    !
+    ! Initialize data containers
+    !
+    call A%init(chidg%data%mesh,mtype='full')
+    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+
+
+
+    !       _         lblks               chi_blks       -           x
+    !       | [ 1                 ] [                  ] |          [     ]
+    !       | [                   ] [ 2   3            ] |          [ 0.1 ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    ! A =   |                                            |
+    !       |      chi_blks               lblks          |
+    !       | [   4               ] [                  ] |          [ 0.2 ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [ 0.3 ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    !       -                                            -
+
+
+    !           -        lblks               chi_blks        -      -     x     -       -          b         -
+    !           | [ 1                 ] [                  ] |      |  [     ]  |       | [                ] |
+    !           | [                   ] [ 4                ] |      |  [ 0.1 ]  |       | [ 4*0.2*nterms_s ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                ] |
+    ! A^T * x = |                                            |  *   |           |   =   |                    |
+    !           |      chi_blks               lblks          |      |           |       |                    |
+    !           | [   2               ] [                  ] |      |  [ 0.2 ]  |       | [ 2*0.1*nterms_s ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                ] |
+    !           | [   3               ] [                  ] |      |  [ 0.3 ]  |       | [ 3*0.1*nterms_s ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                ] |
+    !           -                                            -      -           -       -                    -
+
+
+
+    !
+    ! Initialize chidgMatrix and corresponding chidgVector data -- domain 1
+    !
+    ielem = 1
+    itime = 1
+    idiag = A%dom(1)%lblks(ielem,itime)%loc(1,1)
+    A%dom(1)%lblks(ielem,itime)%data_(idiag)%mat = ONE
+
+
+    ielem = 2
+    itime = 1
+    idom_d  = A%dom(1)%chi_blks(ielem,itime)%dparent_g(1)
+    ielem_d = A%dom(1)%chi_blks(ielem,itime)%eparent_g(1)
+    A%dom(1)%chi_blks(ielem,itime)%data_(1)%mat = TWO
+    x%dom(idom_d)%vecs(ielem_d)%vec = 0.2_rk
+
+
+    ielem = 2
+    itime = 1
+    idom_d  = A%dom(1)%chi_blks(ielem,itime)%dparent_g(2)
+    ielem_d = A%dom(1)%chi_blks(ielem,itime)%eparent_g(2)
+    A%dom(1)%chi_blks(ielem,itime)%data_(2)%mat = THREE
+    x%dom(idom_d)%vecs(ielem_d)%vec = 0.3_rk
+
+
+
+    !
+    ! Initialize chidgMatrix and corresponding chidgVector data -- domain 2
+    !
+    ielem = 1
+    itime = 1
+    idom_d  = A%dom(2)%chi_blks(ielem,itime)%dparent_g(1)
+    ielem_d = A%dom(2)%chi_blks(ielem,itime)%eparent_g(1)
+    A%dom(2)%chi_blks(ielem,itime)%data_(1)%mat = FOUR
+    x%dom(idom_d)%vecs(ielem_d)%vec = 0.1_rk
+    
+    !
+    ! Perform matrix-vector multiplication. THIS IS BEING TESTED
+    !
+    b = transposed_chidg_matrix_vector_product(A,x)
+
+
+    !
+    ! Compute reference values
+    !
+    bref_1 = (4._rk * 0.2_rk)*nterms_s
+    bref_2 = (2._rk * 0.1_rk)*nterms_s
+    bref_3 = (3._rk * 0.1_rk)*nterms_s
+
+    !
+    ! Test MV operation
+    !
+    @assertEqual(bref_1,b%dom(1)%vecs(2)%vec,tol)
+    @assertEqual(bref_2,b%dom(2)%vecs(1)%vec,tol)
+    @assertEqual(bref_3,b%dom(2)%vecs(3)%vec,tol)
+
+
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%shut_down('core')
+
+
+    !
+    ! Clean-up
+    !
+    call delete_file(filename)
+
+end subroutine test_chidg_matrix_operator_mtv
+
+
+
+!!
+!!  @author: Matteo Ugolotti
+!!  @data:  02/03/2018
+!!
+!!  Taken from test_chidg_matrix_operator_mv.pf
+!!
+!!
+!!
+!!        Block 1       Block 2
+!!        .-----.---.-.---.-----.            
+!!        |     |   | |   |     |            
+!!        |3    |4  | |   |     |            
+!!        .-----.---|-.  3|    4|            
+!!        |     |   .-|---.-----.            
+!!        |1    |2  | |  1|    2|            
+!!        .-----.---.-.---.-----.            
+!!
+!!
+!!
+!*****************************************************************************************
+@Test
+subroutine test_chidg_matrix_operator_mtv_2()
+    use pfunit_mod
+
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, &
+                                  EIGHT, NINE, TEN, DIAG, XI_MIN, XI_MAX, ETA_MIN, &
+                                  ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
+
+    use type_chidg,         only: chidg_t
+    use type_chidg_matrix,  only: chidg_matrix_t
+    use type_chidg_vector,  only: chidg_vector_t
+    use type_meshdata,      only: meshdata_t
+    use mod_bc,             only: create_bc
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
+
+    use operator_chidg_mv,  only: transposed_chidg_matrix_vector_product
+    implicit none
+
+
+    type(chidg_t)                   :: chidg
+    type(meshdata_t),   allocatable :: meshdata(:)
+    integer(ik)                     :: idom, spacedim, nterms_s, idiag, idom_d, ielem_d, itime, ielem, imat, i, j
+    real(rk), dimension(8)          :: bref_0, bref_1, bref_2, bref_3, bref_4, bref_5, bref_6
+    real(rk), dimension(8,8)        :: M
+    real(rk)                        :: tol
+    character(:),       allocatable :: filename
+
+    type(chidg_matrix_t)             :: A
+    type(chidg_vector_t)             :: x, b
+
+
+    tol             = 1.e-13_rk
+    spacedim        = 3
+    nterms_s        = 8
+    IO_DESTINATION  = 'file'
+    
+
+    !
+    ! Initialize ChiDG
+    !
+    call chidg%start_up('core')
+
+    !
+    ! Create grid file
+    !
+    filename = "D2E8M1_overlapping_nonmatching.h5"
+    call create_mesh_file("D2 E8 M1 : Overlapping : NonMatching", filename)
+
+
+    !
+    ! Set the order of accuracy for the solution
+    !
+    call chidg%set('Solution Order', integer_input=2)
+
+
+    !
+    ! Get grid points
+    !
+    call chidg%read_mesh(filename,'primal storage')
+
+
+
+    !
+    ! Initialize data containers
+    !
+    call A%init(chidg%data%mesh,mtype='full')
+    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+
+
+    !       _         lblks               chi_blks       -           x
+    !       | [   1               ] [                  ] |          [ 1.1 ]
+    !       | [                   ] [     5            ] |          [ 1.5 ]
+    !       | [               2   ] [                  ] |          [ 1.2 ]
+    !       | [                   ] [     6            ] |          [ 1.6 ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    ! A =   |                                            |
+    !       |      chi_blks               lblks          |
+    !       | [   4               ] [                  ] |          [ 1.4 ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [   7               ] [                  ] |          [ 1.7 ]
+    !       | [                   ] [   8              ] |          [ 1.8 ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [           M      ] |          [     ]
+    !       | [            3      ] [                  ] |          [ 1.3 ]
+    !       | [                   ] [                  ] |          [     ]
+    !       -                                            -
+
+
+    !           -        lblks               chi_blks        -      -     x     -       -                           b                          -
+    !           | [                   ] [                  ] |      |  [ 1.1 ]  |       | [                                                  ] |
+    !           | [ 1                 ] [ 4   7            ] |      |  [ 1.5 ]  |       | [ 1*1.1*ntrems_s + 4*1.4*nterms_s + 7*1.7*nterms_s ] |
+    !           | [                   ] [                  ] |      |  [ 1.2 ]  |       | [                                                  ] |
+    !           | [                   ] [                  ] |      |  [ 1.6 ]  |       | [                                                  ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                                                  ] |
+    !           | [                   ] [             3    ] |      |  [     ]  |       | [ 3*1.3*nterms_s                                   ] |
+    !           | [     2             ] [                  ] |      |  [     ]  |       | [ 2*1.2*nterms_s                                   ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                                                  ] |
+    ! A^T * x = |                                            |  *   |           |   =   |                                                      |
+    !           |      chi_blks               lblks          |      |           |       |                                                      |
+    !           | [                   ] [                  ] |      |  [ 1.4 ]  |       | [                                                  ] |
+    !           | [                   ] [       8          ] |      |  [     ]  |       | [ 8*1.8*nterms_s                                   ] |
+    !           | [   5   6           ] [                  ] |      |  [ 1.7 ]  |       | [ 5*1.5*nterms_s + 6*1.6*nterms_s                  ] |
+    !           | [                   ] [                  ] |      |  [ 1.8 ]  |       | [ M*1.0                                            ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                                                  ] |
+    !           | [                   ] [           M      ] |      |  [ 1.0 ]  |       | [ 1.0+2.0+3.0+4.0+5.0+6.0+7.0+8.0                  ] |
+    !           | [                   ] [                  ] |      |  [ 1.3 ]  |       | [                                                  ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                                                  ] |
+    !           -                                            -      -           -       -                                                      -
+
+
+    !
+    ! Initialize chidgMatrix and corresponding chidgVector data -- domain 1
+    !
+    ! This should be equal to b%dom(1)%vecs(2)%vec
+    idom  = 1
+    ielem = 1
+    itime = 1
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(1,2)
+    A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = ONE
+    x%dom(idom)%vecs(ielem)%vec = 1.1_rk
+    
+    ! This should be equal to b%dom(1)%vecs(7)%vec
+    idom  = 1
+    ielem = 3
+    itime = 1
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(1,7)
+    A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = TWO
+    x%dom(idom)%vecs(ielem)%vec = 1.2_rk
+    
+    ! This should be equal to b%dom(1)%vecs(6)%vec
+    idom  = 2
+    ielem = 7
+    itime = 1
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,6)
+    A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = THREE
+    x%dom(idom)%vecs(ielem)%vec = 1.3_rk
+
+    ! This should be equal to b%dom(1)%vecs(2)%vec
+    idom  = 2
+    ielem = 1
+    itime = 1
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,2)
+    A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = FOUR
+    x%dom(idom)%vecs(ielem)%vec = 1.4_rk
+
+    ! This should be equal to b%dom(2)%vecs(3)%vec
+    idom  = 1
+    ielem = 2
+    itime = 1
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(2,3)
+    A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = FIVE
+    x%dom(idom)%vecs(ielem)%vec = 1.5_rk
+
+    ! This should be equal to b%dom(2)%vecs(3)%vec
+    idom  = 1
+    ielem = 4
+    itime = 1
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(2,3)
+    A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = SIX
+    x%dom(idom)%vecs(ielem)%vec = 1.6_rk
+
+    ! This should be equal to b%dom(1)%vecs(2)%vec
+    idom  = 2
+    ielem = 3
+    itime = 1
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,2)
+    A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = SEVEN
+    x%dom(idom)%vecs(ielem)%vec = 1.7_rk
+
+    ! This should be equal to b%dom(2)%vecs(2)%vec
+    idom  = 2
+    ielem = 4
+    itime = 1
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(2,2)
+    A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = EIGHT
+    x%dom(idom)%vecs(ielem)%vec = 1.8_rk
+
+    ! This should be equal to b%dom(2)%vecs(6)%vec
+    ! Constructing the matrix
+    ! 
+    !   1 1 1 1 1 1 1 1 1
+    !   2 2 2 2 2 2 2 2 2
+    !   3 3 3 3 3 3 3 3 3
+    !   4 4 4 4 4 4 4 4 4 
+    !   5 5 5 5 5 5 5 5 5
+    !   6 6 6 6 6 6 6 6 6
+    !   7 7 7 7 7 7 7 7 7
+    !   8 8 8 8 8 8 8 8 8
+    !
+    do i = 1,8
+        do j = 1,8
+            M(i,j) = real(i,rk)
+        end do
+    end do
+
+    idom  = 2
+    ielem = 6
+    itime = 1
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(2,6)
+    A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = M
+    x%dom(idom)%vecs(ielem)%vec = 1.0_rk
+
+
+    
+    !
+    ! Perform matrix-vector multiplication. THIS IS BEING TESTED
+    !
+    b = transposed_chidg_matrix_vector_product(A,x)
+
+
+    !
+    ! Compute reference values
+    !
+    bref_0 = ZERO
+    bref_1 = (1._rk * 1.1_rk)*nterms_s + (4._rk * 1.4_rk)*nterms_s + (7._rk * 1.7_rk)*nterms_s
+    bref_2 = (2._rk * 1.2_rk)*nterms_s
+    bref_3 = (3._rk * 1.3_rk)*nterms_s
+    bref_4 = (5._rk * 1.5_rk)*nterms_s + (6._rk * 1.6_rk)*nterms_s
+    bref_5 = (8._rk * 1.8_rk)*nterms_s
+    bref_6 = (1._rk + 2._rk + 3._rk + 4._rk + 5._rk + 6._rk + 7._rk + 8._rk)
+
+    !
+    ! Test MV operation
+    !
+    @assertEqual(bref_0,b%dom(1)%vecs(1)%vec,tol)
+    @assertEqual(bref_1,b%dom(1)%vecs(2)%vec,tol)
+    @assertEqual(bref_2,b%dom(1)%vecs(7)%vec,tol)
+    @assertEqual(bref_3,b%dom(1)%vecs(6)%vec,tol)
+    @assertEqual(bref_4,b%dom(2)%vecs(3)%vec,tol)
+    @assertEqual(bref_5,b%dom(2)%vecs(2)%vec,tol)
+    @assertEqual(bref_6,b%dom(2)%vecs(6)%vec,tol)
+
+
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%shut_down('core')
+
+
+    !
+    ! Clean-up
+    !
+    call delete_file(filename)
+
+end subroutine test_chidg_matrix_operator_mtv_2
+
+
+
+
+
+!!
+!!  @author: Matteo Ugolotti
+!!  @data:  10/30/2018
+!!
+!!  Taken from test_chidg_matrix_operator_mv.pf
+!!  Using dX initialization. Note that matrix Rx is not a square matrix.
+!!
+!!
+!!
+!!        Block 1       Block 2
+!!        .-----.---.-.---.-----.            
+!!        |     |   | |   |     |            
+!!        |3    |4  | |   |     |            
+!!        .-----.---|-.  3|    4|            
+!!        |     |   .-|---.-----.            
+!!        |1    |2  | |  1|    2|            
+!!        .-----.---.-.---.-----.            
+!!
+!!
+!!
+!*****************************************************************************************
+@Test
+subroutine test_chidg_matrix_operator_mtv_3()
+    use pfunit_mod
+
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, &
+                                  EIGHT, NINE, TEN, DIAG, XI_MIN, XI_MAX, ETA_MIN, &
+                                  ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION,   &
+                                  dX_DIFF, dQ_DIFF
+
+    use type_chidg,         only: chidg_t
+    use type_chidg_matrix,  only: chidg_matrix_t
+    use type_chidg_vector,  only: chidg_vector_t
+    use type_meshdata,      only: meshdata_t
+    use mod_bc,             only: create_bc
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
+
+    use operator_chidg_mv,  only: transposed_chidg_matrix_vector_product
+    implicit none
+
+
+    type(chidg_t)                   :: chidg
+    type(meshdata_t),   allocatable :: meshdata(:)
+    integer(ik)                     :: idom, spacedim, nterms_s, idiag, idom_d, ielem_d, itime, ielem, imat, i, j
+    real(rk), dimension(24)         :: bref_0, bref_1, bref_2, bref_3, bref_4, bref_5, bref_6
+    real(rk), dimension(8,24)       :: M
+    real(rk)                        :: tol
+    character(:),       allocatable :: filename
+
+    type(chidg_matrix_t)             :: A
+    type(chidg_vector_t)             :: x, b
+
+
+    tol             = 1.e-13_rk
+    spacedim        = 3
+    nterms_s        = 8
+    IO_DESTINATION  = 'file'
+    
+
+    !
+    ! Initialize ChiDG
+    !
+    call chidg%start_up('core')
+
+    !
+    ! Create grid file
+    !
+    filename = "D2E8M1_overlapping_nonmatching.h5"
+    call create_mesh_file("D2 E8 M1 : Overlapping : NonMatching", filename)
+
+
+    !
+    ! Set the order of accuracy for the solution
+    !
+    call chidg%set('Solution Order', integer_input=2)
+
+
+    !
+    ! Get grid points
+    !
+    call chidg%read_mesh(filename,'primal storage')
+
+
+
+    !
+    ! Initialize data containers
+    !
+    call A%init(chidg%data%mesh,mtype='dX')
+    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,specialization=dX_DIFF)
+
+
+    !       _         lblks               chi_blks       -           x
+    !       | [   1               ] [                  ] |          [ 1.1 ]
+    !       | [                   ] [     5            ] |          [ 1.5 ]
+    !       | [               2   ] [                  ] |          [ 1.2 ]
+    !       | [                   ] [     6            ] |          [ 1.6 ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [                  ] |          [     ]
+    ! A =   |                                            |
+    !       |      chi_blks               lblks          |
+    !       | [   4               ] [                  ] |          [ 1.4 ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [   7               ] [                  ] |          [ 1.7 ]
+    !       | [                   ] [   8              ] |          [ 1.8 ]
+    !       | [                   ] [                  ] |          [     ]
+    !       | [                   ] [           M      ] |          [     ]
+    !       | [            3      ] [                  ] |          [ 1.3 ]
+    !       | [                   ] [                  ] |          [     ]
+    !       -                                            -
+
+
+    !           -        lblks               chi_blks        -      -     x     -       -                           b                          -
+    !           | [                   ] [                  ] |      |  [ 1.1 ]  |       | [                                                  ] |
+    !           | [ 1                 ] [ 4   7            ] |      |  [ 1.5 ]  |       | [ 1*1.1*ntrems_s + 4*1.4*nterms_s + 7*1.7*nterms_s ] |
+    !           | [                   ] [                  ] |      |  [ 1.2 ]  |       | [                                                  ] |
+    !           | [                   ] [                  ] |      |  [ 1.6 ]  |       | [                                                  ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                                                  ] |
+    !           | [                   ] [             3    ] |      |  [     ]  |       | [ 3*1.3*nterms_s                                   ] |
+    !           | [     2             ] [                  ] |      |  [     ]  |       | [ 2*1.2*nterms_s                                   ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                                                  ] |
+    ! A^T * x = |                                            |  *   |           |   =   |                                                      |
+    !           |      chi_blks               lblks          |      |           |       |                                                      |
+    !           | [                   ] [                  ] |      |  [ 1.4 ]  |       | [                                                  ] |
+    !           | [                   ] [       8          ] |      |  [     ]  |       | [ 8*1.8*nterms_s                                   ] |
+    !           | [   5   6           ] [                  ] |      |  [ 1.7 ]  |       | [ 5*1.5*nterms_s + 6*1.6*nterms_s                  ] |
+    !           | [                   ] [                  ] |      |  [ 1.8 ]  |       | [ M*1.0                                            ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                                                  ] |
+    !           | [                   ] [           M      ] |      |  [ 1.0 ]  |       | [ 1.0+2.0+3.0+4.0+5.0+6.0+7.0+8.0                  ] |
+    !           | [                   ] [                  ] |      |  [ 1.3 ]  |       | [                                                  ] |
+    !           | [                   ] [                  ] |      |  [     ]  |       | [                                                  ] |
+    !           -                                            -      -           -       -                                                      -
+
+
+    !
+    ! Initialize chidgMatrix and corresponding chidgVector data -- domain 1
+    !
+    ! This should be equal to b%dom(1)%vecs(2)%vec
+    idom  = 1
+    ielem = 1
+    itime = 1
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(1,2)
+    A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = ONE
+    x%dom(idom)%vecs(ielem)%vec = 1.1_rk
+    
+    ! This should be equal to b%dom(1)%vecs(7)%vec
+    idom  = 1
+    ielem = 3
+    itime = 1
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(1,7)
+    A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = TWO
+    x%dom(idom)%vecs(ielem)%vec = 1.2_rk
+    
+    ! This should be equal to b%dom(1)%vecs(6)%vec
+    idom  = 2
+    ielem = 7
+    itime = 1
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,6)
+    A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = THREE
+    x%dom(idom)%vecs(ielem)%vec = 1.3_rk
+
+    ! This should be equal to b%dom(1)%vecs(2)%vec
+    idom  = 2
+    ielem = 1
+    itime = 1
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,2)
+    A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = FOUR
+    x%dom(idom)%vecs(ielem)%vec = 1.4_rk
+
+    ! This should be equal to b%dom(2)%vecs(3)%vec
+    idom  = 1
+    ielem = 2
+    itime = 1
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(2,3)
+    A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = FIVE
+    x%dom(idom)%vecs(ielem)%vec = 1.5_rk
+
+    ! This should be equal to b%dom(2)%vecs(3)%vec
+    idom  = 1
+    ielem = 4
+    itime = 1
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(2,3)
+    A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = SIX
+    x%dom(idom)%vecs(ielem)%vec = 1.6_rk
+
+    ! This should be equal to b%dom(1)%vecs(2)%vec
+    idom  = 2
+    ielem = 3
+    itime = 1
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,2)
+    A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = SEVEN
+    x%dom(idom)%vecs(ielem)%vec = 1.7_rk
+
+    ! This should be equal to b%dom(2)%vecs(2)%vec
+    idom  = 2
+    ielem = 4
+    itime = 1
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(2,2)
+    A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = EIGHT
+    x%dom(idom)%vecs(ielem)%vec = 1.8_rk
+
+    ! This should be equal to b%dom(2)%vecs(6)%vec
+    ! Constructing the matrix
+    !
+    !   24 columns in A: nnodes_r * 3 = 8*3 = 24
+    !   (for linear element)
+    ! 
+    !   1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+    !   2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+    !   3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3
+    !   4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 
+    !   5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5
+    !   6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6
+    !   7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7
+    !   8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8
+    !
+    do i = 1,8
+        do j = 1,24
+            M(i,j) = real(i,rk)
+        end do
+    end do
+
+    idom  = 2
+    ielem = 6
+    itime = 1
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(2,6)
+    A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = M
+    x%dom(idom)%vecs(ielem)%vec = 1.0_rk
+
+
+    
+    !
+    ! Perform matrix-vector multiplication. THIS IS BEING TESTED
+    ! Note here that b is passed to function to initialize the resultant vector
+    ! b and x have different size.
+    !
+    b = transposed_chidg_matrix_vector_product(A,x,b)
+
+
+    !
+    ! Compute reference values
+    !
+    bref_0 = ZERO
+    bref_1 = (1._rk * 1.1_rk)*nterms_s + (4._rk * 1.4_rk)*nterms_s + (7._rk * 1.7_rk)*nterms_s
+    bref_2 = (2._rk * 1.2_rk)*nterms_s
+    bref_3 = (3._rk * 1.3_rk)*nterms_s
+    bref_4 = (5._rk * 1.5_rk)*nterms_s + (6._rk * 1.6_rk)*nterms_s
+    bref_5 = (8._rk * 1.8_rk)*nterms_s
+    bref_6 = (1._rk + 2._rk + 3._rk + 4._rk + 5._rk + 6._rk + 7._rk + 8._rk)
+
+    !
+    ! Test MV operation
+    !
+    @assertEqual(bref_0,b%dom(1)%vecs(1)%vec,tol)
+    @assertEqual(bref_1,b%dom(1)%vecs(2)%vec,tol)
+    @assertEqual(bref_2,b%dom(1)%vecs(7)%vec,tol)
+    @assertEqual(bref_3,b%dom(1)%vecs(6)%vec,tol)
+    @assertEqual(bref_4,b%dom(2)%vecs(3)%vec,tol)
+    @assertEqual(bref_5,b%dom(2)%vecs(2)%vec,tol)
+    @assertEqual(bref_6,b%dom(2)%vecs(6)%vec,tol)
+
+
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%shut_down('core')
+
+
+    !
+    ! Clean-up
+    !
+    call delete_file(filename)
+
+end subroutine test_chidg_matrix_operator_mtv_3

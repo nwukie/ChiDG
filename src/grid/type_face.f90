@@ -54,6 +54,7 @@ module type_face
         integer(ik)             :: iface           ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
         integer(ik)             :: nfields         ! Number of equations in equationset_t
         integer(ik)             :: nterms_s        ! Number of terms in solution polynomial expansion
+        integer(ik)             :: nterms_c        ! Number of terms in solution polynomial expansion
         integer(ik)             :: dof_start       ! Starting DOF index in ChiDG-global index 
         integer(ik)             :: dof_local_start ! Starting DOF index in ChiDG-local index 
         integer(ik)             :: ntime
@@ -330,6 +331,7 @@ contains
         !
         self%nfields    = elem%nfields
         self%nterms_s   = elem%nterms_s
+        self%nterms_c   = elem%nterms_c
         self%dof_start  = elem%dof_start
         self%ntime      = elem%ntime
         self%basis_s    => elem%basis_s

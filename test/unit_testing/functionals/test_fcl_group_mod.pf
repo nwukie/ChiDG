@@ -1,0 +1,196 @@
+module test_fcl_group_mod
+    use pfunit_mod
+    use mod_kinds,              only: rk,ik
+    use type_chidg,             only: chidg_t
+    use type_functional_group,  only: functional_group_t
+    use type_evaluator,         only: evaluator_t
+    use mod_functional
+    implicit none
+
+    public  :: test_fcl
+
+
+    !>  Here, procedures from mod_functional and type_functional_group are tested.
+    !!
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   10/29/2018
+    !!
+    !--------------------------------------------------------------------------
+    @TestCase
+    type, extends(MpiTestCase) ::  test_fcl
+
+        type(chidg_t)   :: chidg
+
+    contains
+
+        procedure   ::  setUp
+        procedure   ::  tearDown
+
+    end type test_fcl
+    !***************************************************************************
+
+
+contains
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !! derived type procedure. The argument names have to match
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   10/29/2018
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_fcl),    intent(inout)   :: this
+
+        
+        !
+        ! Start up ChiDG
+        ! 
+        call this%chidg%start_up('core')
+
+
+        !-------------------------------------------!
+        !     Send io to file                       !
+        !-------------------------------------------!
+        IO_DESTINATION   = 'file'
+
+
+    end subroutine setUp
+    !**************************************************************************************
+    
+
+    !>
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_fcl),    intent(inout)   :: this
+
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%shut_down('core')
+
+    end subroutine tearDown
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Test functional_group initialization.
+    !!
+    !!  Initialize with two functionals.
+    !!
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   10/29/2018
+    !!
+    !!-------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_fcl__init_fcl_group(self)
+        class(test_fcl), intent(inout)   :: self
+
+        type(functional_group_t)         :: fcl_group
+
+        
+        !
+        ! Initialize the functional_group
+        ! This being tested
+        !
+        call fcl_group%init(2)
+        
+        !
+        ! Test
+        !
+        @assertEqual(2,size(fcl_group%fcl_entities))
+        @assertTrue(fcl_group%compute_functionals)
+
+
+
+
+    end subroutine test_fcl__init_fcl_group
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Test functional_group add_functional procedure.
+    !!  Other porcedure being tested here:
+    !!      - nfunctional (functional_group_t)
+    !!      - create_functional (mod_functional)
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   10/29/2018
+    !!
+    !!-------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_fcl__add_functional(self)
+        class(test_fcl), intent(inout)   :: self
+
+        type(functional_group_t)         :: fcl_group
+        class(evaluator_t), allocatable  :: fcl_entity1, fcl_entity2
+
+        !
+        ! Check number of functional added, should be zero
+        !
+        @assertEqual(0,fcl_group%n_functionals())
+
+
+        !
+        ! Create functional entities 
+        !
+        call create_functional('Test 1D Energy'  ,fcl_entity1)
+        call create_functional('Test 1D integral',fcl_entity2)
+
+
+        !
+        ! Add fcl entities to functional group
+        ! This being tested
+        !
+        call fcl_group%add_functional(fcl_entity1)
+        
+        !
+        ! test
+        !
+        @assertEqual(1,fcl_group%n_functionals())
+
+        !
+        ! Add fcl entities to functional group
+        ! This being tested
+        !
+        call fcl_group%add_functional(fcl_entity2)
+        
+        !
+        ! test
+        !
+        @assertEqual(2,fcl_group%n_functionals())
+        @assertTrue(fcl_group%compute_functionals)
+
+
+
+
+    end subroutine test_fcl__add_functional
+    !**************************************************************************************
+
+
+
+
+
+
+
+end module test_fcl_group_mod

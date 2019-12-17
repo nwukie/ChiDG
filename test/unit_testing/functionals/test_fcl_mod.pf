@@ -1,0 +1,169 @@
+module test_fcl_mod
+    use pfunit_mod
+    use mod_kinds,              only: rk,ik
+    use type_chidg,             only: chidg_t
+    use type_evaluator,         only: evaluator_t
+    use mod_functional
+    implicit none
+
+    public  :: test_fcl
+
+
+    !>  Here, procedures from mod_functional are tested.
+    !!
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   10/29/2018
+    !!
+    !--------------------------------------------------------------------------
+    @TestCase
+    type, extends(MpiTestCase) ::  test_fcl
+
+        type(chidg_t)   :: chidg
+
+    contains
+
+        procedure   ::  setUp
+        procedure   ::  tearDown
+
+    end type test_fcl
+    !***************************************************************************
+
+
+contains
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !! derived type procedure. The argument names have to match
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   10/29/2018
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_fcl),    intent(inout)   :: this
+
+        
+        !
+        ! Start up ChiDG
+        ! 
+        call this%chidg%start_up('core')
+
+        !-------------------------------------------!
+        !     Send io to file                       !
+        !-------------------------------------------!
+        IO_DESTINATION   = 'file'
+
+    end subroutine setUp
+    !**************************************************************************************
+    
+
+    !>
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_fcl),    intent(inout)   :: this
+
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%shut_down('core')
+
+    end subroutine tearDown
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Test functional_existence.
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   10/29/2018
+    !!
+    !!-------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_fcl__init_fcl_existence(self)
+        class(test_fcl), intent(inout)   :: self
+
+        logical     :: exist_
+
+        !
+        ! This being tested
+        !        
+        exist_ = check_functional_existence('Y-force')
+        
+        !
+        ! Test
+        !
+        @assertTrue(exist_)
+
+
+        !
+        ! This being tested
+        !        
+        exist_ = check_functional_existence('Dummy name')
+        
+        !
+        ! Test
+        !
+        @assertFalse(exist_)
+
+
+
+    end subroutine test_fcl__init_fcl_existence
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Test create_functional
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   10/29/2018
+    !!
+    !!-------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_fcl__create_functional(self)
+        class(test_fcl), intent(inout)   :: self
+
+        class(evaluator_t), allocatable  :: fcl_entity
+
+        !
+        ! Create functional entities 
+        !
+        call create_functional('Test 1D Energy',fcl_entity)
+
+
+        !
+        ! Test creation
+        !
+        @assertEqual('Test 1D Energy' ,fcl_entity%get_name())
+        @assertEqual('VOLUME INTEGRAL',fcl_entity%get_int_type())
+        @assertEqual('Functional'     ,fcl_entity%get_eval_type())
+
+
+
+    end subroutine test_fcl__create_functional
+    !**************************************************************************************
+
+
+
+
+
+
+
+end module test_fcl_mod

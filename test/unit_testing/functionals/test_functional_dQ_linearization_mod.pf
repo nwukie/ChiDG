@@ -1,0 +1,453 @@
+!>  The dQ linearization of the functionals is tested here.
+!!
+!!  @author Matteo Ugolotti
+!!  @date   9/28/2018
+!!
+!----------------------------------------------------------------------------------------------
+module test_functional_dQ_linearization_mod
+    use pfunit_mod
+    use mod_kinds,                      only: rk,ik
+    use mod_constants,                  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, dQ_DIFF
+    use mod_test_utilities,             only: create_mesh_file
+    use mod_file_utilities,             only: delete_file
+    use type_function,                  only: function_t
+    use mod_function,                   only: create_function, registered_fcns
+    use mod_chidg_mpi,                  only: IRANK, NRANK, ChiDG_COMM
+    use mpi_f08,                        only: MPI_COMM, MPI_REAL8, MPI_SUM
+
+    use type_chidg,                     only: chidg_t
+    use type_cache_data,                only: cache_data_t
+    use mod_string,                     only: string_t
+    use type_bc_state,                  only: bc_state_t
+    use type_bc_state_group,            only: bc_state_group_t
+    use mod_bc,                         only: create_bc
+    use mod_functional,                 only: registered_functional
+    use type_evaluator,                 only: evaluator_t
+    use type_point_ad,                  only: point_ad_t
+
+    use type_integral_cache,            only: integral_cache_t
+    use type_functional_cache_handler,  only: functional_cache_handler_t
+    use mod_update_functionals,         only: update_functionals
+     
+    use mod_test_functional_utilities
+    use mod_io
+    use DNAD_D
+
+    implicit none
+
+    public  :: test_functional_dq_lin
+
+
+
+    !>  The test case object that carries the initialized chidg state to the actual tests.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   28/9/2018
+    !!
+    !------------------------------------------------------------------------------------------
+    @TestCase
+    type, extends(MpiTestCase) ::  test_functional_dq_lin
+
+        character(len=9)            :: gridfile = "D1E6M1.h5"
+        type(chidg_t)               :: chidg
+        type(mpi_comm)              :: ChiDG_COMM
+        integer(ik)                 :: solution_order = 3
+
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_functional_dq_lin
+    !******************************************************************************************
+
+
+
+
+
+
+
+    !>  Function implementing an initial solution for scalar advection 
+    !!  sets a linear variation in x direction from 1 to 3.
+    !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/28/2018
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    type, extends(function_t), public :: initial_solution_dq_f
+
+
+    contains
+
+        procedure   :: init => init_initial_solution
+        procedure   :: compute => compute_initial_solution
+
+    end type initial_solution_dq_f
+    !********************************************************************************
+
+
+    !>  Function implementing an functional solution for scalar advection.
+    !!
+    !!  d/du int{1/2*u^2} = int{2x+1} = x^2 + x
+    !!  
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/28/2018
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    type, extends(function_t), public :: functional_solution_f
+
+
+    contains
+
+        procedure   :: init => init_functional_solution
+        procedure   :: compute => compute_functional_solution
+
+    end type functional_solution_f
+    !********************************************************************************
+
+
+
+
+
+contains
+
+
+    !-------------------------------------------------------------------------------!
+    !                     Implement Initial Solution Function                       !
+    !-------------------------------------------------------------------------------!
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/28/2018
+    !!
+    !-------------------------------------------------------------------------
+    subroutine init_initial_solution(self)
+        class(initial_solution_dq_f),  intent(inout)  :: self
+
+        !
+        ! Set function name
+        !
+        call self%set_name("Test Compute Initial Solution for dQ")
+
+
+    end subroutine init_initial_solution
+    !*************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/28/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    impure elemental function compute_initial_solution(self,time,coord) result(val)
+        class(initial_solution_dq_f),  intent(inout)   :: self
+        real(rk),                      intent(in)      :: time
+        type(point_ad_t),              intent(in)      :: coord
+
+        type(AD_D)  :: x, y, z, val
+
+
+        x = coord%c1_
+        y = coord%c2_
+        z = coord%c3_
+
+        val = TWO*x + ONE
+        
+
+    end function compute_initial_solution
+    !**********************************************************************************
+
+
+
+
+    !-------------------------------------------------------------------------------!
+    !                     Implement Functional Solution Function                       !
+    !-------------------------------------------------------------------------------!
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/28/2018
+    !!
+    !-------------------------------------------------------------------------
+    subroutine init_functional_solution(self)
+        class(functional_solution_f),  intent(inout)  :: self
+
+        !
+        ! Set function name
+        !
+        call self%set_name("Test Compute Functional Solution")
+
+
+    end subroutine init_functional_solution
+    !*************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/28/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    impure elemental function compute_functional_solution(self,time,coord) result(val)
+        class(functional_solution_f),  intent(inout)   :: self
+        real(rk),                   intent(in)      :: time
+        type(point_ad_t),           intent(in)      :: coord
+
+        type(AD_D)  :: x, y, z, val
+
+
+        x = coord%c1_
+        y = coord%c2_
+        z = coord%c3_
+
+        val = x
+        
+
+    end function compute_functional_solution
+    !**********************************************************************************
+
+
+
+
+
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !!  derived type procedure. The argument names have to match
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   28/9/2018
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_functional_dq_lin),    intent(inout)   :: this
+        
+        type(initial_solution_dq_f)             :: initial_solution
+        type(functional_solution_f)             :: functional_solution
+        
+        type(string_t)                  :: group_names(1,6)
+        type(bc_state_group_t)          :: bc_state_groups(3)
+        class(bc_state_t),  allocatable :: bc_state
+        class(function_t),  allocatable :: fcn
+        integer(ik)                     :: ierr
+       
+        
+        
+        
+
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+       
+        
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
+        
+        
+        !-------------------------------------------!
+        !     Register initial solution function    !
+        !-------------------------------------------!
+        call initial_solution%init()
+        call registered_fcns%push_back(initial_solution)
+       
+        !-------------------------------------------!
+        !     Register Functional solution function !
+        !-------------------------------------------!
+        call functional_solution%init()
+        call registered_fcns%push_back(functional_solution)
+       
+
+        !-------------------------------------------!
+        !     Send io to file                       !
+        !-------------------------------------------!
+        IO_DESTINATION   = 'file'
+        
+
+        call this%chidg%data%time_manager%init()
+
+       
+        
+        !
+        ! Let the first chidg instance to create common gridfile
+        !
+        if (IRANK == GLOBAL_MASTER) then
+        
+            group_names(1,:) = [string_t("LHS")           , &
+                                string_t("RHS")           , &
+                                string_t("Extrapolation") , &
+                                string_t("Extrapolation") , &
+                                string_t("Extrapolation") , &
+                                string_t("Extrapolation")]
+
+            bc_state_groups(1)%name = "LHS"
+            call create_bc("Scalar Value",bc_state)
+            call bc_state%set_fcn_option("Value","val",ONE)
+            call bc_state_groups(1)%add_bc_state(bc_state)
+
+            bc_state_groups(2)%name = "RHS"
+            call create_bc("Scalar Value",bc_state)
+            call bc_state%set_fcn_option("Value","val",THREE)
+            call bc_state_groups(2)%add_bc_state(bc_state)
+
+            bc_state_groups(3)%name = "Extrapolation"
+            call create_bc("Scalar Extrapolate", bc_state)
+            call bc_state_groups(3)%add_bc_state(bc_state)
+            
+            
+            call create_mesh_file('D1 NxNxN',this%gridfile,                         &
+                                             group_names     = group_names,         &
+                                             bc_state_groups = bc_state_groups,     &
+                                             nelem_xi        = 6,                   &
+                                             nelem_eta       = 1,                   &
+                                             nelem_zeta      = 1                    )
+        
+
+            !
+            ! Add functional to gridfile
+            !
+            call meshfile_add_functional(this%gridfile,'Test 1D Energy','01')
+        
+        end if
+        call MPI_Barrier(this%ChiDG_COMM,ierr)
+        
+        
+        !
+        ! Set the accuracy for the solution expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=this%solution_order)
+
+        !
+        ! Read grid + bcs
+        !
+        call this%chidg%read_mesh(this%gridfile,'adjoint storage')
+
+        !
+        ! Initialize solution
+        !
+        call create_function(fcn,'Test Compute Initial Solution for dQ')
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
+
+
+
+    end subroutine setUp
+    !******************************************************************************************
+    
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   28/9/2018
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_functional_dq_lin),    intent(inout)   :: this
+
+        !
+        ! Close all ChiDG interface
+        !
+        call this%chidg%shut_down('core')
+            
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
+
+    end subroutine tearDown
+    !******************************************************************************************
+
+
+
+
+
+    !>  Test volume functional with dQ linearization
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   28/9/2018
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test(npes=[1,2,3])
+    subroutine test_functional_cache__dq_lin(self)
+        class(test_functional_dq_lin),    intent(inout)   :: self
+        
+        integer(ik)                         :: ifunc, idiff, ielem
+        real(rk)                            :: tol
+        real(rk),           allocatable     :: ref(:), dJdq(:), invmass(:,:), vec(:)
+        class(function_t),  allocatable     :: fcn
+
+
+        
+        tol = 1.e-6_rk
+        self%chidg%data%time_manager%istep = 1
+
+        !
+        ! Test updated functionals dQ linearization
+        !
+        call update_functionals(self%chidg%data,differentiate=dQ_DIFF)
+
+
+
+        !
+        ! TEST: dJ/dq should be identical to the solution vector q
+        !       Since
+        !           d/du(1/2*u^2) = u
+        !
+        !       However, the update_functional routine computes the integral
+        !
+        !           d/du int{1/2*u^2}
+        !
+        !       Therefore, we need to multiply the modes of the derivative
+        !       of the functional by invmass to get u.
+        !
+        do ielem = 1,self%chidg%data%sdata%adjoint%Jq(1)%dom(1)%nelements()
+            
+            invmass = self%chidg%data%mesh%domain(1)%elems(ielem)%invmass
+            vec     = self%chidg%data%sdata%adjoint%Jq(1)%dom(1)%vecs(ielem)%vec
+
+            ! matmul(invamass,Jq)            
+            dJdq = matmul(invmass,vec)
+            ref = self%chidg%data%sdata%q%dom(1)%vecs(ielem)%vec
+            
+            
+            ! TEST
+            @assertEqual(ref,dJdq,tol)
+        
+        end do
+
+
+
+
+
+    end subroutine test_functional_cache__dq_lin
+    !******************************************************************************************
+
+
+
+
+
+
+
+end module test_functional_dQ_linearization_mod

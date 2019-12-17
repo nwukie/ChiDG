@@ -1769,10 +1769,8 @@ contains
         !   : Getting/computing auxiliary fields etc.
         call self%process('primal problem')
 
-
         ! Initialize algorithms
         call self%init('algorithms')
-
 
         ! Check optional incoming parameters
         option_write_initial = .false.

@@ -25,8 +25,8 @@ module precon_jacobi
 
         type(chidg_matrix_t) :: D     ! inverse of block diagonal, (ndom,maxelems,ntime)
 
-        PC      :: pc
-        logical :: petsc_initialized = .false.
+        PC          :: pc
+        logical     :: petsc_initialized = .false.
 
     contains
         procedure   :: init
@@ -103,11 +103,11 @@ contains
 
         if (self%petsc_initialized) then
         !******  petsc  implementation  ******!
+
             call PCSetOperators(self%pc, A%wrapped_petsc_matrix%petsc_matrix, A%wrapped_petsc_matrix%petsc_matrix, perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%update: error calling PCSetOperators.')
             call PCSetUp(self%pc, perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%update: error calling PCSetUp.')
-
 
         else
         !******  ChiDG native implementation    ******!

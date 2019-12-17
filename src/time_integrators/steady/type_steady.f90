@@ -105,11 +105,14 @@ contains
         class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
+
         ! Simply solve the nonlinear system. No iteration in time.
         call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner)
 
+
         ! Store end residual from nonlinear solver.
         call self%residual_norm%push_back(nonlinear_solver%residual_norm%at(nonlinear_solver%residual_norm%size()))
+
 
     end subroutine step
     !******************************************************************************************

@@ -237,11 +237,11 @@ contains
 
             ! Procedure for setting subdomain ILU solver fill levels
             call PCASMGetSubKSP(self%pc, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ksp, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCGetSubKSP.')
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCGetSubKSP.')
             call KSPGetPC(ksp(1), sub_pc, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling KSPGetPC.')
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling KSPGetPC.')
             call PCFactorSetLevels(sub_pc, self%ilu_levels, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCFactorSetLevels.')
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCFactorSetLevels.')
 
 
 
@@ -489,6 +489,7 @@ contains
         else
         !******  chidg implementation  ******!
 
+            if (A%transposed) call chidg_signal(FATAL,'precon_rasilu0%apply: not implemented for transposed matrices.')
 
             ! Exchange boundary vector data
             call z%comm_send()

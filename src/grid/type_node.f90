@@ -1,6 +1,5 @@
 module type_node
 #include <messenger.h>
-    
     use mod_kinds,      only: ik,rk
     implicit none
 

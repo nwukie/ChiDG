@@ -4,6 +4,7 @@ add_subdirectory(hole_cutting)
 
 add_lib_sources(
                 type_point.f90 
+                type_point_ad.f90 
                 type_node.f90
                 type_element.f90 
                 type_face.f90 

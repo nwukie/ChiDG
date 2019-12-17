@@ -147,6 +147,7 @@ contains
                                   timing=timing,    &
                                   differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
 
+
             if (niter == 1) then
                 resid0 = rhs%norm(ChiDG_COMM)
                 cfln = rhs%norm_fields(ChiDG_COMM) !initialize

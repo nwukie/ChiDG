@@ -1,0 +1,217 @@
+!>  Test Adjointx storage initialization
+!!  Procedures tested:
+!!      - init
+!!      - init_vector
+!!
+!!  @author Matteo Ugolotti
+!!  @date   9/17/2018
+!!
+!*****************************************************************************************
+module test_chidg_adjointx_mod
+#include <messenger.h>
+    use pfunit_mod
+    use type_chidg,                 only: chidg_t
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ZERO, IO_DESTINATION, &
+                                          OUTPUT_RES
+    use type_chidg,                 only: chidg_t
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: copy_file, delete_file
+    use mod_functional,             only: create_functional
+    use type_evaluator,             only: evaluator_t
+    use type_functional_group,      only: functional_group_t
+    use type_file_properties,       only: file_properties_t
+    use mod_hdf_utilities,          only: get_properties_hdf
+    use mod_string,                 only: string_t
+    use mod_io
+    implicit none
+
+
+    public  :: test_chidg_adjointx
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------
+    @TestCase
+    type, extends(TestCase) ::  test_chidg_adjointx
+
+        type(chidg_t)               :: chidg
+        character(11)               :: fileorig   = 'D2_E8_M1.h5'
+
+            
+    contains
+
+        procedure   ::  setUp
+        procedure   ::  tearDown
+
+    end type test_chidg_adjointx
+    !*****************************************************************************
+
+
+
+
+
+contains
+
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !!  derived type procedure. The argument names have to match
+    !!
+    !!  Create two hdf files with different solutions
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_chidg_adjointx),    intent(inout)   :: this
+
+        real(rk)                            :: tol, ref(1)
+        integer(ik)                         :: ielem, idom, ierr, ifunc,istep
+        class(evaluator_t),     allocatable :: fcl_temp1,fcl_temp2
+        type(functional_group_t)            :: fcl_group
+
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('core')
+
+
+
+        !
+        ! Define functionals to add to the grid file
+        !
+        call create_functional("Test 1D Energy",fcl_temp1)
+        call fcl_temp1%set_ref_geom("01")
+        call fcl_group%add_functional(fcl_temp1)
+        call create_functional("Test 1D Integral",fcl_temp2)
+        call fcl_temp2%set_ref_geom("02")
+        call fcl_group%add_functional(fcl_temp2)
+        
+
+
+        !
+        ! Create grid file
+        !
+        call create_mesh_file("D2 NxNxN M1",this%fileorig,                      &
+                                            nelem_xi          = 4,              &
+                                            nelem_eta         = 2,              &
+                                            nelem_zeta        = 2,              &
+                                            functionals       = fcl_group)
+
+
+        
+
+        !
+        ! Set accuracy for fields expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=1)
+        call this%chidg%set('Time Integrator', algorithm='Steady')
+
+
+        !
+        ! Read grid file
+        !
+        call this%chidg%read_mesh(this%fileorig,'adjointx storage')
+
+
+       
+    end subroutine setUp
+    !*******************************************************************************************
+
+
+
+
+
+    
+
+    !------------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_chidg_adjointx),    intent(inout)   :: this
+
+        !
+        ! Close ChiDG instance
+        !
+        call this%chidg%shut_down('core')
+
+        !
+        ! Delete files that were generated
+        !
+        call delete_file(this%fileorig)
+
+    end subroutine tearDown
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Check the adjointx initialization 
+    !!
+    !!  Testing:    init, init_containers
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !---------------------------------------------------------------------------------
+    @Test
+    subroutine test_adjointx_init(this)
+        class(test_chidg_adjointx),     intent(inout)   :: this 
+
+        integer(ik)             :: istep,ielem,idir,idom,inode
+        type(file_properties_t) :: file_props
+        real(rk)                :: tol
+        real(rk)                :: ref1_nodes_s(27,2,3),ref2_nodes_s(27,2,3)
+        real(rk)                :: temp_ref(27,2)
+        integer(ik)             :: nvars, nterms, nentries
+
+        tol = 1.e-14_rk
+
+       
+        
+        !
+        ! Test initialization of adjointx storage
+        !
+        @assertEqual(2,size(this%chidg%data%sdata%adjointx%vRx))
+        @assertEqual(2,size(this%chidg%data%sdata%adjointx%Jx))
+        @assertEqual(2,size(this%chidg%data%sdata%adjointx%Jx_unsteady))
+        @assertTrue(this%chidg%data%sdata%adjointx%adjointx_initialized)
+        @assertTrue(this%chidg%data%sdata%adjointx%Rx%transposed)
+
+        !
+        ! Test initialization of adjoint storage
+        !
+        @assertEqual(2,size(this%chidg%data%sdata%adjoint%v,1))
+        @assertEqual(1,size(this%chidg%data%sdata%adjoint%v,2))
+        @assertEqual(1,size(this%chidg%data%sdata%adjoint%q_time))
+
+
+    end subroutine test_adjointx_init
+    !******************************************************************************************
+
+
+
+    !!#############################################################################!!
+    !!                                                                             !!     
+    !! NOTE: gather_all procedure is tested in parallel/test_chidg_adjoint_mod.pf  !!
+    !!                                                                             !!     
+    !!##############################################################################
+
+
+
+
+
+
+end module test_chidg_adjointx_mod

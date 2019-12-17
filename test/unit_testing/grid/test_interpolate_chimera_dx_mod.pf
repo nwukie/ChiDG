@@ -1,0 +1,895 @@
+module test_interpolate_chimera_dx_mod
+    use pfunit_mod
+    use type_chidg,         only: chidg_t
+    use type_point,         only: point_t
+    use type_meshdata,      only: meshdata_t
+    use type_face_info,     only: face_info_t
+    use type_element_info,  only: element_info_t
+    use type_function_info, only: function_info_t
+
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
+                                  NEIGHBOR, IO_DESTINATION, dX_DIFF
+    use mod_chidg_mpi,      only: IRANK
+    use mod_DNAD_tools,     only: compute_neighbor_element_l, compute_neighbor_face
+    use mod_interpolate,    only: interpolate_face_standard, interpolate_face_autodiff
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
+    use DNAD_D
+
+    use type_function,      only: function_t
+    use mod_function,       only: create_function
+    implicit none
+
+    public  :: test_interpolate_chimera_dx
+
+
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti 
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    @TestCase
+    type, extends(TestCase) ::  test_interpolate_chimera_dx
+
+        character(:),       allocatable :: filename
+        class(function_t),  allocatable :: fcn
+        type(chidg_t)                   :: chidg
+
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_interpolate_chimera_dx
+    !*******************************************************************************
+
+
+
+
+
+
+
+contains
+
+    !>
+    !!
+    !!  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !!  procedure. The argument names have to match
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_interpolate_chimera_dx),    intent(inout)   :: this
+
+        integer(ik)                     :: ivar, idom
+        type(meshdata_t),   allocatable :: meshdata(:) 
+        
+        !
+        ! Send log to file
+        !
+        IO_DESTINATION = 'file'
+    
+
+        !        
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('core')
+
+
+        !
+        ! Create mesh file
+        !
+        this%filename = "D2E8M1_abutting_matching.h5"
+        call create_mesh_file("D2 E8 M1 : Abutting : Matching",this%filename)
+
+
+        !
+        ! Set order of solution expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=2)
+
+
+        !
+        ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
+        !
+        call this%chidg%read_mesh(this%filename,'primal storage')
+
+
+        !
+        ! Initialized solution to linearly increasing values in x direction
+        !
+        ivar = this%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+
+
+        !
+        ! Initialize variable
+        !
+        call create_function(this%fcn,'x_linear')                 ! Allocate constant function
+        call this%fcn%set_option('val'  ,1._rk)                     ! Set constant function value
+        call this%fcn%set_option('slope',1._rk)                     ! Set slope function value
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,this%fcn,ivar)
+
+    
+    end subroutine setUp
+    !*******************************************************************************************
+    
+
+    !>
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_interpolate_chimera_dx),    intent(inout)   :: this
+
+        ! Close ChiDG interface
+        call this%chidg%shut_down('core')
+
+        ! Clean-up test file
+        call delete_file(this%filename)
+
+    end subroutine tearDown
+    !*******************************************************************************************
+
+    
+    
+    
+    !--------------------------------------------------------------------------------------------
+    !                               Face - surface interpolation - Autodiff
+    !--------------------------------------------------------------------------------------------
+        
+    
+    
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. 
+    !!  source=NEIGHBOR. Testing fuction values. 
+    !!
+    !!  @author Matteo Ugolotti 
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    @Test
+    subroutine test__interpolate_face_chimera_AD__dx_values__idE(self)
+        class(test_interpolate_chimera_dx),    intent(inout)   :: self
+        
+        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
+        type(AD_D), allocatable     :: u_gq(:)
+        real(rk),   allocatable     :: u_ref(:)
+        real(rk)                    :: tol, val, slope
+        type(face_info_t)           :: face
+        type(element_info_t)        :: elem
+        type(function_info_t)       :: fcn
+        
+
+
+        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
+
+            idomain = 1         ! domain index
+            ielem   = 2         ! given element
+            itime   = 1
+            iface   = XI_MAX    ! given face
+            
+            elem%idomain_g  = idomain
+            elem%idomain_l  = idomain
+            elem%ielement_g = ielem
+            elem%ielement_l = ielem
+
+
+            !
+            ! A seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
+            !
+            call fcn%seed%init(idomain_g    = 1,     &
+                               idomain_l    = 1,     &
+                               ielement_g   = 2,     &
+                               ielement_l   = 2,     &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               nnodes_r     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
+            
+            !
+            ! Set linearization type to allow to initialize correctly the derivatives
+            !
+            fcn%dtype = dX_DIFF
+
+            !
+            ! Set face indices
+            !
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+
+
+            tol  = 1.e-13_rk
+            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq  = faces(ielem,iface)%basis_s%nnodes_if()
+
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
+            allocate(u_gq(ngq))
+            allocate(u_ref(ngq))
+            
+            
+            !
+            ! Compute dX derivatives of the interpolators
+            !
+            call self%chidg%data%mesh%compute_derivatives_dx(elem,differentiate=dX_DIFF)
+
+
+            !
+            ! PROCEDURE BEING TESTED
+            !
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
+            
+            
+            ! Initialize reference
+            val   = self%fcn%get_option_value('val')
+            slope = self%fcn%get_option_value('slope')
+            u_ref = val
+            u_ref = u_ref + slope*faces(ielem,iface)%interp_coords(:,1)
+            
+            
+            ! Test that interpolation to quadrature nodes from modes to autodiff variables 
+            ! on an element volume is producing expected results
+            @assertEqual(u_ref,u_gq(:)%x_ad_,tol)
+
+
+            !
+            ! Release dX derivatives of the interpolators
+            !
+            call self%chidg%data%mesh%release_derivatives_dx(elem,differentiate=dX_DIFF)
+            
+        end associate
+        
+    end subroutine test__interpolate_face_chimera_AD__dx_values__idE
+    !*******************************************************************************************
+    
+    
+    
+    
+    
+        
+    !> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. 
+    !! source=NEIGHBOR. Testing derivatives. 
+    !!
+    !!  @author Matteo Ugolotti 
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    @Test
+    subroutine test__interpolate_face_chimera_AD__dx_derivatives__idF(self)
+        class(test_interpolate_chimera_dx),    intent(inout)   :: self
+        
+        integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain, itime
+        type(AD_D), allocatable     :: u_gq(:)
+        real(rk),   allocatable     :: deriv_ref(:)
+        real(rk)                    :: tol
+        type(face_info_t)           :: face
+        type(element_info_t)        :: elem
+        type(function_info_t)       :: fcn
+        
+        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
+
+            idomain = 1         ! domain index
+            ielem   = 2         ! given element
+            iface   = XI_MAX    ! given face
+            itime   = 1
+            
+            elem%idomain_g  = idomain
+            elem%idomain_l  = idomain
+            elem%ielement_g = ielem
+            elem%ielement_l = ielem
+
+
+            !
+            ! A seed element, this is the current element. Since we are performing a 
+            ! NEIGHBOR interpolation, derivatives should be zero
+            !
+            call fcn%seed%init(idomain_g    = 1,     &
+                               idomain_l    = 1,     &
+                               ielement_g   = 2,     &
+                               ielement_l   = 2,     &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               nnodes_r     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
+
+
+            
+            !
+            ! Set linearization type to allow to initialize correctly the derivatives
+            !
+            fcn%dtype = dX_DIFF
+
+            !
+            ! Set face indices
+            !
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+
+
+
+            tol    = 1.e-13_rk
+            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq    = faces(ielem,iface)%basis_s%nnodes_if()
+            nderiv = faces(ielem,iface)%nnodes_r * 3
+
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
+            ! not yet allocated
+            allocate(u_gq(ngq))             ! AD
+            allocate(deriv_ref(nderiv))     ! Real
+            
+            
+            !
+            ! Compute dX derivatives of the interpolators
+            !
+            call self%chidg%data%mesh%compute_derivatives_dx(elem,differentiate=dX_DIFF)
+
+            
+            !
+            ! PROCEDURE BEING TESTED
+            !
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
+            
+            deriv_ref = ZERO
+            
+            ! Test that the derivatives for each gq variable are zero, since we seeded 
+            ! with a neighbor element
+            do igq = 1,ngq
+                @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
+            end do
+
+            !
+            ! Release dX derivatives of the interpolators
+            !
+            call self%chidg%data%mesh%release_derivatives_dx(elem,differentiate=dX_DIFF)
+            
+        end associate
+        
+    end subroutine test__interpolate_face_chimera_AD__dx_derivatives__idF
+    !*******************************************************************************************
+    
+
+
+
+
+
+
+    
+   
+    !> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. 
+    !! source=NEIGHBOR. Testing fuction values. 
+    !!
+    !!  @author Matteo Ugolotti 
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    @Test
+    subroutine test__interpolate_face_chimera_dx_AD__values__idG(self)
+        class(test_interpolate_chimera_dx),    intent(inout)   :: self
+        
+        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
+        type(AD_D), allocatable     :: u_gq(:)
+        real(rk),   allocatable     :: u_ref(:)
+        real(rk)                    :: tol, val, slope
+        type(face_info_t)           :: face
+        type(element_info_t)        :: elem
+        type(function_info_t)       :: fcn
+        
+        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q )
+
+            idomain = 1         ! domain index
+            ielem   = 2         ! given element
+            iface   = XI_MAX    ! given face
+            itime   = 1
+            
+            elem%idomain_g  = idomain
+            elem%idomain_l  = idomain
+            elem%ielement_g = ielem
+            elem%ielement_l = ielem
+
+            !
+            ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
+            ! all dervative arrays should be nonzero
+            !
+            call fcn%seed%init(idomain_g    = 2,     &
+                               idomain_l    = 2,     &
+                               ielement_g   = 1,     &
+                               ielement_l   = 1,     &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               nnodes_r     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
+
+            
+            !
+            ! Set linearization type to allow to initialize correctly the derivatives
+            !
+            fcn%dtype = dX_DIFF
+
+
+
+            !
+            ! Set face indices
+            !
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+
+
+
+            tol  = 1.e-13_rk
+            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq  = faces(ielem,iface)%basis_s%nnodes_if()
+            
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
+            ! not yet allocated
+            allocate(u_gq(ngq))
+            allocate(u_ref(ngq))
+            
+            
+            !
+            ! Compute dX derivatives of the interpolators
+            !
+            call self%chidg%data%mesh%compute_derivatives_dx(elem,differentiate=dX_DIFF)
+
+            
+            !
+            ! PROCEDURE BEING TESTED
+            !
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
+            
+            
+            !
+            ! Initialize reference
+            !
+            val   = self%fcn%get_option_value('val')
+            slope = self%fcn%get_option_value('slope')
+            u_ref = val
+            u_ref = u_ref + slope*self%chidg%data%mesh%domain(2)%faces(1,1)%interp_coords(:,1)
+            
+            
+            ! Test that interpolation to quadrature nodes from modes to autodiff variables 
+            ! on an element volume is producing expected results
+            @assertEqual(u_ref,u_gq(:)%x_ad_,tol)
+
+            !
+            ! Release dX derivatives of the interpolators
+            !
+            call self%chidg%data%mesh%release_derivatives_dx(elem,differentiate=dX_DIFF)
+            
+            
+        end associate
+        
+    end subroutine test__interpolate_face_chimera_dx_AD__values__idG
+    !*******************************************************************************************
+    
+    
+   
+   
+   
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. 
+    !!  source=NEIGHBOR. 
+    !!  Testing fuction derivatives. 
+    !!
+    !!  @author Matteo Ugolotti 
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    @Test
+    subroutine test__interpolate_face_chimera_dx_AD__derivatives__idH(self)
+        class(test_interpolate_chimera_dx),    intent(inout)   :: self
+        
+        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain, itime
+        type(AD_D), allocatable     :: u_gq(:)
+        real(rk),   allocatable     :: deriv_ref(:)
+        real(rk)                    :: tol
+        real(rk),   allocatable     :: mat(:,:)
+        type(face_info_t)           :: face
+        type(element_info_t)        :: elem
+        type(function_info_t)       :: fcn
+
+        integer(ik)                 :: ielem_n, iface_n, idonor, ChiID, ndonor_nodes
+        
+        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
+
+            idomain = 1         ! domain index
+            ielem   = 2         ! given element
+            iface   = XI_MAX    ! given face
+            itime   = 1
+            idonor  = 1
+            
+            elem%idomain_g  = idomain
+            elem%idomain_l  = idomain
+            elem%ielement_g = ielem
+            elem%ielement_l = ielem
+
+            ChiID = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%ChiID
+
+            !
+            ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
+            ! all dervative arrays should be nonzero
+            !
+            call fcn%seed%init(idomain_g    = 2,     &
+                               idomain_l    = 2,     &
+                               ielement_g   = 1,     &
+                               ielement_l   = 1,     &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               nnodes_r     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
+
+            
+            !
+            ! Set linearization type to allow to initialize correctly the derivatives
+            !
+            fcn%dtype = dX_DIFF
+
+
+
+            !
+            ! Set face indices
+            !
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+
+
+            
+            tol    = 1.e-13_rk
+            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq    = faces(ielem,iface)%basis_s%nnodes_if()
+            nderiv = faces(ielem,iface)%nnodes_r * 3 
+
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
+            ! not yet allocated
+            allocate(u_gq(ngq))
+            allocate(deriv_ref(nderiv))
+            
+            
+            !
+            ! Compute dX derivatives of the interpolators
+            !
+            call self%chidg%data%mesh%compute_derivatives_dx(elem,differentiate=dX_DIFF)
+
+            
+            !
+            ! PROCEDURE BEING TESTED
+            !
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
+              
+            
+            
+            ! Test that interpolation to quadrature nodes from modes to autodiff variables 
+            ! on an element volume is producing expected results
+            ielem_n = compute_neighbor_element_l(self%chidg%data%mesh,idomain,ielem,iface,idonor)
+            iface_n = compute_neighbor_face(   self%chidg%data%mesh,idomain,ielem,iface,idonor)
+
+
+            !mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_interpolator%at(idonor)
+            mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%value
+            !ndonor_nodes = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_gq_indices(idonor)%size()
+            ndonor_nodes = size(self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%node_index)
+
+            do igq = 1,ndonor_nodes
+                ! Zero expected derivatives, since val matrix does not depends of physical coordiantes
+                deriv_ref = ZERO
+                ! Test derivatives
+                @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
+            end do
+
+            !
+            ! Release dX derivatives of the interpolators
+            !
+            call self%chidg%data%mesh%release_derivatives_dx(elem,differentiate=dX_DIFF)
+            
+        end associate
+
+
+
+    end subroutine test__interpolate_face_chimera_dx_AD__derivatives__idH
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    
+   
+    !> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. 
+    !! source=NEIGHBOR. Testing fuction values. 
+    !!
+    !!  @author Matteo Ugolotti 
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    @Test
+    subroutine test__interpolate_face_chimera_dx_AD__grad1__idI(self)
+        class(test_interpolate_chimera_dx),    intent(inout)   :: self
+        
+        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
+        type(AD_D), allocatable     :: u_gq(:)
+        real(rk),   allocatable     :: u_ref(:)
+        real(rk)                    :: tol, val, slope
+        type(face_info_t)           :: face
+        type(element_info_t)        :: elem
+        type(function_info_t)       :: fcn
+        
+        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q )
+
+            idomain = 1         ! domain index
+            ielem   = 2         ! given element
+            iface   = XI_MAX    ! given face
+            itime   = 1
+            
+            elem%idomain_g  = idomain
+            elem%idomain_l  = idomain
+            elem%ielement_g = ielem
+            elem%ielement_l = ielem
+
+            !
+            ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
+            ! all dervative arrays should be nonzero
+            !
+            call fcn%seed%init(idomain_g    = 2,     &
+                               idomain_l    = 2,     &
+                               ielement_g   = 1,     &
+                               ielement_l   = 1,     &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               nnodes_r     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
+
+            
+            !
+            ! Set linearization type to allow to initialize correctly the derivatives
+            !
+            fcn%dtype = dX_DIFF
+
+
+
+            !
+            ! Set face indices
+            !
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+
+
+
+            tol  = 1.e-13_rk
+            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq  = faces(ielem,iface)%basis_s%nnodes_if()
+            
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
+            ! not yet allocated
+            allocate(u_gq(ngq))
+            allocate(u_ref(ngq))
+            
+            
+            !
+            ! Compute dX derivatives of the interpolators
+            !
+            call self%chidg%data%mesh%compute_derivatives_dx(elem,differentiate=dX_DIFF)
+
+            
+            !
+            ! PROCEDURE BEING TESTED
+            !
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'grad1', NEIGHBOR)
+            
+            
+            !
+            ! Initialize reference
+            !
+            !   For the seed element (idom=2,ielem=1) the solution vector q is
+            !   q = [1.625,0.0,0.0,0.125,0.0,0.0,0.0,0.0]
+            !   since the solution is linear in x direction (ie xi as well) and constant
+            !   in all other directions. 
+            !   Furthermore, the first column of grad1 matric, correspondent to the first
+            !   terms, is zero. The result the malmul operation matmul(grad1,q) is nothing
+            !   but the 4th column of grad1 matrix multiplied by the 4th modal coefficient
+            !   of the solution.
+            !
+            u_ref = self%chidg%data%mesh%domain(2)%faces(1,1)%grad1(:,4) * 0.125_rk
+            
+            ! Test that interpolation to quadrature nodes from modes to autodiff variables 
+            ! on an element volume is producing expected results
+            @assertEqual(u_ref,u_gq(:)%x_ad_,tol)
+            
+
+            !
+            ! Release dX derivatives of the interpolators
+            !
+            call self%chidg%data%mesh%release_derivatives_dx(elem,differentiate=dX_DIFF)
+            
+        end associate
+        
+    end subroutine test__interpolate_face_chimera_dx_AD__grad1__idI
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+
+   
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. 
+    !!  source=NEIGHBOR. 
+    !!  Testing fuction derivatives. 
+    !!
+    !!  @author Matteo Ugolotti 
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    @Test
+    subroutine test__interpolate_face_chimera_dx_AD__grad1_derivatives__idJ(self)
+        class(test_interpolate_chimera_dx),    intent(inout)   :: self
+        
+        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain, itime, &
+                                       nnodes_r
+        type(AD_D), allocatable     :: u_gq(:)
+        real(rk),   allocatable     :: deriv_ref(:)
+        real(rk)                    :: tol
+        real(rk),   allocatable     :: mat(:,:)
+        type(face_info_t)           :: face
+        type(element_info_t)        :: elem
+        type(function_info_t)       :: fcn
+
+        integer(ik)                 :: ielem_n, iface_n, idonor, ChiID, ndonor_nodes
+        
+        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
+
+            idomain = 1         ! domain index
+            ielem   = 2         ! given element
+            iface   = XI_MAX    ! given face
+            itime   = 1
+            idonor  = 1
+            
+            elem%idomain_g  = idomain
+            elem%idomain_l  = idomain
+            elem%ielement_g = ielem
+            elem%ielement_l = ielem
+
+
+            !
+            ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
+            ! all dervative arrays should be nonzero
+            !
+            call fcn%seed%init(idomain_g    = 2,     &
+                               idomain_l    = 2,     &
+                               ielement_g   = 1,     &
+                               ielement_l   = 1,     &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               nnodes_r     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
+
+            
+            !
+            ! Set linearization type to allow to initialize correctly the derivatives
+            !
+            fcn%dtype = dX_DIFF
+
+
+
+            !
+            ! Set face indices
+            !
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+
+
+            
+            tol      = 1.e-13_rk
+            ivar     = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq      = faces(ielem,iface)%basis_s%nnodes_if()
+            nnodes_r = faces(ielem,iface)%nnodes_r 
+            nderiv   = nnodes_r * 3 
+
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
+            ! not yet allocated
+            allocate(u_gq(ngq))
+            allocate(deriv_ref(nderiv))
+            
+            
+            !
+            ! Compute dX derivatives of the interpolators
+            !
+            call self%chidg%data%mesh%compute_derivatives_dx(elem,differentiate=dX_DIFF)
+
+            
+            !
+            ! PROCEDURE BEING TESTED
+            !
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'grad1', NEIGHBOR)
+              
+            
+
+            !
+            ! Initialize reference
+            !
+            !   For the seed element (idom=2,ielem=1) the solution vector q is
+            !   q = [1.625,0.0,0.0,0.125,0.0,0.0,0.0,0.0]
+            !   since the solution is linear in x direction (ie xi as well) and constant
+            !   in all other directions. 
+            !   Furthermore, the first column of dgrad1_dx matrix, correspondent to the first
+            !   terms, is zero. The derivatives of result of the malmul operation 
+            !   matmul(grad1,q) is nothing but the 4th column of dgrad1_dx matrix multiplied 
+            !   by the 4th modal coefficient of the solution.
+            !
+            
+            do igq = 1,ndonor_nodes
+                ! Nonzero expected derivatives
+                deriv_ref(1:nnodes_r)               = self%chidg%data%mesh%domain(2)%faces(1,1)%dgrad1_dx(igq,4,:,1) * 0.125_rk
+                deriv_ref(nnodes_r+1:2*nnodes_r)    = self%chidg%data%mesh%domain(2)%faces(1,1)%dgrad1_dx(igq,4,:,2) * 0.125_rk
+                deriv_ref(2*nnodes_r+1:3*nnodes_r)  = self%chidg%data%mesh%domain(2)%faces(1,1)%dgrad1_dx(igq,4,:,3) * 0.125_rk
+                ! Test derivatives
+                @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
+            end do
+
+            !
+            ! Release dX derivatives of the interpolators
+            !
+            call self%chidg%data%mesh%release_derivatives_dx(elem,differentiate=dX_DIFF)
+            
+        end associate
+
+
+
+    end subroutine test__interpolate_face_chimera_dx_AD__grad1_derivatives__idJ
+    !*******************************************************************************************
+
+
+
+end module test_interpolate_chimera_dx_mod

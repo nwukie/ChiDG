@@ -1,0 +1,907 @@
+!--------------------------------------------------------------------------------
+!
+!                           Functional: X-FORCE
+!
+!   NOTE: THIS IS TEST IS EXACTLY THE SAME OF "integration_force_cartesian_mod.pf"
+!         BUT X-FORCE IS COMPUTED BY MEANS OF THE FUNCTIONAL "fcl_xforce".
+!         DERIVATIVES ARE NOT TESTED HERE!
+!
+!
+!   Test subroutine compute_force. We with to test both inviscid(pressure)
+!   and viscous(shear) contributions to the subroutine. We accomplish this
+!   by imposing an initial known solution with constant pressure, and a 
+!   linear velocity profile.
+!
+!   The constant pressure force contributes purely to force in the direction -Y
+!
+!   The shear force contributes purely to force in the direction +X
+!
+!      +Y
+!       ^
+!       |
+!       |
+!       .------> +X
+!
+!   The initial condition is set as:
+!       Density    = 1.19
+!       Pressure   = 100000
+!       Velocity-1 = dudy*y (linear velocity profile)
+!
+!       where:
+!           dudy      = 100.0
+!           viscosity = 1.0
+!
+!   The inviscid force in the direction -Y is constant over the plate
+!   and is computed as:
+!       Fy = Pressure * Area = 100000.0 * 1.0 = 100000.0
+!
+!
+!   The viscous force in the direction +X is constant over the plate 
+!   and is computed analytically as:
+!       Fx = viscosity * dudy * Area = 1.0 * 100.0 * 1.0 = 100.0
+!
+!
+!   The result we expect to obtain from the compute_force routine is then:
+!       F = [100.0, -100000.0, 0.0]
+!   
+!
+!================================================================================
+!   Boundary conditions
+!================================================================================
+!
+!                             Farfield
+!           |-------------------------------------------|
+!           |                                           |
+!  Farfield |                  ---->                    | Farfield
+!           |                                           |
+!           |                                           |
+!           |-------------------------------------------|
+!                               Wall
+!
+!
+!
+!
+!       Group Name = Farfield
+!       BC State   = Farfield 
+!           Density    = 1.19
+!           Pressure   = 100,000
+!           Velocity-1 = dudy*y
+!           Velocity-2 = 0.0
+!           Velocity-3 = 0.0
+!
+!
+!       Group Name = Walls
+!       BC State   = Wall
+!
+!================================================================================
+!   Initial condition:
+!================================================================================
+!
+!  Linear Velocity Profile:  du/dy = (100-0)/(1-0) = 100
+!                          --------->.
+!                          ------->.
+!                          ----->.
+!                          --->.
+!                          ->.
+!                          .
+!      |------------------------------------------|
+!
+!
+!================================================================================
+!
+!
+!         Constant Pressure:  pressure = 100,000
+!                                        
+!       |    |    |    |    |    |    |    |    |               
+!       |    |    |    |    |    |    |    |    |               
+!       |    |    |    |    |    |    |    |    |               
+!       |    |    |    |    |    |    |    |    |               
+!       v    v    v    v    v    v    v    v    v               
+!      |------------------------------------------|
+!
+!
+!================================================================================
+!
+!
+!         Energy = P/(gam-1)  +  0.5*density*velocity**2
+!               NOTE: because velocity is linear and pressure is constant, 
+!                     energy varies quadratically. Because of this,
+!                     when we project the initial solution at low order, 
+!                     we will not get exactly the correct energy at the wall 
+!                     because of polynomial aliasing in the projection.
+!
+!                     For this reason, we only run this test for P2 and P3
+!                     because for these cases, our basis can exactly
+!                     represent the initial solution.
+
+!                          -------------->.
+!                          ------------->.
+!                          ----------->.
+!                          --------->.
+!                          ------>.
+!                          ->.
+!      |------------------------------------------|
+!
+!
+!================================================================================
+!
+!   @author Nathan A. Wukie (AFRL)
+!   @date   7/13/2017
+!
+!
+!   @author Matteo Ugolotti
+!   @date   9/26/2018
+!
+!--------------------------------------------------------------------------------
+module test_xforce_mod
+    use pfunit_mod
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: ZERO, HALF, ONE, THREE, IO_DESTINATION, NO_DIFF
+    use type_chidg,                 only: chidg_t
+    use type_chidg_worker,          only: chidg_worker_t
+    use type_model,                 only: model_t
+    use mod_models,                 only: model_factory
+    use type_equation_set,          only: equation_set_t
+    use type_equation_builder,      only: equation_builder_t
+    use mod_equations,              only: equation_set_factory
+    use type_bc_state,              only: bc_state_t
+    use type_bc_state_group,        only: bc_state_group_t
+    use mod_bc,                     only: create_bc
+    use type_function,              only: function_t
+    use mod_function,               only: create_function, registered_fcns
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
+    use type_fluid_pseudo_timestep, only: fluid_pseudo_timestep_t
+
+    use mod_functional,             only: create_functional
+    use type_evaluator,             only: evaluator_t
+    use type_functional_group,      only: functional_group_t
+    use mod_update_functionals,     only: update_functionals
+
+    use mod_string,                 only: string_t
+    use type_point,                 only: point_t
+    use type_point_ad,              only: point_ad_t
+    use mod_chidg_mpi,              only: IRANK, NRANK
+    use mpi_f08,                    only: MPI_COMM
+    use mod_io
+    use DNAD_D
+    implicit none
+
+
+    public  :: xforce
+
+
+
+
+    !>  This parameter initialize the state for each test
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !-------------------------------------------------------------------------------
+    @TestParameter
+    type, extends(MpiTestParameter) :: case_grid_order
+
+        character(100)  :: gridfile
+        integer(ik)     :: order
+
+    contains
+        procedure   :: toString
+    end type case_grid_order
+    !*******************************************************************************
+
+
+
+
+
+
+
+    !>  Main testing fixture with test components that get initialized for each test
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !-------------------------------------------------------------------------------
+    @TestCase(testParameters={getParameters()}, constructor=newTest)
+    type, extends(MpiTestCase) :: xforce
+
+        character(100)  :: gridfile
+        integer(ik)     :: order
+
+        type(chidg_t)   :: chidg
+        type(mpi_comm)  :: ChiDG_COMM
+
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type xforce
+    !*******************************************************************************
+
+
+
+
+    !>  Function implementing an initial solution for fluid variables that 
+    !!  sets a linear velocity gradient and constant pressure
+    !!
+    !!  du/dy = 100
+    !   P     = 100000
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/12/2017
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    type, extends(function_t), public :: initial_solution_f
+
+
+    contains
+
+        procedure   :: init => init_initial_solution
+        procedure   :: compute => compute_initial_solution
+
+    end type initial_solution_f
+    !********************************************************************************
+
+
+
+
+    !>  A new equation set builder to build a Navier Stokes equation set with the 
+    !!  appropriate viscosity model.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/13/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    type, extends(equation_builder_t), public :: test_xforce_equation_builder_t
+
+
+    contains
+
+        procedure   :: init => init_builder
+        procedure   :: build
+
+    end type test_xforce_equation_builder_t
+    !****************************************************************************************
+
+
+
+    !>  Constant Viscosity for Laminar Viscosity.
+    !!
+    !!  Model Fields:
+    !!  ------------------------------
+    !!      : Laminar Viscosity
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/13/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(model_t)  :: test_xforce_constant_viscosity_t
+
+    contains
+
+        procedure   :: init => init_constant_viscosity
+        procedure   :: compute => compute_constant_viscosity
+
+    end type test_xforce_constant_viscosity_t
+    !***************************************************************************************
+
+
+
+
+
+
+contains
+
+    !-------------------------------------------------------------------------------!
+    !                     Implement Initial Solution Function                       !
+    !-------------------------------------------------------------------------------!
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !-------------------------------------------------------------------------
+    subroutine init_initial_solution(self)
+        class(initial_solution_f),  intent(inout)  :: self
+
+        !
+        ! Set function name
+        !
+        call self%set_name("Test Compute x-Force Initial Solution")
+
+        call self%add_option('ivar', ZERO)
+
+    end subroutine init_initial_solution
+    !*************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    impure elemental function compute_initial_solution(self,time,coord) result(val)
+        class(initial_solution_f),  intent(inout)   :: self
+        real(rk),                   intent(in)      :: time
+        type(point_ad_t),           intent(in)      :: coord
+
+        real(rk)    :: ivar, tol,               &
+                       velocity_2, velocity_3,  &
+                       momentum_2, momentum_3,  &
+                       dudy, density, pressure, &
+                       gam
+        type(AD_D)  :: x, y, z, velocity_1,     &
+                       vmag, momentum_1,        &
+                       energy, val
+
+        tol = 1.e-5_rk
+        ivar = self%get_option_value('ivar')
+
+
+        x = coord%c1_
+        y = coord%c2_
+        z = coord%c3_
+
+
+        gam      = 1.4_rk
+        dudy     = 100._rk
+        pressure = 100000._rk
+
+        density    = 1.19_rk
+        velocity_1 = dudy*y
+        velocity_2 = ZERO
+        velocity_3 = ZERO
+        vmag       = sqrt(velocity_1*velocity_1 + velocity_2*velocity_2 + velocity_3*velocity_3)
+        momentum_1 = density*velocity_1
+        momentum_2 = density*velocity_2
+        momentum_3 = density*velocity_3
+        energy     = (pressure/(gam-ONE)) + HALF*density*vmag*vmag
+
+        !
+        ! Initialize val, in case we put equal to a real
+        !
+        val = energy
+        val = 0.0_rk
+
+        if (     real(ivar-1) < tol) then
+            val = density
+        else if (real(ivar-2) < tol) then
+            val = momentum_1
+        else if (real(ivar-3) < tol) then
+            val = momentum_2
+        else if (real(ivar-4) < tol) then
+            val = momentum_3
+        else if (real(ivar-5) < tol) then
+            val = energy
+        else if (real(ivar-6) < tol) then
+            val = pressure
+        else if (real(ivar-7) < tol) then
+            val = velocity_1
+        else if (real(ivar-8) < tol) then
+            val = velocity_2
+        else if (real(ivar-9) < tol) then
+            val = velocity_3
+        else
+            print*, 'Bad function parameter!'
+        end if
+
+
+    end function compute_initial_solution
+    !**********************************************************************************
+
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------------
+    !                           Builder Methods for new equation set
+    !----------------------------------------------------------------------------------------
+
+
+    !>  Initialize the new linear diffusion builder.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/30/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_builder(self)
+        class(test_xforce_equation_builder_t),   intent(inout)  :: self
+
+        call self%set_name("Test X-Force Navier Stokes")
+
+    end subroutine init_builder
+    !****************************************************************************************
+
+    
+
+
+
+    !>  Implement the linear diffusion builder definition.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/19/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    function build(self,blueprint) result(eqn)
+        class(test_xforce_equation_builder_t), intent(in)  :: self
+        character(*),                           intent(in)  :: blueprint
+
+        type(equation_set_t)            :: eqn
+        type(fluid_pseudo_timestep_t)   :: fluid_pseudo_time
+        
+
+        !
+        ! Set equationset name.
+        !
+        call eqn%set_name("Test X-Force Navier Stokes")
+
+        call eqn%add_operator('Euler Volume Flux')
+        call eqn%add_operator('Euler Boundary Average Flux')
+        call eqn%add_operator('Euler Roe Flux')
+        call eqn%add_operator('Euler BC Flux')
+        call eqn%add_operator('Euler Volume Cylindrical Source')
+
+        call eqn%add_operator('Fluid Viscous Volume Operator')
+        call eqn%add_operator('Fluid Viscous Boundary Average Operator')
+        call eqn%add_operator('Fluid Viscous BC Operator')
+        call eqn%add_operator('Fluid Viscous Volume Cylindrical Source')
+
+        call eqn%add_model('Ideal Gas')
+        call eqn%add_model('Test X-Force Constant Viscosity')
+        call eqn%add_model('Stokes Hypothesis')
+        call eqn%add_model('Reynolds Analogy')
+        call eqn%add_model('Zero Turbulent Model Fields')
+        call eqn%add_model('Shear Stress')
+        call eqn%add_model('Temperature Gradient')
+
+
+        call eqn%add_pseudo_timestep(fluid_pseudo_time)
+
+
+
+    end function build
+    !***************************************************************************************
+
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------------
+    !                           Implement viscosity model
+    !----------------------------------------------------------------------------------------
+
+
+
+    !>  Initialize the model with a name and the model fields it is contributing to.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/13/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine init_constant_viscosity(self)   
+        class(test_xforce_constant_viscosity_t), intent(inout)   :: self
+
+        !
+        ! Initialize model object
+        !
+        call self%set_name('Test X-Force Constant Viscosity')
+        call self%set_dependency('f(Q-)')
+        call self%add_model_field('Laminar Viscosity')
+
+
+    end subroutine init_constant_viscosity
+    !***************************************************************************************
+
+
+
+
+
+
+    !>  Routine for computing a viscosity contribution from Sutherland's Law.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/1/2016
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine compute_constant_viscosity(self,worker)
+        class(test_xforce_constant_viscosity_t), intent(in)       :: self
+        type(chidg_worker_t),                   intent(inout)   :: worker
+
+        type(AD_D), dimension(:),   allocatable :: viscosity, T
+
+        !
+        ! Interpolate solution to quadrature nodes
+        !
+        T = worker%get_field('Temperature','value')
+    
+
+        !
+        ! Constant Viscosity for Laminar Viscosity
+        !   - initialize derivatives first...
+        !
+        viscosity = T
+        viscosity = ONE
+
+
+        !
+        ! Contribute laminar viscosity
+        !
+        call worker%store_model_field('Laminar Viscosity', 'value', viscosity)
+
+
+    end subroutine compute_constant_viscosity
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------------
+    !                           pFUnit test infrastructure
+    !----------------------------------------------------------------------------------------
+
+
+
+
+
+    !> Parameter constructors
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function newTest(test_parameter) result(test)
+        type(case_grid_order),  intent(in)  :: test_parameter
+        type(xforce)                          :: test
+
+        test%gridfile    = test_parameter%gridfile
+        test%order       = test_parameter%order
+
+    end function newTest
+    !******************************************************************************
+
+
+    !> Parameter initialization
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function getParameters() result(params)
+        type(case_grid_order), allocatable :: params(:)
+    
+        type(string_t),     allocatable :: files(:)
+        integer(ik),        allocatable :: orders(:)
+        integer(ik) :: icase
+
+
+        files = [  string_t('file.h5'), &
+                   string_t('file.h5') ]
+
+        orders = [ 3, 4 ]
+
+
+        !Initialize the test case container with the parameter
+        allocate(params(size(files)))
+        do icase = 1,size(files)
+            params(icase)%gridfile = files(icase)%str
+            params(icase)%order    = orders(icase)
+        end do
+
+    end function getParameters
+    !*******************************************************************************************
+
+
+
+    !>  Reporting the parameters of the test
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function toString(this) result(string)
+        class (case_grid_order),    intent(in)  :: this
+        character(:), allocatable   :: string
+
+        character(len=200) :: buffer
+
+        write(buffer,"( '(order)=','(', I2 ')' )") this%order
+        string = trim(buffer)
+
+    end function toString
+    !********************************************************************************************
+
+
+
+
+
+
+
+    !>  Set up test routine.
+    !!
+    !!  This routine reads the grid file, sets up boundary conditions, initializes storage
+    !!  and sets the appropriate configuration options.
+    !!  This routine also gets the numer of processors and the correct MPI communicator for 
+    !!  the test.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(xforce),  intent(inout)   :: this
+
+        type(initial_solution_f)                :: initial_solution
+        type(test_xforce_constant_viscosity_t)   :: test_xforce_constant_viscosity
+        type(test_xforce_equation_builder_t)     :: test_xforce_equation_builder
+        class(bc_state_t),  allocatable :: bc_state
+        type(bc_state_group_t)          :: bc_state_groups(3)
+        type(string_t)                  :: group_names(1,6)
+        class(evaluator_t), allocatable :: fcl_temp
+        type(functional_group_t)        :: fcl_group
+        class(function_t),  allocatable :: fcn
+        real(rk)                        :: tol, entropy_error
+
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
+
+
+
+
+
+        !-------------------------------------------!
+        !     Register initial solution function    !
+        !-------------------------------------------!
+        call initial_solution%init()
+        call registered_fcns%push_back(initial_solution)
+
+
+
+        !-------------------------------------------!
+        !     Register viscosity model              !
+        !-------------------------------------------!
+        call test_xforce_constant_viscosity%init()
+        call model_factory%register(test_xforce_constant_viscosity)
+
+
+        !-------------------------------------------!
+        !     Register equation builder             !
+        !-------------------------------------------!
+        call test_xforce_equation_builder%init()
+        call equation_set_factory%register(test_xforce_equation_builder%build('default'))
+
+
+        
+        tol = 1.e-6_rk
+
+        !------------------------------------------------------------------------------
+        !
+        ! Define input data here that is normally read through the namelist input file
+        !
+        ! As a result, we don't call chidg%init('io')
+        !
+        !------------------------------------------------------------------------------
+        basis            = 'legendre'
+        gq_rule          = 3
+        time_integrator  = 'steady'
+        nonlinear_solver = 'quasi_newton'
+        linear_solver    = 'fgmres_cgs'
+        preconditioner   = 'RASILU0'
+        IO_DESTINATION   = 'file'
+        !------------------------------------------------------------------------------
+
+
+
+
+
+        ! Set timescheme options to pass during initialization
+        !call toptions%set('dt', 0.1_rk) ! means nothing here
+        !call toptions%set('nsteps',100)
+        !call toptions%set('nwrite',0)
+
+        call this%chidg%data%time_manager%init()
+
+        ! Set linear solver options to pass during initialization
+        call loptions%set('tol',1.e-9_rk)
+
+        ! Set nonlinear solver options
+        call noptions%set('tol',3.e-5_rk)
+        call noptions%set('cfl0',1.0_rk)
+        call noptions%set('nsteps',100)
+
+
+
+
+
+        !
+        ! Create mesh
+        !
+        if (IRANK == GLOBAL_MASTER) then
+            bc_state_groups(1)%name = 'Farfield'
+            bc_state_groups(2)%name = 'Symmetry'
+            bc_state_groups(3)%name = 'Walls'
+
+
+            call create_bc('Farfield', bc_state)
+            call bc_state%set_fcn('Density',    'Test Compute X-Force Initial Solution')
+            call bc_state%set_fcn('Pressure',   'Test Compute X-Force Initial Solution')
+            call bc_state%set_fcn('Velocity-1', 'Test Compute X-Force Initial Solution')
+            call bc_state%set_fcn('Velocity-2', 'Test Compute X-Force Initial Solution')
+            call bc_state%set_fcn('Velocity-3', 'Test Compute X-Force Initial Solution')
+            call bc_state%set_fcn_option('Density',   'ivar', 1._rk   )
+            call bc_state%set_fcn_option('Pressure',  'ivar', 6._rk   )
+            call bc_state%set_fcn_option('Velocity-1','ivar', 7._rk   )
+            call bc_state%set_fcn_option('Velocity-2','ivar', 8._rk   )
+            call bc_state%set_fcn_option('Velocity-3','ivar', 9._rk   )
+            call bc_state_groups(1)%add_bc_state(bc_state)
+
+            call create_bc('Symmetry', bc_state)
+            call bc_state_groups(2)%add_bc_state(bc_state)
+
+            call create_bc('Wall', bc_state)
+            call bc_state_groups(3)%add_bc_state(bc_state)
+
+
+
+            ! Define patch group names
+            group_names(1,:) = [string_t('Farfield'), &
+                                string_t('Farfield'), &
+                                string_t('Walls')   , &
+                                string_t('Farfield'), &
+                                string_t('Symmetry'), &
+                                string_t('Symmetry') ]
+        
+            
+            ! Define functional to be tested: LIFT!
+            call create_functional("X-force",fcl_temp)
+            call fcl_temp%set_ref_geom("Walls")
+            call fcl_group%add_functional(fcl_temp)
+
+            call create_mesh_file('D1 NxNxN',this%gridfile,equation_sets   = [string_t('Test X-Force Navier Stokes')], &
+                                                           group_names     = group_names,     &
+                                                           bc_state_groups = bc_state_groups, &
+                                                           nelem_xi        = 10,              &
+                                                           nelem_eta       = 1,               &
+                                                           nelem_zeta      = 1,               &
+                                                           functionals     = fcl_group)
+        end if
+
+
+        !
+        ! Set ChiDG components
+        !
+        call this%chidg%set('Solution Order',   integer_input=this%order)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+
+
+        !
+        ! Read grid
+        !
+        call this%chidg%read_mesh(this%gridfile,'primal storage')
+
+
+
+
+        !
+        ! Initialize solution
+        !
+        call create_function(fcn,'Test Compute X-Force Initial Solution')
+
+        call fcn%set_option('ivar',1._rk)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
+        call fcn%set_option('ivar',2._rk)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,2)
+        call fcn%set_option('ivar',3._rk)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,3)
+        call fcn%set_option('ivar',4._rk)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,4)
+        call fcn%set_option('ivar',5._rk)
+       call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,5)
+
+
+
+    end subroutine SetUp
+    !*******************************************************************************************
+
+
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(xforce),  intent(inout)   :: this
+
+        ! Close ChiDG
+        call this%chidg%shut_down('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
+
+    end subroutine tearDown
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Compute xforce
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/12/2017
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    @Test(npes=[1,4,7])
+    subroutine test_compute_xforce(self)
+        class(xforce),  intent(inout)   :: self
+
+        real(rk)    :: tol, xforce_computed, xforce_expected
+
+
+        !
+        ! Compute xforce: THIS IS BEING TESTED
+        !
+        call update_functionals(self%chidg%data,differentiate = NO_DIFF)
+
+
+
+        !
+        ! Test that computed entropy error is the expected value
+        !
+        xforce_expected = 100._rk
+        xforce_computed = self%chidg%data%sdata%functional%func(1)%at(1)
+        tol = 1.e-6_rk
+        @assertEqual(xforce_expected,xforce_computed,tol)
+
+
+    end subroutine test_compute_xforce
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+end module test_xforce_mod

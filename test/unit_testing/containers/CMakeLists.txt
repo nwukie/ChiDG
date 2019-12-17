@@ -9,12 +9,19 @@ add_test_sources(containers
                 test_domain_matrix_mod.pf
                 test_operator_domain_dot.pf
                 test_dict.pf
+                test_fclvector.pf
                 test_rvector.pf
                 test_ivector.pf
                 test_mvector.pf
+                test_nvector.pf
                 test_pvector.pf
+                test_functional_cache_mod.pf
+                test_chidg_adjoint_mod.pf
+                test_chidg_adjointx_mod.pf
+                test_chidg_functional.pf
                 test_chidg_vector_operators_mod.pf
                 test_chidg_matrix_operator_mv.pf
+                test_chidg_matrix_operator_mtv.pf
                 test_chidg_matrix_operator_chimera_mv.pf
                 test_chidg_matrix_operator_HB_mv.pf
                 test_function_status_mod.pf

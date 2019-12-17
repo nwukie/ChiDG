@@ -103,7 +103,7 @@ module integration_smoothbump_mod
         integer(ik)                 :: order
         character(:),   allocatable :: gridfile
         character(:),   allocatable :: backend
-        type(mpi_comm)              :: ChiDG_COMM
+!        type(mpi_comm)              :: ChiDG_COMM
 
     contains
         procedure   :: setUp
@@ -148,8 +148,8 @@ contains
 
         nelem_xi  = [24, 48]
         nelem_eta = [12, 24]
-        files     = [string_t('24x12x2'), string_t('48x24x2')]
         orders    = [0,1,2,3]
+        files     = [string_t('24x12x2'), string_t('48x24x2')]
         backend   = [string_t("native"), string_t("petsc")  ]
 
         !Initialize the test case container with the parameter

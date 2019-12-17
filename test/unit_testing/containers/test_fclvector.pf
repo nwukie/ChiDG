@@ -1,0 +1,202 @@
+@Test
+subroutine test_fclvector__push_back__onevalue()
+    use pfunit_mod
+    use mod_kinds,          only: rk, ik
+    use type_fclvector,     only: fclvector_t
+    use type_evaluator,     only: evaluator_t
+
+    use fcl_mass_averaged_entropy,  only: mass_averaged_entropy_t
+    !use fcl_kinetic_energy,         only: kinetic_energy_t
+    use fcl_test_1D_energy,         only: test_1D_energy_t
+    use fcl_test_1D_integral,       only: test_1D_integral_t
+    use fcl_xforce,                 only: xforce_t
+    use fcl_yforce,                 only: yforce_t
+    use fcl_xforce_coeff,           only: xforce_coeff_t
+    
+    implicit none
+
+    type(fclvector_t)               :: vec
+    class(evaluator_t),allocatable  :: read_fcl 
+    type(test_1D_integral_t)        :: TEST_1D_INTEGRAL
+    integer(ik)                     :: index_
+
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    call vec%push_back(TEST_1D_INTEGRAL)
+    call vec%data(1)%func%init()
+
+
+
+    ! Test value
+    index_ = vec%index_by_name("Test 1D Integral")
+    allocate(read_fcl, source=vec%data(index_)%func)
+    @assertEqual("Test 1D Integral",read_fcl%get_name())
+    @assertEqual("Functional"      ,read_fcl%get_eval_type())
+    @assertEqual("VOLUME INTEGRAL" ,read_fcl%get_int_type())
+
+    ! Test size
+    @assertEqual(1,vec%size())
+
+    ! Test capacity
+    @assertEqual(5,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+@Test
+subroutine test_fclvector__push_back__twovalues()
+    use pfunit_mod
+    use mod_kinds,          only: rk, ik
+    use type_fclvector,     only: fclvector_t
+    use type_evaluator,     only: evaluator_t
+
+    use fcl_mass_averaged_entropy,  only: mass_averaged_entropy_t
+    !use fcl_kinetic_energy,         only: kinetic_energy_t
+    use fcl_test_1D_energy,         only: test_1D_energy_t
+    use fcl_test_1D_integral,       only: test_1D_integral_t
+    use fcl_xforce,                 only: xforce_t
+    use fcl_yforce,                 only: yforce_t
+    use fcl_xforce_coeff,           only: xforce_coeff_t
+    
+    implicit none
+
+    type(fclvector_t)               :: vec
+    class(evaluator_t),allocatable  :: read_fcl 
+    type(test_1D_integral_t)        :: TEST_1D_INTEGRAL
+    type(test_1D_energy_t)          :: TEST_1D_ENERGY
+    integer(ik)                     :: index_
+
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    call vec%push_back(TEST_1D_INTEGRAL)
+    call vec%data(1)%func%init()
+    call vec%push_back(TEST_1D_ENERGY)
+    call vec%data(2)%func%init()
+
+
+
+    ! Test value
+    index_ = vec%index_by_name("Test 1D Integral")
+    allocate(read_fcl, source=vec%data(index_)%func)
+    @assertEqual("Test 1D Integral",read_fcl%get_name())
+    @assertEqual("Functional"      ,read_fcl%get_eval_type())
+    @assertEqual("VOLUME INTEGRAL" ,read_fcl%get_int_type())
+
+    ! Test value
+    index_ = vec%index_by_name("Test 1D Energy")
+    deallocate(read_fcl)
+    allocate(read_fcl, source=vec%data(index_)%func)
+    @assertEqual("Test 1D Energy"  ,read_fcl%get_name())
+    @assertEqual("Functional"      ,read_fcl%get_eval_type())
+    @assertEqual("VOLUME INTEGRAL" ,read_fcl%get_int_type())
+
+    ! Test size
+    @assertEqual(2,vec%size())
+
+    ! Test capacity
+    @assertEqual(5,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+@Test
+subroutine test_fclvector__push_back__multiplevalues()
+    use pfunit_mod
+    use mod_kinds,          only: rk, ik
+    use type_fclvector,     only: fclvector_t
+    use type_evaluator,     only: evaluator_t
+
+    use fcl_mass_averaged_entropy,  only: mass_averaged_entropy_t
+    use fcl_test_1D_energy,         only: test_1D_energy_t
+    use fcl_test_1D_integral,       only: test_1D_integral_t
+    use fcl_xforce,                 only: xforce_t
+    use fcl_yforce,                 only: yforce_t
+    use fcl_xforce_coeff,           only: xforce_coeff_t
+    use fcl_yforce_coeff,           only: yforce_coeff_t
+    
+    implicit none
+
+    type(fclvector_t)               :: vec
+    class(evaluator_t),allocatable  :: read_fcl 
+    type(test_1D_integral_t)        :: TEST_1D_INTEGRAL
+    type(test_1D_energy_t)          :: TEST_1D_ENERGY
+    type(mass_averaged_entropy_t)   :: MASS_AVERAGED_ENTROPY
+    type(yforce_coeff_t)            :: YFORCE_COEFF
+    type(yforce_t)                  :: YFORCE
+    type(xforce_t)                  :: XFORCE
+    integer(ik)                     :: index_
+
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    call vec%push_back(TEST_1D_INTEGRAL)
+    call vec%data(1)%func%init()
+    call vec%push_back(TEST_1D_ENERGY)
+    call vec%data(2)%func%init()
+    call vec%push_back(MASS_AVERAGED_ENTROPY)
+    call vec%data(3)%func%init()
+    call vec%push_back(YFORCE_COEFF)
+    call vec%data(4)%func%init()
+    call vec%push_back(YFORCE)
+    call vec%data(5)%func%init()
+    call vec%push_back(XFORCE)
+    call vec%data(6)%func%init()
+
+
+
+    ! Test value
+    index_ = vec%index_by_name("Y-force")
+    allocate(read_fcl, source=vec%data(index_)%func)
+    @assertEqual("Y-force"       ,read_fcl%get_name())
+    @assertEqual("Functional"    ,read_fcl%get_eval_type())
+    @assertEqual("FACE INTEGRAL" ,read_fcl%get_int_type())
+
+    ! Test value
+    index_ = vec%index_by_name("Test 1D Energy")
+    deallocate(read_fcl)
+    allocate(read_fcl, source=vec%data(index_)%func)
+    @assertEqual("Test 1D Energy"  ,read_fcl%get_name())
+    @assertEqual("Functional"      ,read_fcl%get_eval_type())
+    @assertEqual("VOLUME INTEGRAL" ,read_fcl%get_int_type())
+
+    ! Test size
+    @assertEqual(6,vec%size())
+
+    ! Test capacity
+    @assertEqual(10,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+

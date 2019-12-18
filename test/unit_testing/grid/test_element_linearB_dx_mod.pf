@@ -3,6 +3,7 @@ module test_element_linearB_dx_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                           XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use mod_chidg_mpi,              only: IRANK
     use type_chidg,                 only: chidg_t
     use type_element,               only: element_t
     use type_face,                  only: face_t
@@ -66,12 +67,15 @@ contains
         real(rk)                        :: nodes(npt,3)
         real(rk)                        :: sqrt_two, inv_sqrt_two
         integer(ik)                     :: ftype, ielem, idomain,                       &
-                                           neqns, nterms_s, ntime,                      &
+                                           nfields, nterms_s, ntime,                      &
+                                           dof_start, dof_local_start,                  &
                                            ineighbor_domain_g,  ineighbor_domain_l,     &
                                            ineighbor_element_g, ineighbor_element_l,    &
                                            ineighbor_face, ineighbor_proc,              &
-                                           ineighbor_neqns, ineighbor_nterms_s,         &
-                                           ineighbor_nterms_c, ineighbor_nnodes_r
+                                           ineighbor_nfields, ineighbor_nterms_s,         &
+                                           ineighbor_nterms_c, ineighbor_nnodes_r,      &
+                                           ineighbor_ntime,                             &
+                                           ineighbor_dof_start, ineighbor_dof_local_start
         
         
         call this%chidg%start_up('core')
@@ -106,17 +110,19 @@ contains
         
         
         ! Initialize Element geometry and Numerics
-        idomain  = 1
-        ielem    = 1
-        neqns    = 2
-        nterms_s = 8
-        ntime    = 1
-        call this%elem%init_geom(nodes        = nodes,                          &
-                                 connectivity = [1, 2, 3, 4, 5, 6, 7, 8],       &
-                                 etype        = 1,                              &
-                                 location     = [idomain,idomain,ielem,ielem],  &
+        idomain         = 1
+        ielem           = 1
+        nfields         = 2
+        nterms_s        = 8
+        ntime           = 1
+        dof_start       = 1
+        dof_local_start = 1
+        call this%elem%init_geom(nodes        = nodes,                              &
+                                 connectivity = [1, 2, 3, 4, 5, 6, 7, 8],           &
+                                 etype        = 1,                                  &
+                                 location     = [idomain,idomain,ielem,ielem,IRANK],&
                                  coord_system = 'Cartesian')
-        call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime)
+        call this%elem%init_sol('Quadrature',1,nterms_s,nfields,ntime,dof_start,dof_local_start)
         call this%elem%update_interpolations_dx()
 
 
@@ -131,46 +137,53 @@ contains
 
         ! Initialize face neighbors
         ftype = 0
-        ineighbor_domain_g  = 0
-        ineighbor_domain_l  = 0
-        ineighbor_element_g = 0
-        ineighbor_element_l = 0
-        ineighbor_proc      = 0
-        ineighbor_neqns     = 2
-        ineighbor_nterms_s  = 8
-        ineighbor_nterms_c  = 8
-        ineighbor_nnodes_r  = 8
-        call this%faces(XI_MIN)%set_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,           &
-                                                     ineighbor_nterms_s,ineighbor_nterms_s,    &
-                                                     ineighbor_nnodes_r,ineighbor_proc)
-        call this%faces(XI_MAX)%set_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,           &
-                                                     ineighbor_nterms_s,ineighbor_nterms_s,    &
-                                                     ineighbor_nnodes_r,ineighbor_proc)
-        call this%faces(ETA_MIN)%set_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,           &
-                                                     ineighbor_nterms_s,ineighbor_nterms_s,    &
-                                                     ineighbor_nnodes_r,ineighbor_proc)
-        call this%faces(ETA_MAX)%set_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,           &
-                                                     ineighbor_nterms_s,ineighbor_nterms_s,    &
-                                                     ineighbor_nnodes_r,ineighbor_proc)
-        call this%faces(ZETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,           &
-                                                     ineighbor_nterms_s,ineighbor_nterms_s,    &
-                                                     ineighbor_nnodes_r,ineighbor_proc)
-        call this%faces(ZETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                     ineighbor_element_g,ineighbor_element_l,  &
-                                                     ineighbor_face,ineighbor_neqns,           &
-                                                     ineighbor_nterms_s,ineighbor_nterms_s,    &
-                                                     ineighbor_nnodes_r,ineighbor_proc)
-
+        ineighbor_domain_g        = 0
+        ineighbor_domain_l        = 0
+        ineighbor_element_g       = 0
+        ineighbor_element_l       = 0
+        ineighbor_proc            = 0
+        ineighbor_nfields         = 2
+        ineighbor_ntime           = 1
+        ineighbor_nterms_s        = 8
+        ineighbor_nterms_c        = 8
+        ineighbor_dof_start       = 1
+        ineighbor_dof_local_start = 1
+        call this%faces(XI_MIN)%set_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_nterms_c,             &
+                                                     ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(XI_MAX)%set_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_nterms_c,             &
+                                                     ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ETA_MIN)%set_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_nterms_c,             &
+                                                     ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ETA_MAX)%set_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_nterms_c,             &
+                                                     ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ZETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_nterms_c,             &
+                                                     ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
+        call this%faces(ZETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,             &
+                                                     ineighbor_element_g,ineighbor_element_l,           &
+                                                     ineighbor_face,ineighbor_nfields,ineighbor_ntime,  &
+                                                     ineighbor_nterms_s,ineighbor_nterms_c,             &
+                                                     ineighbor_proc,                 &
+                                                     ineighbor_dof_start,ineighbor_dof_local_start)
 
 
         call this%faces(XI_MIN)%init_sol(this%elem)
@@ -318,7 +331,7 @@ contains
         
 
 
-        do inode = 1,self%elem%basis_s%nnodes_ie()
+        do inode = 1,self%elem%basis_s%nnodes_elem()
             @assertEqual(transpose(test_djinv_dx(inode,:,:)),self%elem%djinv_dx(inode,:,:), 1.e-14_rk)
         end do
         
@@ -337,7 +350,7 @@ contains
     subroutine testElement_dmetric_dx(self)
         class(test_element_linearB_dx),    intent(inout)   :: self
 
-        real(rk)    :: test_metric(3,3,self%elem%basis_s%nnodes_ie())
+        real(rk)    :: test_metric(3,3,self%elem%basis_s%nnodes_elem())
         real(rk)    :: test_dmetric_dx(3,3,8,8,3), test_dmetric_dx_trans(3,3)
         integer(ik) :: inode, inode_diff, idir, irow
         
@@ -1497,8 +1510,8 @@ contains
                                         /),(/3,3/))
         
 
-        do inode = 1,self%elem%basis_s%nnodes_ie()
-            do inode_diff = 1,self%elem%nnodes_r
+        do inode = 1,self%elem%basis_s%nnodes_elem()
+            do inode_diff = 1,self%elem%nterms_c
                 do idir = 1,3
                     @assertEqual(transpose(test_dmetric_dx(:,:,inode,inode_diff,idir)),self%elem%dmetric_dx(:,:,inode,inode_diff,idir), 1.e-14_rk)
                 end do
@@ -1522,7 +1535,7 @@ contains
         class(test_element_linearB_dx),    intent(inout)   :: self
         
         
-        real(rk), dimension(self%elem%basis_s%nnodes_ie(),self%elem%nterms_s,self%elem%nnodes_r,3) :: test_dgrad1_dx, test_dgrad2_dx, test_dgrad3_dx
+        real(rk), dimension(self%elem%basis_s%nnodes_elem(),self%elem%nterms_s,self%elem%nterms_c,3) :: test_dgrad1_dx, test_dgrad2_dx, test_dgrad3_dx
         
         real(rk)        :: tol
         integer(ik)     :: inode_diff, idir, inode
@@ -1801,7 +1814,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dgrad1_dx(:,:,inode_diff,idir)),self%elem%dgrad1_dx(:,:,inode_diff,idir),tol)
             end do
@@ -1824,7 +1837,7 @@ contains
         class(test_element_linearB_dx),    intent(inout)   :: self
         
         
-        real(rk), dimension(self%elem%basis_s%nnodes_ie(),self%elem%nterms_s,self%elem%nnodes_r,3) :: test_dgrad2_dx
+        real(rk), dimension(self%elem%basis_s%nnodes_elem(),self%elem%nterms_s,self%elem%nterms_c,3) :: test_dgrad2_dx
         
         real(rk)        :: tol
         integer(ik)     :: inode_diff, idir, inode
@@ -2103,7 +2116,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dgrad2_dx(:,:,inode_diff,idir)),self%elem%dgrad2_dx(:,:,inode_diff,idir),tol)
             end do
@@ -2127,7 +2140,7 @@ contains
         class(test_element_linearB_dx),    intent(inout)   :: self
         
         
-        real(rk), dimension(self%elem%basis_s%nnodes_ie(),self%elem%nterms_s,self%elem%nnodes_r,3) :: test_dgrad3_dx
+        real(rk), dimension(self%elem%basis_s%nnodes_elem(),self%elem%nterms_s,self%elem%nterms_c,3) :: test_dgrad3_dx
         
         real(rk)        :: tol
         integer(ik)     :: inode_diff, idir, inode
@@ -2407,7 +2420,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dgrad3_dx(:,:,inode_diff,idir)),self%elem%dgrad3_dx(:,:,inode_diff,idir),tol)
             end do
@@ -2431,7 +2444,7 @@ contains
         class(test_element_linearB_dx),    intent(inout)   :: self
         
         
-        real(rk), dimension(self%elem%nterms_s,self%elem%nterms_s,self%elem%nnodes_r,3) :: test_dinvmass_dx
+        real(rk), dimension(self%elem%nterms_s,self%elem%nterms_s,self%elem%nterms_c,3) :: test_dinvmass_dx
         
         real(rk)        :: tol
         integer(ik)     :: inode_diff, idir, inode
@@ -2712,7 +2725,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dinvmass_dx(:,:,inode_diff,idir)),self%elem%dinvmass_dx(:,:,inode_diff,idir),tol)
             end do
@@ -2737,7 +2750,7 @@ contains
         class(test_element_linearB_dx),    intent(inout)   :: self
         
         
-        real(rk), dimension(self%elem%nterms_s,self%elem%nterms_s,self%elem%nnodes_r,3) :: test_dmass_dx
+        real(rk), dimension(self%elem%nterms_s,self%elem%nterms_s,self%elem%nterms_c,3) :: test_dmass_dx
         
         real(rk)        :: tol
         integer(ik)     :: inode_diff, idir, inode
@@ -3016,7 +3029,7 @@ contains
 
         
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dmass_dx(:,:,inode_diff,idir)),self%elem%dmass_dx(:,:,inode_diff,idir),tol)
             end do
@@ -3043,8 +3056,8 @@ contains
         class(test_element_linearB_dx),    intent(inout)   :: self
         
         
-        real(rk), dimension(self%elem%nnodes_r*3,self%elem%basis_s%nnodes_ie()) :: test_dcoords_dx
-        real(rk), dimension(self%elem%basis_s%nnodes_ie(),self%elem%nnodes_r*3) :: dcoords_dx
+        real(rk), dimension(self%elem%nterms_c*3,self%elem%basis_s%nnodes_elem()) :: test_dcoords_dx
+        real(rk), dimension(self%elem%basis_s%nnodes_elem(),self%elem%nterms_c*3) :: dcoords_dx
         
         real(rk)        :: tol
         integer(ik)     :: inode_diff, idir, inode
@@ -3067,7 +3080,7 @@ contains
         !
         ! Computed X-coordiantes
         !
-        do inode = 1,self%elem%basis_s%nnodes_ie()
+        do inode = 1,self%elem%basis_s%nnodes_elem()
             dcoords_dx(inode,:) = self%elem%basis_c%get_coord_derivatives('element','1',inode,0)
         end do
         
@@ -3098,7 +3111,7 @@ contains
         !
         ! Computed Y-coordiantes
         !
-        do inode = 1,self%elem%basis_s%nnodes_ie()
+        do inode = 1,self%elem%basis_s%nnodes_elem()
             dcoords_dx(inode,:) = self%elem%basis_c%get_coord_derivatives('element','2',inode,0)
         end do
         
@@ -3129,7 +3142,7 @@ contains
         !
         ! Computed Z-coordiantes
         !
-        do inode = 1,self%elem%basis_s%nnodes_ie()
+        do inode = 1,self%elem%basis_s%nnodes_elem()
             dcoords_dx(inode,:) = self%elem%basis_c%get_coord_derivatives('element','3',inode,0)
         end do
         
@@ -3169,8 +3182,8 @@ contains
         class(test_element_linearB_dx),    intent(inout)   :: self
         
         
-        real(rk), dimension(self%elem%nnodes_r*3,self%elem%basis_s%nnodes_if()) :: test_dcoords_dx
-        real(rk), dimension(self%elem%basis_s%nnodes_if(),self%elem%nnodes_r*3) :: dcoords_dx
+        real(rk), dimension(self%elem%nterms_c*3,self%elem%basis_s%nnodes_face()) :: test_dcoords_dx
+        real(rk), dimension(self%elem%basis_s%nnodes_face(),self%elem%nterms_c*3) :: dcoords_dx
         
         real(rk)        :: tol
         integer(ik)     :: inode_diff, idir, inode
@@ -3192,7 +3205,7 @@ contains
         !
         ! Computed X-coordiantes
         !
-        do inode = 1,self%elem%basis_s%nnodes_if()
+        do inode = 1,self%elem%basis_s%nnodes_face()
             dcoords_dx(inode,:) = self%elem%basis_c%get_coord_derivatives('face interior','1',inode,2)
         end do
         
@@ -3222,7 +3235,7 @@ contains
         !
         ! Computed Y-coordiantes
         !
-        do inode = 1,self%elem%basis_s%nnodes_if()
+        do inode = 1,self%elem%basis_s%nnodes_face()
             dcoords_dx(inode,:) = self%elem%basis_c%get_coord_derivatives('face interior','2',inode,2)
         end do
         
@@ -3252,7 +3265,7 @@ contains
         !
         ! Computed Z-coordiantes
         !
-        do inode = 1,self%elem%basis_s%nnodes_if()
+        do inode = 1,self%elem%basis_s%nnodes_face()
             dcoords_dx(inode,:) = self%elem%basis_c%get_coord_derivatives('face interior','3',inode,2)
         end do
         
@@ -3276,12 +3289,12 @@ contains
     subroutine testElement_dbr2_vol_dx(self)
         class(test_element_linearB_dx),    intent(inout)   :: self
         
-        real(rk), dimension(self%faces(XI_MIN)%basis_s%nnodes_if(),  self%elem%basis_s%nnodes_ie(),self%elem%nnodes_r,3)   :: test_dbr2_vol_face1_dx
-        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_if(),  self%elem%basis_s%nnodes_ie(),self%elem%nnodes_r,3)   :: test_dbr2_vol_face2_dx
-        real(rk), dimension(self%faces(ETA_MIN)%basis_s%nnodes_if(), self%elem%basis_s%nnodes_ie(),self%elem%nnodes_r,3)  :: test_dbr2_vol_face3_dx
-        real(rk), dimension(self%faces(ETA_MAX)%basis_s%nnodes_if(), self%elem%basis_s%nnodes_ie(),self%elem%nnodes_r,3)  :: test_dbr2_vol_face4_dx
-        real(rk), dimension(self%faces(ZETA_MIN)%basis_s%nnodes_if(),self%elem%basis_s%nnodes_ie(),self%elem%nnodes_r,3) :: test_dbr2_vol_face5_dx
-        real(rk), dimension(self%faces(ZETA_MAX)%basis_s%nnodes_if(),self%elem%basis_s%nnodes_ie(),self%elem%nnodes_r,3) :: test_dbr2_vol_face6_dx
+        real(rk), dimension(self%faces(XI_MIN)%basis_s%nnodes_face(),  self%elem%basis_s%nnodes_elem(),self%elem%nterms_c,3)   :: test_dbr2_vol_face1_dx
+        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_face(),  self%elem%basis_s%nnodes_elem(),self%elem%nterms_c,3)   :: test_dbr2_vol_face2_dx
+        real(rk), dimension(self%faces(ETA_MIN)%basis_s%nnodes_face(), self%elem%basis_s%nnodes_elem(),self%elem%nterms_c,3)  :: test_dbr2_vol_face3_dx
+        real(rk), dimension(self%faces(ETA_MAX)%basis_s%nnodes_face(), self%elem%basis_s%nnodes_elem(),self%elem%nterms_c,3)  :: test_dbr2_vol_face4_dx
+        real(rk), dimension(self%faces(ZETA_MIN)%basis_s%nnodes_face(),self%elem%basis_s%nnodes_elem(),self%elem%nterms_c,3) :: test_dbr2_vol_face5_dx
+        real(rk), dimension(self%faces(ZETA_MAX)%basis_s%nnodes_face(),self%elem%basis_s%nnodes_elem(),self%elem%nterms_c,3) :: test_dbr2_vol_face6_dx
         
         real(rk)        :: tol
         integer(ik)     :: inode_diff, idir, inode
@@ -3559,7 +3572,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dbr2_vol_face1_dx(:,:,inode_diff,idir)),self%faces(XI_MIN)%dbr2_v_dx(:,:,inode_diff,idir),tol)
             end do
@@ -3838,7 +3851,7 @@ contains
 
 
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dbr2_vol_face2_dx(:,:,inode_diff,idir)),self%faces(XI_MAX)%dbr2_v_dx(:,:,inode_diff,idir),tol)
             end do
@@ -4117,7 +4130,7 @@ contains
 
 
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dbr2_vol_face3_dx(:,:,inode_diff,idir)),self%faces(ETA_MIN)%dbr2_v_dx(:,:,inode_diff,idir),tol)
             end do
@@ -4396,7 +4409,7 @@ contains
 
 
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dbr2_vol_face4_dx(:,:,inode_diff,idir)),self%faces(ETA_MAX)%dbr2_v_dx(:,:,inode_diff,idir),tol)
             end do
@@ -4675,7 +4688,7 @@ contains
 
 
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dbr2_vol_face5_dx(:,:,inode_diff,idir)),self%faces(ZETA_MIN)%dbr2_v_dx(:,:,inode_diff,idir),tol)
             end do
@@ -4955,7 +4968,7 @@ contains
 
 
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dbr2_vol_face6_dx(:,:,inode_diff,idir)),self%faces(ZETA_MAX)%dbr2_v_dx(:,:,inode_diff,idir),tol)
             end do
@@ -4977,12 +4990,12 @@ contains
     subroutine testElement_dbr2_face_dx(self)
         class(test_element_linearB_dx),    intent(inout)   :: self
         
-        real(rk), dimension(self%faces(XI_MIN)%basis_s%nnodes_if(),  self%faces(XI_MIN)%basis_s%nnodes_if(),  self%elem%nnodes_r,3) :: test_dbr2_face_face1_dx
-        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_if(),  self%faces(XI_MAX)%basis_s%nnodes_if(),  self%elem%nnodes_r,3) :: test_dbr2_face_face2_dx
-        real(rk), dimension(self%faces(ETA_MIN)%basis_s%nnodes_if(), self%faces(ETA_MIN)%basis_s%nnodes_if(), self%elem%nnodes_r,3) :: test_dbr2_face_face3_dx
-        real(rk), dimension(self%faces(ETA_MAX)%basis_s%nnodes_if(), self%faces(ETA_MAX)%basis_s%nnodes_if(), self%elem%nnodes_r,3) :: test_dbr2_face_face4_dx
-        real(rk), dimension(self%faces(ZETA_MIN)%basis_s%nnodes_if(),self%faces(ZETA_MIN)%basis_s%nnodes_if(),self%elem%nnodes_r,3) :: test_dbr2_face_face5_dx
-        real(rk), dimension(self%faces(ZETA_MAX)%basis_s%nnodes_if(),self%faces(ZETA_MAX)%basis_s%nnodes_if(),self%elem%nnodes_r,3) :: test_dbr2_face_face6_dx
+        real(rk), dimension(self%faces(XI_MIN)%basis_s%nnodes_face(),  self%faces(XI_MIN)%basis_s%nnodes_face(),  self%elem%nterms_c,3) :: test_dbr2_face_face1_dx
+        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_face(),  self%faces(XI_MAX)%basis_s%nnodes_face(),  self%elem%nterms_c,3) :: test_dbr2_face_face2_dx
+        real(rk), dimension(self%faces(ETA_MIN)%basis_s%nnodes_face(), self%faces(ETA_MIN)%basis_s%nnodes_face(), self%elem%nterms_c,3) :: test_dbr2_face_face3_dx
+        real(rk), dimension(self%faces(ETA_MAX)%basis_s%nnodes_face(), self%faces(ETA_MAX)%basis_s%nnodes_face(), self%elem%nterms_c,3) :: test_dbr2_face_face4_dx
+        real(rk), dimension(self%faces(ZETA_MIN)%basis_s%nnodes_face(),self%faces(ZETA_MIN)%basis_s%nnodes_face(),self%elem%nterms_c,3) :: test_dbr2_face_face5_dx
+        real(rk), dimension(self%faces(ZETA_MAX)%basis_s%nnodes_face(),self%faces(ZETA_MAX)%basis_s%nnodes_face(),self%elem%nterms_c,3) :: test_dbr2_face_face6_dx
         
         real(rk)        :: tol
         integer(ik)     :: inode_diff, idir, inode
@@ -5165,7 +5178,7 @@ contains
 
 
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dbr2_face_face1_dx(:,:,inode_diff,idir)),self%faces(XI_MIN)%dbr2_f_dx(:,:,inode_diff,idir),tol)
             end do
@@ -5350,7 +5363,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dbr2_face_face2_dx(:,:,inode_diff,idir)),self%faces(XI_MAX)%dbr2_f_dx(:,:,inode_diff,idir),tol)
             end do
@@ -5535,7 +5548,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dbr2_face_face3_dx(:,:,inode_diff,idir)),self%faces(ETA_MIN)%dbr2_f_dx(:,:,inode_diff,idir),tol)
             end do
@@ -5720,7 +5733,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dbr2_face_face4_dx(:,:,inode_diff,idir)),self%faces(ETA_MAX)%dbr2_f_dx(:,:,inode_diff,idir),tol)
             end do
@@ -5905,7 +5918,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dbr2_face_face5_dx(:,:,inode_diff,idir)),self%faces(ZETA_MIN)%dbr2_f_dx(:,:,inode_diff,idir),tol)
             end do
@@ -6090,7 +6103,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dbr2_face_face6_dx(:,:,inode_diff,idir)),self%faces(ZETA_MAX)%dbr2_f_dx(:,:,inode_diff,idir),tol)
             end do
@@ -6115,7 +6128,7 @@ contains
     @Test
     subroutine testElement_face_dmetrics_dx_etamax(self)
         class(test_element_linearB_dx),    intent(inout)   :: self
-        real(rk)    :: test_dmetric_dx_etamax(3,3,self%faces(ETA_MAX)%basis_s%nnodes_if(),self%elem%nnodes_r,3)
+        real(rk)    :: test_dmetric_dx_etamax(3,3,self%faces(ETA_MAX)%basis_s%nnodes_face(),self%elem%nterms_c,3)
         real(rk)    :: tol
         
         integer(ik)     :: inode_diff, idir, inode, irow
@@ -6702,8 +6715,8 @@ contains
         
         
         
-        do inode = 1,self%elem%basis_s%nnodes_if()
-            do inode_diff = 1,self%elem%nnodes_r
+        do inode = 1,self%elem%basis_s%nnodes_face()
+            do inode_diff = 1,self%elem%nterms_c
                 do idir = 1,3
                     @assertEqual(transpose(test_dmetric_dx_etamax(:,:,inode,inode_diff,idir)),self%faces(ETA_MAX)%dmetric_dx(:,:,inode,inode_diff,idir),tol)
                 end do
@@ -6726,7 +6739,7 @@ contains
     @Test
     subroutine testElement_face_dmetrics_dx_zetamax(self)
         class(test_element_linearB_dx),    intent(inout)   :: self
-        real(rk)    :: test_dmetric_dx_zetamax(3,3,self%faces(ZETA_MAX)%basis_s%nnodes_if(),self%elem%nnodes_r,3)
+        real(rk)    :: test_dmetric_dx_zetamax(3,3,self%faces(ZETA_MAX)%basis_s%nnodes_face(),self%elem%nterms_c,3)
         real(rk)    :: tol
         
         integer(ik)     :: inode_diff, idir, inode, irow
@@ -7314,8 +7327,8 @@ contains
         
         
         
-        do inode = 1,self%elem%basis_s%nnodes_if()
-            do inode_diff = 1,self%elem%nnodes_r
+        do inode = 1,self%elem%basis_s%nnodes_face()
+            do inode_diff = 1,self%elem%nterms_c
                 do idir = 1,3
                     @assertEqual(transpose(test_dmetric_dx_zetamax(:,:,inode,inode_diff,idir)),self%faces(ZETA_MAX)%dmetric_dx(:,:,inode,inode_diff,idir),tol)
                 end do
@@ -7340,7 +7353,7 @@ contains
         class(test_element_linearB_dx),    intent(inout)   :: self
         
         
-        real(rk), dimension(self%elem%nterms_s,self%elem%basis_s%nnodes_if(),self%elem%nnodes_r,3) :: test_dgrad1_dx, test_dgrad2_dx, test_dgrad3_dx
+        real(rk), dimension(self%elem%nterms_s,self%elem%basis_s%nnodes_face(),self%elem%nterms_c,3) :: test_dgrad1_dx, test_dgrad2_dx, test_dgrad3_dx
         
         real(rk)        :: tol
         integer(ik)     :: inode_diff, idir, inode, irow
@@ -7523,7 +7536,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dgrad1_dx(:,:,inode_diff,idir)),self%faces(ETA_MIN)%dgrad1_dx(:,:,inode_diff,idir),tol)
             end do
@@ -7705,7 +7718,7 @@ contains
         
 
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dgrad2_dx(:,:,inode_diff,idir)),self%faces(ETA_MIN)%dgrad2_dx(:,:,inode_diff,idir),tol)
             end do
@@ -7888,7 +7901,7 @@ contains
         
 
         
-        do inode_diff = 1,self%elem%nnodes_r 
+        do inode_diff = 1,self%elem%nterms_c 
             do idir =1,3
                 @assertEqual(transpose(test_dgrad3_dx(:,:,inode_diff,idir)),self%faces(ETA_MIN)%dgrad3_dx(:,:,inode_diff,idir),tol)
             end do
@@ -7915,7 +7928,7 @@ contains
     subroutine testelement_face_dnormals_dx(self)
         class(test_element_linearB_dx),    intent(inout)   :: self
 
-        real(rk), dimension(3,self%faces(XI_MAX)%basis_s%nnodes_if(),self%elem%nnodes_r,3) :: test_dnorm_dx
+        real(rk), dimension(3,self%faces(XI_MAX)%basis_s%nnodes_face(),self%elem%nterms_c,3) :: test_dnorm_dx
         integer(ik) :: inode_diff, idir, irow
         real(rk)    :: tol,mat(4,3)
         
@@ -8095,7 +8108,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r
+        do inode_diff = 1,self%elem%nterms_c
             do idir = 1,3
                 @assertequal(transpose(test_dnorm_dx(:,:,inode_diff,idir)),self%faces(xi_min)%dnorm_dx(:,:,inode_diff,idir),tol)
             end do
@@ -8276,7 +8289,7 @@ contains
         
 
 
-        do inode_diff = 1,self%elem%nnodes_r
+        do inode_diff = 1,self%elem%nterms_c
             do idir = 1,3
                 @assertequal(transpose(test_dnorm_dx(:,:,inode_diff,idir)),self%faces(xi_max)%dnorm_dx(:,:,inode_diff,idir),tol)
             end do
@@ -8456,7 +8469,7 @@ contains
         
         
 
-        do inode_diff = 1,self%elem%nnodes_r
+        do inode_diff = 1,self%elem%nterms_c
             do idir = 1,3
                 @assertequal(transpose(test_dnorm_dx(:,:,inode_diff,idir)),self%faces(eta_min)%dnorm_dx(:,:,inode_diff,idir),tol)
             end do
@@ -8636,7 +8649,7 @@ contains
         
         
         
-        do inode_diff = 1,self%elem%nnodes_r
+        do inode_diff = 1,self%elem%nterms_c
             do idir = 1,3
                 @assertequal(transpose(test_dnorm_dx(:,:,inode_diff,idir)),self%faces(eta_max)%dnorm_dx(:,:,inode_diff,idir),tol)
             end do
@@ -8815,7 +8828,7 @@ contains
                                         /),(/3,4/))
         
         
-        do inode_diff = 1,self%elem%nnodes_r
+        do inode_diff = 1,self%elem%nterms_c
             do idir = 1,3
                 @assertequal(transpose(test_dnorm_dx(:,:,inode_diff,idir)),self%faces(zeta_min)%dnorm_dx(:,:,inode_diff,idir),tol)
             end do
@@ -8996,7 +9009,7 @@ contains
         
         
 
-        do inode_diff = 1,self%elem%nnodes_r
+        do inode_diff = 1,self%elem%nterms_c
             do idir = 1,3
                 @assertequal(transpose(test_dnorm_dx(:,:,inode_diff,idir)),self%faces(zeta_max)%dnorm_dx(:,:,inode_diff,idir),tol)
             end do
@@ -9086,44 +9099,44 @@ contains
 
 
 
-    !>  Test h_index
-    !!
-    !!  Fortran search the minimum x, y and z coordinate among all the support nodes.
-    !!  If multiple minimum are found, fortran returns the location of the first minimum starting 
-    !!  from the first minimum found (ie. first location in connectivity vector).
-    !!
-    !!  In this case, for instance for x direction, there exists 4 minima. However, the one stored
-    !!  for dX differentiation (needed for artificial viscosity) will be node 1, since it comes first
-    !!
-    !!
-    !!  @author Matteo Ugolotti
-    !!
-    !------------------------------------------------------------------------------------------
-    @Test
-    subroutine testelement_h_index(self)
-        class(test_element_linearB_dx),    intent(inout)   :: self
-
-        integer(ik) :: x_min, x_max, y_min, y_max, z_min, z_max
-        
-        x_min = 3
-        x_max = 2
-        y_min = 1
-        y_max = 4
-        z_min = 1
-        z_max = 5
-
-
-        ! Test
-        @assertequal(x_min,self%elem%h_index(1,1))
-        @assertequal(x_max,self%elem%h_index(1,2))
-        @assertequal(y_min,self%elem%h_index(2,1))
-        @assertequal(y_max,self%elem%h_index(2,2))
-        @assertequal(z_min,self%elem%h_index(3,1))
-        @assertequal(z_max,self%elem%h_index(3,2))
-
-
-    end subroutine testelement_h_index
-    !*******************************************************************************************
+!    !>  Test h_index
+!    !!
+!    !!  Fortran search the minimum x, y and z coordinate among all the support nodes.
+!    !!  If multiple minimum are found, fortran returns the location of the first minimum starting 
+!    !!  from the first minimum found (ie. first location in connectivity vector).
+!    !!
+!    !!  In this case, for instance for x direction, there exists 4 minima. However, the one stored
+!    !!  for dX differentiation (needed for artificial viscosity) will be node 1, since it comes first
+!    !!
+!    !!
+!    !!  @author Matteo Ugolotti
+!    !!
+!    !------------------------------------------------------------------------------------------
+!    @Test
+!    subroutine testelement_h_index(self)
+!        class(test_element_linearB_dx),    intent(inout)   :: self
+!
+!        integer(ik) :: x_min, x_max, y_min, y_max, z_min, z_max
+!        
+!        x_min = 3
+!        x_max = 2
+!        y_min = 1
+!        y_max = 4
+!        z_min = 1
+!        z_max = 5
+!
+!
+!        ! Test
+!        @assertequal(x_min,self%elem%h_index(1,1))
+!        @assertequal(x_max,self%elem%h_index(1,2))
+!        @assertequal(y_min,self%elem%h_index(2,1))
+!        @assertequal(y_max,self%elem%h_index(2,2))
+!        @assertequal(z_min,self%elem%h_index(3,1))
+!        @assertequal(z_max,self%elem%h_index(3,2))
+!
+!
+!    end subroutine testelement_h_index
+!    !*******************************************************************************************
 
 
 
@@ -9191,8 +9204,8 @@ contains
 !
 !
 !nnodes_r   = coords.size(0)
-!nnodes_ie  = 8 
-!nnodes_if  = 4 
+!nnodes_elem  = 8 
+!nnodes_face  = 4 
 !nterms_s   = 8
 !ndirs      = 3
 !coord_sys  = 'CYLINDRICAL'
@@ -9331,9 +9344,9 @@ contains
 !
 !
 !# Initialized jacobian
-!jacobian     = torch.empty(3,3,nnodes_ie, dtype=torch.float64) 
-!jacobian_tmp = torch.empty(3,3,nnodes_ie, dtype=torch.float64) 
-!for inode in range(0,nnodes_ie):
+!jacobian     = torch.empty(3,3,nnodes_elem, dtype=torch.float64) 
+!jacobian_tmp = torch.empty(3,3,nnodes_elem, dtype=torch.float64) 
+!for inode in range(0,nnodes_elem):
 !    jacobian_tmp[0,0,inode] = torch.dot(ddxi_i[inode,:]   , coords_modes[:,0])
 !    jacobian_tmp[0,1,inode] = torch.dot(ddeta_i[inode,:]  , coords_modes[:,0])
 !    jacobian_tmp[0,2,inode] = torch.dot(ddzeta_i[inode,:] , coords_modes[:,0])
@@ -9343,11 +9356,11 @@ contains
 !    jacobian_tmp[2,0,inode] = torch.dot(ddxi_i[inode,:]   , coords_modes[:,2])
 !    jacobian_tmp[2,1,inode] = torch.dot(ddeta_i[inode,:]  , coords_modes[:,2])
 !    jacobian_tmp[2,2,inode] = torch.dot(ddzeta_i[inode,:] , coords_modes[:,2])
-!    update_progress("Computing Jacobian                 ", inode/(nnodes_ie-1))
+!    update_progress("Computing Jacobian                 ", inode/(nnodes_elem-1))
 !if coord_sys == 'CYLINDRICAL':
 !    jacobian = jacobian_tmp.clone()
 !    scaling_factor = torch.mv(val_i,coords_modes[:,0])
-!    for inode in range(0,nnodes_ie):
+!    for inode in range(0,nnodes_elem):
 !        jacobian[1,0,inode] = jacobian_tmp[1,0,inode] * scaling_factor[inode]
 !        jacobian[1,1,inode] = jacobian_tmp[1,1,inode] * scaling_factor[inode]
 !        jacobian[1,2,inode] = jacobian_tmp[1,2,inode] * scaling_factor[inode]
@@ -9356,16 +9369,16 @@ contains
 !
 !
 !# Matrics and Determinant
-!metrics = torch.empty(3,3,nnodes_ie, dtype=torch.float64) 
-!jinv    = torch.empty(nnodes_ie, dtype=torch.float64) 
-!for inode in range(0,nnodes_ie):
+!metrics = torch.empty(3,3,nnodes_elem, dtype=torch.float64) 
+!jinv    = torch.empty(nnodes_elem, dtype=torch.float64) 
+!for inode in range(0,nnodes_elem):
 !    ijacobian = torch.empty(3,3, dtype=torch.float64)
 !    imetric   = torch.empty(3,3, dtype=torch.float64)
 !    for irow in range(0,3):
 !        for icol in range(0,3):
 !            ijacobian[irow,icol] = jacobian[irow,icol,inode]
 !    # Compute jacobian for the ith node
-!    update_progress("Computing Jinv and Metric          ", inode/(nnodes_ie-1))
+!    update_progress("Computing Jinv and Metric          ", inode/(nnodes_elem-1))
 !    jinv[inode] = torch.det(ijacobian) 
 !    imetric     = torch.inverse(ijacobian)
 !    for irow in range(0,3):
@@ -9374,14 +9387,14 @@ contains
 !
 ! 
 !# Compute inverse Mass matrix
-!invmass = torch.empty(nterms_s,nterms_s,nnodes_ie, dtype=torch.float64)
-!mass    = torch.empty(nterms_s,nterms_s,nnodes_ie, dtype=torch.float64)
-!val_tmp = torch.empty(nterms_s,nnodes_ie, dtype=torch.float64)
+!invmass = torch.empty(nterms_s,nterms_s,nnodes_elem, dtype=torch.float64)
+!mass    = torch.empty(nterms_s,nterms_s,nnodes_elem, dtype=torch.float64)
+!val_tmp = torch.empty(nterms_s,nnodes_elem, dtype=torch.float64)
 !i = 1
 !for iterm in range(0,nterms_s):
-!    for inode in range(0,nnodes_ie):
+!    for inode in range(0,nnodes_elem):
 !        val_tmp[inode,iterm] = val_i[inode,iterm] * weights_e[inode] * jinv[inode]
-!        update_progress("Computing invmass                  ", i/(nterms_s*nnodes_ie))
+!        update_progress("Computing invmass                  ", i/(nterms_s*nnodes_elem))
 !        i += 1
 !mass    = torch.mm(torch.t(val_tmp),val_i)
 !invmass = torch.inverse(mass)
@@ -9408,16 +9421,16 @@ contains
 !
 !
 !# Grad1, Grad2, and Grad3
-!grad1 = torch.empty(nnodes_ie,nterms_s, dtype=torch.float64)
-!grad2 = torch.empty(nnodes_ie,nterms_s, dtype=torch.float64)
-!grad3 = torch.empty(nnodes_ie,nterms_s, dtype=torch.float64)
+!grad1 = torch.empty(nnodes_elem,nterms_s, dtype=torch.float64)
+!grad2 = torch.empty(nnodes_elem,nterms_s, dtype=torch.float64)
+!grad3 = torch.empty(nnodes_elem,nterms_s, dtype=torch.float64)
 !i = 1
 !for iterm in range(0,nterms_s):
-!    for inode in range(0,nnodes_ie):
+!    for inode in range(0,nnodes_elem):
 !        grad1[inode,iterm] = metrics[0,0,inode] * ddxi_i[inode,iterm] + metrics[1,0,inode] * ddeta_i[inode,iterm] + metrics[2,0,inode] * ddzeta_i[inode,iterm] 
 !        grad2[inode,iterm] = metrics[0,1,inode] * ddxi_i[inode,iterm] + metrics[1,1,inode] * ddeta_i[inode,iterm] + metrics[2,1,inode] * ddzeta_i[inode,iterm] 
 !        grad3[inode,iterm] = metrics[0,2,inode] * ddxi_i[inode,iterm] + metrics[1,2,inode] * ddeta_i[inode,iterm] + metrics[2,2,inode] * ddzeta_i[inode,iterm] 
-!        update_progress("Computing grad1, grad2, grad3      ", i/(nnodes_ie*nterms_s))
+!        update_progress("Computing grad1, grad2, grad3      ", i/(nnodes_elem*nterms_s))
 !        i += 1
 !
 !
@@ -9433,13 +9446,13 @@ contains
 !#
 !f = open("metrics.txt","w")
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    f.write("Metric interpolation node %d \n" % (inode+1))
 !    array = np.zeros([3, 3])
 !    for irow in range(0,3):
 !        for icol in range(0,3):
 !            array[irow,icol] = metrics[irow,icol,inode].item() 
-!            update_progress("Writing metrics to file            ", i/(nnodes_ie*9))
+!            update_progress("Writing metrics to file            ", i/(nnodes_elem*9))
 !            i += 1
 !    np.savetxt(f,array)
 !f.close()
@@ -9450,11 +9463,11 @@ contains
 !f = open("jinv.txt","w")
 !array = np.zeros([1])
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    f.write("Jinv interpolation node %d \n" % (inode+1))
 !    array[0] = jinv[inode].item()
 !    np.savetxt(f,array)
-!    update_progress("Writing jinv to file               ", i/(nnodes_ie))
+!    update_progress("Writing jinv to file               ", i/(nnodes_elem))
 !    i += 1
 !f.close()
 !
@@ -9463,12 +9476,12 @@ contains
 !#
 !f = open("grad1.txt","w")
 !f.write("Grad1 \n")
-!array = np.zeros([nnodes_ie,nterms_s])
+!array = np.zeros([nnodes_elem,nterms_s])
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    for iterm in range(0,nterms_s):
 !        array[inode,iterm] = grad1[inode,iterm].item()
-!        update_progress("Writing grad1 to file              ", i/(nnodes_ie*nterms_s))
+!        update_progress("Writing grad1 to file              ", i/(nnodes_elem*nterms_s))
 !        i += 1
 !np.savetxt(f,array)
 !f.close()
@@ -9478,12 +9491,12 @@ contains
 !#
 !f = open("grad2.txt","w")
 !f.write("Grad2 \n")
-!array = np.zeros([nnodes_ie,nterms_s])
+!array = np.zeros([nnodes_elem,nterms_s])
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    for iterm in range(0,nterms_s):
 !        array[inode,iterm] = grad2[inode,iterm].item()
-!        update_progress("Writing grad2 to file              ", i/(nnodes_ie*nterms_s))
+!        update_progress("Writing grad2 to file              ", i/(nnodes_elem*nterms_s))
 !        i += 1
 !np.savetxt(f,array)
 !f.close()
@@ -9493,12 +9506,12 @@ contains
 !#
 !f = open("grad3.txt","w")
 !f.write("Grad3 \n")
-!array = np.zeros([nnodes_ie,nterms_s])
+!array = np.zeros([nnodes_elem,nterms_s])
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    for iterm in range(0,nterms_s):
 !        array[inode,iterm] = grad3[inode,iterm].item()
-!        update_progress("Writing grad3 to file              ", i/(nnodes_ie*nterms_s))
+!        update_progress("Writing grad3 to file              ", i/(nnodes_elem*nterms_s))
 !        i += 1
 !np.savetxt(f,array)
 !f.close()
@@ -9508,7 +9521,7 @@ contains
 !#
 !f = open("dmetric_dx.txt","w")
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    for inode_diff in range(0,nnodes_r):
 !        for idir in range(0,ndirs):
 !            array = np.zeros([3,3])
@@ -9520,7 +9533,7 @@ contains
 !                    ddata = coords.grad
 !                    ddata_np = ddata.numpy()
 !                    array[irow,icol] = ddata_np[inode_diff,idir]
-!                    update_progress("Writing dmetric_dx to file         ", i/(nnodes_ie*nnodes_r*ndirs*3*3))
+!                    update_progress("Writing dmetric_dx to file         ", i/(nnodes_elem*nnodes_r*ndirs*3*3))
 !                    # This avoid to accumulate derivatives
 !                    dummy = coords.grad.data.zero_()
 !                    i += 1
@@ -9533,8 +9546,8 @@ contains
 !f = open("dinterp_xcoords_dx.txt","w")
 !i = 1
 !f.write("xcoord interpolation, coord 1,  row=node, col=nnodes_r*dir \n")
-!array = np.zeros([nnodes_ie,nnodes_r*ndirs])
-!for inode in range (0,nnodes_ie):
+!array = np.zeros([nnodes_elem,nnodes_r*ndirs])
+!for inode in range (0,nnodes_elem):
 !    data = interp_coords[inode,0]
 !    data.backward(retain_graph=True)
 !    ddata = coords.grad
@@ -9548,7 +9561,7 @@ contains
 !            elif idir == 2:
 !                index = 2*nnodes_r + inode_diff
 !            array[inode,index] = ddata_np[inode_diff,idir]
-!            update_progress("Writing interp_xcoords_dx to file  ", i/(nnodes_ie*nnodes_r*3))
+!            update_progress("Writing interp_xcoords_dx to file  ", i/(nnodes_elem*nnodes_r*3))
 !            i += 1
 !    # This avoid to accumulate derivatives
 !    dummy = coords.grad.data.zero_()
@@ -9557,8 +9570,8 @@ contains
 !f = open("dinterp_ycoords_dx.txt","w")
 !i = 1
 !f.write("ycoord interpolation, coord 2,  row=node, col=nnodes_r*dir \n")
-!array = np.zeros([nnodes_ie,nnodes_r*ndirs])
-!for inode in range (0,nnodes_ie):
+!array = np.zeros([nnodes_elem,nnodes_r*ndirs])
+!for inode in range (0,nnodes_elem):
 !    data = interp_coords[inode,1]
 !    data.backward(retain_graph=True)
 !    ddata = coords.grad
@@ -9572,7 +9585,7 @@ contains
 !            elif idir == 2:
 !                index = 2*nnodes_r + inode_diff
 !            array[inode,index] = ddata_np[inode_diff,idir]
-!            update_progress("Writing interp_ycoords_dx to file  ", i/(nnodes_ie*nnodes_r*3))
+!            update_progress("Writing interp_ycoords_dx to file  ", i/(nnodes_elem*nnodes_r*3))
 !            i += 1
 !    # This avoid to accumulate derivatives
 !    dummy = coords.grad.data.zero_()
@@ -9581,8 +9594,8 @@ contains
 !f = open("dinterp_zcoords_dx.txt","w")
 !i = 1
 !f.write("zcoord interpolation, coord 3,  row=node, col=nnodes_r*dir \n")
-!array = np.zeros([nnodes_ie,nnodes_r*ndirs])
-!for inode in range (0,nnodes_ie):
+!array = np.zeros([nnodes_elem,nnodes_r*ndirs])
+!for inode in range (0,nnodes_elem):
 !    data = interp_coords[inode,2]
 !    data.backward(retain_graph=True)
 !    ddata = coords.grad
@@ -9596,7 +9609,7 @@ contains
 !            elif idir == 2:
 !                index = 2*nnodes_r + inode_diff
 !            array[inode,index] = ddata_np[inode_diff,idir]
-!            update_progress("Writing interp_zcoords_dx to file  ", i/(nnodes_ie*nnodes_r*3))
+!            update_progress("Writing interp_zcoords_dx to file  ", i/(nnodes_elem*nnodes_r*3))
 !            i += 1
 !    # This avoid to accumulate derivatives
 !    dummy = coords.grad.data.zero_()
@@ -9608,7 +9621,7 @@ contains
 !#
 !f = open("djinv_dx.txt","w")
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    array = np.zeros([nnodes_r,ndirs])
 !    f.write("djinv_dx interpolation node %s, row=inode_diff, col=dir \n" % (inode+1))
 !    for inode_diff in range(0,nnodes_r):
@@ -9618,7 +9631,7 @@ contains
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[inode_diff,idir] = ddata_np[inode_diff,idir]
-!                update_progress("Writing djinv_dx to file           ", i/(nnodes_ie*nnodes_r*ndirs))
+!                update_progress("Writing djinv_dx to file           ", i/(nnodes_elem*nnodes_r*ndirs))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !    np.savetxt(f,array)
@@ -9677,15 +9690,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_vol_face1_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nnodes_if])
-!        for irow in range(0,nnodes_ie):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_elem,nnodes_face])
+!        for irow in range(0,nnodes_elem):
+!            for icol in range(0,nnodes_face):
 !                data = br2_vol_face1[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_vol_face1_dx to file  ", i/(nnodes_ie*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_vol_face1_dx to file  ", i/(nnodes_elem*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9695,15 +9708,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_vol_face2_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nnodes_if])
-!        for irow in range(0,nnodes_ie):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_elem,nnodes_face])
+!        for irow in range(0,nnodes_elem):
+!            for icol in range(0,nnodes_face):
 !                data = br2_vol_face2[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_vol_face2_dx to file  ", i/(nnodes_ie*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_vol_face2_dx to file  ", i/(nnodes_elem*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9713,15 +9726,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_vol_face3_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nnodes_if])
-!        for irow in range(0,nnodes_ie):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_elem,nnodes_face])
+!        for irow in range(0,nnodes_elem):
+!            for icol in range(0,nnodes_face):
 !                data = br2_vol_face3[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_vol_face3_dx to file  ", i/(nnodes_ie*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_vol_face3_dx to file  ", i/(nnodes_elem*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9731,15 +9744,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_vol_face4_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nnodes_if])
-!        for irow in range(0,nnodes_ie):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_elem,nnodes_face])
+!        for irow in range(0,nnodes_elem):
+!            for icol in range(0,nnodes_face):
 !                data = br2_vol_face4[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_vol_face4_dx to file  ", i/(nnodes_ie*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_vol_face4_dx to file  ", i/(nnodes_elem*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9749,15 +9762,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_vol_face5_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nnodes_if])
-!        for irow in range(0,nnodes_ie):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_elem,nnodes_face])
+!        for irow in range(0,nnodes_elem):
+!            for icol in range(0,nnodes_face):
 !                data = br2_vol_face5[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_vol_face5_dx to file  ", i/(nnodes_ie*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_vol_face5_dx to file  ", i/(nnodes_elem*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9767,15 +9780,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_vol_face6_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nnodes_if])
-!        for irow in range(0,nnodes_ie):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_elem,nnodes_face])
+!        for irow in range(0,nnodes_elem):
+!            for icol in range(0,nnodes_face):
 !                data = br2_vol_face6[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_vol_face6_dx to file  ", i/(nnodes_ie*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_vol_face6_dx to file  ", i/(nnodes_elem*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9790,15 +9803,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_face_face1_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_if,nnodes_if])
-!        for irow in range(0,nnodes_if):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_face,nnodes_face])
+!        for irow in range(0,nnodes_face):
+!            for icol in range(0,nnodes_face):
 !                data = br2_face_face1[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_face_face1_dx to file ", i/(nnodes_if*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_face_face1_dx to file ", i/(nnodes_face*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9808,15 +9821,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_face_face2_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_if,nnodes_if])
-!        for irow in range(0,nnodes_if):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_face,nnodes_face])
+!        for irow in range(0,nnodes_face):
+!            for icol in range(0,nnodes_face):
 !                data = br2_face_face2[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_face_face2_dx to file ", i/(nnodes_if*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_face_face2_dx to file ", i/(nnodes_face*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9826,15 +9839,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_face_face3_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_if,nnodes_if])
-!        for irow in range(0,nnodes_if):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_face,nnodes_face])
+!        for irow in range(0,nnodes_face):
+!            for icol in range(0,nnodes_face):
 !                data = br2_face_face3[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_face_face3_dx to file ", i/(nnodes_if*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_face_face3_dx to file ", i/(nnodes_face*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9844,15 +9857,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_face_face4_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_if,nnodes_if])
-!        for irow in range(0,nnodes_if):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_face,nnodes_face])
+!        for irow in range(0,nnodes_face):
+!            for icol in range(0,nnodes_face):
 !                data = br2_face_face4[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_face_face4_dx to file ", i/(nnodes_if*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_face_face4_dx to file ", i/(nnodes_face*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9862,15 +9875,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_face_face5_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_if,nnodes_if])
-!        for irow in range(0,nnodes_if):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_face,nnodes_face])
+!        for irow in range(0,nnodes_face):
+!            for icol in range(0,nnodes_face):
 !                data = br2_face_face5[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_face_face5_dx to file ", i/(nnodes_if*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_face_face5_dx to file ", i/(nnodes_face*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9880,15 +9893,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_face_face6_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_if,nnodes_if])
-!        for irow in range(0,nnodes_if):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_face,nnodes_face])
+!        for irow in range(0,nnodes_face):
+!            for icol in range(0,nnodes_face):
 !                data = br2_face_face6[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_face_face6_dx to file ", i/(nnodes_if*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_face_face6_dx to file ", i/(nnodes_face*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9902,15 +9915,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dgrad1_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nterms_s])
-!        for irow in range(0,nnodes_ie):
+!        array = np.zeros([nnodes_elem,nterms_s])
+!        for irow in range(0,nnodes_elem):
 !            for icol in range(0,nterms_s):
 !                data = grad1[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dgrad1_dx to file          ", i/(nnodes_ie*nnodes_r*ndirs*nterms_s))
+!                update_progress("Writing dgrad1_dx to file          ", i/(nnodes_elem*nnodes_r*ndirs*nterms_s))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9924,15 +9937,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dgrad2_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nterms_s])
-!        for irow in range(0,nnodes_ie):
+!        array = np.zeros([nnodes_elem,nterms_s])
+!        for irow in range(0,nnodes_elem):
 !            for icol in range(0,nterms_s):
 !                data = grad2[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dgrad2_dx to file          ", i/(nnodes_ie*nnodes_r*ndirs*nterms_s))
+!                update_progress("Writing dgrad2_dx to file          ", i/(nnodes_elem*nnodes_r*ndirs*nterms_s))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -9946,15 +9959,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dgrad3_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nterms_s])
-!        for irow in range(0,nnodes_ie):
+!        array = np.zeros([nnodes_elem,nterms_s])
+!        for irow in range(0,nnodes_elem):
 !            for icol in range(0,nterms_s):
 !                data = grad3[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dgrad3_dx to file          ", i/(nnodes_ie*nnodes_r*ndirs*nterms_s))
+!                update_progress("Writing dgrad3_dx to file          ", i/(nnodes_elem*nnodes_r*ndirs*nterms_s))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10033,8 +10046,8 @@ contains
 !
 !
 !nnodes_r   = coords.size(0)
-!nnodes_ie  = 8 
-!nnodes_if  = 4 
+!nnodes_elem  = 8 
+!nnodes_face  = 4 
 !nterms_s   = 8
 !ndirs      = 3
 !coord_sys  = 'CYLINDRICAL'
@@ -10173,9 +10186,9 @@ contains
 !
 !
 !# Initialized jacobian
-!jacobian     = torch.empty(3,3,nnodes_ie, dtype=torch.float64) 
-!jacobian_tmp = torch.empty(3,3,nnodes_ie, dtype=torch.float64) 
-!for inode in range(0,nnodes_ie):
+!jacobian     = torch.empty(3,3,nnodes_elem, dtype=torch.float64) 
+!jacobian_tmp = torch.empty(3,3,nnodes_elem, dtype=torch.float64) 
+!for inode in range(0,nnodes_elem):
 !    jacobian_tmp[0,0,inode] = torch.dot(ddxi_i[inode,:]   , coords_modes[:,0])
 !    jacobian_tmp[0,1,inode] = torch.dot(ddeta_i[inode,:]  , coords_modes[:,0])
 !    jacobian_tmp[0,2,inode] = torch.dot(ddzeta_i[inode,:] , coords_modes[:,0])
@@ -10185,11 +10198,11 @@ contains
 !    jacobian_tmp[2,0,inode] = torch.dot(ddxi_i[inode,:]   , coords_modes[:,2])
 !    jacobian_tmp[2,1,inode] = torch.dot(ddeta_i[inode,:]  , coords_modes[:,2])
 !    jacobian_tmp[2,2,inode] = torch.dot(ddzeta_i[inode,:] , coords_modes[:,2])
-!    update_progress("Computing Jacobian                 ", inode/(nnodes_ie-1))
+!    update_progress("Computing Jacobian                 ", inode/(nnodes_elem-1))
 !if coord_sys == 'CYLINDRICAL':
 !    jacobian = jacobian_tmp.clone()
 !    scaling_factor = torch.mv(val_i,coords_modes[:,0])
-!    for inode in range(0,nnodes_ie):
+!    for inode in range(0,nnodes_elem):
 !        jacobian[1,0,inode] = jacobian_tmp[1,0,inode] * scaling_factor[inode]
 !        jacobian[1,1,inode] = jacobian_tmp[1,1,inode] * scaling_factor[inode]
 !        jacobian[1,2,inode] = jacobian_tmp[1,2,inode] * scaling_factor[inode]
@@ -10198,16 +10211,16 @@ contains
 !
 !
 !# Matrics and Determinant
-!metrics = torch.empty(3,3,nnodes_ie, dtype=torch.float64) 
-!jinv    = torch.empty(nnodes_ie, dtype=torch.float64) 
-!for inode in range(0,nnodes_ie):
+!metrics = torch.empty(3,3,nnodes_elem, dtype=torch.float64) 
+!jinv    = torch.empty(nnodes_elem, dtype=torch.float64) 
+!for inode in range(0,nnodes_elem):
 !    ijacobian = torch.empty(3,3, dtype=torch.float64)
 !    imetric   = torch.empty(3,3, dtype=torch.float64)
 !    for irow in range(0,3):
 !        for icol in range(0,3):
 !            ijacobian[irow,icol] = jacobian[irow,icol,inode]
 !    # Compute jacobian for the ith node
-!    update_progress("Computing Jinv and Metric          ", inode/(nnodes_ie-1))
+!    update_progress("Computing Jinv and Metric          ", inode/(nnodes_elem-1))
 !    jinv[inode] = torch.det(ijacobian) 
 !    imetric     = torch.inverse(ijacobian)
 !    for irow in range(0,3):
@@ -10216,14 +10229,14 @@ contains
 !
 ! 
 !# Compute inverse Mass matrix
-!invmass = torch.empty(nterms_s,nterms_s,nnodes_ie, dtype=torch.float64)
-!mass    = torch.empty(nterms_s,nterms_s,nnodes_ie, dtype=torch.float64)
-!val_tmp = torch.empty(nterms_s,nnodes_ie, dtype=torch.float64)
+!invmass = torch.empty(nterms_s,nterms_s,nnodes_elem, dtype=torch.float64)
+!mass    = torch.empty(nterms_s,nterms_s,nnodes_elem, dtype=torch.float64)
+!val_tmp = torch.empty(nterms_s,nnodes_elem, dtype=torch.float64)
 !i = 1
 !for iterm in range(0,nterms_s):
-!    for inode in range(0,nnodes_ie):
+!    for inode in range(0,nnodes_elem):
 !        val_tmp[inode,iterm] = val_i[inode,iterm] * weights_e[inode] * jinv[inode]
-!        update_progress("Computing invmass                  ", i/(nterms_s*nnodes_ie))
+!        update_progress("Computing invmass                  ", i/(nterms_s*nnodes_elem))
 !        i += 1
 !mass    = torch.mm(torch.t(val_tmp),val_i)
 !invmass = torch.inverse(mass)
@@ -10250,16 +10263,16 @@ contains
 !
 !
 !# Grad1, Grad2, and Grad3
-!grad1 = torch.empty(nnodes_ie,nterms_s, dtype=torch.float64)
-!grad2 = torch.empty(nnodes_ie,nterms_s, dtype=torch.float64)
-!grad3 = torch.empty(nnodes_ie,nterms_s, dtype=torch.float64)
+!grad1 = torch.empty(nnodes_elem,nterms_s, dtype=torch.float64)
+!grad2 = torch.empty(nnodes_elem,nterms_s, dtype=torch.float64)
+!grad3 = torch.empty(nnodes_elem,nterms_s, dtype=torch.float64)
 !i = 1
 !for iterm in range(0,nterms_s):
-!    for inode in range(0,nnodes_ie):
+!    for inode in range(0,nnodes_elem):
 !        grad1[inode,iterm] = metrics[0,0,inode] * ddxi_i[inode,iterm] + metrics[1,0,inode] * ddeta_i[inode,iterm] + metrics[2,0,inode] * ddzeta_i[inode,iterm] 
 !        grad2[inode,iterm] = metrics[0,1,inode] * ddxi_i[inode,iterm] + metrics[1,1,inode] * ddeta_i[inode,iterm] + metrics[2,1,inode] * ddzeta_i[inode,iterm] 
 !        grad3[inode,iterm] = metrics[0,2,inode] * ddxi_i[inode,iterm] + metrics[1,2,inode] * ddeta_i[inode,iterm] + metrics[2,2,inode] * ddzeta_i[inode,iterm] 
-!        update_progress("Computing grad1, grad2, grad3      ", i/(nnodes_ie*nterms_s))
+!        update_progress("Computing grad1, grad2, grad3      ", i/(nnodes_elem*nterms_s))
 !        i += 1
 !
 !
@@ -10275,13 +10288,13 @@ contains
 !#
 !f = open("metrics.txt","w")
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    f.write("Metric interpolation node %d \n" % (inode+1))
 !    array = np.zeros([3, 3])
 !    for irow in range(0,3):
 !        for icol in range(0,3):
 !            array[irow,icol] = metrics[irow,icol,inode].item() 
-!            update_progress("Writing metrics to file            ", i/(nnodes_ie*9))
+!            update_progress("Writing metrics to file            ", i/(nnodes_elem*9))
 !            i += 1
 !    np.savetxt(f,array)
 !f.close()
@@ -10292,11 +10305,11 @@ contains
 !f = open("jinv.txt","w")
 !array = np.zeros([1])
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    f.write("Jinv interpolation node %d \n" % (inode+1))
 !    array[0] = jinv[inode].item()
 !    np.savetxt(f,array)
-!    update_progress("Writing jinv to file               ", i/(nnodes_ie))
+!    update_progress("Writing jinv to file               ", i/(nnodes_elem))
 !    i += 1
 !f.close()
 !
@@ -10305,12 +10318,12 @@ contains
 !#
 !f = open("grad1.txt","w")
 !f.write("Grad1 \n")
-!array = np.zeros([nnodes_ie,nterms_s])
+!array = np.zeros([nnodes_elem,nterms_s])
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    for iterm in range(0,nterms_s):
 !        array[inode,iterm] = grad1[inode,iterm].item()
-!        update_progress("Writing grad1 to file              ", i/(nnodes_ie*nterms_s))
+!        update_progress("Writing grad1 to file              ", i/(nnodes_elem*nterms_s))
 !        i += 1
 !np.savetxt(f,array)
 !f.close()
@@ -10320,12 +10333,12 @@ contains
 !#
 !f = open("grad2.txt","w")
 !f.write("Grad2 \n")
-!array = np.zeros([nnodes_ie,nterms_s])
+!array = np.zeros([nnodes_elem,nterms_s])
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    for iterm in range(0,nterms_s):
 !        array[inode,iterm] = grad2[inode,iterm].item()
-!        update_progress("Writing grad2 to file              ", i/(nnodes_ie*nterms_s))
+!        update_progress("Writing grad2 to file              ", i/(nnodes_elem*nterms_s))
 !        i += 1
 !np.savetxt(f,array)
 !f.close()
@@ -10335,12 +10348,12 @@ contains
 !#
 !f = open("grad3.txt","w")
 !f.write("Grad3 \n")
-!array = np.zeros([nnodes_ie,nterms_s])
+!array = np.zeros([nnodes_elem,nterms_s])
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    for iterm in range(0,nterms_s):
 !        array[inode,iterm] = grad3[inode,iterm].item()
-!        update_progress("Writing grad3 to file              ", i/(nnodes_ie*nterms_s))
+!        update_progress("Writing grad3 to file              ", i/(nnodes_elem*nterms_s))
 !        i += 1
 !np.savetxt(f,array)
 !f.close()
@@ -10350,7 +10363,7 @@ contains
 !#
 !f = open("dmetric_dx.txt","w")
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    for inode_diff in range(0,nnodes_r):
 !        for idir in range(0,ndirs):
 !            array = np.zeros([3,3])
@@ -10362,7 +10375,7 @@ contains
 !                    ddata = coords.grad
 !                    ddata_np = ddata.numpy()
 !                    array[irow,icol] = ddata_np[inode_diff,idir]
-!                    update_progress("Writing dmetric_dx to file         ", i/(nnodes_ie*nnodes_r*ndirs*3*3))
+!                    update_progress("Writing dmetric_dx to file         ", i/(nnodes_elem*nnodes_r*ndirs*3*3))
 !                    # This avoid to accumulate derivatives
 !                    dummy = coords.grad.data.zero_()
 !                    i += 1
@@ -10375,8 +10388,8 @@ contains
 !f = open("dinterp_xcoords_dx.txt","w")
 !i = 1
 !f.write("xcoord interpolation, coord 1,  row=node, col=nnodes_r*dir \n")
-!array = np.zeros([nnodes_ie,nnodes_r*ndirs])
-!for inode in range (0,nnodes_ie):
+!array = np.zeros([nnodes_elem,nnodes_r*ndirs])
+!for inode in range (0,nnodes_elem):
 !    data = interp_coords[inode,0]
 !    data.backward(retain_graph=True)
 !    ddata = coords.grad
@@ -10390,7 +10403,7 @@ contains
 !            elif idir == 2:
 !                index = 2*nnodes_r + inode_diff
 !            array[inode,index] = ddata_np[inode_diff,idir]
-!            update_progress("Writing interp_xcoords_dx to file  ", i/(nnodes_ie*nnodes_r*3))
+!            update_progress("Writing interp_xcoords_dx to file  ", i/(nnodes_elem*nnodes_r*3))
 !            i += 1
 !    # This avoid to accumulate derivatives
 !    dummy = coords.grad.data.zero_()
@@ -10399,8 +10412,8 @@ contains
 !f = open("dinterp_ycoords_dx.txt","w")
 !i = 1
 !f.write("ycoord interpolation, coord 2,  row=node, col=nnodes_r*dir \n")
-!array = np.zeros([nnodes_ie,nnodes_r*ndirs])
-!for inode in range (0,nnodes_ie):
+!array = np.zeros([nnodes_elem,nnodes_r*ndirs])
+!for inode in range (0,nnodes_elem):
 !    data = interp_coords[inode,1]
 !    data.backward(retain_graph=True)
 !    ddata = coords.grad
@@ -10414,7 +10427,7 @@ contains
 !            elif idir == 2:
 !                index = 2*nnodes_r + inode_diff
 !            array[inode,index] = ddata_np[inode_diff,idir]
-!            update_progress("Writing interp_ycoords_dx to file  ", i/(nnodes_ie*nnodes_r*3))
+!            update_progress("Writing interp_ycoords_dx to file  ", i/(nnodes_elem*nnodes_r*3))
 !            i += 1
 !    # This avoid to accumulate derivatives
 !    dummy = coords.grad.data.zero_()
@@ -10423,8 +10436,8 @@ contains
 !f = open("dinterp_zcoords_dx.txt","w")
 !i = 1
 !f.write("zcoord interpolation, coord 3,  row=node, col=nnodes_r*dir \n")
-!array = np.zeros([nnodes_ie,nnodes_r*ndirs])
-!for inode in range (0,nnodes_ie):
+!array = np.zeros([nnodes_elem,nnodes_r*ndirs])
+!for inode in range (0,nnodes_elem):
 !    data = interp_coords[inode,2]
 !    data.backward(retain_graph=True)
 !    ddata = coords.grad
@@ -10438,7 +10451,7 @@ contains
 !            elif idir == 2:
 !                index = 2*nnodes_r + inode_diff
 !            array[inode,index] = ddata_np[inode_diff,idir]
-!            update_progress("Writing interp_zcoords_dx to file  ", i/(nnodes_ie*nnodes_r*3))
+!            update_progress("Writing interp_zcoords_dx to file  ", i/(nnodes_elem*nnodes_r*3))
 !            i += 1
 !    # This avoid to accumulate derivatives
 !    dummy = coords.grad.data.zero_()
@@ -10450,7 +10463,7 @@ contains
 !#
 !f = open("djinv_dx.txt","w")
 !i = 1
-!for inode in range (0,nnodes_ie):
+!for inode in range (0,nnodes_elem):
 !    array = np.zeros([nnodes_r,ndirs])
 !    f.write("djinv_dx interpolation node %s, row=inode_diff, col=dir \n" % (inode+1))
 !    for inode_diff in range(0,nnodes_r):
@@ -10460,7 +10473,7 @@ contains
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[inode_diff,idir] = ddata_np[inode_diff,idir]
-!                update_progress("Writing djinv_dx to file           ", i/(nnodes_ie*nnodes_r*ndirs))
+!                update_progress("Writing djinv_dx to file           ", i/(nnodes_elem*nnodes_r*ndirs))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !    np.savetxt(f,array)
@@ -10519,15 +10532,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_vol_face1_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nnodes_if])
-!        for irow in range(0,nnodes_ie):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_elem,nnodes_face])
+!        for irow in range(0,nnodes_elem):
+!            for icol in range(0,nnodes_face):
 !                data = br2_vol_face1[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_vol_face1_dx to file  ", i/(nnodes_ie*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_vol_face1_dx to file  ", i/(nnodes_elem*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10537,15 +10550,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_vol_face2_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nnodes_if])
-!        for irow in range(0,nnodes_ie):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_elem,nnodes_face])
+!        for irow in range(0,nnodes_elem):
+!            for icol in range(0,nnodes_face):
 !                data = br2_vol_face2[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_vol_face2_dx to file  ", i/(nnodes_ie*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_vol_face2_dx to file  ", i/(nnodes_elem*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10555,15 +10568,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_vol_face3_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nnodes_if])
-!        for irow in range(0,nnodes_ie):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_elem,nnodes_face])
+!        for irow in range(0,nnodes_elem):
+!            for icol in range(0,nnodes_face):
 !                data = br2_vol_face3[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_vol_face3_dx to file  ", i/(nnodes_ie*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_vol_face3_dx to file  ", i/(nnodes_elem*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10573,15 +10586,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_vol_face4_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nnodes_if])
-!        for irow in range(0,nnodes_ie):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_elem,nnodes_face])
+!        for irow in range(0,nnodes_elem):
+!            for icol in range(0,nnodes_face):
 !                data = br2_vol_face4[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_vol_face4_dx to file  ", i/(nnodes_ie*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_vol_face4_dx to file  ", i/(nnodes_elem*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10591,15 +10604,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_vol_face5_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nnodes_if])
-!        for irow in range(0,nnodes_ie):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_elem,nnodes_face])
+!        for irow in range(0,nnodes_elem):
+!            for icol in range(0,nnodes_face):
 !                data = br2_vol_face5[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_vol_face5_dx to file  ", i/(nnodes_ie*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_vol_face5_dx to file  ", i/(nnodes_elem*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10609,15 +10622,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_vol_face6_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nnodes_if])
-!        for irow in range(0,nnodes_ie):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_elem,nnodes_face])
+!        for irow in range(0,nnodes_elem):
+!            for icol in range(0,nnodes_face):
 !                data = br2_vol_face6[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_vol_face6_dx to file  ", i/(nnodes_ie*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_vol_face6_dx to file  ", i/(nnodes_elem*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10632,15 +10645,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_face_face1_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_if,nnodes_if])
-!        for irow in range(0,nnodes_if):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_face,nnodes_face])
+!        for irow in range(0,nnodes_face):
+!            for icol in range(0,nnodes_face):
 !                data = br2_face_face1[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_face_face1_dx to file ", i/(nnodes_if*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_face_face1_dx to file ", i/(nnodes_face*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10650,15 +10663,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_face_face2_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_if,nnodes_if])
-!        for irow in range(0,nnodes_if):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_face,nnodes_face])
+!        for irow in range(0,nnodes_face):
+!            for icol in range(0,nnodes_face):
 !                data = br2_face_face2[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_face_face2_dx to file ", i/(nnodes_if*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_face_face2_dx to file ", i/(nnodes_face*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10668,15 +10681,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_face_face3_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_if,nnodes_if])
-!        for irow in range(0,nnodes_if):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_face,nnodes_face])
+!        for irow in range(0,nnodes_face):
+!            for icol in range(0,nnodes_face):
 !                data = br2_face_face3[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_face_face3_dx to file ", i/(nnodes_if*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_face_face3_dx to file ", i/(nnodes_face*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10686,15 +10699,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_face_face4_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_if,nnodes_if])
-!        for irow in range(0,nnodes_if):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_face,nnodes_face])
+!        for irow in range(0,nnodes_face):
+!            for icol in range(0,nnodes_face):
 !                data = br2_face_face4[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_face_face4_dx to file ", i/(nnodes_if*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_face_face4_dx to file ", i/(nnodes_face*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10704,15 +10717,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_face_face5_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_if,nnodes_if])
-!        for irow in range(0,nnodes_if):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_face,nnodes_face])
+!        for irow in range(0,nnodes_face):
+!            for icol in range(0,nnodes_face):
 !                data = br2_face_face5[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_face_face5_dx to file ", i/(nnodes_if*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_face_face5_dx to file ", i/(nnodes_face*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10722,15 +10735,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dbr2_face_face6_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_if,nnodes_if])
-!        for irow in range(0,nnodes_if):
-!            for icol in range(0,nnodes_if):
+!        array = np.zeros([nnodes_face,nnodes_face])
+!        for irow in range(0,nnodes_face):
+!            for icol in range(0,nnodes_face):
 !                data = br2_face_face6[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dbr2_face_face6_dx to file ", i/(nnodes_if*nnodes_r*ndirs*nnodes_if))
+!                update_progress("Writing dbr2_face_face6_dx to file ", i/(nnodes_face*nnodes_r*ndirs*nnodes_face))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10744,15 +10757,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dgrad1_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nterms_s])
-!        for irow in range(0,nnodes_ie):
+!        array = np.zeros([nnodes_elem,nterms_s])
+!        for irow in range(0,nnodes_elem):
 !            for icol in range(0,nterms_s):
 !                data = grad1[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dgrad1_dx to file          ", i/(nnodes_ie*nnodes_r*ndirs*nterms_s))
+!                update_progress("Writing dgrad1_dx to file          ", i/(nnodes_elem*nnodes_r*ndirs*nterms_s))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10766,15 +10779,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dgrad2_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nterms_s])
-!        for irow in range(0,nnodes_ie):
+!        array = np.zeros([nnodes_elem,nterms_s])
+!        for irow in range(0,nnodes_elem):
 !            for icol in range(0,nterms_s):
 !                data = grad2[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dgrad2_dx to file          ", i/(nnodes_ie*nnodes_r*ndirs*nterms_s))
+!                update_progress("Writing dgrad2_dx to file          ", i/(nnodes_elem*nnodes_r*ndirs*nterms_s))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)
@@ -10788,15 +10801,15 @@ contains
 !for inode_diff in range(0,nnodes_r):
 !    for idir in range(0,ndirs):
 !        f.write("dgrad3_dx => diff_node %s, diff_dir %s \n" % (inode_diff+1,idir+1))
-!        array = np.zeros([nnodes_ie,nterms_s])
-!        for irow in range(0,nnodes_ie):
+!        array = np.zeros([nnodes_elem,nterms_s])
+!        for irow in range(0,nnodes_elem):
 !            for icol in range(0,nterms_s):
 !                data = grad3[irow,icol]
 !                data.backward(retain_graph=True)
 !                ddata = coords.grad
 !                ddata_np = ddata.numpy()
 !                array[irow,icol] = ddata_np[inode_diff,idir]
-!                update_progress("Writing dgrad3_dx to file          ", i/(nnodes_ie*nnodes_r*ndirs*nterms_s))
+!                update_progress("Writing dgrad3_dx to file          ", i/(nnodes_elem*nnodes_r*ndirs*nterms_s))
 !                dummy = coords.grad.data.zero_()
 !                i += 1
 !        np.savetxt(f,array)

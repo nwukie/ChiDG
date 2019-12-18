@@ -109,8 +109,8 @@ contains
                 call worker%set_element(elem_info)
 
 
-                !! Compute differential interpolator for mesh sensititivites
-                !call worker%mesh%compute_derivatives_dx(elem_info,differentiate)
+                ! Compute differential interpolator for mesh sensititivites
+                call worker%mesh%compute_derivatives_dx(elem_info,differentiate)
 
                 ! Update the element cache
                 call cache_timer%start()
@@ -141,8 +141,8 @@ contains
                 call eqnset%compute_volume_diffusive_operators(worker, differentiate)
                 call function_timer%stop()
 
-                !! Release differential interpolators allocated memory
-                !call worker%mesh%release_derivatives_dx(elem_info,differentiate)
+                ! Release differential interpolators allocated memory
+                call worker%mesh%release_derivatives_dx(elem_info,differentiate)
 
 
                 end associate

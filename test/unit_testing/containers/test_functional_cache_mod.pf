@@ -33,7 +33,9 @@ module test_functional_cache_mod
     use mod_file_utilities,             only: delete_file
 
     use type_chidg,                     only: chidg_t
+    use type_chidg_worker,              only: chidg_worker_t
     use type_chidg_vector,              only: chidg_vector_t
+    use type_chidg_cache,               only: chidg_cache_t
     use type_cache_data,                only: cache_data_t
     use mod_string,                     only: string_t
     use type_bc_state,                  only: bc_state_t
@@ -271,16 +273,17 @@ contains
     !!  @date   9/28/2018
     !!
     !----------------------------------------------------------------------------------------
-    subroutine finalize_auxiliary(self,cache)
-        class(test_surface_functional2_t),   intent(inout)   :: self
-        type(functional_cache_t),            intent(inout)   :: cache
+    subroutine finalize_auxiliary(self,worker,cache)
+        class(test_surface_functional2_t),  intent(inout)   :: self
+        type(chidg_worker_t),               intent(in)      :: worker
+        type(functional_cache_t),           intent(inout)   :: cache
 
         type(AD_D)  :: u_aux2
 
-        u_aux2 = cache%get_value('u_aux2','auxiliary') 
+        u_aux2 = cache%get_value(worker%mesh,'u_aux2','auxiliary') 
 
-        call cache%set_value(u_aux2+2._rk,'u_aux2','auxiliary')
-        call cache%set_value(u_aux2-1._rk,'u_aux1','auxiliary')
+        call cache%set_value(worker%mesh,u_aux2+2._rk,'u_aux2','auxiliary')
+        call cache%set_value(worker%mesh,u_aux2-1._rk,'u_aux1','auxiliary')
 
     end subroutine finalize_auxiliary
     !****************************************************************************************
@@ -295,16 +298,17 @@ contains
     !!  @date   9/28/2018
     !!
     !----------------------------------------------------------------------------------------
-    subroutine finalize_functional(self,cache)
-        class(test_surface_functional2_t),   intent(inout)   :: self
-        type(functional_cache_t),            intent(inout)   :: cache
+    subroutine finalize_functional(self,worker,cache)
+        class(test_surface_functional2_t),  intent(inout)   :: self
+        type(chidg_worker_t),               intent(in)      :: worker
+        type(functional_cache_t),           intent(inout)   :: cache
 
         type(AD_D)  :: u_aux2,u_ref1
 
-        u_aux2 = cache%get_value('u_aux2','auxiliary') 
-        u_ref1 = cache%get_value('u_ref1','reference') 
+        u_aux2 = cache%get_value(worker%mesh,'u_aux2','auxiliary') 
+        u_ref1 = cache%get_value(worker%mesh,'u_ref1','reference') 
 
-        call cache%set_value(u_aux2+u_ref1,'functional 2','reference')
+        call cache%set_value(worker%mesh,u_aux2+u_ref1,'functional 2','reference')
 
     end subroutine finalize_functional
     !****************************************************************************************
@@ -698,7 +702,7 @@ contains
             fcn_info%seed%ielement_l = ielem
             fcn_info%seed%ielement_g = ielem
             fcn_info%dtype           = NO_DIFF
-            call fcl_cache%set_value(int_value,int_name,'reference',fcn_info)
+            call fcl_cache%set_value(self%chidg_v_none%data%mesh,int_value,int_name,'reference',fcn_info)
         end do
 
         
@@ -867,7 +871,7 @@ contains
             fcn_info%seed%ielement_l = ielem
             fcn_info%seed%ielement_g = ielem
             fcn_info%dtype           = dQ_DIFF
-            call fcl_cache%set_value(int_value,int_name,'reference',fcn_info)
+            call fcl_cache%set_value(self%chidg_v_dq%data%mesh,int_value,int_name,'reference',fcn_info)
         end do
 
         
@@ -1053,7 +1057,7 @@ contains
             fcn_info%seed%ielement_l = fcl_cache%ref_cache%ielement_l%at(ielem)
             fcn_info%seed%ielement_g = fcl_cache%ref_cache%ielement_g%at(ielem)
             fcn_info%dtype           = dQ_DIFF
-            call fcl_cache%set_value(int_value,int_name,'reference',fcn_info)
+            call fcl_cache%set_value(self%chidg_f_dq%data%mesh,int_value,int_name,'reference',fcn_info)
         end do
 
         
@@ -1172,6 +1176,7 @@ contains
         ifunc    = 1
         ref_geom = "reference"
 
+
         !
         ! THIS BEING TESTED: Test both functional_cache and functional_cache_handeler initialization
         !__________________
@@ -1240,11 +1245,10 @@ contains
             fcn_info%seed%ielement_l = ielem
             fcn_info%seed%ielement_g = ielem
             fcn_info%dtype           = dX_DIFF
-            call fcl_cache%set_value(int_value,int_name,'reference',fcn_info)
+            call fcl_cache%set_value(self%chidg_v_dx%data%mesh,int_value,int_name,'reference',fcn_info)
         end do
 
         
-      
             !
             ! TEST: check number of integrals stored
             !
@@ -1421,7 +1425,7 @@ contains
             fcn_info%seed%ielement_l = fcl_cache%ref_cache%ielement_l%at(ielem)
             fcn_info%seed%ielement_g = fcl_cache%ref_cache%ielement_g%at(ielem)
             fcn_info%dtype           = dX_DIFF
-            call fcl_cache%set_value(int_value,int_name,'reference',fcn_info)
+            call fcl_cache%set_value(self%chidg_f1_dx%data%mesh,int_value,int_name,'reference',fcn_info)
         end do
 
         
@@ -1545,10 +1549,17 @@ contains
         type(AD_D)                           :: int_value, u_aux1
         real(rk)                             :: ref_diff(24), ref_real, ref_deriv(24)
 
+        type(chidg_worker_t)    :: chidg_worker
+        type(chidg_cache_t)     :: cache
         
         !---------------------------------------------------------
         ! COMPUTE INTEGRALS ON THE AUXILIARY GEOMETRY
         !---------------------------------------------------------
+
+
+        ! Initialize Chidg Worker references
+        call chidg_worker%init(self%chidg_f2_dx%data%mesh, self%chidg_f2_dx%data%eqnset(:)%prop, self%chidg_f2_dx%data%sdata, self%chidg_f2_dx%data%time_manager, cache)
+
 
 
         ifunc    = 1
@@ -1600,8 +1611,6 @@ contains
        
        
         
-       
-        
         !
         ! Add integral_cache for each element manually
         !   NOTE1: remember we have: nvars = 1, nterms_s = 8
@@ -1621,7 +1630,7 @@ contains
             fcn_info%seed%ielement_l = fcl_cache%aux_cache%ielement_l%at(ielem)
             fcn_info%seed%ielement_g = fcl_cache%aux_cache%ielement_g%at(ielem)
             fcn_info%dtype           = dX_DIFF
-            call fcl_cache%set_value(int_value,int_name,'auxiliary',fcn_info)
+            call fcl_cache%set_value(self%chidg_f2_dx%data%mesh,int_value,int_name,'auxiliary',fcn_info)
         end do
 
         
@@ -1667,7 +1676,7 @@ contains
         !
         ! Finalize nothing to finalize 
         !_______________
-        call self%chidg_f2_dx%data%functional_group%fcl_entities(ifunc)%func%finalize_auxiliary(fcl_cache)
+        call self%chidg_f2_dx%data%functional_group%fcl_entities(ifunc)%func%finalize_auxiliary(chidg_worker,fcl_cache)
            
             
             !
@@ -1801,18 +1810,19 @@ contains
             do idiff = 1, self%nnodes_r*3
                 int_value%xp_ad_(idiff) = real(3+ielem,rk)
             end do
+
             ! Define fcn_info
             fcn_info%seed%idomain_l  = 1
             fcn_info%seed%idomain_g  = 1
             fcn_info%seed%ielement_l = fcl_cache%ref_cache%ielement_l%at(ielem)
             fcn_info%seed%ielement_g = fcl_cache%ref_cache%ielement_g%at(ielem)
             fcn_info%dtype           = dX_DIFF
-            u_aux1 = fcl_cache%get_value('u_aux1','auxiliary',fcn_info)
-            call fcl_cache%set_value(int_value+u_aux1,int_name,'reference',fcn_info)
+
+            u_aux1 = fcl_cache%get_value(self%chidg_f2_dx%data%mesh,'u_aux1','auxiliary',fcn_info)
+            call fcl_cache%set_value(self%chidg_f2_dx%data%mesh,int_value+u_aux1,int_name,'reference',fcn_info)
         end do
 
         
-      
             !
             ! TEST: check number of integrals stored
             !
@@ -1854,7 +1864,7 @@ contains
         !
         ! Finalize 
         !_______________
-        call self%chidg_f2_dx%data%functional_group%fcl_entities(ifunc)%func%finalize_functional(fcl_cache)
+        call self%chidg_f2_dx%data%functional_group%fcl_entities(ifunc)%func%finalize_functional(chidg_worker,fcl_cache)
            
             
             !

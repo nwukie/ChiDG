@@ -1,7 +1,7 @@
 module type_mesh
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: NO_ID, INTERIOR, NFACES, CARTESIAN, CYLINDRICAL, NO_PROC
+    use mod_constants,              only: NO_ID, INTERIOR, NFACES, CARTESIAN, CYLINDRICAL, NO_PROC, dX_DIFF
     use mod_grid,                   only: NFACE_CORNERS
     use mod_chidg_mpi,              only: NRANK, IRANK
     use type_element,               only: element_t
@@ -675,22 +675,16 @@ contains
 
         integer(ik) :: ielement_l, idomain_l 
 
-        call write_line("**********************   WARNING   ***********************")
-        call write_line("mesh%compute_derivatives_dx has not yet been implemented.")
-        call write_line("********************** END WARNING ***********************")
+        ! Compute only if we need mesh senstitivities
+        if (differentiate == dX_DIFF) then
 
-! TODO: Uncomment and implement for adjointx
-!
-!        ! Compute only if we need mesh senstitivities
-!        if (differentiate == dX_DIFF) then
-!
-!            ielement_l = elem_info%ielement_l
-!            idomain_l  = elem_info%idomain_l
-!            
-!            ! Compute element and faces differentiated interpolators
-!            call self%domain(idomain_l)%compute_interpolations_dx(ielement_l)
-!
-!        end if
+            ielement_l = elem_info%ielement_l
+            idomain_l  = elem_info%idomain_l
+            
+            ! Compute element and faces differentiated interpolators
+            call self%domain(idomain_l)%compute_interpolations_dx(ielement_l)
+
+        end if
 
     end subroutine compute_derivatives_dx
     !*********************************************************************************
@@ -715,22 +709,16 @@ contains
 
         integer(ik) :: ielement_l, idomain_l 
 
-        call write_line("**********************   WARNING   ***********************")
-        call write_line("mesh%release_derivatives_dx has not yet been implemented.")
-        call write_line("********************** END WARNING ***********************")
+        ! Release only if we need mesh senstitivities
+        if (differentiate == dX_DIFF) then
 
-! TODO: Uncomment and implement for adjointx
-!
-!        ! Release only if we need mesh senstitivities
-!        if (differentiate == dX_DIFF) then
-!
-!            ielement_l = elem_info%ielement_l
-!            idomain_l  = elem_info%idomain_l
-!            
-!            ! Realse element and faces differentiated interpolators
-!            call self%domain(idomain_l)%release_interpolations_dx(ielement_l)
-!
-!        end if
+            ielement_l = elem_info%ielement_l
+            idomain_l  = elem_info%idomain_l
+            
+            ! Realse element and faces differentiated interpolators
+            call self%domain(idomain_l)%release_interpolations_dx(ielement_l)
+
+        end if
 
     end subroutine release_derivatives_dx
     !*********************************************************************************

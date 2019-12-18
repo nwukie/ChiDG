@@ -6,10 +6,11 @@ module type_face
                                       NO_INTERIOR_NEIGHBOR, NO_PROC,                    &
                                       ZERO, ONE, TWO, ORPHAN, NO_MM_ASSIGNED, CARTESIAN, CYLINDRICAL, NO_ID
     use type_reference_element, only: reference_element_t
+    use mod_reference_elements, only: get_reference_element, ref_elems
     use type_element,           only: element_t
     use type_densevector,       only: densevector_t
-    use mod_inv,                only: inv, inv_3x3
-    use mod_determinant,        only: det_3x3
+    use mod_inv,                only: inv, inv_3x3, dinv, dinv_3x3
+    use mod_determinant,        only: det_3x3, ddet_3x3
     use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
@@ -76,6 +77,8 @@ module type_face
         integer(ik)             :: ineighbor_dof_start       = NO_ID
         integer(ik)             :: ineighbor_dof_local_start = NO_ID
         integer(ik)             :: ineighbor_pelem_ID        = NO_ID
+        integer(ik)             :: ineighbor_ref_ID_c        = NO_ID
+        integer(ik)             :: ineighbor_ref_ID_s        = NO_ID
         integer(ik)             :: recv_comm                 = NO_ID
         integer(ik)             :: recv_domain               = NO_ID
         integer(ik)             :: recv_element              = NO_ID
@@ -212,6 +215,19 @@ module type_face
         procedure, private  :: interpolate_normals_ale  
         procedure, private  :: interpolate_coords_ale
         procedure, private  :: interpolate_metrics_ale
+
+
+        ! Adjoint-based grid geometry sensitivity
+        procedure, public   :: update_interpolations_dx
+        procedure, public   :: update_neighbor_interpolations_dx
+        procedure, public   :: release_interpolations_dx
+        procedure, public   :: release_neighbor_interpolations_dx
+        procedure, private  :: interpolate_metrics_dx
+        procedure, private  :: interpolate_normals_dx 
+        procedure, private  :: interpolate_gradients_dx 
+        procedure, private  :: interpolate_br2_dx
+        procedure, private  :: interpolate_neighbor_gradients_dx 
+        procedure, private  :: interpolate_neighbor_br2_dx
 
         ! Neighbor data procedures
         procedure           :: set_neighbor             ! Set neighbor location data
@@ -1262,6 +1278,1053 @@ contains
 
 
 
+
+    !>  Compute metrics and grads differentiated wrt grid geometric variables (ie grid nodes)
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/24/2018
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine update_interpolations_dx(self,elem)
+        class(face_t),      intent(inout)   :: self
+        type(element_t),    intent(in)      :: elem
+
+        integer(ik)     :: nnodes_r, nnodes_f, nnodes_e, ierr
+
+        nnodes_r = self%basis_c%nnodes_r()
+        nnodes_f = self%basis_s%nnodes_face()
+        nnodes_e = self%basis_s%nnodes_elem()
+
+        ! (Re)Allocate storage for face data structures.
+        if (allocated(self%djinv_dx))                       &
+            deallocate(self%djinv_dx,                   &
+                       self%dmetric_dx,                 &
+                       self%dnorm_dx,                   &
+                       self%dgrad1_dx,                  &
+                       self%dgrad2_dx,                  &
+                       self%dgrad3_dx,                  &
+                       self%dbr2_v_dx,                  &
+                       self%dbr2_f_dx                   &
+                       ) 
+
+
+        allocate(self%djinv_dx(nnodes_f,nnodes_r,3),                  &
+                 self%dmetric_dx(3,3,nnodes_f,nnodes_r,3),            &
+                 self%dnorm_dx(nnodes_f,3,nnodes_r,3),                &
+                 self%dgrad1_dx(nnodes_f,self%nterms_s,nnodes_r,3),   &
+                 self%dgrad2_dx(nnodes_f,self%nterms_s,nnodes_r,3),   &
+                 self%dgrad3_dx(nnodes_f,self%nterms_s,nnodes_r,3),   &
+                 self%dbr2_v_dx(nnodes_e,nnodes_f,nnodes_r,3),        &
+                 self%dbr2_f_dx(nnodes_f,nnodes_f,nnodes_r,3),        &
+                 stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        ! Compute differential operators and matrices
+        call self%interpolate_metrics_dx()
+        call self%interpolate_normals_dx()
+        call self%interpolate_gradients_dx()
+        call self%interpolate_br2_dx(elem)
+
+
+    end subroutine update_interpolations_dx
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Compute parallel neighbor's metrics and grads differentiated wrt grid geometric variables (ie grid nodes)
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   12/12/2018
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine update_neighbor_interpolations_dx(self)
+        class(face_t),      intent(inout)   :: self
+
+        integer(ik)     :: nnodes_r, nterms_s, nnodes, ierr
+
+        !
+        ! Retrieve neighbor reference element ID
+        ! The element_type of the neighbor interior element has to match the current element
+        ! type, this is actaully happening because this subroutine is called only if the 
+        ! neighbor element is an interior element, and all the elements belonging to the same
+        ! block has the same element_type (linear, quadratic, etc). 
+        ! Node set is also the same of the current element.
+        ! The same for the level, since it level (or GQ rule) is defined for all the blocks.
+        !
+        self%ineighbor_ref_ID_s = get_reference_element(element_type = self%basis_s%element_type,   &
+                                                        polynomial   = 'Legendre',                  &    
+                                                        nterms       = self%ineighbor_nterms_s,     &    
+                                                        node_set     = self%basis_s%node_set,       &    
+                                                        level        = self%basis_s%level,          &    
+                                                        nterms_rule  = self%ineighbor_nterms_s)
+
+        self%ineighbor_ref_ID_c = get_reference_element(element_type = self%basis_c%element_type,   &
+                                                        polynomial   = 'Legendre',                  &    
+                                                        nterms       = self%ineighbor_nnodes_r,     &    
+                                                        node_set     = self%basis_c%node_set,       &    
+                                                        level        = self%basis_c%level,          &    
+                                                        nterms_rule  = self%ineighbor_nterms_s)
+
+        
+        ! The neighbor's face has the same number of interpolation nodes
+        ! of the current element's face
+        nnodes   = ref_elems(self%ineighbor_ref_ID_s)%nnodes_face()
+        nnodes_r = self%ineighbor_nnodes_r
+        nterms_s = self%ineighbor_nterms_s
+
+
+        ! (Re)Allocate storage for face data structures.
+        if (allocated(self%neighbor_dgrad1_dx))         &
+            deallocate(self%neighbor_dgrad1_dx,         &
+                       self%neighbor_dgrad2_dx,         &
+                       self%neighbor_dgrad3_dx,         &
+                       self%neighbor_dbr2_f_dx,         &
+                       self%neighbor_dnorm_dx           &
+                       ) 
+
+
+        allocate(self%neighbor_dgrad1_dx(nnodes,nterms_s,nnodes_r,3),   &
+                 self%neighbor_dgrad2_dx(nnodes,nterms_s,nnodes_r,3),   &
+                 self%neighbor_dgrad3_dx(nnodes,nterms_s,nnodes_r,3),   &
+                 self%neighbor_dbr2_f_dx(nnodes,nnodes,nnodes_r,3),     &
+                 self%neighbor_dnorm_dx(nnodes,3,nnodes_r,3),           &
+                 stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        ! Compute differential gradient interpolators for the neighbor face
+        call self%interpolate_neighbor_gradients_dx()
+        call self%interpolate_neighbor_br2_dx()
+
+    end subroutine update_neighbor_interpolations_dx
+    !**************************************************************************************
+
+
+
+
+
+
+    !>  Release differential interpolators memeory 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   12/12/2018
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine release_interpolations_dx(self)
+        class(face_t),      intent(inout)   :: self
+
+
+        ! Deallocate storage for face data structures.
+        if (allocated(self%djinv_dx))                   &
+            deallocate(self%djinv_dx,                   &
+                       self%dmetric_dx,                 &
+                       self%dnorm_dx,                   &
+                       self%dgrad1_dx,                  &
+                       self%dgrad2_dx,                  &
+                       self%dgrad3_dx,                  &
+                       self%dbr2_v_dx,                  &
+                       self%dbr2_f_dx                   &
+                       ) 
+
+
+    end subroutine release_interpolations_dx
+    !**************************************************************************************
+
+
+
+
+
+
+    !>  Release neighbor's differential interpolators memory 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   12/12/2018
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine release_neighbor_interpolations_dx(self)
+        class(face_t),      intent(inout)   :: self
+
+
+        ! Deallocate storage for face data structures.
+        if (allocated(self%neighbor_dgrad1_dx))         &
+            deallocate(self%neighbor_dgrad1_dx,         &
+                       self%neighbor_dgrad2_dx,         &
+                       self%neighbor_dgrad3_dx,         &
+                       self%neighbor_dbr2_f_dx,         &
+                       self%neighbor_dnorm_dx           &
+                       ) 
+
+
+    end subroutine release_neighbor_interpolations_dx
+    !**************************************************************************************
+
+
+
+
+
+
+
+    !> Compute element metric and jacobian terms differentiated wrt grid nodes 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/24/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine interpolate_metrics_dx(self)
+        class(face_t),  intent(inout)   :: self
+
+        integer(ik)                 :: inode, nnodes, nnodes_r, ierr, idiff_n, icoord
+        character(:),   allocatable :: coordinate_system, user_msg
+
+        real(rk),   dimension(:),           allocatable :: scaling_row2
+        real(rk),   dimension(:,:),         allocatable :: val, ddxi, ddeta, ddzeta, dmodes
+        real(rk),   dimension(:,:,:),       allocatable :: jacobian
+        real(rk),   dimension(:,:,:,:,:),   allocatable :: djacobian_dx
+
+        nnodes   = self%basis_c%nnodes_face()
+        nnodes_r = self%basis_c%nnodes_r()
+        val      = self%basis_c%interpolator_face('Value', self%iface)
+        ddxi     = self%basis_c%interpolator_face('ddxi',  self%iface)
+        ddeta    = self%basis_c%interpolator_face('ddeta', self%iface)
+        ddzeta   = self%basis_c%interpolator_face('ddzeta',self%iface)
+
+
+        ! Get nodes_to_modes matrix
+        dmodes = self%basis_c%nodes_to_modes
+
+
+        ! Compute element jacobian matrix at interpolation nodes
+        allocate(jacobian(3,3,nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        jacobian(1,1,:) = matmul(ddxi,   self%coords%getvar(1,itime = 1))
+        jacobian(1,2,:) = matmul(ddeta,  self%coords%getvar(1,itime = 1))
+        jacobian(1,3,:) = matmul(ddzeta, self%coords%getvar(1,itime = 1))
+
+        jacobian(2,1,:) = matmul(ddxi,   self%coords%getvar(2,itime = 1))
+        jacobian(2,2,:) = matmul(ddeta,  self%coords%getvar(2,itime = 1))
+        jacobian(2,3,:) = matmul(ddzeta, self%coords%getvar(2,itime = 1))
+
+        jacobian(3,1,:) = matmul(ddxi,   self%coords%getvar(3,itime = 1))
+        jacobian(3,2,:) = matmul(ddeta,  self%coords%getvar(3,itime = 1))
+        jacobian(3,3,:) = matmul(ddzeta, self%coords%getvar(3,itime = 1))
+
+
+        ! Compute coordinate derivatives of jacobian matrix wrt grid ndoes 
+        ! at interpolation nodes
+        allocate(djacobian_dx(3,3,nnodes,nnodes_r,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        
+        ! Initialize djacobian_dx with zeros
+        djacobian_dx = ZERO
+
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                
+                djacobian_dx(icoord,1,:,idiff_n,icoord) = matmul(ddxi,   dmodes(:,idiff_n))
+                djacobian_dx(icoord,2,:,idiff_n,icoord) = matmul(ddeta,  dmodes(:,idiff_n))
+                djacobian_dx(icoord,3,:,idiff_n,icoord) = matmul(ddzeta, dmodes(:,idiff_n))
+                
+            end do
+        end do
+        
+        
+        ! Add coordinate system scaling to jacobian matrix
+        allocate(scaling_row2(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        select case (self%coordinate_system)
+            case (CARTESIAN)
+                scaling_row2 = ONE
+            case (CYLINDRICAL)
+                scaling_row2 = self%interp_coords(:,1)
+            case default
+                user_msg = "face%interpolate_metrics: Invalid coordinate system."
+                call chidg_signal(FATAL,user_msg)
+        end select
+
+
+        ! Apply transformation to second row of dJacobian/d1
+        if (self%coordinate_system == CYLINDRICAL) then                                                          
+            do idiff_n = 1,nnodes_r                                                                              
+                djacobian_dx(2,1,:,idiff_n,1) = matmul(val,dmodes(:,idiff_n)) * jacobian(2,1,:)                  
+                djacobian_dx(2,2,:,idiff_n,1) = matmul(val,dmodes(:,idiff_n)) * jacobian(2,2,:)                  
+                djacobian_dx(2,3,:,idiff_n,1) = matmul(val,dmodes(:,idiff_n)) * jacobian(2,3,:)                  
+            end do                                                                                               
+        end if 
+
+
+        ! Apply coorindate system scaling
+        jacobian(2,1,:) = jacobian(2,1,:)*scaling_row2
+        jacobian(2,2,:) = jacobian(2,2,:)*scaling_row2
+        jacobian(2,3,:) = jacobian(2,3,:)*scaling_row2
+        do idiff_n = 1,nnodes_r
+            djacobian_dx(2,1,:,idiff_n,2) = djacobian_dx(2,1,:,idiff_n,2)*scaling_row2
+            djacobian_dx(2,2,:,idiff_n,2) = djacobian_dx(2,2,:,idiff_n,2)*scaling_row2
+            djacobian_dx(2,3,:,idiff_n,2) = djacobian_dx(2,3,:,idiff_n,2)*scaling_row2
+        end do
+
+
+        ! Compute inverse cell mapping jacobian
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                do inode = 1,nnodes
+                    self%djinv_dx(inode,idiff_n,icoord) = &
+                    ddet_3x3(jacobian(:,:,inode),djacobian_dx(:,:,inode,idiff_n,icoord))
+                end do
+            end do !icoord
+        end do !idiff_n
+
+
+        ! No need to check for negative jacobians derivatives
+        
+        ! Invert jacobian matrix at each interpolation node
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                do inode = 1,nnodes
+                    self%dmetric_dx(:,:,inode,idiff_n,icoord) = &
+                    dinv_3x3(jacobian(:,:,inode),djacobian_dx(:,:,inode,idiff_n,icoord))
+                end do
+            end do !icoord
+        end do !idiff_n
+
+
+    end subroutine interpolate_metrics_dx
+    !******************************************************************************************
+
+
+
+
+
+
+    !>  Compute the derivatives of normal vector components at face quadrature nodes wrt 
+    !!  grid nodes
+    !!
+    !!  NOTE: be sure to differentiate between normals self%norm and unit-normals self%unorm
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/24/2018
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine interpolate_normals_dx(self)
+        class(face_t),  intent(inout)   :: self
+
+        integer(ik)                                 :: inode, nnodes, ierr, nnodes_r, &
+                                                       idiff_n, icoord
+        character(:),   allocatable                 :: coordinate_system, user_msg
+        real(rk),       allocatable, dimension(:)   :: norm_mag, weights
+
+
+        nnodes    = self%basis_c%nnodes_face()
+        nnodes_r  = self%basis_c%nnodes_r()
+        weights   = self%basis_c%weights_face(self%iface)
+
+
+        ! Compute derivatives of normal vectors for each face
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                select case (self%iface)
+                    case (XI_MIN, XI_MAX)
+
+                        self%dnorm_dx(:,XI_DIR,  idiff_n,icoord) =               &
+                            self%djinv_dx(:,idiff_n,icoord)*self%metric(1,1,:) + &
+                            self%jinv(:)*self%dmetric_dx(1,1,:,idiff_n,icoord) 
+
+                        self%dnorm_dx(:,ETA_DIR, idiff_n,icoord) =               &
+                            self%djinv_dx(:,idiff_n,icoord)*self%metric(1,2,:) + &
+                            self%jinv(:)*self%dmetric_dx(1,2,:,idiff_n,icoord)
+
+                        self%dnorm_dx(:,ZETA_DIR,idiff_n,icoord) =               &
+                            self%djinv_dx(:,idiff_n,icoord)*self%metric(1,3,:) + &
+                            self%jinv(:)*self%dmetric_dx(1,3,:,idiff_n,icoord)
+
+                    case (ETA_MIN, ETA_MAX)
+
+                        self%dnorm_dx(:,XI_DIR,  idiff_n,icoord) =               &
+                            self%djinv_dx(:,idiff_n,icoord)*self%metric(2,1,:) + &
+                            self%jinv(:)*self%dmetric_dx(2,1,:,idiff_n,icoord) 
+
+                        self%dnorm_dx(:,ETA_DIR, idiff_n,icoord) =               &
+                            self%djinv_dx(:,idiff_n,icoord)*self%metric(2,2,:) + &
+                            self%jinv(:)*self%dmetric_dx(2,2,:,idiff_n,icoord)
+
+                        self%dnorm_dx(:,ZETA_DIR,idiff_n,icoord) =               &
+                            self%djinv_dx(:,idiff_n,icoord)*self%metric(2,3,:) + &
+                            self%jinv(:)*self%dmetric_dx(2,3,:,idiff_n,icoord)
+                        
+                    case (ZETA_MIN, ZETA_MAX)
+                        
+                        self%dnorm_dx(:,XI_DIR,  idiff_n,icoord) =               &
+                            self%djinv_dx(:,idiff_n,icoord)*self%metric(3,1,:) + &
+                            self%jinv(:)*self%dmetric_dx(3,1,:,idiff_n,icoord) 
+
+                        self%dnorm_dx(:,ETA_DIR, idiff_n,icoord) =               &
+                            self%djinv_dx(:,idiff_n,icoord)*self%metric(3,2,:) + &
+                            self%jinv(:)*self%dmetric_dx(3,2,:,idiff_n,icoord)
+
+                        self%dnorm_dx(:,ZETA_DIR,idiff_n,icoord) =               &
+                            self%djinv_dx(:,idiff_n,icoord)*self%metric(3,3,:) + &
+                            self%jinv(:)*self%dmetric_dx(3,3,:,idiff_n,icoord)
+                        
+                    case default
+                        user_msg = "face%interpolate_normals_dx: Invalid face index in face initialization."
+                        call chidg_signal(FATAL,user_msg)
+                end select
+            end do
+        end do
+        
+
+        ! Reverse normal vectors for faces XI_MIN,ETA_MIN,ZETA_MIN
+        if (self%iface == XI_MIN .or. self%iface == ETA_MIN .or. self%iface == ZETA_MIN) then
+            do idiff_n = 1,nnodes_r
+                do icoord = 1,3
+                    self%dnorm_dx(:,XI_DIR  ,idiff_n,icoord) = -self%dnorm_dx(:,XI_DIR  ,idiff_n,icoord)
+                    self%dnorm_dx(:,ETA_DIR ,idiff_n,icoord) = -self%dnorm_dx(:,ETA_DIR ,idiff_n,icoord)
+                    self%dnorm_dx(:,ZETA_DIR,idiff_n,icoord) = -self%dnorm_dx(:,ZETA_DIR,idiff_n,icoord)
+                end do
+            end do
+        end if
+
+
+
+        !
+        ! Compute unit normals
+        !
+        ! NOTE: the worker will tke care of computing the unit_norms, the differential areas
+        ! and the total areas, and norm_mag on the fly.
+        ! 
+        ! Leave the differentiation of unorm to the worker and the automatic differentiation
+        !
+        !norm_mag = sqrt(self%norm(:,XI_DIR)**TWO + self%norm(:,ETA_DIR)**TWO + self%norm(:,ZETA_DIR)**TWO)
+        !self%dunorm_dx(:,XI_DIR)   = self%norm(:,XI_DIR  )/norm_mag
+        !self%dunorm_dx(:,ETA_DIR)  = self%norm(:,ETA_DIR )/norm_mag
+        !self%dunorm_dx(:,ZETA_DIR) = self%norm(:,ZETA_DIR)/norm_mag
+
+
+
+
+    end subroutine interpolate_normals_dx
+    !******************************************************************************************
+
+
+
+
+
+
+
+    !>  Compute matrices containing derivative of cartesian gradients of basis/test function
+    !!  at each quadrature node wrt to grid geometries (ie grid nodes)
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/24/2018
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine interpolate_gradients_dx(self)
+        class(face_t),      intent(inout)   :: self
+
+        integer(ik)                                 :: iterm,inode,iface,nnodes,nnodes_r, &
+                                                       idiff_n,icoord
+        real(rk),   allocatable,    dimension(:,:)  :: ddxi, ddeta, ddzeta
+
+        iface    = self%iface
+        nnodes   = self%basis_s%nnodes_face()
+        nnodes_r = self%basis_s%nnodes_r()
+        ddxi     = self%basis_s%interpolator_face('ddxi',  iface)
+        ddeta    = self%basis_s%interpolator_face('ddeta', iface)
+        ddzeta   = self%basis_s%interpolator_face('ddzeta',iface)
+
+
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                do iterm = 1,self%nterms_s
+                    do inode = 1,nnodes
+
+                        self%dgrad1_dx(inode,iterm,idiff_n,icoord) = &
+                                self%dmetric_dx(1,1,inode,idiff_n,icoord) * ddxi(inode,iterm)   + &
+                                self%dmetric_dx(2,1,inode,idiff_n,icoord) * ddeta(inode,iterm)  + &
+                                self%dmetric_dx(3,1,inode,idiff_n,icoord) * ddzeta(inode,iterm)
+
+                        self%dgrad2_dx(inode,iterm,idiff_n,icoord) = &
+                                self%dmetric_dx(1,2,inode,idiff_n,icoord) * ddxi(inode,iterm)   + &
+                                self%dmetric_dx(2,2,inode,idiff_n,icoord) * ddeta(inode,iterm)  + &
+                                self%dmetric_dx(3,2,inode,idiff_n,icoord) * ddzeta(inode,iterm)
+
+                        self%dgrad3_dx(inode,iterm,idiff_n,icoord) = &
+                                self%dmetric_dx(1,3,inode,idiff_n,icoord) * ddxi(inode,iterm)   + &
+                                self%dmetric_dx(2,3,inode,idiff_n,icoord) * ddeta(inode,iterm)  + &
+                                self%dmetric_dx(3,3,inode,idiff_n,icoord) * ddzeta(inode,iterm)
+
+                    end do !inode
+                end do !iterm
+            end do !icoord
+        end do !idiff_n
+
+    end subroutine interpolate_gradients_dx
+    !*******************************************************************************************
+
+
+
+
+
+
+
+    !> Compute derivatives of br2_vol and br2_face matrices 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   1/31/2019
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine interpolate_br2_dx(self,elem)
+        class(face_t),      intent(inout)   :: self
+        type(element_t),    intent(in)      :: elem
+
+        integer(ik)             :: inode_r, idir
+        real(rk),   allocatable :: val_e(:,:), val_f(:,:), tmp(:,:)
+
+        val_e = self%basis_s%interpolator_element('Value')
+        val_f = self%basis_s%interpolator_face('Value',self%iface)
+        
+        
+        ! Differentiate br2_vol and br2_face
+        do inode_r = 1,self%nterms_c
+            do idir = 1,3
+                
+                tmp = matmul(elem%dinvmass_dx(:,:,inode_r,idir),transpose(val_f))
+                ! BR2_vol
+                self%dbr2_v_dx(:,:,inode_r,idir) = matmul(val_e,tmp)
+                ! BR2_face
+                self%dbr2_f_dx(:,:,inode_r,idir) = matmul(val_f,tmp)
+
+            end do !idir
+        end do !inode_r
+
+
+    end subroutine interpolate_br2_dx
+    !*******************************************************************************************
+
+
+
+
+
+
+
+    !>  Compute parallel neighbor's face differentiated gradient interpolators 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   12/14/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine interpolate_neighbor_gradients_dx(self)
+        class(face_t),  intent(inout)   :: self
+
+        integer(ik)                 :: inode, nnodes, nnodes_r, ierr, idiff_n, icoord, iterm
+        character(:),   allocatable :: coordinate_system, user_msg
+
+        real(rk),   dimension(:),           allocatable :: scaling_row2, jinv
+        real(rk),   dimension(:,:),         allocatable :: val_c, ddxi_c, ddeta_c, ddzeta_c, dmodes, &
+                                                           val_s, ddxi_s, ddeta_s, ddzeta_s
+        real(rk),   dimension(:,:,:),       allocatable :: jacobian, djinv_dx, metric
+        real(rk),   dimension(:,:,:,:,:),   allocatable :: djacobian_dx, dmetric_dx
+
+        
+        associate( nref_elem => ref_elems(self%ineighbor_ref_ID_c) )
+
+        nnodes   = nref_elem%nnodes_face()
+        nnodes_r = nref_elem%nnodes_r()
+        val_c    = nref_elem%interpolator_face('Value', self%ineighbor_face)
+        ddxi_c   = nref_elem%interpolator_face('ddxi',  self%ineighbor_face)
+        ddeta_c  = nref_elem%interpolator_face('ddeta', self%ineighbor_face)
+        ddzeta_c = nref_elem%interpolator_face('ddzeta',self%ineighbor_face)
+
+
+        ! Get nodes_to_modes matrix
+        dmodes = nref_elem%nodes_to_modes
+
+         
+        ! Compute element jacobian matrix at interpolation nodes
+        allocate(jacobian(3,3,nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        jacobian(1,1,:) = matmul(ddxi_c,   self%neighbor_coords(:,1))
+        jacobian(1,2,:) = matmul(ddeta_c,  self%neighbor_coords(:,1))
+        jacobian(1,3,:) = matmul(ddzeta_c, self%neighbor_coords(:,1))
+
+        jacobian(2,1,:) = matmul(ddxi_c,   self%neighbor_coords(:,2))
+        jacobian(2,2,:) = matmul(ddeta_c,  self%neighbor_coords(:,2))
+        jacobian(2,3,:) = matmul(ddzeta_c, self%neighbor_coords(:,2))
+
+        jacobian(3,1,:) = matmul(ddxi_c,   self%neighbor_coords(:,3))
+        jacobian(3,2,:) = matmul(ddeta_c,  self%neighbor_coords(:,3))
+        jacobian(3,3,:) = matmul(ddzeta_c, self%neighbor_coords(:,3))
+
+
+        ! Compute coordinate derivatives of jacobian matrix wrt grid ndoes 
+        ! at interpolation nodes
+        allocate(djacobian_dx(3,3,nnodes,nnodes_r,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        
+
+        ! Initialize djacobian_dx with zeros
+        djacobian_dx = ZERO
+
+
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                
+                djacobian_dx(icoord,1,:,idiff_n,icoord) = matmul(ddxi_c,   dmodes(:,idiff_n))
+                djacobian_dx(icoord,2,:,idiff_n,icoord) = matmul(ddeta_c,  dmodes(:,idiff_n))
+                djacobian_dx(icoord,3,:,idiff_n,icoord) = matmul(ddzeta_c, dmodes(:,idiff_n))
+                
+            end do
+        end do
+        
+        
+        ! Add coordinate system scaling to jacobian matrix
+        ! ASSUMPTION: neighbor coordinate system equal to current element system
+        allocate(scaling_row2(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        select case (self%coordinate_system)
+            case (CARTESIAN)
+                scaling_row2 = ONE
+            case (CYLINDRICAL)
+                scaling_row2 = matmul(val_c,self%neighbor_coords(:,1))
+            case default
+                user_msg = "face%interpolate_neighbor_gradient_dx: Invalid coordinate system."
+                call chidg_signal(FATAL,user_msg)
+        end select
+
+
+        ! Apply transformation to second row of dJacobian/d1
+        if (self%coordinate_system == CYLINDRICAL) then                                                          
+            do idiff_n = 1,nnodes_r                                                                              
+                djacobian_dx(2,1,:,idiff_n,1) = matmul(val_c,dmodes(:,idiff_n)) * jacobian(2,1,:)                  
+                djacobian_dx(2,2,:,idiff_n,1) = matmul(val_c,dmodes(:,idiff_n)) * jacobian(2,2,:)                  
+                djacobian_dx(2,3,:,idiff_n,1) = matmul(val_c,dmodes(:,idiff_n)) * jacobian(2,3,:)                  
+            end do                                                                                               
+        end if 
+
+
+        ! Apply coorindate system scaling
+        jacobian(2,1,:) = jacobian(2,1,:)*scaling_row2
+        jacobian(2,2,:) = jacobian(2,2,:)*scaling_row2
+        jacobian(2,3,:) = jacobian(2,3,:)*scaling_row2
+        do idiff_n = 1,nnodes_r
+            djacobian_dx(2,1,:,idiff_n,2) = djacobian_dx(2,1,:,idiff_n,2)*scaling_row2
+            djacobian_dx(2,2,:,idiff_n,2) = djacobian_dx(2,2,:,idiff_n,2)*scaling_row2
+            djacobian_dx(2,3,:,idiff_n,2) = djacobian_dx(2,3,:,idiff_n,2)*scaling_row2
+        end do
+
+
+
+        ! NEW
+        !
+        ! Compute inverse cell mapping jacobian
+        !
+        allocate(jinv(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        do inode = 1,nnodes
+            jinv(inode) = det_3x3(jacobian(:,:,inode))
+        end do
+        
+        
+        
+        ! NEW
+        !
+        ! Compute differentiated inverse cell mapping jacobian
+        !
+        allocate(djinv_dx(nnodes,nnodes_r,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                do inode = 1,nnodes
+                    djinv_dx(inode,idiff_n,icoord) = &
+                    ddet_3x3(jacobian(:,:,inode),djacobian_dx(:,:,inode,idiff_n,icoord))
+                end do
+            end do !icoord
+        end do !idiff_n
+
+        
+        ! NEW
+        !
+        ! Invert jacobian matrix at each interpolation node
+        !
+        allocate(metric(3,3,nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        do inode = 1,nnodes
+            metric(:,:,inode) = inv_3x3(jacobian(:,:,inode))
+        end do
+        
+        
+        
+        !
+        ! Invert jacobian matrix at each interpolation node
+        !
+        allocate(dmetric_dx(3,3,nnodes,nnodes_r,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                do inode = 1,nnodes
+                    dmetric_dx(:,:,inode,idiff_n,icoord) = &
+                    dinv_3x3(jacobian(:,:,inode),djacobian_dx(:,:,inode,idiff_n,icoord))
+                end do
+            end do !icoord
+        end do !idiff_n
+
+
+        end associate
+
+
+
+        ! Compute gradient interpolators derivatives
+        associate( nref_elem => ref_elems(self%ineighbor_ref_ID_s) )
+        
+        nnodes   = nref_elem%nnodes_face()
+        nnodes_r = nref_elem%nnodes_r()
+        val_s    = nref_elem%interpolator_face('Value', self%ineighbor_face)
+        ddxi_s   = nref_elem%interpolator_face('ddxi',  self%ineighbor_face)
+        ddeta_s  = nref_elem%interpolator_face('ddeta', self%ineighbor_face)
+        ddzeta_s = nref_elem%interpolator_face('ddzeta',self%ineighbor_face)
+        
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                do iterm = 1,self%ineighbor_nterms_s
+                    do inode = 1,nnodes
+
+                        self%neighbor_dgrad1_dx(inode,iterm,idiff_n,icoord) = &
+                                dmetric_dx(1,1,inode,idiff_n,icoord) * ddxi_s(inode,iterm)   + &
+                                dmetric_dx(2,1,inode,idiff_n,icoord) * ddeta_s(inode,iterm)  + &
+                                dmetric_dx(3,1,inode,idiff_n,icoord) * ddzeta_s(inode,iterm)
+
+                        self%neighbor_dgrad2_dx(inode,iterm,idiff_n,icoord) = &
+                                dmetric_dx(1,2,inode,idiff_n,icoord) * ddxi_s(inode,iterm)   + &
+                                dmetric_dx(2,2,inode,idiff_n,icoord) * ddeta_s(inode,iterm)  + &
+                                dmetric_dx(3,2,inode,idiff_n,icoord) * ddzeta_s(inode,iterm)
+
+                        self%neighbor_dgrad3_dx(inode,iterm,idiff_n,icoord) = &
+                                dmetric_dx(1,3,inode,idiff_n,icoord) * ddxi_s(inode,iterm)   + &
+                                dmetric_dx(2,3,inode,idiff_n,icoord) * ddeta_s(inode,iterm)  + &
+                                dmetric_dx(3,3,inode,idiff_n,icoord) * ddzeta_s(inode,iterm)
+
+                    end do !inode
+                end do !iterm
+            end do !icoord
+        end do !idiff_n
+
+
+
+        end associate
+        
+        
+        
+        !
+        ! Compute derivatives of normal vectors for neighbor face
+        !
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                select case (self%ineighbor_face)
+                    case (XI_MIN, XI_MAX)
+
+                        self%neighbor_dnorm_dx(:,XI_DIR,  idiff_n,icoord) =               &
+                            djinv_dx(:,idiff_n,icoord)*metric(1,1,:) + &
+                            jinv(:)*dmetric_dx(1,1,:,idiff_n,icoord) 
+
+                        self%neighbor_dnorm_dx(:,ETA_DIR, idiff_n,icoord) =               &
+                            djinv_dx(:,idiff_n,icoord)*metric(1,2,:) + &
+                            jinv(:)*dmetric_dx(1,2,:,idiff_n,icoord)
+
+                        self%neighbor_dnorm_dx(:,ZETA_DIR,idiff_n,icoord) =               &
+                            djinv_dx(:,idiff_n,icoord)*metric(1,3,:) + &
+                            jinv(:)*dmetric_dx(1,3,:,idiff_n,icoord)
+
+                    case (ETA_MIN, ETA_MAX)
+
+                        self%neighbor_dnorm_dx(:,XI_DIR,  idiff_n,icoord) =               &
+                            djinv_dx(:,idiff_n,icoord)*metric(2,1,:) + &
+                            jinv(:)*dmetric_dx(2,1,:,idiff_n,icoord) 
+
+                        self%neighbor_dnorm_dx(:,ETA_DIR, idiff_n,icoord) =               &
+                            djinv_dx(:,idiff_n,icoord)*metric(2,2,:) + &
+                            jinv(:)*dmetric_dx(2,2,:,idiff_n,icoord)
+
+                        self%neighbor_dnorm_dx(:,ZETA_DIR,idiff_n,icoord) =               &
+                            djinv_dx(:,idiff_n,icoord)*metric(2,3,:) + &
+                            jinv(:)*dmetric_dx(2,3,:,idiff_n,icoord)
+                        
+                    case (ZETA_MIN, ZETA_MAX)
+                        
+                        self%neighbor_dnorm_dx(:,XI_DIR,  idiff_n,icoord) =               &
+                            djinv_dx(:,idiff_n,icoord)*metric(3,1,:) + &
+                            jinv(:)*dmetric_dx(3,1,:,idiff_n,icoord) 
+
+                        self%neighbor_dnorm_dx(:,ETA_DIR, idiff_n,icoord) =               &
+                            djinv_dx(:,idiff_n,icoord)*metric(3,2,:) + &
+                            jinv(:)*dmetric_dx(3,2,:,idiff_n,icoord)
+
+                        self%neighbor_dnorm_dx(:,ZETA_DIR,idiff_n,icoord) =               &
+                            djinv_dx(:,idiff_n,icoord)*metric(3,3,:) + &
+                            jinv(:)*dmetric_dx(3,3,:,idiff_n,icoord)
+                        
+                    case default
+                        user_msg = "face%interpolate_normals_dx: Invalid face index in face initialization."
+                        call chidg_signal(FATAL,user_msg)
+                end select
+            end do
+        end do
+        
+        !
+        ! Reverse normal vectors for faces XI_MIN,ETA_MIN,ZETA_MIN
+        !
+        if (self%ineighbor_face == XI_MIN .or. self%ineighbor_face == ETA_MIN .or. self%ineighbor_face == ZETA_MIN) then
+            do idiff_n = 1,nnodes_r
+                do icoord = 1,3
+                    self%neighbor_dnorm_dx(:,XI_DIR  ,idiff_n,icoord) = -self%neighbor_dnorm_dx(:,XI_DIR  ,idiff_n,icoord)
+                    self%neighbor_dnorm_dx(:,ETA_DIR ,idiff_n,icoord) = -self%neighbor_dnorm_dx(:,ETA_DIR ,idiff_n,icoord)
+                    self%neighbor_dnorm_dx(:,ZETA_DIR,idiff_n,icoord) = -self%neighbor_dnorm_dx(:,ZETA_DIR,idiff_n,icoord)
+                end do
+            end do
+        end if
+
+    end subroutine interpolate_neighbor_gradients_dx
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+    !> Compute derivatives of neighbor br2_face matrix
+    !!
+    !! Here, we unfortunately need to recompute the neigbor element mass matrix and its inverse.
+    !! This is because the dx interpolators are computed on the fly as the jacobian
+    !! matrix is computed. Therefore, there it is very hard to communicate between processors
+    !! This can be improved in the future.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   1/31/2019
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine interpolate_neighbor_br2_dx(self)
+        class(face_t),      intent(inout)   :: self
+
+        integer(ik)                 :: inode, nnodes, nnodes_r, ierr, idiff_n, icoord, iterm,        &
+                                       nterms_s, idir
+        character(:),   allocatable :: coordinate_system, user_msg
+
+        real(rk),   dimension(:),           allocatable :: scaling_row2, jinv
+        real(rk),   dimension(:,:),         allocatable :: val_c, ddxi_c, ddeta_c, ddzeta_c, dmodes, &
+                                                           val_s, ddxi_s, ddeta_s, ddzeta_s, mass,   &
+                                                           dmass, val_f, tmp, tval_e
+        real(rk),   dimension(:,:,:),       allocatable :: jacobian, djinv_dx
+        real(rk),   dimension(:,:,:,:),     allocatable :: dinvmass_dx
+        real(rk),   dimension(:,:,:,:,:),   allocatable :: djacobian_dx
+
+        
+        associate( nref_elem => ref_elems(self%ineighbor_ref_ID_c) )
+
+        nnodes   = nref_elem%nnodes_elem()
+        nnodes_r = nref_elem%nnodes_r()
+        val_c    = nref_elem%interpolator_element('Value')
+        ddxi_c   = nref_elem%interpolator_element('ddxi')
+        ddeta_c  = nref_elem%interpolator_element('ddeta')
+        ddzeta_c = nref_elem%interpolator_element('ddzeta')
+        nterms_s = self%ineighbor_nterms_s
+        
+        !
+        ! Get nodes_to_modes matrix
+        !
+        dmodes = nref_elem%nodes_to_modes
+
+        !
+        ! Compute element jacobian matrix at interpolation nodes
+        !
+        allocate(jacobian(3,3,nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        jacobian(1,1,:) = matmul(ddxi_c,   self%neighbor_coords(:,1))
+        jacobian(1,2,:) = matmul(ddeta_c,  self%neighbor_coords(:,1))
+        jacobian(1,3,:) = matmul(ddzeta_c, self%neighbor_coords(:,1))
+
+        jacobian(2,1,:) = matmul(ddxi_c,   self%neighbor_coords(:,2))
+        jacobian(2,2,:) = matmul(ddeta_c,  self%neighbor_coords(:,2))
+        jacobian(2,3,:) = matmul(ddzeta_c, self%neighbor_coords(:,2))
+
+        jacobian(3,1,:) = matmul(ddxi_c,   self%neighbor_coords(:,3))
+        jacobian(3,2,:) = matmul(ddeta_c,  self%neighbor_coords(:,3))
+        jacobian(3,3,:) = matmul(ddzeta_c, self%neighbor_coords(:,3))
+
+
+        !
+        ! Compute coordinate derivatives of jacobian matrix wrt grid ndoes 
+        ! at interpolation nodes
+        !
+        allocate(djacobian_dx(3,3,nnodes,nnodes_r,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        
+        !
+        ! Initialize djacobian_dx with zeros
+        !
+        djacobian_dx = ZERO
+
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                
+                djacobian_dx(icoord,1,:,idiff_n,icoord) = matmul(ddxi_c,   dmodes(:,idiff_n))
+                djacobian_dx(icoord,2,:,idiff_n,icoord) = matmul(ddeta_c,  dmodes(:,idiff_n))
+                djacobian_dx(icoord,3,:,idiff_n,icoord) = matmul(ddzeta_c, dmodes(:,idiff_n))
+                
+            end do
+        end do
+        
+        
+        !
+        ! Add coordinate system scaling to jacobian matrix
+        ! ASSUMPTION: neighbor coordinate system equal to current element system
+        !
+        allocate(scaling_row2(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        select case (self%coordinate_system)
+            case (CARTESIAN)
+                scaling_row2 = ONE
+            case (CYLINDRICAL)
+                scaling_row2 = matmul(val_c,self%neighbor_coords(:,1))
+            case default
+                user_msg = "face%interpolate_neighbor_gradient_dx: Invalid coordinate system."
+                call chidg_signal(FATAL,user_msg)
+        end select
+
+
+        !
+        ! Apply transformation to second row of dJacobian/d1
+        !                                                                                                        
+        if (self%coordinate_system == CYLINDRICAL) then                                                          
+            do idiff_n = 1,nnodes_r                                                                              
+                djacobian_dx(2,1,:,idiff_n,1) = matmul(val_c,dmodes(:,idiff_n)) * jacobian(2,1,:)                  
+                djacobian_dx(2,2,:,idiff_n,1) = matmul(val_c,dmodes(:,idiff_n)) * jacobian(2,2,:)                  
+                djacobian_dx(2,3,:,idiff_n,1) = matmul(val_c,dmodes(:,idiff_n)) * jacobian(2,3,:)                  
+            end do                                                                                               
+        end if 
+
+
+        !
+        ! Apply coorindate system scaling
+        !
+        jacobian(2,1,:) = jacobian(2,1,:)*scaling_row2
+        jacobian(2,2,:) = jacobian(2,2,:)*scaling_row2
+        jacobian(2,3,:) = jacobian(2,3,:)*scaling_row2
+        do idiff_n = 1,nnodes_r
+            djacobian_dx(2,1,:,idiff_n,2) = djacobian_dx(2,1,:,idiff_n,2)*scaling_row2
+            djacobian_dx(2,2,:,idiff_n,2) = djacobian_dx(2,2,:,idiff_n,2)*scaling_row2
+            djacobian_dx(2,3,:,idiff_n,2) = djacobian_dx(2,3,:,idiff_n,2)*scaling_row2
+        end do
+
+
+        !    
+        ! Compute inverse cell mapping jacobian
+        !    
+        allocate(jinv(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        do inode = 1,nnodes
+            jinv(inode) = det_3x3(jacobian(:,:,inode))
+        end do
+
+
+        !    
+        ! Compute derivatives inverse cell mapping jacobian
+        !    
+        allocate(djinv_dx(nnodes,nnodes_r,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                do inode = 1,nnodes
+                    djinv_dx(inode,idiff_n,icoord) = &
+                    ddet_3x3(jacobian(:,:,inode),djacobian_dx(:,:,inode,idiff_n,icoord))
+                end do
+            end do !icoord
+        end do !idiff_n
+
+        end associate
+
+
+       
+       
+        associate( nref_elem => ref_elems(self%ineighbor_ref_ID_s) )
+
+        !
+        ! Compute mass neighbor mass matrix
+        !
+        tval_e = transpose(nref_elem%interpolator_element('Value'))
+
+
+        !
+        ! Multiply rows by quadrature weights and cell jacobians
+        !
+        do iterm = 1,nterms_s
+            tval_e(iterm,:) = tval_e(iterm,:)*(nref_elem%weights_element())*(jinv)
+        end do
+
+
+        ! Perform the matrix multiplication of the transpose val matrix by
+        ! the standard matrix. This produces the mass matrix.
+        mass = matmul(tval_e,nref_elem%interpolator_element('Value'))
+
+
+        ! Compute neighbor mass matric differentiated by each support node and direction
+        allocate(dinvmass_dx(nterms_s,nterms_s,nnodes_r,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        do idiff_n = 1,nnodes_r
+            do idir = 1,3
+
+                tval_e = transpose(nref_elem%interpolator_element('Value'))
+
+                ! Multiply rows by quadrature weights and cell jacobians
+                do iterm = 1,nterms_s
+                    tval_e(iterm,:) = tval_e(iterm,:)*(nref_elem%weights_element())*(djinv_dx(:,idiff_n,idir))
+                end do
+
+
+                ! Perform the matrix multiplication of the transpose val matrix by
+                ! the standard matrix. This produces the mass matrix.
+                dmass = matmul(tval_e,nref_elem%interpolator_element('Value'))
+
+
+                ! Compute and store differentiated inverse mass matrix  
+                dinvmass_dx(:,:,idiff_n,idir) = dinv(mass,dmass)
+
+            end do !idir
+        end do !inode_r
+
+
+        ! Finally compute br2_face for neighbor element
+        val_f = nref_elem%interpolator_face('Value',self%ineighbor_face)
+        do idiff_n = 1,nnodes_r
+            do idir = 1,3
+                
+                tmp = matmul(dinvmass_dx(:,:,idiff_n,idir),transpose(val_f))
+                ! BR2_face
+                self%neighbor_dbr2_f_dx(:,:,idiff_n,idir) = matmul(val_f,tmp)
+
+            end do !idir
+        end do !inode_r
+
+
+        end associate
+
+    end subroutine interpolate_neighbor_br2_dx
+    !*******************************************************************************************
 
 
 

@@ -4,13 +4,13 @@ module test_interpolate_chimera_dx_mod
     use type_point,         only: point_t
     use type_meshdata,      only: meshdata_t
     use type_face_info,     only: face_info_t
-    use type_element_info,  only: element_info_t
+    use type_element_info,  only: element_info_t, element_info
     use type_function_info, only: function_info_t
 
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  NEIGHBOR, IO_DESTINATION, dX_DIFF
+                                  NEIGHBOR, IO_DESTINATION, dX_DIFF, CARTESIAN, NO_ID
     use mod_chidg_mpi,      only: IRANK
     use mod_DNAD_tools,     only: compute_neighbor_element_l, compute_neighbor_face
     use mod_interpolate,    only: interpolate_face_standard, interpolate_face_autodiff
@@ -65,53 +65,33 @@ contains
     subroutine setUp(this)
         class(test_interpolate_chimera_dx),    intent(inout)   :: this
 
-        integer(ik)                     :: ivar, idom
+        integer(ik)                     :: ifield, idom
         type(meshdata_t),   allocatable :: meshdata(:) 
         
-        !
         ! Send log to file
-        !
         IO_DESTINATION = 'file'
     
-
-        !        
         ! Initialize ChiDG environment
-        !
         call this%chidg%start_up('core')
 
-
-        !
         ! Create mesh file
-        !
         this%filename = "D2E8M1_abutting_matching.h5"
         call create_mesh_file("D2 E8 M1 : Abutting : Matching",this%filename)
 
-
-        !
         ! Set order of solution expansion
-        !
         call this%chidg%set('Solution Order', integer_input=2)
 
-
-        !
         ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
-        !
         call this%chidg%read_mesh(this%filename,'primal storage')
 
-
-        !
         ! Initialized solution to linearly increasing values in x direction
-        !
-        ivar = this%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+        ifield= this%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
-
-        !
         ! Initialize variable
-        !
         call create_function(this%fcn,'x_linear')                 ! Allocate constant function
         call this%fcn%set_option('val'  ,1._rk)                     ! Set constant function value
         call this%fcn%set_option('slope',1._rk)                     ! Set slope function value
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,this%fcn,ivar)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,this%fcn,ifield)
 
     
     end subroutine setUp
@@ -155,13 +135,12 @@ contains
     subroutine test__interpolate_face_chimera_AD__dx_values__idE(self)
         class(test_interpolate_chimera_dx),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
+        integer(ik)                 :: ielem, iface, ifield, ngq, idomain, itime, nterms_s, nfields
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val, slope
-        type(face_info_t)           :: face
-        type(element_info_t)        :: elem
-        type(function_info_t)       :: fcn
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: fcn_info
         
 
 
@@ -170,48 +149,63 @@ contains
 
             idomain = 1         ! domain index
             ielem   = 2         ! given element
+            nterms_s = 8
+            nfields = 1
             itime   = 1
             iface   = XI_MAX    ! given face
-            
-            elem%idomain_g  = idomain
-            elem%idomain_l  = idomain
-            elem%ielement_g = ielem
-            elem%ielement_l = ielem
 
+            !
+            ! Set element indices
+            !
+            elem_info = element_info(idomain_g       = idomain, &
+                                     idomain_l       = idomain, &
+                                     ielement_g      = ielem,   &
+                                     ielement_l      = ielem,   &
+                                     iproc           = 0,       &
+                                     pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
+                                     eqn_ID          = 1,       &
+                                     nfields         = 1,       &
+                                     ntime           = 1,       &
+                                     nterms_s        = 8,       &
+                                     nterms_c        = 8,       &
+                                     dof_start       = 1,       &
+                                     dof_local_start = 1,       &
+                                     recv_comm    = NO_ID,      &
+                                     recv_domain  = NO_ID,      &
+                                     recv_element = NO_ID,      &
+                                     recv_dof     = NO_ID)
+
+            
 
             !
             ! A seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
             !
-            call fcn%seed%init(idomain_g    = 1,     &
-                               idomain_l    = 1,     &
-                               ielement_g   = 2,     &
-                               ielement_l   = 2,     &
-                               neqns        = 1,     &
-                               nterms_s     = 8,     &
-                               nnodes_r     = 8,     &
-                               iproc        = IRANK, &
-                               recv_comm    = 0,     &
-                               recv_domain  = 0,     &
-                               recv_element = 0)
+            call fcn_info%seed%init(idomain_g    = 1,     &
+                                    idomain_l    = 1,     &
+                                    ielement_g   = 2,     &
+                                    ielement_l   = 2,     &
+                                    nfields      = nfields,  &
+                                    nterms_s     = nterms_s, &
+                                    nnodes_r     = 8,     &
+                                    iproc        = IRANK, &
+                                    itime        = itime, &
+                                    dof_start    = (ielem-1)*nterms_s*nfields + 1, &
+                                    recv_comm    = 0,     &
+                                    recv_domain  = 0,     &
+                                    recv_element = 0)
             
             !
             ! Set linearization type to allow to initialize correctly the derivatives
             !
-            fcn%dtype = dX_DIFF
-
-            !
-            ! Set face indices
-            !
-            face%idomain_g  = idomain
-            face%idomain_l  = idomain
-            face%ielement_g = ielem
-            face%ielement_l = ielem
-            face%iface      = iface
+            fcn_info%dtype = dX_DIFF
 
 
-            tol  = 1.e-13_rk
-            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq  = faces(ielem,iface)%basis_s%nnodes_if()
+
+
+            tol    = 1.e-13_rk
+            ifield = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq    = faces(ielem,iface)%basis_s%nnodes_face()
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
             allocate(u_gq(ngq))
@@ -221,13 +215,13 @@ contains
             !
             ! Compute dX derivatives of the interpolators
             !
-            call self%chidg%data%mesh%compute_derivatives_dx(elem,differentiate=dX_DIFF)
+            call self%chidg%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
 
 
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,elem_info,fcn_info,iface,ifield,itime,'value', NEIGHBOR)
             
             
             ! Initialize reference
@@ -245,7 +239,7 @@ contains
             !
             ! Release dX derivatives of the interpolators
             !
-            call self%chidg%data%mesh%release_derivatives_dx(elem,differentiate=dX_DIFF)
+            call self%chidg%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)
             
         end associate
         
@@ -269,66 +263,76 @@ contains
     subroutine test__interpolate_face_chimera_AD__dx_derivatives__idF(self)
         class(test_interpolate_chimera_dx),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain, itime
+        integer(ik)                 :: ielem, iface, ifield, ngq, igq, nderiv, idomain, itime, nterms_s, nfields
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
-        type(face_info_t)           :: face
-        type(element_info_t)        :: elem
-        type(function_info_t)       :: fcn
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: fcn_info
         
         
         associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
 
             idomain = 1         ! domain index
             ielem   = 2         ! given element
+            nterms_s = 8
+            nfields = 1
             iface   = XI_MAX    ! given face
             itime   = 1
             
-            elem%idomain_g  = idomain
-            elem%idomain_l  = idomain
-            elem%ielement_g = ielem
-            elem%ielement_l = ielem
+            !
+            ! Set face indices
+            !
+            elem_info = element_info(idomain_g       = idomain, &
+                                     idomain_l       = idomain, &
+                                     ielement_g      = ielem,   &
+                                     ielement_l      = ielem,   &
+                                     iproc           = 0,       &
+                                     pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
+                                     eqn_ID          = 1,       &
+                                     nfields         = 1,       &
+                                     ntime           = 1,       &
+                                     nterms_s        = 8,       &
+                                     nterms_c        = 8,       &
+                                     dof_start       = 1,       &
+                                     dof_local_start = 1,       &
+                                     recv_comm    = NO_ID,      &
+                                     recv_domain  = NO_ID,      &
+                                     recv_element = NO_ID,      &
+                                     recv_dof     = NO_ID)
 
 
             !
             ! A seed element, this is the current element. Since we are performing a 
             ! NEIGHBOR interpolation, derivatives should be zero
             !
-            call fcn%seed%init(idomain_g    = 1,     &
-                               idomain_l    = 1,     &
-                               ielement_g   = 2,     &
-                               ielement_l   = 2,     &
-                               neqns        = 1,     &
-                               nterms_s     = 8,     &
-                               nnodes_r     = 8,     &
-                               iproc        = IRANK, &
-                               recv_comm    = 0,     &
-                               recv_domain  = 0,     &
-                               recv_element = 0)
+            call fcn_info%seed%init(idomain_g    = 1,     &
+                                    idomain_l    = 1,     &
+                                    ielement_g   = 2,     &
+                                    ielement_l   = 2,     &
+                                    nfields      = nfields,  &
+                                    nterms_s     = nterms_s, &
+                                    nnodes_r     = 8,     &
+                                    iproc        = IRANK, &
+                                    itime        = itime, &
+                                    dof_start    = (ielem-1)*nterms_s*nfields + 1, &
+                                    recv_comm    = 0,     &
+                                    recv_domain  = 0,     &
+                                    recv_element = 0)
 
 
             
             !
             ! Set linearization type to allow to initialize correctly the derivatives
             !
-            fcn%dtype = dX_DIFF
-
-            !
-            ! Set face indices
-            !
-            face%idomain_g  = idomain
-            face%idomain_l  = idomain
-            face%ielement_g = ielem
-            face%ielement_l = ielem
-            face%iface      = iface
-
+            fcn_info%dtype = dX_DIFF
 
 
             tol    = 1.e-13_rk
-            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq    = faces(ielem,iface)%basis_s%nnodes_if()
-            nderiv = faces(ielem,iface)%nnodes_r * 3
+            ifield = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq    = faces(ielem,iface)%basis_s%nnodes_face()
+            nderiv = faces(ielem,iface)%nterms_c * 3
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
             ! not yet allocated
@@ -339,13 +343,13 @@ contains
             !
             ! Compute dX derivatives of the interpolators
             !
-            call self%chidg%data%mesh%compute_derivatives_dx(elem,differentiate=dX_DIFF)
+            call self%chidg%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
 
             
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,elem_info,fcn_info,iface,ifield,itime,'value', NEIGHBOR)
             
             deriv_ref = ZERO
             
@@ -358,7 +362,7 @@ contains
             !
             ! Release dX derivatives of the interpolators
             !
-            call self%chidg%data%mesh%release_derivatives_dx(elem,differentiate=dX_DIFF)
+            call self%chidg%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)
             
         end associate
         
@@ -384,65 +388,75 @@ contains
     subroutine test__interpolate_face_chimera_dx_AD__values__idG(self)
         class(test_interpolate_chimera_dx),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
+        integer(ik)                 :: ielem, iface, ifield, ngq, idomain, itime, nterms_s, nfields
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val, slope
-        type(face_info_t)           :: face
-        type(element_info_t)        :: elem
-        type(function_info_t)       :: fcn
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: fcn_info
         
         
         associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q )
 
             idomain = 1         ! domain index
             ielem   = 2         ! given element
+            nterms_s = 8
+            nfields = 1
             iface   = XI_MAX    ! given face
             itime   = 1
-            
-            elem%idomain_g  = idomain
-            elem%idomain_l  = idomain
-            elem%ielement_g = ielem
-            elem%ielement_l = ielem
+
+            !
+            ! Set face indices
+            !
+            elem_info = element_info(idomain_g       = idomain, &
+                                     idomain_l       = idomain, &
+                                     ielement_g      = ielem,   &
+                                     ielement_l      = ielem,   &
+                                     iproc           = 0,       &
+                                     pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
+                                     eqn_ID          = 1,       &
+                                     nfields         = 1,       &
+                                     ntime           = 1,       &
+                                     nterms_s        = 8,       &
+                                     nterms_c        = 8,       &
+                                     dof_start       = 1,       &
+                                     dof_local_start = 1,       &
+                                     recv_comm    = NO_ID,      &
+                                     recv_domain  = NO_ID,      &
+                                     recv_element = NO_ID,      &
+                                     recv_dof     = NO_ID)
+
 
             !
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
             ! all dervative arrays should be nonzero
             !
-            call fcn%seed%init(idomain_g    = 2,     &
-                               idomain_l    = 2,     &
-                               ielement_g   = 1,     &
-                               ielement_l   = 1,     &
-                               neqns        = 1,     &
-                               nterms_s     = 8,     &
-                               nnodes_r     = 8,     &
-                               iproc        = IRANK, &
-                               recv_comm    = 0,     &
-                               recv_domain  = 0,     &
-                               recv_element = 0)
+            call fcn_info%seed%init(idomain_g    = 2,     &
+                                    idomain_l    = 2,     &
+                                    ielement_g   = 1,     &
+                                    ielement_l   = 1,     &
+                                    nfields      = nfields,  &
+                                    nterms_s     = nterms_s, &
+                                    nnodes_r     = 8,     &
+                                    iproc        = IRANK, &
+                                    itime        = itime, &
+                                    dof_start    = (ielem-1)*nterms_s*nfields + 1, &
+                                    recv_comm    = 0,     &
+                                    recv_domain  = 0,     &
+                                    recv_element = 0)
 
             
             !
             ! Set linearization type to allow to initialize correctly the derivatives
             !
-            fcn%dtype = dX_DIFF
-
-
-
-            !
-            ! Set face indices
-            !
-            face%idomain_g  = idomain
-            face%idomain_l  = idomain
-            face%ielement_g = ielem
-            face%ielement_l = ielem
-            face%iface      = iface
+            fcn_info%dtype = dX_DIFF
 
 
 
             tol  = 1.e-13_rk
-            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq  = faces(ielem,iface)%basis_s%nnodes_if()
+            ifield = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq  = faces(ielem,iface)%basis_s%nnodes_face()
             
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
             ! not yet allocated
@@ -453,13 +467,13 @@ contains
             !
             ! Compute dX derivatives of the interpolators
             !
-            call self%chidg%data%mesh%compute_derivatives_dx(elem,differentiate=dX_DIFF)
+            call self%chidg%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
 
             
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,elem_info,fcn_info,iface,ifield,itime,'value', NEIGHBOR)
             
             
             !
@@ -478,7 +492,7 @@ contains
             !
             ! Release dX derivatives of the interpolators
             !
-            call self%chidg%data%mesh%release_derivatives_dx(elem,differentiate=dX_DIFF)
+            call self%chidg%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)
             
             
         end associate
@@ -502,14 +516,13 @@ contains
     subroutine test__interpolate_face_chimera_dx_AD__derivatives__idH(self)
         class(test_interpolate_chimera_dx),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain, itime
+        integer(ik)                 :: ielem, iface, ifield, igq, ngq, nderiv, idomain, itime, nterms_s, nfields
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
         real(rk),   allocatable     :: mat(:,:)
-        type(face_info_t)           :: face
-        type(element_info_t)        :: elem
-        type(function_info_t)       :: fcn
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: fcn_info
 
         integer(ik)                 :: ielem_n, iface_n, idonor, ChiID, ndonor_nodes
         
@@ -519,13 +532,33 @@ contains
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
+            nterms_s = 8
+            nfields = 1
             itime   = 1
             idonor  = 1
             
-            elem%idomain_g  = idomain
-            elem%idomain_l  = idomain
-            elem%ielement_g = ielem
-            elem%ielement_l = ielem
+            !
+            ! Set face indices
+            !
+            elem_info = element_info(idomain_g       = idomain, &
+                                     idomain_l       = idomain, &
+                                     ielement_g      = ielem,   &
+                                     ielement_l      = ielem,   &
+                                     iproc           = 0,       &
+                                     pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
+                                     eqn_ID          = 1,       &
+                                     nfields         = 1,       &
+                                     ntime           = 1,       &
+                                     nterms_s        = 8,       &
+                                     nterms_c        = 8,       &
+                                     dof_start       = 0,       &
+                                     dof_local_start = 1,       &
+                                     recv_comm    = NO_ID,      &
+                                     recv_domain  = NO_ID,      &
+                                     recv_element = NO_ID,      &
+                                     recv_dof     = NO_ID)
+
 
             ChiID = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%ChiID
 
@@ -533,41 +566,30 @@ contains
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
             ! all dervative arrays should be nonzero
             !
-            call fcn%seed%init(idomain_g    = 2,     &
-                               idomain_l    = 2,     &
-                               ielement_g   = 1,     &
-                               ielement_l   = 1,     &
-                               neqns        = 1,     &
-                               nterms_s     = 8,     &
-                               nnodes_r     = 8,     &
-                               iproc        = IRANK, &
-                               recv_comm    = 0,     &
-                               recv_domain  = 0,     &
-                               recv_element = 0)
+            call fcn_info%seed%init(idomain_g    = 2,     &
+                                    idomain_l    = 2,     &
+                                    ielement_g   = 1,     &
+                                    ielement_l   = 1,     &
+                                    nfields      = nfields,  &
+                                    nterms_s     = nterms_s, &
+                                    nnodes_r     = 8,     &
+                                    iproc        = IRANK, &
+                                    itime        = itime, &
+                                    dof_start    = (ielem-1)*nterms_s*nfields + 1, &
+                                    recv_comm    = 0,     &
+                                    recv_domain  = 0,     &
+                                    recv_element = 0)
 
             
             !
             ! Set linearization type to allow to initialize correctly the derivatives
             !
-            fcn%dtype = dX_DIFF
+            fcn_info%dtype = dX_DIFF
 
-
-
-            !
-            ! Set face indices
-            !
-            face%idomain_g  = idomain
-            face%idomain_l  = idomain
-            face%ielement_g = ielem
-            face%ielement_l = ielem
-            face%iface      = iface
-
-
-            
             tol    = 1.e-13_rk
-            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq    = faces(ielem,iface)%basis_s%nnodes_if()
-            nderiv = faces(ielem,iface)%nnodes_r * 3 
+            ifield = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq    = faces(ielem,iface)%basis_s%nnodes_face()
+            nderiv = faces(ielem,iface)%nterms_c * 3 
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
             ! not yet allocated
@@ -578,13 +600,13 @@ contains
             !
             ! Compute dX derivatives of the interpolators
             !
-            call self%chidg%data%mesh%compute_derivatives_dx(elem,differentiate=dX_DIFF)
+            call self%chidg%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
 
             
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,elem_info,fcn_info,iface,ifield,itime,'value', NEIGHBOR)
               
             
             
@@ -609,7 +631,7 @@ contains
             !
             ! Release dX derivatives of the interpolators
             !
-            call self%chidg%data%mesh%release_derivatives_dx(elem,differentiate=dX_DIFF)
+            call self%chidg%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)
             
         end associate
 
@@ -641,13 +663,12 @@ contains
     subroutine test__interpolate_face_chimera_dx_AD__grad1__idI(self)
         class(test_interpolate_chimera_dx),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
+        integer(ik)                 :: ielem, iface, ifield, ngq, idomain, itime, nterms_s, nfields
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val, slope
-        type(face_info_t)           :: face
-        type(element_info_t)        :: elem
-        type(function_info_t)       :: fcn
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: fcn_info
         
         
         associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q )
@@ -655,51 +676,66 @@ contains
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
+            nfields = 1
+            nterms_s = 8
             itime   = 1
             
-            elem%idomain_g  = idomain
-            elem%idomain_l  = idomain
-            elem%ielement_g = ielem
-            elem%ielement_l = ielem
+
+            !
+            ! Set face indices
+            !
+            elem_info = element_info(idomain_g       = idomain, &
+                                     idomain_l       = idomain, &
+                                     ielement_g      = ielem,   &
+                                     ielement_l      = ielem,   &
+                                     iproc           = 0,       &
+                                     pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
+                                     eqn_ID          = 1,       &
+                                     nfields         = 1,       &
+                                     ntime           = 1,       &
+                                     nterms_s        = 8,       &
+                                     nterms_c        = 8,       &
+                                     dof_start       = 0,       &
+                                     dof_local_start = 1,       &
+                                     recv_comm    = NO_ID,      &
+                                     recv_domain  = NO_ID,      &
+                                     recv_element = NO_ID,      &
+                                     recv_dof     = NO_ID)
+
+
+
+
+
 
             !
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
             ! all dervative arrays should be nonzero
             !
-            call fcn%seed%init(idomain_g    = 2,     &
-                               idomain_l    = 2,     &
-                               ielement_g   = 1,     &
-                               ielement_l   = 1,     &
-                               neqns        = 1,     &
-                               nterms_s     = 8,     &
-                               nnodes_r     = 8,     &
-                               iproc        = IRANK, &
-                               recv_comm    = 0,     &
-                               recv_domain  = 0,     &
-                               recv_element = 0)
+            call fcn_info%seed%init(idomain_g    = 2,     &
+                                    idomain_l    = 2,     &
+                                    ielement_g   = 1,     &
+                                    ielement_l   = 1,     &
+                                    nfields      = nfields,     &
+                                    nterms_s     = nterms_s,     &
+                                    nnodes_r     = 8,     &
+                                    iproc        = IRANK, &
+                                    itime        = itime, &
+                                    dof_start    = (ielem-1)*nterms_s*nfields + 1, &
+                                    recv_comm    = 0,     &
+                                    recv_domain  = 0,     &
+                                    recv_element = 0)
 
             
             !
             ! Set linearization type to allow to initialize correctly the derivatives
             !
-            fcn%dtype = dX_DIFF
-
-
-
-            !
-            ! Set face indices
-            !
-            face%idomain_g  = idomain
-            face%idomain_l  = idomain
-            face%ielement_g = ielem
-            face%ielement_l = ielem
-            face%iface      = iface
-
+            fcn_info%dtype = dX_DIFF
 
 
             tol  = 1.e-13_rk
-            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq  = faces(ielem,iface)%basis_s%nnodes_if()
+            ifield = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq  = faces(ielem,iface)%basis_s%nnodes_face()
             
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
             ! not yet allocated
@@ -710,13 +746,13 @@ contains
             !
             ! Compute dX derivatives of the interpolators
             !
-            call self%chidg%data%mesh%compute_derivatives_dx(elem,differentiate=dX_DIFF)
+            call self%chidg%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
 
             
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'grad1', NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,elem_info,fcn_info,iface,ifield,itime,'grad1', NEIGHBOR)
             
             
             !
@@ -741,7 +777,7 @@ contains
             !
             ! Release dX derivatives of the interpolators
             !
-            call self%chidg%data%mesh%release_derivatives_dx(elem,differentiate=dX_DIFF)
+            call self%chidg%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)
             
         end associate
         
@@ -769,72 +805,79 @@ contains
     subroutine test__interpolate_face_chimera_dx_AD__grad1_derivatives__idJ(self)
         class(test_interpolate_chimera_dx),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain, itime, &
-                                       nnodes_r
+        integer(ik)                 :: ielem, iface, ifield, igq, ngq, nderiv, idomain, itime, nterms_s, nfields, nnodes_r
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
         real(rk),   allocatable     :: mat(:,:)
-        type(face_info_t)           :: face
-        type(element_info_t)        :: elem
-        type(function_info_t)       :: fcn
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: fcn_info
 
         integer(ik)                 :: ielem_n, iface_n, idonor, ChiID, ndonor_nodes
         
         
         associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
 
-            idomain = 1         ! domain index
-            ielem   = 2         ! given element
-            iface   = XI_MAX    ! given face
-            itime   = 1
-            idonor  = 1
+            idomain  = 1         ! domain index
+            ielem    = 2         ! given element
+            iface    = XI_MAX    ! given face
+            nterms_s = 8
+            nfields  = 1
+            itime    = 1
+            idonor   = 1
             
-            elem%idomain_g  = idomain
-            elem%idomain_l  = idomain
-            elem%ielement_g = ielem
-            elem%ielement_l = ielem
 
+            !
+            ! Set face indices
+            !
+            elem_info = element_info(idomain_g       = idomain, &
+                                     idomain_l       = idomain, &
+                                     ielement_g      = ielem,   &
+                                     ielement_l      = ielem,   &
+                                     iproc           = 0,       &
+                                     pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
+                                     eqn_ID          = 1,       &
+                                     nfields         = 1,       &
+                                     ntime           = 1,       &
+                                     nterms_s        = 8,       &
+                                     nterms_c        = 8,       &
+                                     dof_start       = 0,       &
+                                     dof_local_start = 1,       &
+                                     recv_comm    = NO_ID,      &
+                                     recv_domain  = NO_ID,      &
+                                     recv_element = NO_ID,      &
+                                     recv_dof     = NO_ID)
 
             !
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
             ! all dervative arrays should be nonzero
             !
-            call fcn%seed%init(idomain_g    = 2,     &
-                               idomain_l    = 2,     &
-                               ielement_g   = 1,     &
-                               ielement_l   = 1,     &
-                               neqns        = 1,     &
-                               nterms_s     = 8,     &
-                               nnodes_r     = 8,     &
-                               iproc        = IRANK, &
-                               recv_comm    = 0,     &
-                               recv_domain  = 0,     &
-                               recv_element = 0)
+            call fcn_info%seed%init(idomain_g    = 2,     &
+                                    idomain_l    = 2,     &
+                                    ielement_g   = 1,     &
+                                    ielement_l   = 1,     &
+                                    nfields      = nfields,  &
+                                    nterms_s     = nterms_s, &
+                                    nnodes_r     = 8,     &
+                                    iproc        = IRANK, &
+                                    itime        = itime, &
+                                    dof_start    = (ielem-1)*nterms_s*nfields + 1, &
+                                    recv_comm    = 0,     &
+                                    recv_domain  = 0,     &
+                                    recv_element = 0)
 
             
             !
             ! Set linearization type to allow to initialize correctly the derivatives
             !
-            fcn%dtype = dX_DIFF
+            fcn_info%dtype = dX_DIFF
 
 
-
-            !
-            ! Set face indices
-            !
-            face%idomain_g  = idomain
-            face%idomain_l  = idomain
-            face%ielement_g = ielem
-            face%ielement_l = ielem
-            face%iface      = iface
-
-
-            
             tol      = 1.e-13_rk
-            ivar     = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq      = faces(ielem,iface)%basis_s%nnodes_if()
-            nnodes_r = faces(ielem,iface)%nnodes_r 
+            ifield   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq      = faces(ielem,iface)%basis_s%nnodes_face()
+            nnodes_r = faces(ielem,iface)%nterms_c
             nderiv   = nnodes_r * 3 
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
@@ -846,13 +889,13 @@ contains
             !
             ! Compute dX derivatives of the interpolators
             !
-            call self%chidg%data%mesh%compute_derivatives_dx(elem,differentiate=dX_DIFF)
+            call self%chidg%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
 
             
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'grad1', NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,elem_info,fcn_info,iface,ifield,itime,'grad1', NEIGHBOR)
               
             
 
@@ -881,7 +924,7 @@ contains
             !
             ! Release dX derivatives of the interpolators
             !
-            call self%chidg%data%mesh%release_derivatives_dx(elem,differentiate=dX_DIFF)
+            call self%chidg%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)
             
         end associate
 

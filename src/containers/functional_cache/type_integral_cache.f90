@@ -1,7 +1,7 @@
 module type_integral_cache
 #include<messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, ONE, NO_ID, NO_DIFF
+    use mod_constants,          only: ZERO, ONE, NO_ID, NO_DIFF, dX_DIFF, dQ_DIFF
     use mod_io,                 only: backend
     use type_mesh,              only: mesh_t
     use type_svector,           only: svector_t
@@ -134,7 +134,7 @@ contains
         type(function_info_t),      intent(in)      :: fcn_info
          
         type(element_info_t)    :: elem_info
-            
+
         ! Accumulate integral real value, this has to be done for any kind of differentiation
         self%integral_value = self%integral_value + integral%x_ad_
     
@@ -151,7 +151,6 @@ contains
             elem_info = mesh%get_element_info(fcn_info%seed%idomain_l,fcn_info%seed%ielement_l)
             call self%integral_deriv%add_fields(integral%xp_ad_,elem_info)
 
-!            call self%integral_deriv%assemble()
         end if
 
 
@@ -235,6 +234,7 @@ contains
         
         integer(ik)             :: istart, iend, idom, ielem
         type(element_info_t)    :: elem_info
+
        
         ! Initialize istart and iend indeces
         istart = 0
@@ -259,8 +259,16 @@ contains
 
                     ! Find correspondent derivatives in the AD_D vector
                     elem_info = mesh%get_element_info(idom,ielem)
-                    istart = elem_info%dof_local_start
-                    iend   = istart + elem_info%nfields*elem_info%nterms_s*elem_info%ntime - 1
+
+                    if (dtype == dQ_DIFF) then
+                        istart = elem_info%dof_local_start
+                        iend   = istart + elem_info%nfields*elem_info%nterms_s*elem_info%ntime - 1
+                    else if (dtype == dX_DIFF) then
+                        istart = iend + 1
+                        iend   = istart + 3*elem_info%nterms_c*elem_info%ntime - 1
+                    else
+                        call chidg_signal_one(FATAL,"integral_cache%set_global_value: differentiation type not implemented.", dtype)
+                    end if
 
                     call self%integral_deriv%set_fields(integral%xp_ad_(istart:iend),elem_info)
 
@@ -318,6 +326,7 @@ contains
         type(AD_D)              :: integral
         integer(ik)             :: istart, iend, idom, ielem, nderivs
 
+
         call self%integral_deriv%assemble()
 
         ! Allocate result
@@ -354,8 +363,22 @@ contains
                 do ielem = 1,mesh%domain(idom)%nelements()
                     
                     elem_info = mesh%get_element_info(idom,ielem)
-                    istart = elem_info%dof_local_start
-                    iend   = istart + elem_info%nfields*elem_info%nterms_s*elem_info%ntime - 1
+
+                    if (dtype == dQ_DIFF) then
+                        istart = elem_info%dof_local_start
+                        iend   = istart + elem_info%nfields*elem_info%nterms_s*elem_info%ntime - 1
+                    else if (dtype == dX_DIFF) then
+                        istart = iend + 1
+                        iend   = istart + 3*elem_info%nterms_c*elem_info%ntime - 1
+                    else
+                        call chidg_signal_one(FATAL,"integral_cache%set_global_value: differentiation type not implemented.", dtype)
+                    end if
+
+
+
+
+                    !istart = elem_info%dof_local_start
+                    !iend   = istart + elem_info%nfields*elem_info%nterms_s*elem_info%ntime - 1
 
                     integral%xp_ad_(istart:iend) = self%integral_deriv%get_fields(elem_info)
 
@@ -380,6 +403,7 @@ contains
             end do !idom 
             
         end if            
+
 
     end function get_global_value
     !***************************************************************************************************

@@ -537,15 +537,11 @@ contains
             !
             ! Test derivatives from first donor
             !
-            !mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_interpolator%at(idonor)
             mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%value
-            !ndonor_nodes = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_gq_indices(idonor)%size()
             ndonor_nodes = size(self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%node_index)
 
             do igq = 1,ndonor_nodes
-                !node_index = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_gq_indices(idonor)%at(igq)
                 node_index = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%node_index(igq)
-
                 deriv_ref = mat(igq,:)     ! Set expected derivatives
                 
                 @assertEqual(deriv_ref,u_gq(node_index)%xp_ad_,tol)
@@ -560,15 +556,11 @@ contains
             ! Test derivatives from second donor
             !
             idonor = 2
-            !mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_interpolator%at(idonor)
             mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%value
-            !ndonor_nodes = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_gq_indices(idonor)%size()
             ndonor_nodes = size(self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%node_index)
 
             do igq = 1,ndonor_nodes
-                !node_index = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_gq_indices(idonor)%at(igq)
                 node_index = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%node_index(igq)
-
                 deriv_ref = mat(igq,:)      ! Set expected derivatives
                 deriv_ref = ZERO            ! should be zero since donor 1 was being differentiated and this is donor two
                 

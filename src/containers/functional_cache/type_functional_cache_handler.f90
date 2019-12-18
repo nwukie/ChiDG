@@ -407,7 +407,7 @@ contains
             ! dX derivatives in the Jx(ifunc) vector
             if (store_derivatives_dX) then
                 self%data%sdata%adjointx%Jx(self%ifunc) = func%store_deriv(self%cache)
-                call self%data%sdata%adjoint%Jq(self%ifunc)%assemble()
+                call self%data%sdata%adjointx%Jx(self%ifunc)%assemble()
             end if
 
 

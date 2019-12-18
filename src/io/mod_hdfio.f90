@@ -942,8 +942,9 @@ contains
 
 
         ! Check valid field_type input
-        if ( (trim(field_type) /= 'Primary') .and. &
-             (trim(field_type) /= 'Auxiliary') ) then
+        if ( (trim(field_type) /= 'Primary')   .and. &
+             (trim(field_type) /= 'Auxiliary') .and. &
+             (trim(field_type) /= 'Adjoint') ) then
              user_msg = "read_field_domain_hdf: An invalid field type was passed to the routine. &
                          valid field types are 'Primary' and 'Auxiliary'."
              call chidg_signal_one(FATAL,user_msg,trim(field_type))

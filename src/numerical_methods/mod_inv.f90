@@ -155,6 +155,49 @@ contains
 
 
 
+
+
+
+    !>  Compute and return the derivative of the inverse of a matrix A
+    !!  given an already differentiated matrix A.
+    !!
+    !!  This uses a mathematical preposition for differentiating the inverse
+    !!  of a square matrix
+    !!      See: https://atmos.washington.edu/~dennis/MatrixCalculus.pdf 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   1/31/2019
+    !!
+    !---------------------------------------------------------------------------
+    function dinv(A,dA) result(dAinv)
+        real(rk),   allocatable,    intent(inout)    :: A(:,:)
+        real(rk),   allocatable,    intent(in)       :: dA(:,:)
+
+        real(rk),   allocatable    :: Ainv(:,:), Ainv_n(:,:), Atemp(:,:), det, dAinv(:,:)
+
+        ! Find determinant of A
+        !det = det(A)
+
+        ! Find inverse of A
+        Ainv = inv(A)
+
+        ! Negate Ainv
+        Ainv_n = -Ainv
+
+        Atemp = matmul(Ainv_n,dA)
+
+        dAinv = matmul(Atemp,Ainv)
+
+
+    end function dinv
+    !***************************************************************************
+
+
+
+
+
+
+
     !> Returns the inverse of a complex matrix calculated by finding the LU
     !! decomposition.  Depends on LAPACK.
     !!

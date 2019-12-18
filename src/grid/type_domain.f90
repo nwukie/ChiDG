@@ -116,6 +116,10 @@ module type_domain
         procedure, public   :: set_displacements_velocities
         procedure           :: update_interpolations_ale
 
+        ! Mesh-sensitivities
+        procedure, public   :: compute_interpolations_dx ! Compute derivatives of loal interpolators
+        procedure, public   :: release_interpolations_dx ! Compute derivatives of loal interpolators
+
         ! Utilities
         procedure, private  :: find_neighbor_local      ! Try to find a neighbor for a particular face on the local processor
 !        procedure, private  :: find_neighbor_global     ! Try to find a neighbor for a particular face across processors
@@ -617,6 +621,135 @@ contains
 
     end subroutine init_faces_sol
     !******************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Compute interpolators derivatives for:
+    !!      - the current element and element faces
+    !!      - the current neighbor elements' faces  
+    !!  
+    !!  @authot Matteo Ugolotti
+    !!  @date   12/14/2018
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine compute_interpolations_dx(self,ielem_l)
+        class(domain_t),    intent(inout)            :: self
+        integer(ik),        intent(in)               :: ielem_l
+
+        integer(ik)     :: iface, n_element_l, n_face, ChiID, idonor
+        logical         :: conforming_face, chimera_face, local_neighbor
+        
+        ! Compute element interpolators for current element
+        call self%elems(ielem_l)%update_interpolations_dx()
+
+        ! Compute face interpolators for all current element faces
+        ! and neighrbor's face
+        do iface = 1,NFACES
+
+            ! Differentiate current face
+            call self%faces(ielem_l,iface)%update_interpolations_dx(self%elems(ielem_l))
+
+            ! Differentiate adjecent neighbor's face
+            conforming_face  = ( self%faces(ielem_l,iface)%ftype == INTERIOR )
+            chimera_face     = ( self%faces(ielem_l,iface)%ftype == CHIMERA )
+            local_neighbor   = ( self%faces(ielem_l,iface)%ineighbor_proc == IRANK)
+
+            if ( conforming_face ) then
+                if ( local_neighbor ) then
+                    ! Compute local neighbor element and face intepolators
+                    ! NB: here the element dx interpolators have to intialized 
+                    !     because dinvmass_dx is needed for BR2 matrices
+                    n_element_l = self%faces(ielem_l,iface)%ineighbor_element_l
+                    n_face      = self%faces(ielem_l,iface)%ineighbor_face
+                    call self%elems(n_element_l)%update_interpolations_dx()
+                    call self%faces(n_element_l,n_face)%update_interpolations_dx(self%elems(n_element_l))
+                else
+                    ! Compute parallel neighbor face interpolators
+                    call self%faces(ielem_l,iface)%update_neighbor_interpolations_dx()
+                end if
+
+            else if ( chimera_face ) then
+                ! Compute differentiated interpolator for chimera donors
+                ChiID = self%faces(ielem_l,iface)%ChiID
+                do idonor = 1,self%chimera%recv(ChiID)%ndonors()
+                    call self%chimera%recv(ChiID)%donor(idonor)%update_interpolations_dx()
+                end do
+            end if
+        end do
+
+    end subroutine compute_interpolations_dx
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Release interpolators derivatives for a specific element and neighbors' face
+    !!  
+    !!
+    !!  @authot Matteo Ugolotti
+    !!  @date   12/14/2018
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine release_interpolations_dx(self,ielem_l)
+        class(domain_t),    intent(inout)            :: self
+        integer(ik),        intent(in)               :: ielem_l
+
+        integer(ik)     :: iface, n_element_l, n_face, ChiID, idonor
+        logical         :: conforming_face, chimera_face, local_neighbor
+        
+        ! Release element interpolators for current element
+        call self%elems(ielem_l)%release_interpolations_dx()
+
+        ! Release memeory for face interpolators for all current element faces
+        ! and neighrbor's face
+        do iface = 1,NFACES
+
+            ! Release memory for current face
+            call self%faces(ielem_l,iface)%release_interpolations_dx()
+
+            ! Release memory for adjacent neighbor's face
+            conforming_face  = ( self%faces(ielem_l,iface)%ftype == INTERIOR )
+            chimera_face     = ( self%faces(ielem_l,iface)%ftype == CHIMERA )
+            local_neighbor   = ( self%faces(ielem_l,iface)%ineighbor_proc == IRANK)
+
+            if ( conforming_face ) then
+                if ( local_neighbor ) then
+                    ! Release local neighbor face intepolators
+                    n_element_l = self%faces(ielem_l,iface)%ineighbor_element_l
+                    n_face      = self%faces(ielem_l,iface)%ineighbor_face
+
+                    call self%elems(n_element_l)%release_interpolations_dx()
+                    call self%faces(n_element_l,n_face)%release_interpolations_dx()
+                else
+                    ! Release parallel neighbor face interpolators
+                    call self%faces(ielem_l,iface)%release_neighbor_interpolations_dx()
+                end if
+            else if ( chimera_face ) then
+                ! Release differentiated interpolator for chimera donors
+                ChiID = self%faces(ielem_l,iface)%ChiID
+                do idonor = 1,self%chimera%recv(ChiID)%ndonors()
+                    call self%chimera%recv(ChiID)%donor(idonor)%release_interpolations_dx()
+                end do
+            end if
+        end do
+
+    end subroutine release_interpolations_dx
+    !******************************************************************************************
+
+
+
+
 
 
 

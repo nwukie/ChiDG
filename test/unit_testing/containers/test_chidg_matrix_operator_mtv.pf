@@ -51,7 +51,7 @@ subroutine test_chidg_matrix_operator_mtv()
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
 
-    use operator_chidg_mv,  only: transposed_chidg_matrix_vector_product
+    use operator_chidg_mv,  only: transposed_matrix_vector_product
     implicit none
 
 
@@ -157,7 +157,7 @@ subroutine test_chidg_matrix_operator_mtv()
     !
     ielem = 1
     itime = 1
-    idiag = A%dom(1)%lblks(ielem,itime)%loc(1,1)
+    idiag = A%dom(1)%lblks(ielem,itime)%loc(1,1,itime)
     A%dom(1)%lblks(ielem,itime)%data_(idiag)%mat = ONE
 
 
@@ -191,7 +191,7 @@ subroutine test_chidg_matrix_operator_mtv()
     !
     ! Perform matrix-vector multiplication. THIS IS BEING TESTED
     !
-    b = transposed_chidg_matrix_vector_product(A,x)
+    b = transposed_matrix_vector_product(A,x)
 
 
     !
@@ -261,7 +261,7 @@ subroutine test_chidg_matrix_operator_mtv_2()
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
 
-    use operator_chidg_mv,  only: transposed_chidg_matrix_vector_product
+    use operator_chidg_mv,  only: transposed_matrix_vector_product
     implicit none
 
 
@@ -367,7 +367,7 @@ subroutine test_chidg_matrix_operator_mtv_2()
     idom  = 1
     ielem = 1
     itime = 1
-    imat  = A%dom(idom)%lblks(ielem,itime)%loc(1,2)
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(1,2,itime)
     A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = ONE
     x%dom(idom)%vecs(ielem)%vec = 1.1_rk
     
@@ -375,7 +375,7 @@ subroutine test_chidg_matrix_operator_mtv_2()
     idom  = 1
     ielem = 3
     itime = 1
-    imat  = A%dom(idom)%lblks(ielem,itime)%loc(1,7)
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(1,7,itime)
     A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = TWO
     x%dom(idom)%vecs(ielem)%vec = 1.2_rk
     
@@ -383,7 +383,7 @@ subroutine test_chidg_matrix_operator_mtv_2()
     idom  = 2
     ielem = 7
     itime = 1
-    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,6)
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,6,itime)
     A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = THREE
     x%dom(idom)%vecs(ielem)%vec = 1.3_rk
 
@@ -391,7 +391,7 @@ subroutine test_chidg_matrix_operator_mtv_2()
     idom  = 2
     ielem = 1
     itime = 1
-    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,2)
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,2,itime)
     A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = FOUR
     x%dom(idom)%vecs(ielem)%vec = 1.4_rk
 
@@ -399,7 +399,7 @@ subroutine test_chidg_matrix_operator_mtv_2()
     idom  = 1
     ielem = 2
     itime = 1
-    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(2,3)
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(2,3,itime)
     A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = FIVE
     x%dom(idom)%vecs(ielem)%vec = 1.5_rk
 
@@ -407,7 +407,7 @@ subroutine test_chidg_matrix_operator_mtv_2()
     idom  = 1
     ielem = 4
     itime = 1
-    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(2,3)
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(2,3,itime)
     A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = SIX
     x%dom(idom)%vecs(ielem)%vec = 1.6_rk
 
@@ -415,7 +415,7 @@ subroutine test_chidg_matrix_operator_mtv_2()
     idom  = 2
     ielem = 3
     itime = 1
-    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,2)
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,2,itime)
     A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = SEVEN
     x%dom(idom)%vecs(ielem)%vec = 1.7_rk
 
@@ -423,7 +423,7 @@ subroutine test_chidg_matrix_operator_mtv_2()
     idom  = 2
     ielem = 4
     itime = 1
-    imat  = A%dom(idom)%lblks(ielem,itime)%loc(2,2)
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(2,2,itime)
     A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = EIGHT
     x%dom(idom)%vecs(ielem)%vec = 1.8_rk
 
@@ -448,7 +448,7 @@ subroutine test_chidg_matrix_operator_mtv_2()
     idom  = 2
     ielem = 6
     itime = 1
-    imat  = A%dom(idom)%lblks(ielem,itime)%loc(2,6)
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(2,6,itime)
     A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = M
     x%dom(idom)%vecs(ielem)%vec = 1.0_rk
 
@@ -457,7 +457,7 @@ subroutine test_chidg_matrix_operator_mtv_2()
     !
     ! Perform matrix-vector multiplication. THIS IS BEING TESTED
     !
-    b = transposed_chidg_matrix_vector_product(A,x)
+    b = transposed_matrix_vector_product(A,x)
 
 
     !
@@ -539,7 +539,7 @@ subroutine test_chidg_matrix_operator_mtv_3()
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
 
-    use operator_chidg_mv,  only: transposed_chidg_matrix_vector_product
+    use operator_chidg_mv,  only: transposed_matrix_vector_product
     implicit none
 
 
@@ -591,7 +591,8 @@ subroutine test_chidg_matrix_operator_mtv_3()
     !
     call A%init(chidg%data%mesh,mtype='dX')
     call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
-    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,specialization=dX_DIFF)
+    !call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,specialization=dX_DIFF)
+    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,vtype='grid differentiation')
 
 
     !       _         lblks               chi_blks       -           x
@@ -645,7 +646,7 @@ subroutine test_chidg_matrix_operator_mtv_3()
     idom  = 1
     ielem = 1
     itime = 1
-    imat  = A%dom(idom)%lblks(ielem,itime)%loc(1,2)
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(1,2,itime)
     A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = ONE
     x%dom(idom)%vecs(ielem)%vec = 1.1_rk
     
@@ -653,7 +654,7 @@ subroutine test_chidg_matrix_operator_mtv_3()
     idom  = 1
     ielem = 3
     itime = 1
-    imat  = A%dom(idom)%lblks(ielem,itime)%loc(1,7)
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(1,7,itime)
     A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = TWO
     x%dom(idom)%vecs(ielem)%vec = 1.2_rk
     
@@ -661,7 +662,7 @@ subroutine test_chidg_matrix_operator_mtv_3()
     idom  = 2
     ielem = 7
     itime = 1
-    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,6)
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,6,itime)
     A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = THREE
     x%dom(idom)%vecs(ielem)%vec = 1.3_rk
 
@@ -669,7 +670,7 @@ subroutine test_chidg_matrix_operator_mtv_3()
     idom  = 2
     ielem = 1
     itime = 1
-    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,2)
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,2,itime)
     A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = FOUR
     x%dom(idom)%vecs(ielem)%vec = 1.4_rk
 
@@ -677,7 +678,7 @@ subroutine test_chidg_matrix_operator_mtv_3()
     idom  = 1
     ielem = 2
     itime = 1
-    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(2,3)
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(2,3,itime)
     A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = FIVE
     x%dom(idom)%vecs(ielem)%vec = 1.5_rk
 
@@ -685,7 +686,7 @@ subroutine test_chidg_matrix_operator_mtv_3()
     idom  = 1
     ielem = 4
     itime = 1
-    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(2,3)
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(2,3,itime)
     A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = SIX
     x%dom(idom)%vecs(ielem)%vec = 1.6_rk
 
@@ -693,7 +694,7 @@ subroutine test_chidg_matrix_operator_mtv_3()
     idom  = 2
     ielem = 3
     itime = 1
-    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,2)
+    imat  = A%dom(idom)%chi_blks(ielem,itime)%loc(1,2,itime)
     A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = SEVEN
     x%dom(idom)%vecs(ielem)%vec = 1.7_rk
 
@@ -701,7 +702,7 @@ subroutine test_chidg_matrix_operator_mtv_3()
     idom  = 2
     ielem = 4
     itime = 1
-    imat  = A%dom(idom)%lblks(ielem,itime)%loc(2,2)
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(2,2,itime)
     A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = EIGHT
     x%dom(idom)%vecs(ielem)%vec = 1.8_rk
 
@@ -729,7 +730,7 @@ subroutine test_chidg_matrix_operator_mtv_3()
     idom  = 2
     ielem = 6
     itime = 1
-    imat  = A%dom(idom)%lblks(ielem,itime)%loc(2,6)
+    imat  = A%dom(idom)%lblks(ielem,itime)%loc(2,6,itime)
     A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat = M
     x%dom(idom)%vecs(ielem)%vec = 1.0_rk
 
@@ -740,7 +741,7 @@ subroutine test_chidg_matrix_operator_mtv_3()
     ! Note here that b is passed to function to initialize the resultant vector
     ! b and x have different size.
     !
-    b = transposed_chidg_matrix_vector_product(A,x,b)
+    b = transposed_matrix_vector_product(A,x,b)
 
 
     !

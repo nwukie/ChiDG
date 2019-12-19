@@ -114,6 +114,7 @@ contains
 
             ! Add new field to last slot
             call temp_fields(size(temp_fields))%set_name(field_string)
+            call temp_fields(size(temp_fields))%set_cache_index(size(temp_fields))
 
             ! Move temporary allocation to data type
             call move_alloc(from=temp_fields, to=self%primary_fields)
@@ -172,6 +173,7 @@ contains
 
             ! Set new field at end
             call temp_fields(size(temp_fields))%set_name(field_string)
+            call temp_fields(size(temp_fields))%set_cache_index(size(temp_fields))
 
             ! Move temporary allocation
             call move_alloc(from=temp_fields, to=self%auxiliary_fields)

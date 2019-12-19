@@ -192,17 +192,10 @@ contains
 
         call write_line("   TecIO: Writing domains...",io_proc=GLOBAL_MASTER)
 
-
-        !
         ! Initialize Chidg Worker references
-        !
         call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, data%time_manager, cache)
 
-
-
-        !
         ! Loop time/domains/elements/fields
-        !
         do itime = 1,data%sdata%q_out%get_ntime()
             worker%itime = itime
 
@@ -270,7 +263,6 @@ contains
                     end do ! ifield
 
                 end do ! ielem
-
 
 
                 !

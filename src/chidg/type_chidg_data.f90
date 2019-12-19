@@ -1542,8 +1542,8 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine report(self,selection)
-        class(chidg_data_t),    intent(in)  :: self
-        character(*),           intent(in)  :: selection
+        class(chidg_data_t),    intent(inout)   :: self
+        character(*),           intent(in)      :: selection
 
         integer(ik) :: idom
 
@@ -1551,7 +1551,16 @@ contains
             do idom = 1,self%mesh%ndomains()
                 call write_line('Domain ', idom, '  :  ', self%mesh%domain(idom)%nelem, ' Elements', io_proc=IRANK)
             end do
-        else
+
+        else if ( trim(selection) == 'adjoint' ) then
+            call self%sdata%adjoint%report(self%functional_group%functionals_name())
+
+
+        else if ( trim(selection) == 'functional' ) then
+            call self%sdata%functional%report(self%functional_group%functionals_name())
+
+        else 
+            call chidg_signal_one(FATAL,'type_chidg_data%report: unexpected input string', trim(selection))
 
         end if
 

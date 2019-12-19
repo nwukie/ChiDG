@@ -251,6 +251,8 @@ contains
         else
         !******  ChiDG native implementation    ******!
 
+            if (A%transposed) call chidg_signal(FATAL,"RASILU0%update: transpose not implemented for 'native' containers.")
+
             call write_line('   RAS: Computing ILU0 factorization', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
 

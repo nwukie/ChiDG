@@ -2,7 +2,6 @@ add_lib_sources(mod_io.f90
                 mod_hdfio.f90
                 mod_hdf_utilities.f90
                 mod_tecio.f90
-                mod_tecio_old.f90
                 mod_vtk_file_unstr.f90
                 mod_vtk_calc_func.f90
                 mod_vtkio.f90

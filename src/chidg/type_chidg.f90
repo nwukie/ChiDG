@@ -2061,6 +2061,13 @@ contains
                     !call self%preconditioner%report()
                 end if
 
+        
+            case ('after adjoint' )
+                if ( IRANK == GLOBAL_MASTER ) call self%data%report('adjoint')
+
+            case( 'functional' ) 
+                if ( IRANK == GLOBAL_MASTER ) call self%data%report('functional')
+
             case ('forces')
 
                 call report_forces(self%data,trim(report_info),force=force, power=power)

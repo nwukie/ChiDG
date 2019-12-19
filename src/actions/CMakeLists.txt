@@ -3,6 +3,7 @@ add_subdirectory(convert)
 add_subdirectory(post)
 add_subdirectory(forces)
 add_subdirectory(clone)
+add_subdirectory(adjoint)
 #add_subdirectory(interpolate)
 
 

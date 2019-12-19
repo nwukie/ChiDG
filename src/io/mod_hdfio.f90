@@ -210,7 +210,7 @@ contains
         integer(HID_T)                  :: fid, domain_id
         integer(HSIZE_T)                :: adim
         integer(ik)                     :: idom, time, &
-                                           field_index, iproc, nelements_g, ielem, eqn_ID
+                                           field_index, iproc, nelements_g, ielem, eqn_ID, idomain_g
         integer                         :: ierr, order_s
         logical                         :: file_exists
         integer(ik)                     :: itime, connectivity_size, order_c
@@ -222,6 +222,7 @@ contains
         do idom = 1,data%mesh%ndomains()
 
             domain_name = data%mesh%domain(idom)%name
+            idomain_g   = data%mesh%domain(idom)%idomain_g
             domain_id   = open_domain_hdf(fid,trim(domain_name))
             
             ! Write domain attributes: solution order, equation set
@@ -238,6 +239,7 @@ contains
             call set_domain_coordinate_displacements_hdf(domain_id,data%mesh%domain(idom)%dnodes           )
             call set_domain_coordinate_velocities_hdf(   domain_id,data%mesh%domain(idom)%vnodes           )
             call set_domain_coordinate_system_hdf(       domain_id,data%mesh%domain(idom)%coordinate_system)
+            call set_domain_npoints_hdf(                 domain_id,data%mesh%npoints(idomain_g,:))
 
 
             ! Assemble element connectivities
@@ -409,7 +411,6 @@ contains
         character(:),       allocatable :: field_name, user_msg, domain_name
         logical                         :: file_exists, contains_adjoint_solution
 
-
         ! Get number of domains contained in the ChiDG data instance
         ndomains = data%mesh%ndomains()
 
@@ -462,7 +463,6 @@ contains
 
                 do itime = 1, ntime
                     do idom = 1,ndomains
-
 
                         ! Get domain name and number of primary fields
                         domain_name = data%mesh%domain(idom)%name
@@ -993,7 +993,6 @@ contains
         end if
 
 
-
         ! Allocate storage for incoming element modes, create a memory dataspace (memspace)
         allocate(var(nterms_s,1,1))
         cp_var = c_loc(var(1,1,1))
@@ -1026,7 +1025,6 @@ contains
             if (allocated(bufferterms)) deallocate(bufferterms)
             allocate(bufferterms(nterms_ielem), stat=ierr)
             if (ierr /= 0) call AllocationError
-
 
 
             ! Select subset of dataspace - sid, read selected modes into cp_var 

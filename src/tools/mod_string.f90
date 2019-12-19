@@ -315,9 +315,7 @@ contains
         character(len=:), allocatable   :: prefix
         integer                         :: iext, extloc
         
-        !
         ! Check if the file name has already the extension
-        !
         extloc = index(file, trim(extension))
 
         if ( extloc == 0 ) then
@@ -355,17 +353,12 @@ contains
         character(len=:), allocatable   :: extension
         integer                         :: iext, extloc
 
-
         do iext = 1,size(extensions)
 
-            !
             ! Check for extension in grid file
-            !
             extloc = index(file, trim(extensions(iext)))
 
-            !
             ! If extloc is nonzero, then the extension was found in the filename
-            !
             if ( extloc /= 0 ) then
                 extension = trim(extensions(iext))
                 exit
@@ -373,11 +366,43 @@ contains
 
         end do
 
-
     end function get_file_extension
     !**********************************************************************************************
 
 
+
+
+
+
+
+    !> Given a file name and an extension, return true if the extention is found.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   10/16/2019
+    !!
+    !!  @param[in]  file        Character string containing a file name
+    !!  @param[in]  extensions  Character string of the extension 
+    !!
+    !---------------------------------------------------------------------------------------------
+    function check_file_extension(file,extension) result(extension_found)
+        character(*),       intent(in)  :: file
+        character(*),       intent(in)  :: extension
+
+        integer     :: iext, extloc
+        logical     :: extension_found
+
+        ! Check for extension in grid file
+        extloc = index(file, trim(extension))
+
+        ! If extloc is nonzero, then the extension was found in the filename
+        if ( extloc /= 0 ) then
+            extension_found = .true.
+        else
+            extension_found = .false.
+        end if
+
+    end function check_file_extension
+    !**********************************************************************************************
 
 
 

@@ -23,10 +23,11 @@ program driver
     ! Actions
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
-    use mod_chidg_post,         only: chidg_post, chidg_post_vtk
     use mod_chidg_forces,       only: chidg_forces
+    use mod_chidg_adjoint,      only: chidg_adjoint
     use mod_chidg_clone,        only: chidg_clone
-    use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec_new
+    use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec
+    use mod_chidg_post_hdf2vtk, only: chidg_post_hdf2vtk
     use mod_tutorials,          only: tutorial_driver
     use mod_euler_eigenmodes,   only: compute_euler_eigenmodes
 
@@ -56,6 +57,7 @@ program driver
         trim(chidg_action) == 'edit'       .or. &
         trim(chidg_action) == 'clone'      .or. &
         trim(chidg_action) == 'forces'     .or. &
+        trim(chidg_action) == 'adjoint'    .or. &
         trim(chidg_action) == 'inputs'     .or. &
         trim(chidg_action) == 'tutorial'   .or. &
         trim(chidg_action) == '-v'         .or. & 
@@ -289,7 +291,7 @@ program driver
 
 
 
-                    call chidg_post_hdf2tec_new(chidg,trim(solution_file),trim(solution_file))
+                    call chidg_post_hdf2tec(chidg,trim(solution_file),trim(solution_file))
 
                     ! Release existing data
                     call chidg%data%release()
@@ -346,7 +348,7 @@ program driver
                 do
                     read(7,fmt='(a)', iostat=ierr) solution_file
                     if (ierr /= 0) exit
-                    call chidg_post_vtk(trim(solution_file), trim(solution_file))
+                    call chidg_post_hdf2vtk(trim(solution_file), trim(solution_file))
                 end do
                 close(7)
 
@@ -407,6 +409,44 @@ program driver
                 close(7)
 
                 call delete_file(tmp_file)
+
+
+
+            !>  ChiDG:adjoint src/actions/adjoint
+            !!
+            !!  Run an adjoint simulation 
+            !!
+            !!  Command-Line:
+            !!  --------------------------------
+            !!  chidg adjoint
+            !!
+            !!
+            !!  The input flow solution is taken from the chidg.nml file
+            !!
+            !!      'solutionfile_in'
+            !!
+            !!  If there are multiple solution in time, such as:
+            !!
+            !!      flow_01.h5, flow_02.h5, flow_03.h5
+            !!
+            !!  simply set in chidg.nml:
+            !!
+            !!      'solutionfile_in' = flow.h5
+            !!
+            !!  ChiDG will search files with 
+            !!
+            !!      ls flow* 
+            !!
+            !!  WARNING: make sure that only the flow solutions in time are named with the same 
+            !!           prefix.
+            !!
+            !-----------------------------------------------------------------------------
+            case ('adjoint')
+                if (narg /= 1) call chidg_signal(FATAL,"the 'adjoint' action does not expect other arguments.")
+
+                call chidg_adjoint()
+                call_shutdown = .false.
+            !*****************************************************************************
 
 
 

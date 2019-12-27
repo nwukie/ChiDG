@@ -237,7 +237,8 @@ contains
              call self%dom(idom)%init(mesh,idom,mtype=mtype)
         end do
 
-        ! Set initialization to true
+        ! Set flags
+        self%transposed = .false.
         self%local_initialized = .true.
 
     end subroutine chidg_init

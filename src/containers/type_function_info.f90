@@ -30,4 +30,45 @@ module type_function_info
     end type function_info_t
     !*********************************************************************
 
+    interface function_info
+        module procedure function_info_constructor
+    end interface function_info
+
+contains
+
+
+
+    !>
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   5/7/2019
+    !!
+    !----------------------------------------------------------------------------------
+    function function_info_constructor(type,ifcn,idepend,idiff,dtype,seed,bc_param,bc_group_match) result(fcn_info)
+        integer(ik),    intent(in)  :: type
+        integer(ik),    intent(in)  :: ifcn
+        integer(ik),    intent(in)  :: idepend
+        integer(ik),    intent(in)  :: idiff
+        integer(ik),    intent(in)  :: dtype
+        type(seed_t),   intent(in)  :: seed
+        character(*),   intent(in)  :: bc_param
+        logical,        intent(in)  :: bc_group_match
+
+        type(function_info_t)   :: fcn_info
+
+        fcn_info%type           = type
+        fcn_info%ifcn           = ifcn
+        fcn_info%idepend        = idepend
+        fcn_info%idiff          = idiff
+        fcn_info%dtype          = dtype 
+        fcn_info%seed           = seed
+        fcn_info%bc_param       = bc_param
+        fcn_info%bc_group_match = bc_group_match
+
+    end function function_info_constructor
+    !**********************************************************************************
+
+
+
+
+
 end module type_function_info

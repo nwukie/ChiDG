@@ -4,6 +4,8 @@ add_subdirectory(post)
 add_subdirectory(forces)
 add_subdirectory(clone)
 add_subdirectory(adjoint)
+add_subdirectory(adjointx)
+add_subdirectory(adjointbc)
 #add_subdirectory(interpolate)
 
 

@@ -3,7 +3,6 @@ module test_differentiate_mod
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
     use type_element_info,          only: element_info_t
-    use type_face_info,             only: face_info_t
     use type_function_info,         only: function_info_t
     use type_function,              only: function_t
     use type_bc_state_group,        only: bc_state_group_t
@@ -94,37 +93,27 @@ contains
         type(string_t)                              :: group_names(2,6)
 
 
-        
-        !
         ! Send log to file
-        !
         IO_DESTINATION = 'file'
     
 
-        !        
         ! Initialize ChiDG environment
-        !
         call this%chidg_d1%start_up('core')
         call this%chidg_d2%start_up('core')
 
-        !
+         
         ! Specify interpolation nodes rule
-        !
         basis   = "legendre"
         gq_rule = 1
 
 
-        !
         ! Create D1 9x3x3 element grid         
-        !
         this%file_name_d1 = "D1_6x3x3.h5"
         call create_mesh_file("D1 NxNxN",   this%file_name_d1, nelem_xi=6, nelem_eta=3, nelem_zeta=3)
 
         
-        !
         ! Create a D2 9x3x3 grid, here we want to specify the CHIMERA interface.
         ! Don't really care about the other boundaries.
-        !
         this%file_name_d2 = "D2_3x3x3.h5"
         
         bc_state_groups(1)%name = "Extrapolation"
@@ -149,27 +138,21 @@ contains
         call create_mesh_file("D2 NxNxN M1",this%file_name_d2,group_names=group_names,bc_state_groups=bc_state_groups,nelem_xi=6, nelem_eta=3, nelem_zeta=3)
 
 
-
-        !
         ! Initialize chidg solution data storage
-        !
         call this%chidg_d1%set('Solution Order', integer_input=2)
         call this%chidg_d2%set('Solution Order', integer_input=2)
 
-        !
+         
         ! Read grid
-        !
         call this%chidg_d1%read_mesh(this%file_name_d1,'primal storage')
         call this%chidg_d2%read_mesh(this%file_name_d2,'primal storage')
 
-        !
+         
         ! Initialized solution to constant values
-        !
         ivar = this%chidg_d1%data%eqnset(1)%prop%get_primary_field_index('u')
 
-        !
+         
         ! Initialize variable
-        !
         call create_function(this%fcn,'constant')
         call this%fcn%set_option('val',5._rk)
         call this%chidg_d1%data%sdata%q%project(this%chidg_d1%data%mesh,this%fcn,ivar)
@@ -185,7 +168,6 @@ contains
     !-------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_differentiate),    intent(inout)   :: this
-        
 
         ! Close ChiDG interface
         call this%chidg_d1%shut_down('core')
@@ -194,7 +176,6 @@ contains
         ! Clean-up test file
         call delete_file(this%file_name_d1)
         call delete_file(this%file_name_d2)
-
         
     end subroutine tearDown
     !*******************************************************************************************
@@ -226,9 +207,8 @@ contains
         ielem   = 27    ! given element
         itime   = 1
 
-        !
+         
         ! No linearization. The seed is null 
-        !
         function_info%type    = VOLUME_ADVECTIVE_FLUX
         function_info%ifcn    = 1
         function_info%idepend = 1
@@ -588,7 +568,6 @@ contains
         real(rk), allocatable                   :: u_gq(:), u_ref(:)
         real(rk)                                :: tol, val
         type(function_info_t)                   :: function_info
-        type(face_info_t)                       :: face_info
         type(element_info_t)                    :: elem_info
         type(AD_D), allocatable, dimension(:)   :: norm
         type(real), allocatable, dimension(:)   :: test_derivs
@@ -600,40 +579,18 @@ contains
         iface   = 4     ! eta_max
         itime   = 1
         
-        !
         ! Define element_info for the current element
-        !
-        face_info%idomain_g  = idomain
-        face_info%idomain_l  = idomain
-        face_info%ielement_g = ielem
-        face_info%ielement_l = ielem
-        face_info%iface      = iface
+        elem_info = self%chidg_d1%data%mesh%get_element_info(idomain,ielem)
 
-        !
-        ! Define element_info for the current element
-        !
-        elem_info%idomain_g  = idomain
-        elem_info%idomain_l  = idomain
-        elem_info%ielement_g = ielem
-        elem_info%ielement_l = ielem
-
-        !
         ! Compute dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
         
-        
-
         associate ( face => self%chidg_d1%data%mesh%domain(1)%faces(ielem,iface) )
             
-            !
             ! Allocate test derivatives vector
-            !
             allocate(test_derivs(face%nterms_c*3),stat=ierr)
 
-            !
             ! DUMMY array. 
-            !
             do inode = 1,face%basis_c%nnodes_face()
                 do norm_dir = 1,3
                     do inode_diff = 1,face%nterms_c
@@ -644,13 +601,7 @@ contains
                 end do
             end do
 
-
-
-
-            !
             ! Test1: dX linearization wrt the neighbor element => null derivatives
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -674,7 +625,7 @@ contains
             
 
             ! PROCEDURE BEING TESTED
-            norm = differentiate_normal(self%chidg_d1%data%mesh,face_info,function_info,1)
+            norm = differentiate_normal(self%chidg_d1%data%mesh,elem_info,function_info,iface,1)
 
             ! Test
             test_derivs = 0._rk
@@ -684,14 +635,8 @@ contains
             end do
             
             
-            
-            
-            
-            !
             ! Test2: dX linearization wrt the current element => non-null derivatives
             !        Normal direction 1
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -712,10 +657,8 @@ contains
                                          recv_element = NO_ID)
 
 
-            
-
             ! PROCEDURE BEING TESTED
-            norm = differentiate_normal(self%chidg_d1%data%mesh,face_info,function_info,1)
+            norm = differentiate_normal(self%chidg_d1%data%mesh,elem_info,function_info,iface,1)
 
             ! Test
             norm_dir = 1
@@ -732,13 +675,8 @@ contains
             
             
             
-            
-            
-            !
             ! Test3: dX linearization wrt the current element => non-null derivatives
             !        Normal direction 2
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -759,10 +697,9 @@ contains
                                          recv_element = NO_ID)
 
 
-            
 
             ! PROCEDURE BEING TESTED
-            norm = differentiate_normal(self%chidg_d1%data%mesh,face_info,function_info,2)
+            norm = differentiate_normal(self%chidg_d1%data%mesh,elem_info,function_info,iface,2)
 
             ! Test
             norm_dir = 2
@@ -779,13 +716,8 @@ contains
             
             
             
-            
-            
-            !
             ! Test4: dX linearization wrt the current element => non-null derivatives
             !        Normal direction 3
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -809,7 +741,7 @@ contains
             
 
             ! PROCEDURE BEING TESTED
-            norm = differentiate_normal(self%chidg_d1%data%mesh,face_info,function_info,3)
+            norm = differentiate_normal(self%chidg_d1%data%mesh,elem_info,function_info,iface,3)
 
             ! Test
             norm_dir = 3
@@ -825,13 +757,8 @@ contains
             end do
             
             
-            
-            
-            !
             ! Test5: dQ linearization wrt the current element => null derivatives
             !        Normal direction 3
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -852,7 +779,7 @@ contains
                                          recv_element = NO_ID)
 
             ! PROCEDURE BEING TESTED
-            norm = differentiate_normal(self%chidg_d1%data%mesh,face_info,function_info,3)
+            norm = differentiate_normal(self%chidg_d1%data%mesh,elem_info,function_info,iface,3)
 
             ! Test
             deallocate(test_derivs)
@@ -863,14 +790,11 @@ contains
                 @assertEqual(face%norm(inode,3),norm(inode)%x_ad_,tol)
             end do
 
-            
 
         end associate
 
 
-        !
         ! Release dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)            
 
 
@@ -908,7 +832,6 @@ contains
         real(rk), allocatable                   :: u_gq(:), u_ref(:)
         real(rk)                                :: tol, val
         type(function_info_t)                   :: function_info
-        type(face_info_t)                       :: face_info
         type(element_info_t)                    :: elem_info
         type(AD_D), allocatable, dimension(:)   :: unorm1, unorm2, unorm3
         type(real), allocatable, dimension(:)   :: test_derivs
@@ -920,43 +843,17 @@ contains
         iface   = 4     ! eta_max
         itime   = 1
         
-        !
         ! Define element_info for the current element
-        !
-        face_info%idomain_g  = idomain
-        face_info%idomain_l  = idomain
-        face_info%ielement_g = ielem
-        face_info%ielement_l = ielem
-        face_info%iface      = iface
+        elem_info = self%chidg_d1%data%mesh%get_element_info(idomain,ielem)
 
-        !
-        ! Define element_info for the current element
-        !
-        elem_info%idomain_g  = idomain
-        elem_info%idomain_l  = idomain
-        elem_info%ielement_g = ielem
-        elem_info%ielement_l = ielem
-
-        !
         ! Compute dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
-
-        
 
         associate ( face => self%chidg_d1%data%mesh%domain(1)%faces(ielem,iface) )
             
-            !
-            ! Allocate test derivatives vector
-            !
             allocate(test_derivs(face%nterms_c*3),stat=ierr)
 
-
-
-            !
             ! Test1: dX linearization wrt the neighbor element => null derivatives
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -980,9 +877,9 @@ contains
             
 
             ! PROCEDURE BEING TESTED
-            unorm1 = differentiate_unit_normal(self%chidg_d1%data%mesh,face_info,function_info,1)
-            unorm2 = differentiate_unit_normal(self%chidg_d1%data%mesh,face_info,function_info,2)
-            unorm3 = differentiate_unit_normal(self%chidg_d1%data%mesh,face_info,function_info,3)
+            unorm1 = differentiate_unit_normal(self%chidg_d1%data%mesh,elem_info,function_info,iface,1)
+            unorm2 = differentiate_unit_normal(self%chidg_d1%data%mesh,elem_info,function_info,iface,2)
+            unorm3 = differentiate_unit_normal(self%chidg_d1%data%mesh,elem_info,function_info,iface,3)
 
             ! Test
             test_derivs = 0._rk
@@ -1024,9 +921,9 @@ contains
             
 
             ! PROCEDURE BEING TESTED
-            unorm1 = differentiate_unit_normal(self%chidg_d1%data%mesh,face_info,function_info,1)
-            unorm2 = differentiate_unit_normal(self%chidg_d1%data%mesh,face_info,function_info,2)
-            unorm3 = differentiate_unit_normal(self%chidg_d1%data%mesh,face_info,function_info,3)
+            unorm1 = differentiate_unit_normal(self%chidg_d1%data%mesh,elem_info,function_info,iface,1)
+            unorm2 = differentiate_unit_normal(self%chidg_d1%data%mesh,elem_info,function_info,iface,2)
+            unorm3 = differentiate_unit_normal(self%chidg_d1%data%mesh,elem_info,function_info,iface,3)
 
             ! Test
             test_derivs = 0._rk
@@ -1075,7 +972,7 @@ contains
         real(rk), allocatable                   :: u_gq(:), u_ref(:)
         real(rk)                                :: tol, a, b, c
         type(function_info_t)                   :: function_info
-        type(face_info_t)                       :: face_info
+        type(element_info_t)                    :: elem_info
         type(AD_D), allocatable, dimension(:)   :: coord1, coord2, coord3
         real(rk),   allocatable, dimension(:,:) :: test_coords_derivs_t, test_coords_derivs
         real(rk),   allocatable, dimension(:)   :: test_zero_vector_dx, test_zero_vector_dq
@@ -1087,21 +984,12 @@ contains
         iface   = 4     ! eta_max
         itime   = 1
         
-        !
         ! Define element_info for the current element
-        !
-        face_info%idomain_g  = idomain
-        face_info%idomain_l  = idomain
-        face_info%ielement_g = ielem
-        face_info%ielement_l = ielem
-        face_info%iface      = iface
+        elem_info = self%chidg_d1%data%mesh%get_element_info(idomain,ielem)
         
         associate ( elem => self%chidg_d1%data%mesh%domain(1)%elems(ielem) )
        
-       
-            !
             ! Expected derivatives (computed by hand)
-            !
             allocate(test_coords_derivs_t(elem%nterms_c,elem%basis_c%nnodes_elem()),stat=ierr)
             allocate(test_coords_derivs(elem%basis_c%nnodes_elem(),elem%nterms_c),stat=ierr)
             allocate(test_zero_vector_dx(3*elem%nterms_c),stat=ierr)
@@ -1122,28 +1010,16 @@ contains
             a-b*c+3._rk*b-3._rk*c,a+b*c-b-c,a+b*c-b-c,a-b*c-b+c,a+b*c-b-c,a-b*c-b+c,a-b*c-b+c,a+b*c+3._rk*b+3._rk*c     &
                                             /),(/8,8/))
 
-            !
             ! Divide by the determinant of val_e (left out from the matrix val_e inversion)
-            !
             test_coords_derivs_t = test_coords_derivs_t/(8._rk)
             
-            !
             ! The ith row of this matrix represents the derivatives of the ith interpolation node
             ! wrt the support nodes for either of the three directions (x, y and z)
-            !
             test_coords_derivs = transpose(test_coords_derivs_t)
             test_zero_vector_dq = ZERO
             test_zero_vector_dx = ZERO
 
-
-
-
-
-
-            !
             ! Test1: dX linearization wrt the neighbor element => null derivatives
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -1166,9 +1042,9 @@ contains
 
 
             ! PROCEDURE BEING TESTED
-            coord1 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'1',source='element')
-            coord2 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'2',source='element')
-            coord3 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'3',source='element')
+            coord1 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'1',source='element')
+            coord2 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'2',source='element')
+            coord3 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'3',source='element')
 
             ! Test
             do inode = 1, elem%basis_c%nnodes_elem()
@@ -1210,9 +1086,9 @@ contains
 
 
             ! PROCEDURE BEING TESTED
-            coord1 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'1',source='element')
-            coord2 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'2',source='element')
-            coord3 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'3',source='element')
+            coord1 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'1',source='element')
+            coord2 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'2',source='element')
+            coord3 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'3',source='element')
 
             
             ! Test
@@ -1266,9 +1142,9 @@ contains
 
 
             ! PROCEDURE BEING TESTED
-            coord1 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'1',source='element')
-            coord2 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'2',source='element')
-            coord3 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'3',source='element')
+            coord1 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'1',source='element')
+            coord2 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'2',source='element')
+            coord3 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'3',source='element')
 
             ! Test
             do inode = 1, elem%basis_c%nnodes_elem()
@@ -1314,7 +1190,7 @@ contains
         real(rk), allocatable                   :: u_gq(:), u_ref(:)
         real(rk)                                :: tol, a, b, c
         type(function_info_t)                   :: function_info
-        type(face_info_t)                       :: face_info
+        type(element_info_t)                    :: elem_info
         type(AD_D), allocatable, dimension(:)   :: coord1, coord2, coord3
         real(rk),   allocatable, dimension(:,:) :: test_coords_derivs_t, test_coords_derivs
         real(rk),   allocatable, dimension(:)   :: test_zero_vector_dx, test_zero_vector_dq
@@ -1326,21 +1202,12 @@ contains
         iface   = 2     ! xi_max
         itime   = 1
         
-        !
         ! Define element_info for the current element
-        !
-        face_info%idomain_g  = idomain
-        face_info%idomain_l  = idomain
-        face_info%ielement_g = ielem
-        face_info%ielement_l = ielem
-        face_info%iface      = iface
+        elem_info = self%chidg_d1%data%mesh%get_element_info(idomain,ielem)
         
         associate ( face => self%chidg_d1%data%mesh%domain(1)%faces(ielem,XI_MAX) )
        
-       
-            !
             ! Expected derivatives (computed by hand)
-            !
             allocate(test_coords_derivs_t(face%nterms_c,face%basis_c%nnodes_face()),stat=ierr)
             allocate(test_coords_derivs(face%basis_c%nnodes_face(),face%nterms_c),stat=ierr)
             allocate(test_zero_vector_dx(3*face%nterms_c),stat=ierr)
@@ -1358,30 +1225,16 @@ contains
                                             /),(/8,4/))
 
 
-
-
-            !
             ! Divide by the determinant of val_e (left out from the matrix val_e inversion)
-            !
             test_coords_derivs_t = test_coords_derivs_t/(8._rk)
             
-            !
             ! The ith row of this matrix represents the derivatives of the ith interpolation node
             ! wrt the support nodes for either of the three directions (x, y and z)
-            !
             test_coords_derivs = transpose(test_coords_derivs_t)
             test_zero_vector_dq = ZERO
             test_zero_vector_dx = ZERO
 
-
-
-
-
-
-            !
             ! Test1: dX linearization wrt the neighbor element => null derivatives
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -1404,9 +1257,9 @@ contains
 
 
             ! PROCEDURE BEING TESTED
-            coord1 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'1',source='face interior')
-            coord2 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'2',source='face interior')
-            coord3 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'3',source='face interior')
+            coord1 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'1',source='face interior')
+            coord2 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'2',source='face interior')
+            coord3 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'3',source='face interior')
 
             ! Test
             do inode = 1, face%basis_c%nnodes_face()
@@ -1448,9 +1301,9 @@ contains
 
 
             ! PROCEDURE BEING TESTED
-            coord1 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'1',source='face exterior')
-            coord2 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'2',source='face exterior')
-            coord3 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'3',source='face exterior')
+            coord1 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'1',source='face exterior')
+            coord2 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'2',source='face exterior')
+            coord3 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'3',source='face exterior')
 
             
             ! Test
@@ -1504,9 +1357,9 @@ contains
 
 
             ! PROCEDURE BEING TESTED
-            coord1 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'1',source='boundary')
-            coord2 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'2',source='boundary')
-            coord3 = differentiate_coordinate(self%chidg_d1%data%mesh,face_info,function_info,'3',source='boundary')
+            coord1 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'1',source='boundary')
+            coord2 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'2',source='boundary')
+            coord3 = differentiate_coordinate(self%chidg_d1%data%mesh,elem_info,function_info,iface,'3',source='boundary')
 
             ! Test
             do inode = 1, face%basis_c%nnodes_face()
@@ -1634,10 +1487,10 @@ contains
             
 
             ! PROCEDURE BEING TESTED
-            val   = differentiate_element_interpolator('value',self%chidg_d1%data%mesh,elem_info,function_info)
-            grad1 = differentiate_element_interpolator('grad1',self%chidg_d1%data%mesh,elem_info,function_info)
-            grad2 = differentiate_element_interpolator('grad2',self%chidg_d1%data%mesh,elem_info,function_info)
-            grad3 = differentiate_element_interpolator('grad3',self%chidg_d1%data%mesh,elem_info,function_info)
+            val   = differentiate_element_interpolator('value',self%chidg_d1%data%mesh,elem_info,function_info,itime)
+            grad1 = differentiate_element_interpolator('grad1',self%chidg_d1%data%mesh,elem_info,function_info,itime)
+            grad2 = differentiate_element_interpolator('grad2',self%chidg_d1%data%mesh,elem_info,function_info,itime)
+            grad3 = differentiate_element_interpolator('grad3',self%chidg_d1%data%mesh,elem_info,function_info,itime)
 
             ! Test
             test_derivs = 0._rk
@@ -1689,10 +1542,10 @@ contains
             
 
             ! PROCEDURE BEING TESTED
-            val   = differentiate_element_interpolator('value',self%chidg_d1%data%mesh,elem_info,function_info)
-            grad1 = differentiate_element_interpolator('grad1',self%chidg_d1%data%mesh,elem_info,function_info)
-            grad2 = differentiate_element_interpolator('grad2',self%chidg_d1%data%mesh,elem_info,function_info)
-            grad3 = differentiate_element_interpolator('grad3',self%chidg_d1%data%mesh,elem_info,function_info)
+            val   = differentiate_element_interpolator('value',self%chidg_d1%data%mesh,elem_info,function_info,itime)
+            grad1 = differentiate_element_interpolator('grad1',self%chidg_d1%data%mesh,elem_info,function_info,itime)
+            grad2 = differentiate_element_interpolator('grad2',self%chidg_d1%data%mesh,elem_info,function_info,itime)
+            grad3 = differentiate_element_interpolator('grad3',self%chidg_d1%data%mesh,elem_info,function_info,itime)
 
             ! Test real values
             test_derivs = 0._rk
@@ -1775,7 +1628,6 @@ contains
                                                    igq, iface
         real(rk)                                :: tol, expect
         type(function_info_t)                   :: function_info
-        type(face_info_t)                       :: face_info
         type(element_info_t)                    :: elem_info
         type(AD_D), allocatable, dimension(:,:) :: val, grad1, grad2, grad3
         type(real), allocatable, dimension(:)   :: test_derivs
@@ -1787,41 +1639,18 @@ contains
         iface   = 3     ! ETA_MIN
         itime   = 1
         
-        !
-        ! Define face_info for the current element
-        !
-        face_info%idomain_g  = idomain
-        face_info%idomain_l  = idomain
-        face_info%ielement_g = ielem
-        face_info%ielement_l = ielem
-        face_info%iface      = iface
-
-
-        !
         ! Define element_info for the current element
-        !
-        elem_info%idomain_g  = idomain
-        elem_info%idomain_l  = idomain
-        elem_info%ielement_g = ielem
-        elem_info%ielement_l = ielem
+        elem_info = self%chidg_d1%data%mesh%get_element_info(idomain,ielem)
 
-
-        !
         ! Compute dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
-        
 
         associate ( face => self%chidg_d1%data%mesh%domain(1)%faces(ielem,iface) )
             
-            !
             ! Allocate test derivatives vector
-            !
             allocate(test_derivs(face%nterms_c*3),stat=ierr)
 
-            !
             ! DUMMY array. 
-            !
             do igq = 1,size(face%grad1,1)
                 do iterm = 1,face%nterms_s
                     do inode_diff = 1,face%nterms_c
@@ -1864,10 +1693,10 @@ contains
             
 
             ! PROCEDURE BEING TESTED
-            val   = differentiate_face_interior_interpolator('value',self%chidg_d1%data%mesh,face_info,face_info,function_info)
-            grad1 = differentiate_face_interior_interpolator('grad1',self%chidg_d1%data%mesh,face_info,face_info,function_info)
-            grad2 = differentiate_face_interior_interpolator('grad2',self%chidg_d1%data%mesh,face_info,face_info,function_info)
-            grad3 = differentiate_face_interior_interpolator('grad3',self%chidg_d1%data%mesh,face_info,face_info,function_info)
+            val   = differentiate_face_interior_interpolator('value',self%chidg_d1%data%mesh,elem_info,iface,elem_info,iface,function_info,itime)
+            grad1 = differentiate_face_interior_interpolator('grad1',self%chidg_d1%data%mesh,elem_info,iface,elem_info,iface,function_info,itime)
+            grad2 = differentiate_face_interior_interpolator('grad2',self%chidg_d1%data%mesh,elem_info,iface,elem_info,iface,function_info,itime)
+            grad3 = differentiate_face_interior_interpolator('grad3',self%chidg_d1%data%mesh,elem_info,iface,elem_info,iface,function_info,itime)
 
             ! Test
             test_derivs = 0._rk
@@ -1919,10 +1748,10 @@ contains
             
 
             ! PROCEDURE BEING TESTED
-            val   = differentiate_face_interior_interpolator('value',self%chidg_d1%data%mesh,face_info,face_info,function_info)
-            grad1 = differentiate_face_interior_interpolator('grad1',self%chidg_d1%data%mesh,face_info,face_info,function_info)
-            grad2 = differentiate_face_interior_interpolator('grad2',self%chidg_d1%data%mesh,face_info,face_info,function_info)
-            grad3 = differentiate_face_interior_interpolator('grad3',self%chidg_d1%data%mesh,face_info,face_info,function_info)
+            val   = differentiate_face_interior_interpolator('value',self%chidg_d1%data%mesh,elem_info,iface,elem_info,iface,function_info,itime)
+            grad1 = differentiate_face_interior_interpolator('grad1',self%chidg_d1%data%mesh,elem_info,iface,elem_info,iface,function_info,itime)
+            grad2 = differentiate_face_interior_interpolator('grad2',self%chidg_d1%data%mesh,elem_info,iface,elem_info,iface,function_info,itime)
+            grad3 = differentiate_face_interior_interpolator('grad3',self%chidg_d1%data%mesh,elem_info,iface,elem_info,iface,function_info,itime)
 
             ! Test real values
             test_derivs = 0._rk
@@ -2006,8 +1835,7 @@ contains
                                                    igq, iface, ddomain, delem, dface, dtime
         real(rk)                                :: tol, expect
         type(function_info_t)                   :: function_info
-        type(face_info_t)                       :: face_info, donor_face
-        type(element_info_t)                    :: elem_info
+        type(element_info_t)                    :: elem_info, donor_elem
         type(AD_D), allocatable, dimension(:,:) :: val, grad1, grad2, grad3
         type(real), allocatable, dimension(:)   :: test_derivs
         
@@ -2018,27 +1846,11 @@ contains
         iface   = 3     ! ETA_MIN
         itime   = 1
         
-        !
-        ! Define face_info for the current element
-        !
-        face_info%idomain_g  = idomain
-        face_info%idomain_l  = idomain
-        face_info%ielement_g = ielem
-        face_info%ielement_l = ielem
-        face_info%iface      = iface
 
-        !
         ! Define element_info for the current element
-        !
-        elem_info%idomain_g  = idomain
-        elem_info%idomain_l  = idomain
-        elem_info%ielement_g = ielem
-        elem_info%ielement_l = ielem
+        elem_info = self%chidg_d1%data%mesh%get_element_info(idomain,ielem)
 
-
-        !
         ! Compute dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
 
         ddomain = 1
@@ -2046,26 +1858,15 @@ contains
         dface   = 6     ! ZETA_MAX
         dtime   = 1
         
-        !
         ! Define face_info for the donor element, 
-        !
-        donor_face%idomain_g  = ddomain
-        donor_face%idomain_l  = ddomain
-        donor_face%ielement_g = delem
-        donor_face%ielement_l = delem
-        donor_face%iface      = dface
-        
+        donor_elem = self%chidg_d1%data%mesh%get_element_info(ddomain,delem)
 
         associate ( face => self%chidg_d1%data%mesh%domain(1)%faces(delem,dface) )
             
-            !
             ! Allocate test derivatives vector
-            !
             allocate(test_derivs(face%nterms_c*3),stat=ierr)
 
-            !
             ! DUMMY array. 
-            !
             do igq = 1,size(face%grad1,1)
                 do iterm = 1,face%nterms_s
                     do inode_diff = 1,face%nterms_c
@@ -2080,14 +1881,10 @@ contains
 
 
 
-
-            !
             ! Test1: dX linearization wrt the current element => null derivatives
             ! Remember: we are asking for information on the exterior face (ie donor's face). 
             !           Therefore, we are currently differentiating wrt the current element
             !           the derivatives will be zeros.
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -2108,13 +1905,11 @@ contains
                                          recv_element = NO_ID)
 
 
-            
-
             ! PROCEDURE BEING TESTED
-            val   = differentiate_face_local_interpolator('value',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-            grad1 = differentiate_face_local_interpolator('grad1',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-            grad2 = differentiate_face_local_interpolator('grad2',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-            grad3 = differentiate_face_local_interpolator('grad3',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
+            val   = differentiate_face_local_interpolator('value',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+            grad1 = differentiate_face_local_interpolator('grad1',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+            grad2 = differentiate_face_local_interpolator('grad2',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+            grad3 = differentiate_face_local_interpolator('grad3',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
 
             ! Test
             test_derivs = 0._rk
@@ -2166,10 +1961,10 @@ contains
             
 
             ! PROCEDURE BEING TESTED
-            val   = differentiate_face_local_interpolator('value',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-            grad1 = differentiate_face_local_interpolator('grad1',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-            grad2 = differentiate_face_local_interpolator('grad2',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-            grad3 = differentiate_face_local_interpolator('grad3',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
+            val   = differentiate_face_local_interpolator('value',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+            grad1 = differentiate_face_local_interpolator('grad1',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+            grad2 = differentiate_face_local_interpolator('grad2',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+            grad3 = differentiate_face_local_interpolator('grad3',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
 
             ! Test real values
             test_derivs = 0._rk
@@ -2210,17 +2005,12 @@ contains
 
         end associate
 
-        !
         ! Release dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)            
 
 
     end subroutine test_differentiate_face_local_interpolator
     !******************************************************************************************
-
-
-
 
 
 
@@ -2254,8 +2044,7 @@ contains
                                                    igq, iface, ddomain, delem, dface, dtime
         real(rk)                                :: tol, expect
         type(function_info_t)                   :: function_info
-        type(face_info_t)                       :: face_info, donor_face
-        type(element_info_t)                    :: elem_info
+        type(element_info_t)                    :: elem_info, donor_elem
         type(AD_D), allocatable, dimension(:,:) :: val, grad1, grad2, grad3
         type(real), allocatable, dimension(:)   :: test_derivs
         
@@ -2266,28 +2055,11 @@ contains
         iface   = 3     ! ETA_MIN
         itime   = 1
         
-        !
-        ! Define face_info for the current element
-        !
-        face_info%idomain_g  = idomain
-        face_info%idomain_l  = idomain
-        face_info%ielement_g = ielem
-        face_info%ielement_l = ielem
-        face_info%iface      = iface
-
-
-        !
         ! Define element_info for the current element
-        !
-        elem_info%idomain_g  = idomain
-        elem_info%idomain_l  = idomain
-        elem_info%ielement_g = ielem
-        elem_info%ielement_l = ielem
+        elem_info = self%chidg_d1%data%mesh%get_element_info(idomain,ielem)
 
 
-        !
         ! Compute dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
 
 
@@ -2296,14 +2068,8 @@ contains
         dface   = 4     ! ETA_MAX
         dtime   = 1
         
-        !
-        ! Define face_info for the donor element, 
-        !
-        donor_face%idomain_g  = ddomain
-        donor_face%idomain_l  = ddomain
-        donor_face%ielement_g = delem
-        donor_face%ielement_l = delem
-        donor_face%iface      = dface
+        ! Define elem_info for the donor element, 
+        donor_elem = self%chidg_d1%data%mesh%get_element_info(ddomain,delem)
         
 
         associate ( face => self%chidg_d1%data%mesh%domain(1)%faces(ielem,iface) )
@@ -2338,15 +2104,10 @@ contains
             end do
 
 
-
-
-            !
             ! Test1: dX linearization wrt the current element => null derivatives
             ! Remember: we are asking for information on the exterior face (ie donor's face). 
             !           Therefore, we are currently differentiating wrt the current element
             !           the derivatives will be zeros.
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -2370,10 +2131,10 @@ contains
             
 
             ! PROCEDURE BEING TESTED
-            val   = differentiate_face_parallel_interpolator('value',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-            grad1 = differentiate_face_parallel_interpolator('grad1',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-            grad2 = differentiate_face_parallel_interpolator('grad2',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-            grad3 = differentiate_face_parallel_interpolator('grad3',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
+            val   = differentiate_face_parallel_interpolator('value',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+            grad1 = differentiate_face_parallel_interpolator('grad1',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+            grad2 = differentiate_face_parallel_interpolator('grad2',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+            grad3 = differentiate_face_parallel_interpolator('grad3',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
 
             ! Test
             test_derivs = 0._rk
@@ -2425,10 +2186,10 @@ contains
             
 
             ! PROCEDURE BEING TESTED
-            val   = differentiate_face_parallel_interpolator('value',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-            grad1 = differentiate_face_parallel_interpolator('grad1',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-            grad2 = differentiate_face_parallel_interpolator('grad2',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-            grad3 = differentiate_face_parallel_interpolator('grad3',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
+            val   = differentiate_face_parallel_interpolator('value',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+            grad1 = differentiate_face_parallel_interpolator('grad1',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+            grad2 = differentiate_face_parallel_interpolator('grad2',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+            grad3 = differentiate_face_parallel_interpolator('grad3',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
 
 
             ! Test real values
@@ -2470,19 +2231,11 @@ contains
 
         end associate
 
-
-        !
         ! Release dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)            
-
 
     end subroutine test_differentiate_face_parallel_interpolator
     !******************************************************************************************
-
-
-
-
 
 
 
@@ -2515,8 +2268,7 @@ contains
                                                    igq, iface, ddomain, delem, dface, dtime, ChiID
         real(rk)                                :: tol, expect
         type(function_info_t)                   :: function_info
-        type(face_info_t)                       :: face_info, donor_face
-        type(element_info_t)                    :: elem_info
+        type(element_info_t)                    :: elem_info, donor_elem
         type(AD_D), allocatable, dimension(:,:) :: val_conf, grad1_conf, grad2_conf, grad3_conf,    &
                                                    val_chi, grad1_chi, grad2_chi, grad3_chi
         type(real), allocatable, dimension(:)   :: test_derivs
@@ -2531,28 +2283,10 @@ contains
         iface   = 2     ! XI_MAX
         itime   = 1
         
-        !
-        ! Define face_info for the current element
-        !
-        face_info%idomain_g  = idomain
-        face_info%idomain_l  = idomain
-        face_info%ielement_g = ielem
-        face_info%ielement_l = ielem
-        face_info%iface      = iface
-
-
-        !
         ! Define element_info for the current element
-        !
-        elem_info%idomain_g  = idomain
-        elem_info%idomain_l  = idomain
-        elem_info%ielement_g = ielem
-        elem_info%ielement_l = ielem
+        elem_info = self%chidg_d1%data%mesh%get_element_info(idomain,ielem)
 
-
-        !
         ! Compute dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
 
         ddomain = 1
@@ -2560,19 +2294,12 @@ contains
         dface   = 1     ! XI_MIN
         dtime   = 1
         
-        !
-        ! Define face_info for the donor element, 
-        !
-        donor_face%idomain_g  = ddomain
-        donor_face%idomain_l  = ddomain
-        donor_face%ielement_g = delem
-        donor_face%ielement_l = delem
-        donor_face%iface      = dface
+         
+        ! Define elem_info for the donor element, 
+        donor_elem = self%chidg_d1%data%mesh%get_element_info(ddomain,delem)
         
         
-        !
         ! Set function_info for local problem, differentiate wrt to donor
-        !
         function_info%type    = VOLUME_ADVECTIVE_FLUX
         function_info%ifcn    = 1
         function_info%idepend = 1
@@ -2592,23 +2319,15 @@ contains
                                      recv_domain  = NO_ID,     &
                                      recv_element = NO_ID)
         
-        !
         ! Get reference arrys from local neighbor 
-        !
-        val_conf   = differentiate_face_local_interpolator('value',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-        grad1_conf = differentiate_face_local_interpolator('grad1',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-        grad2_conf = differentiate_face_local_interpolator('grad2',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
-        grad3_conf = differentiate_face_local_interpolator('grad3',self%chidg_d1%data%mesh,face_info,donor_face,function_info)
+        val_conf   = differentiate_face_local_interpolator('value',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+        grad1_conf = differentiate_face_local_interpolator('grad1',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+        grad2_conf = differentiate_face_local_interpolator('grad2',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
+        grad3_conf = differentiate_face_local_interpolator('grad3',self%chidg_d1%data%mesh,elem_info,iface,donor_elem,dface,function_info,itime)
 
         
-
-        !
         ! Release dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)            
-
-
-
 
 
 
@@ -2624,28 +2343,10 @@ contains
         iface   = 2     ! XI_MAX
         itime   = 1
         
-        !
-        ! Define face_info for the current element
-        !
-        face_info%idomain_g  = idomain
-        face_info%idomain_l  = idomain
-        face_info%ielement_g = ielem
-        face_info%ielement_l = ielem
-        face_info%iface      = iface
-
-
-        !
         ! Define element_info for the current element
-        !
-        elem_info%idomain_g  = idomain
-        elem_info%idomain_l  = idomain
-        elem_info%ielement_g = ielem
-        elem_info%ielement_l = ielem
+        elem_info = self%chidg_d2%data%mesh%get_element_info(idomain,ielem)
 
-
-        !
         ! Compute dX derivatives of the interpolators
-        !
         call self%chidg_d2%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
 
         ddomain = 2
@@ -2653,32 +2354,19 @@ contains
         dface   = 1     ! XI_MIN
         dtime   = 1
         
-        !
+
         ! Define face_info for the donor element, 
-        !
-        donor_face%idomain_g  = ddomain
-        donor_face%idomain_l  = ddomain
-        donor_face%ielement_g = delem
-        donor_face%ielement_l = delem
-        donor_face%iface      = dface
+        donor_elem = self%chidg_d2%data%mesh%get_element_info(ddomain,delem)
         
         
         associate ( face => self%chidg_d2%data%mesh%domain(2)%faces(delem,dface) )
         
-            !
-            ! Allocate test derivatives vector
-            !
             allocate(test_derivs(face%nterms_c*3),stat=ierr)
 
-
-
-            !
             ! Test1: dX linearization wrt the current element => null derivatives
             ! Remember: we are asking for information on the exterior face (ie donor's face). 
             !           Therefore, we are currently differentiating wrt the current element
             !           the derivatives will be zeros.
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -2699,17 +2387,13 @@ contains
                                          recv_element = NO_ID)
 
 
-            
-
 
             ! PROCEDURE BEING TESTED
             ChiID = self%chidg_d2%data%mesh%domain(idomain)%faces(ielem,iface)%ChiID
-            val_chi   = differentiate_face_chimera_interpolator('value',self%chidg_d2%data%mesh,face_info,donor_face,ChiID,1,function_info)
-            grad1_chi = differentiate_face_chimera_interpolator('grad1',self%chidg_d2%data%mesh,face_info,donor_face,ChiID,1,function_info)
-            grad2_chi = differentiate_face_chimera_interpolator('grad2',self%chidg_d2%data%mesh,face_info,donor_face,ChiID,1,function_info)
-            grad3_chi = differentiate_face_chimera_interpolator('grad3',self%chidg_d2%data%mesh,face_info,donor_face,ChiID,1,function_info)
-
-
+            val_chi   = differentiate_face_chimera_interpolator('value',self%chidg_d2%data%mesh,elem_info,iface,donor_elem,ChiID,1,function_info,itime)
+            grad1_chi = differentiate_face_chimera_interpolator('grad1',self%chidg_d2%data%mesh,elem_info,iface,donor_elem,ChiID,1,function_info,itime)
+            grad2_chi = differentiate_face_chimera_interpolator('grad2',self%chidg_d2%data%mesh,elem_info,iface,donor_elem,ChiID,1,function_info,itime)
+            grad3_chi = differentiate_face_chimera_interpolator('grad3',self%chidg_d2%data%mesh,elem_info,iface,donor_elem,ChiID,1,function_info,itime)
 
 
             ! Test
@@ -2733,14 +2417,9 @@ contains
             
             
             
-            
-            
-            !
             ! Test2: dX linearization wrt the donor element => non-null derivatives
             ! Derivatives should be the same of the correspondent element in the
             ! local problem with conforming face
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -2761,13 +2440,11 @@ contains
                                          recv_element = NO_ID)
 
 
-            
-
             ChiID = self%chidg_d2%data%mesh%domain(idomain)%faces(ielem,iface)%ChiID
-            val_chi   = differentiate_face_chimera_interpolator('value',self%chidg_d2%data%mesh,face_info,donor_face,ChiID,1,function_info)
-            grad1_chi = differentiate_face_chimera_interpolator('grad1',self%chidg_d2%data%mesh,face_info,donor_face,ChiID,1,function_info)
-            grad2_chi = differentiate_face_chimera_interpolator('grad2',self%chidg_d2%data%mesh,face_info,donor_face,ChiID,1,function_info)
-            grad3_chi = differentiate_face_chimera_interpolator('grad3',self%chidg_d2%data%mesh,face_info,donor_face,ChiID,1,function_info)
+            val_chi   = differentiate_face_chimera_interpolator('value',self%chidg_d2%data%mesh,elem_info,iface,donor_elem,ChiID,1,function_info,itime)
+            grad1_chi = differentiate_face_chimera_interpolator('grad1',self%chidg_d2%data%mesh,elem_info,iface,donor_elem,ChiID,1,function_info,itime)
+            grad2_chi = differentiate_face_chimera_interpolator('grad2',self%chidg_d2%data%mesh,elem_info,iface,donor_elem,ChiID,1,function_info,itime)
+            grad3_chi = differentiate_face_chimera_interpolator('grad3',self%chidg_d2%data%mesh,elem_info,iface,donor_elem,ChiID,1,function_info,itime)
 
 
             ! Test real values
@@ -2872,17 +2549,10 @@ contains
         ntime   = 1
         nface   = 4     ! ETA_MAX face
         
-        !
         ! Define element_info for the current element
-        !
-        elem_info%idomain_g  = idomain
-        elem_info%idomain_l  = idomain
-        elem_info%ielement_g = ielem
-        elem_info%ielement_l = ielem
+        elem_info = self%chidg_d1%data%mesh%get_element_info(idomain,ielem)
 
-        !
         ! Compute dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
         
 
@@ -2890,15 +2560,11 @@ contains
                     face_i => self%chidg_d1%data%mesh%domain(1)%faces(ielem,iface),&
                     face_n => self%chidg_d1%data%mesh%domain(1)%faces(nelem,nface) )
             
-            !
             ! Allocate test derivatives vector
-            !
             allocate(test_derivs_null(elem_i%nterms_c*3),stat=ierr)
             allocate(test_derivs(elem_i%nterms_c*3),stat=ierr)
 
-            !
             ! Current element: DUMMY array dbr2_v_dx 
-            !
             do inode_1 = 1,elem_i%basis_c%nnodes_elem()
                 do inode_2 = 1,elem_i%basis_c%nnodes_face()
                     do inode_diff = 1,elem_i%nterms_c
@@ -2909,9 +2575,7 @@ contains
                 end do
             end do
 
-            !
             ! Current element: dummy array dbr2_f_dx 
-            !
             do inode_1 = 1,elem_i%basis_c%nnodes_face()
                 do inode_2 = 1,elem_i%basis_c%nnodes_face()
                     do inode_diff = 1,elem_i%nterms_c
@@ -2922,9 +2586,7 @@ contains
                 end do
             end do
 
-            !
             ! Neighbor element: dummy array dbr2_f_dx 
-            !
             do inode_1 = 1,elem_i%basis_c%nnodes_face()
                 do inode_2 = 1,elem_i%basis_c%nnodes_face()
                     do inode_diff = 1,elem_i%nterms_c
@@ -2936,11 +2598,8 @@ contains
             end do
 
 
-            !
             ! Test1: dX linearization wrt the current element => non-null derivatives for current element interpolators
             !                                                 => null derivatives for neighbor interpolators 
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -3074,13 +2733,8 @@ contains
             
             
             
-            
-            
-            !
             ! Test3: dX linearization with chimera exception => null derivatives for neighbor interpolators
             !                                                => null derivatives for current element interpolators 
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -3121,15 +2775,8 @@ contains
             
 
 
-
-            
-            
-            
-            !
             ! Test3: dQ linearization => null derivatives for neighbor interpolators
             !                         => null derivatives for current element interpolators 
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -3149,14 +2796,12 @@ contains
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
 
-
             
 
             ! PROCEDURE BEING TESTED
             BR2_vol_i  = differentiate_br2(self%chidg_d1%data%mesh,elem_info,iface,function_info,source='element')
             BR2_face_i = differentiate_br2(self%chidg_d1%data%mesh,elem_info,iface,function_info,source='face interior')
             BR2_face_n = differentiate_br2(self%chidg_d1%data%mesh,elem_info,iface,function_info,source='face exterior')
-
 
 
             ! Test Real values
@@ -3192,12 +2837,8 @@ contains
 
             
             
-            
-            !
             ! Test3: dBC linearization => null derivatives for neighbor interpolators
             !                          => null derivatives for current element interpolators 
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -3218,7 +2859,6 @@ contains
                                          recv_element = NO_ID)
 
 
-            
 
             ! PROCEDURE BEING TESTED
             BR2_vol_i  = differentiate_br2(self%chidg_d1%data%mesh,elem_info,iface,function_info,source='element')
@@ -3254,15 +2894,10 @@ contains
             end do
 
 
-
-
-
             
         end associate
 
-        !
         ! Release dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)            
 
 
@@ -3317,30 +2952,20 @@ contains
         nelem   = 26    ! given element
         ntime   = 1
         nface   = 2     ! XI_MAX face
-        
-        !
+
+
         ! Define element_info for the current element
-        !
-        elem_info%idomain_g  = idomain
-        elem_info%idomain_l  = idomain
-        elem_info%ielement_g = ielem
-        elem_info%ielement_l = ielem
+        elem_info = self%chidg_d1%data%mesh%get_element_info(idomain,ielem)
 
         
         
-        !
         ! Compute dX derivatives assuming neighbor is local
-        !
         call self%chidg_d1%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
         
 
             
-
-        !
         ! dX linearization wrt the neighbor element => non-null derivatives for neighbor interpolators
         !                                           => null derivatives for current element interpolators 
-        !
-
         function_info%type    = VOLUME_ADVECTIVE_FLUX
         function_info%ifcn    = 1
         function_info%idepend = 1
@@ -3362,15 +2987,11 @@ contains
 
 
         
-        !
         ! This will be used to compare BR2_face_remote to.
-        !
         BR2_face_local = differentiate_br2(self%chidg_d1%data%mesh,elem_info,iface,function_info,source='face exterior')
 
         
-        !
         ! Release dX derivatives of the interpolators
-        !
         call self%chidg_d1%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)            
 
         
@@ -3380,9 +3001,7 @@ contains
                     face_i => self%chidg_d1%data%mesh%domain(1)%faces(ielem,iface),&
                     face_n => self%chidg_d1%data%mesh%domain(1)%faces(nelem,nface) )
         
-            !
             ! Let chidg think that the neighbor is remote
-            !
             allocate(face_i%neighbor_coords(elem_i%nterms_c,3), stat = ierr)
             face_i%ineighbor_proc       = 2
             face_i%neighbor_coords(:,1) = elem_n%coords%getvar(1,itime=1)
@@ -3390,26 +3009,17 @@ contains
             face_i%neighbor_coords(:,3) = elem_n%coords%getvar(3,itime=1)
             face_i%neighbor_br2_face    = face_n%br2_face 
         
-            !
             ! Set null derivatives
-            !
             allocate(test_derivs_null(elem_i%nterms_c*3),stat=ierr)
             test_derivs_null = ZERO
         
         
-            
-            !
             ! Compute dX derivatives with neighbor being remote
-            !
             call self%chidg_d1%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
         
         
-
-            !
             ! Test1: dX linearization wrt the neighbor element => non-null derivatives for neighbor interpolators
             !                                                  => null derivatives for current element interpolators 
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -3453,12 +3063,7 @@ contains
             
 
 
-
-
-            !
             ! Test2: dX linearization wrt the current element => non-null derivatives for neighbor interpolators
-            !
-
             function_info%type    = VOLUME_ADVECTIVE_FLUX
             function_info%ifcn    = 1
             function_info%idepend = 1
@@ -3479,11 +3084,8 @@ contains
                                          recv_element = NO_ID)
 
 
-            
-
             ! PROCEDURE BEING TESTED
             BR2_face_remote = differentiate_br2(self%chidg_d1%data%mesh,elem_info,iface,function_info,source='face exterior')
-
 
 
             ! Test Real values
@@ -3498,17 +3100,11 @@ contains
             end do
             
             
-        
-            !
             ! Release dX derivatives of the interpolators
-            !
             call self%chidg_d1%data%mesh%release_derivatives_dx(elem_info,differentiate=dX_DIFF)            
 
-
         
-            !
             ! Reset local neighbor in case other tests need to be added
-            !
             deallocate(face_i%neighbor_coords)
             deallocate(face_i%neighbor_br2_face)
             face_i%ineighbor_proc       = IRANK

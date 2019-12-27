@@ -199,7 +199,6 @@ contains
         ! Confirm solver initialization
         self%solverInitialized = .true.
 
-
     end subroutine init_base
     !******************************************************************************************
 

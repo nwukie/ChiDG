@@ -32,12 +32,16 @@ module mod_interpolate
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: CHIMERA, INTERIOR, BOUNDARY, &
-                                      ME, NEIGHBOR, ONE, ZERO, NO_ID
+                                      ME, NEIGHBOR, ONE, ZERO, NO_ID, NO_DATA, &
+                                      dQ_DIFF, dBC_DIFF, NO_DIFF, dD_DIFF, dX_DIFF
                                   
     use mod_chidg_mpi,          only: IRANK
     use mod_DNAD_tools,         only: compute_neighbor_face
     use mod_chimera,            only: find_gq_donor, find_gq_donor_parallel
     use mod_polynomial,         only: polynomial_val
+    use mod_differentiate,      only: differentiate_modal_coefficients, differentiate_element_interpolator, &
+                                      differentiate_face_interior_interpolator, differentiate_face_parallel_interpolator, &
+                                      differentiate_face_local_interpolator, differentiate_face_chimera_interpolator
     use DNAD_D
 
     use type_mesh,              only: mesh_t
@@ -80,9 +84,27 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !!  @param[in]  itime - Index for the time step in solution
-    !!  @param[in]  interpolator: optionally, pass in another interpolator to interpolate to 
-    !!              a set of nodes other than the default set of nodes.
+    !!  @author Matteo Ugolotti
+    !!  @date   9/3/2018
+    !!
+    !!  Added capability to compute dX derivatives. The differentiation comes from the geometric
+    !!  side, that is from grad1, grad2 and grad3.
+    !!  For dQ differentiation, the derivatives coms from the qdiff whereas for dX differentiation
+    !!  the derivatives come fom the interpolator.
+    !!  In order to speed up the matmul computation, qdiff (AD) and standard interpolator (rk)
+    !!  are multiplied. Instead, q (rk) and differentiated interpolator (AD) are used for 
+    !!  dX case.
+    !!  This is meant to avoid a matmul operation that involves two AD terms.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/26/2018
+    !!
+    !!  Added BC linearization
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   5/10/2019
+    !!
+    !!  Added distance field linearization
     !!
     !-----------------------------------------------------------------------------------------
     function interpolate_element_autodiff(mesh,vector,elem_info,fcn_info,ifield,itime,interpolation_type,interpolator,mode_min,mode_max) result(var_gq)
@@ -100,8 +122,8 @@ contains
 
         character(:),   allocatable :: user_msg
 
-        type(AD_D), allocatable :: qdiff(:), var_gq(:)
-        real(rk),   allocatable :: qtmp(:)
+        type(AD_D), allocatable :: qdiff(:), var_gq(:), interpolator_ad(:,:)
+        real(rk),   allocatable :: qtmp(:), q(:)
 
         integer(ik) :: nderiv, set_deriv, iterm, nterms, ierr
         logical     :: differentiate_me
@@ -113,79 +135,118 @@ contains
                     default interpolator for 'value' interpolations."
         if (present(interpolator) .and. (interpolation_type /= 'value')) call chidg_signal(FATAL,user_msg)
 
-        ! Get number of derivatives to initialize for automatic differentiation
-        nderiv = get_interpolation_nderiv(mesh,fcn_info%seed)
+!        ! Get number of derivatives to initialize for automatic differentiation
+!        nderiv = get_interpolation_nderiv(mesh,fcn_info%seed)
 
         ! Determine nterms from interpolator matrix
         nterms = mesh%domain(idom)%elems(ielem)%basis_s%nterms_i()
 
-        ! Allocate qdiff buffer and initialize derivative allocations + zero
-        allocate(qdiff(nterms), stat=ierr)
-        if (ierr /= 0) call AllocationError
-        do iterm = 1,nterms
-            qdiff(iterm) = AD_D(nderiv)
-        end do
-        qdiff = ZERO
+!        ! Allocate qdiff buffer and initialize derivative allocations + zero
+!        allocate(qdiff(nterms), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!        do iterm = 1,nterms
+!            qdiff(iterm) = AD_D(nderiv)
+!        end do
+!        qdiff = ZERO
 
         ! Retrieve modal coefficients representing ifield in vector to 'qtmp'
         qtmp = vector%get_field(elem_info,ifield,itime)
 
-        ! 1: If mode_min,mode_max are present, use a subset of the expansion modes.
-        ! 2: If not present, use the entire expansion.
-        if (present(mode_min) .and. present(mode_max)) then
-            qdiff(mode_min:mode_max) = qtmp(mode_min:mode_max)
+!        ! 1: If mode_min,mode_max are present, use a subset of the expansion modes.
+!        ! 2: If not present, use the entire expansion.
+!        if (present(mode_min) .and. present(mode_max)) then
+!            qdiff(mode_min:mode_max) = qtmp(mode_min:mode_max)
+!        else
+!            qdiff(1:nterms) = qtmp(1:nterms)
+!        end if
+!
+!        ! If the current element is being differentiated (ielem == ielem_seed)
+!        ! then copy the solution modes to local AD variable and seed derivatives
+!        !
+!        ! If the current element is being differentiated (ielem == ielem_seed)
+!        ! then copy the solution modes to local AD variable and seed derivatives
+!        differentiate_me = ( (elem_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
+!                             (elem_info%ielement_g == fcn_info%seed%ielement_g) .and. &
+!                             (itime                == fcn_info%seed%itime) )
+!
+!        if (differentiate_me) then
+!            ! Differentiating element, initialize appropriate derivatives to ONE
+!            do iterm = 1,size(qdiff)
+!                set_deriv = (ifield - 1)*mesh%domain(idom)%elems(ielem)%nterms_s + iterm
+!                qdiff(iterm)%xp_ad_(set_deriv) = ONE
+!            end do
+!        else
+!            ! Not differentiating element, set all derivatives to ZERO
+!            do iterm = 1,size(qdiff)
+!                qdiff(iterm)%xp_ad_ = ZERO
+!            end do
+!        end if
+
+
+        ! Standard dQ differentiation, or no differentiation at all
+        if (fcn_info%dtype == dQ_DIFF  .or. &
+            fcn_info%dtype == dBC_DIFF .or. &
+            fcn_info%dtype == NO_DIFF  .or. &
+            fcn_info%dtype == dD_DIFF) then
+
+            ! 1: If mode_min,mode_max are present, use a subset of the expansion modes.
+            ! 2: If not present, use the entire expansion.
+            if (present(mode_min) .and. present(mode_max)) then
+                qdiff = differentiate_modal_coefficients(qtmp(mode_min:mode_max),fcn_info,elem_info,ifield,itime,nterms,mode_min,mode_max)
+            else
+                qdiff = differentiate_modal_coefficients(qtmp(1:nterms),fcn_info,elem_info,ifield,itime,nterms)
+            end if
+
+            ! Select interpolation type
+            select case (interpolation_type)
+                case('value')
+                    if (present(interpolator)) then
+                        var_gq = matmul(interpolator,qdiff)
+                    else
+                        var_gq = matmul(mesh%domain(idom)%elems(ielem)%basis_s%interpolator_element('Value'),qdiff)
+                    end if
+
+                case('grad1')
+                    var_gq = matmul(mesh%domain(idom)%elems(ielem)%grad1,qdiff)
+
+                case('grad2')
+                    var_gq = matmul(mesh%domain(idom)%elems(ielem)%grad2,qdiff)
+
+                case('grad3')
+                    var_gq = matmul(mesh%domain(idom)%elems(ielem)%grad3,qdiff)
+
+                case default
+                    user_msg = "interpolate_element_autodiff: The 'interpolation_type' incoming&
+                                parameter was not a valid string. Valid strings for &
+                                'interpolation_type' include 'value', 'grad1', 'grad2', 'grad3'."
+                    call chidg_signal_one(FATAL,user_msg,interpolation_type)
+            end select
+
+        
+        ! dX differentiation
+        else if (fcn_info%dtype == dX_DIFF) then
+
+            ! Allocate q buffer in case of dX differentiation 
+            allocate(q(nterms), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            ! 1: If mode_min,mode_max are present, use a subset of the expansion modes.
+            ! 2: If not present, use the entire expansion.
+            if (present(mode_min) .and. present(mode_max)) then
+                q(mode_min:mode_max) = qtmp(mode_min:mode_max)
+            else
+                q(1:nterms) = qtmp(1:nterms)
+            end if
+            interpolator_ad = differentiate_element_interpolator(interpolation_type,mesh,elem_info,fcn_info,itime)
+            var_gq = matmul(interpolator_ad,q)
+        
         else
-            qdiff(1:nterms) = qtmp(1:nterms)
+            user_msg = "interpolate_element_autodiff: The 'fcn_info%dtype' incoming&
+                        parameter was not a valid string. Valid strings for &
+                        'differentiation_type' include 'dQ', 'dX', 'dBC, 'NO'."
+            call chidg_signal_one(FATAL,user_msg,fcn_info%dtype)
+
         end if
-
-        ! If the current element is being differentiated (ielem == ielem_seed)
-        ! then copy the solution modes to local AD variable and seed derivatives
-        !
-        ! If the current element is being differentiated (ielem == ielem_seed)
-        ! then copy the solution modes to local AD variable and seed derivatives
-        differentiate_me = ( (elem_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-                             (elem_info%ielement_g == fcn_info%seed%ielement_g) .and. &
-                             (itime                == fcn_info%seed%itime) )
-
-        if (differentiate_me) then
-            ! Differentiating element, initialize appropriate derivatives to ONE
-            do iterm = 1,size(qdiff)
-                set_deriv = (ifield - 1)*mesh%domain(idom)%elems(ielem)%nterms_s + iterm
-                qdiff(iterm)%xp_ad_(set_deriv) = ONE
-            end do
-        else
-            ! Not differentiating element, set all derivatives to ZERO
-            do iterm = 1,size(qdiff)
-                qdiff(iterm)%xp_ad_ = ZERO
-            end do
-        end if
-
-
-        ! Select interpolation type
-        select case (interpolation_type)
-            case('value')
-                if (present(interpolator)) then
-                    var_gq = matmul(interpolator,qdiff)
-                else
-                    var_gq = matmul(mesh%domain(idom)%elems(ielem)%basis_s%interpolator_element('Value'),qdiff)
-                end if
-
-            case('grad1')
-                var_gq = matmul(mesh%domain(idom)%elems(ielem)%grad1,qdiff)
-
-            case('grad2')
-                var_gq = matmul(mesh%domain(idom)%elems(ielem)%grad2,qdiff)
-
-            case('grad3')
-                var_gq = matmul(mesh%domain(idom)%elems(ielem)%grad3,qdiff)
-
-            case default
-                user_msg = "interpolate_element_autodiff: The 'interpolation_type' incoming&
-                            parameter was not a valid string. Valid strings for &
-                            'interpolation_type' include 'value', 'grad1', 'grad2', 'grad3'."
-                call chidg_signal_one(FATAL,user_msg,interpolation_type)
-        end select
-
 
         end associate
 
@@ -246,308 +307,124 @@ contains
         type(element_info_t) :: donor_info
 
         type(AD_D),         allocatable :: qdiff(:), var_gq(:)
-        real(rk),           allocatable :: qtmp(:)
+        real(rk),           allocatable :: qtmp(:), q(:)
         real(rk),           allocatable :: interpolator(:,:)
+        type(AD_D),         allocatable :: interpolator_ad(:,:)
         character(:),       allocatable :: interpolation_style
 
         integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr, nnodes, donor_iface
         logical     :: differentiate_me, conforming_interpolation, chimera_interpolation
-
 
         ! Chimera data
         integer(ik)                 :: ndonors, idonor
         logical,    allocatable     :: mask(:)          ! node mask for distributing Chimera quadrature points
         type(AD_D), allocatable     :: var_gq_chimera(:)
 
-        
-        !
+
         ! Allocate output array
-        !
         nnodes   = mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%basis_s%nnodes_face()
         nterms_s = mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%basis_s%nterms_i()
         allocate(var_gq(nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-        !
         ! Get number of donors for the interpolation
-        !
         ndonors = get_elem_interpolation_ndonors(mesh,elem_info,iface,interpolation_source)
 
 
-        !
         ! Get interpolation style. Conforming or Chimera
-        !
         interpolation_style = get_elem_interpolation_style(mesh,elem_info,iface,interpolation_source)
         conforming_interpolation = (interpolation_style == 'conforming')
         chimera_interpolation    = (interpolation_style == 'chimera')
 
 
-        !
-        ! Get number of derivatives to initialize for automatic differentiation
-        !
-        nderiv = get_interpolation_nderiv(mesh,fcn_info%seed)
-
-
-
-
-        !
         ! For each donor element to the interpolation. 
         ! (ndonors could be > 1 for Chimera interpolations)
-        !
         do idonor = 1,ndonors
 
-
-            !
             ! Get face info for face being interpolated to(ME, NEIGHBOR), 
             ! interpolation matrix, and recv data for parallel access
-            !
             donor_iface  = compute_neighbor_face(mesh,elem_info%idomain_l,elem_info%ielement_l,iface,idonor)         ! THIS PROBABLY NEEDS IMPROVED
             donor_info   = get_elem_interpolation_info(        mesh,elem_info,iface,interpolation_source,idonor)
             mask         = get_elem_interpolation_mask(        mesh,elem_info,iface,interpolation_source,idonor)
             interpolator = get_elem_interpolation_interpolator(mesh,elem_info,iface,interpolation_source,idonor,interpolation_type,donor_info,donor_iface)
 
 
-        
-
-
-            !
             ! Deduce nterms from interpolator matrix
-            !
             nterms_s = size(interpolator,2)
 
-
-            !
-            ! Allocate solution and derivative arrays for temporary solution variable
-            !
-            if ( allocated(qdiff) ) deallocate(qdiff)
-            allocate(qdiff(nterms_s), stat=ierr)
-            if (ierr /= 0) call AllocationError
-
-            do iterm = 1,nterms_s
-                qdiff(iterm) = AD_D(nderiv)
-            end do
-
-
-            !
             ! Retrieve modal coefficients for ifield from vector
-            !
             qtmp = vector%get_field(donor_info,ifield,itime)
 
 
-            !
-            ! Copy correct number of modes. We use this because there is the possibility
-            ! that 'q' could be an auxiliary vector with nterms > nterms_s. For example,
-            ! if wall distance was computed for P1, and we are running Navier Stokes P0.
-            ! So we take only up to the modes that we need.
-            !
-            qdiff(1:nterms_s) = qtmp(1:nterms_s)
+            select case(fcn_info%dtype)
+
+                case(dX_DIFF)
 
 
+                    ! Allocate solution vector q for dX differentiation
+                    if ( allocated(q) ) deallocate(q)
+                    allocate(q(nterms_s), stat=ierr)
+                    if (ierr /= 0) call AllocationError
 
-            !!
-            !! If the current element is being differentiated (ielem == ielem_seed)
-            !! then copy the solution modes to local AD variable and seed derivatives
-            !!
-            !differentiate_me = ( (iface_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-            !                     (iface_info%ielement_g == fcn_info%seed%ielement_g) )
-            ! If the current element is being differentiated (ielem == ielem_seed)
-            ! then copy the solution modes to local AD variable and seed derivatives
-            differentiate_me = ( (donor_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-                                 (donor_info%ielement_g == fcn_info%seed%ielement_g) .and. &
-                                 (itime                 == fcn_info%seed%itime) )
+                    ! Copy the right modes to q 
+                    q = qtmp(1:nterms_s)
+            
+                    ! Initialize interpolator with grid-node derivatives 
+                    interpolator_ad = get_elem_interpolation_interpolator_ad(mesh,                 &
+                                                                             elem_info,            &
+                                                                             iface,                &
+                                                                             interpolation_source, &
+                                                                             idonor,               &
+                                                                             donor_info,           &
+                                                                             donor_iface,          &
+                                                                             interpolation_type,   &
+                                                                             fcn_info,             &
+                                                                             itime)
+                    
+                    if ( conforming_interpolation ) then
+                        var_gq = matmul(interpolator_ad,q)
 
-            if ( differentiate_me ) then
-                ! Loop through the terms in qdiff, seed appropriate derivatives to ONE
-                do iterm = 1,size(qdiff)
-                    ! For the given term, seed its appropriate derivative
-                    set_deriv = (ifield - 1)*nterms_s + iterm
-                    qdiff(iterm)%xp_ad_(set_deriv) = ONE
-                end do
+                    elseif ( chimera_interpolation ) then
+                        ! Perform interpolation
+                        var_gq_chimera = matmul(interpolator_ad,q)
 
-            else
-                ! Loop through the terms in qdiff. Set all derivatives to ZERO
-                do iterm = 1,size(qdiff)
-                    qdiff(iterm)%xp_ad_ = ZERO
-                end do
+                        ! Scatter chimera nodes to appropriate location in var_gq
+                        var_gq = unpack(var_gq_chimera,mask,var_gq)
 
-            end if
-
-
-
-            !
-            ! Interpolate solution to GQ nodes via matrix-vector multiplication
-            !
-            if ( conforming_interpolation ) then
-                var_gq = matmul(interpolator,  qdiff)
+                    else
+                        call chidg_signal(FATAL,"interpolate_face: face interpolation type error")
+                    end if
 
 
-            elseif ( chimera_interpolation ) then
-                ! Perform interpolation
-                var_gq_chimera = matmul(interpolator,  qdiff)
+                case default
 
-                ! Scatter chimera nodes to appropriate location in var_gq
-                var_gq = unpack(var_gq_chimera,mask,var_gq)
+                    !qdiff = differentiate_modal_coefficients(qtmp(1:nterms_s),fcn_info,elem_info,ifield,itime,nterms_s)
+                    qdiff = differentiate_modal_coefficients(qtmp(1:nterms_s),fcn_info,donor_info,ifield,itime,nterms_s)
 
-            else
-                call chidg_signal(FATAL,"interpolate_face: face interpolation type error")
-            end if
+                    ! Interpolate solution to GQ nodes via matrix-vector multiplication
+                    if ( conforming_interpolation ) then
+                        var_gq = matmul(interpolator,  qdiff)
 
+                    elseif ( chimera_interpolation ) then
+                        ! Perform interpolation
+                        var_gq_chimera = matmul(interpolator,  qdiff)
+
+                        ! Scatter chimera nodes to appropriate location in var_gq
+                        var_gq = unpack(var_gq_chimera,mask,var_gq)
+
+                    else
+                        call chidg_signal(FATAL,"interpolate_face: face interpolation type error")
+                    end if
+
+            end select
 
 
         end do ! idonor
 
 
-
     end function interpolate_face_autodiff
     !*****************************************************************************************
-
-
-
-
-
-
-
-
-
-!    !>  Interpolate variable from polynomial expansion to explicit values at quadrature 
-!    !!  nodes. The automatic differentiation process really starts here, when the polynomial 
-!    !!  expansion is evaluated.
-!    !!
-!    !!  The interpolation process occurs through a matrix-vector multiplication. That is an 
-!    !!  interpolation matrix multiplied by a vector of modes from the polynomial expansion. 
-!    !!  To start the automatic differentiation, the derivative arrays of the values for the 
-!    !!  polynomial modes must be initialized before any computation. So, before the 
-!    !!  matrix-vector multiplication.
-!    !!
-!    !!  Some interpolation parameters to note that a user might select:
-!    !!      - interpolation_type:   'value', 'grad1', 'grad2', 'grad3'
-!    !!      - interpolation_source: ME, NEIGHBOR
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   2/1/2016
-!    !!
-!    !!  @param[in]      mesh                    Array of mesh instances.
-!    !!  @param[in]      face                    Face indices for locating the face in mesh.
-!    !!  @param[in]      vector                  A chidg_vector containing a modal representation of fields on mesh
-!    !!  @param[in]      ifield                  Index of field being interpolated
-!    !!  @param[inout]   var_gq                  Autodiff values of field evaluated at gq points
-!    !!  @param[in]      interpolation_type      Interpolate 'value', 'grad1', 'grad2', 'grad3'
-!    !!  @param[in]      interpolation_source    ME/NEIGHBOR indicating element to interpolate from
-!    !!
-!    !!  @author Mayank Sharma + Matteo Ugolotti
-!    !!  @date   11/5/2016
-!    !!
-!    !!  @param[in]      itime                   Index for time step in solution
-!    !!
-!    !------------------------------------------------------------------------------------------
-!    function interpolate_edge_autodiff(mesh,vector,edge_info,seed, ifield, itime, interpolation_type) result(var_gq)
-!        type(mesh_t),           intent(in)              :: mesh
-!        type(chidg_vector_t),   intent(in)              :: vector
-!        type(edge_info_t),      intent(in)              :: edge_info
-!        type(seed_t),           intent(in)              :: seed
-!        integer(ik),            intent(in)              :: ifield
-!        integer(ik),            intent(in)              :: itime
-!        character(*),           intent(in)              :: interpolation_type
-!
-!        type(AD_D),         allocatable :: qdiff(:), var_gq(:)
-!        real(rk),           allocatable :: qtmp(:)
-!        real(rk),           allocatable :: interpolator(:,:)
-!
-!        integer(ik) :: nderiv, set_deriv, iterm, nterms_s, ierr, nnodes
-!        logical     :: differentiate_me
-!
-!        
-!        !
-!        ! Allocate output array
-!        !
-!        nnodes   = mesh%domain(edge_info%idomain_l)%elems(edge_info%ielement_l)%basis_s%nnodes_face()
-!        nterms_s = mesh%domain(edge_info%idomain_l)%elems(edge_info%ielement_l)%basis_s%nterms_i()
-!        allocate(var_gq(nnodes), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!
-!        !
-!        ! Get number of derivatives to initialize for automatic differentiation
-!        !
-!        nderiv = get_interpolation_nderiv(mesh,seed)
-!
-!
-!        !
-!        ! Get edge interpolation matrix
-!        !
-!        interpolator = get_edge_interpolation_interpolator(mesh,edge_info,interpolation_type)
-!
-!
-!        !
-!        ! Deduce nterms from interpolator matrix
-!        !
-!        nterms_s = size(interpolator,2)
-!
-!
-!        !
-!        ! Allocate solution and derivative arrays for temporary solution variable
-!        !
-!        if ( allocated(qdiff) ) deallocate(qdiff)
-!        allocate(qdiff(nterms_s), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!        do iterm = 1,nterms_s
-!            qdiff(iterm) = AD_D(nderiv)
-!        end do
-!
-!
-!        !
-!        ! Retrieve modal coefficients for ifield from vector
-!        !
-!        qtmp = vector%dom(edge_info%idomain_l)%vecs(edge_info%ielement_l)%getvar(ifield,itime)
-!
-!
-!        !
-!        ! Copy correct number of modes. We use this because there is the possibility
-!        ! that 'q' could be an auxiliary vector with nterms > nterms_s. For example,
-!        ! if wall distance was computed for P1, and we are running Navier Stokes P0.
-!        ! So we take only up to the modes that we need.
-!        !
-!        qdiff(1:nterms_s) = qtmp(1:nterms_s)
-!
-!
-!
-!        !
-!        ! If the current element is being differentiated (ielem == ielem_seed)
-!        ! then copy the solution modes to local AD variable and seed derivatives
-!        !
-!        differentiate_me = ( (edge_info%idomain_g  == seed%idomain_g ) .and. &
-!                             (edge_info%ielement_g == seed%ielement_g) )
-!
-!        if ( differentiate_me ) then
-!            ! Loop through the terms in qdiff, seed appropriate derivatives to ONE
-!            do iterm = 1,size(qdiff)
-!                ! For the given term, seed its appropriate derivative
-!                set_deriv = (ifield - 1)*nterms_s + iterm
-!                qdiff(iterm)%xp_ad_(set_deriv) = ONE
-!            end do
-!
-!        else
-!            ! Loop through the terms in qdiff. Set all derivatives to ZERO
-!            do iterm = 1,size(qdiff)
-!                qdiff(iterm)%xp_ad_ = ZERO
-!            end do
-!
-!        end if
-!
-!
-!
-!        !
-!        ! Interpolate solution to GQ nodes via matrix-vector multiplication
-!        !
-!        var_gq = matmul(interpolator,  qdiff)
-!
-!
-!    end function interpolate_edge_autodiff
-!    !*****************************************************************************************
-
-
 
 
 
@@ -1165,7 +1042,7 @@ contains
                                           nfields           = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_nfields,         &
                                           ntime             = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_ntime,           &
                                           nterms_s          = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_nterms_s,        &
-                                          nterms_c          = 0,                                                                                                       &
+                                          nterms_c          = NO_DATA,                                                                                                 &
                                           dof_start         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_dof_start,       &
                                           dof_local_start   = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_dof_local_start, &
                                           recv_comm         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_comm,                 &
@@ -1342,6 +1219,94 @@ contains
     end function get_elem_interpolation_interpolator
     !*****************************************************************************************
 
+
+
+
+
+
+    !>  This returns an interpolation matrix that is used to actually perform the interpolation 
+    !!  from a modal expansion to a set of quadrature nodes.
+    !!
+    !!  Compared to get_elem_interpolation_interpolator, this routine returns also the derivatives
+    !!  wrt the grid-nodes for each interpolator.
+    !!
+    !!  The interpolation from a modal expansion to a set of quadrature nodes takes the form 
+    !!  of a matrix-vector multiplication, where the vector entries are modal coefficients of 
+    !!  the polynomial expansion, and the matrix contains entries that evaluate the modes of 
+    !!  the polynomial expansion at the quadrature nodes. This routine returns the 
+    !!  interpolation matrix. Additionally, an interpolation could be computing the actual 
+    !!  value of the expansion at the nodes('value'), or it could be computing derivatives 
+    !!  ('grad1', 'grad2', 'grad3'). The interpolation_type specifies what kind of interpolation 
+    !!  to perform.
+    !!
+    !!  Given a face, interpolation type, and interpolation source, this routine returns
+    !!      - a face_info_t of the face to be interpolated to
+    !!      - an interpolation matrix
+    !!      - receiver info to be used if the interpolation is remote
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/3/2018
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_elem_interpolation_interpolator_ad(mesh,source_elem,source_iface,interpolation_source,idonor,donor_elem,donor_iface,interpolation_type,fcn_info,itime) result(interpolator)
+        type(mesh_t),           intent(in)  :: mesh
+        type(element_info_t),   intent(in)  :: source_elem
+        integer(ik),            intent(in)  :: source_iface
+        integer(ik),            intent(in)  :: interpolation_source
+        integer(ik),            intent(in)  :: idonor
+        type(element_info_t),   intent(in)  :: donor_elem
+        integer(ik),            intent(in)  :: donor_iface
+        character(*),           intent(in)  :: interpolation_type
+        type(function_info_t), intent(in)   :: fcn_info
+        integer(ik),            intent(in)  :: itime
+
+        type(AD_D),     allocatable :: interpolator(:,:)
+        integer(ik),    allocatable :: gq_node_indices(:)
+        integer(ik)                 :: inode, ChiID, donor_proc
+        logical                     :: conforming_interpolation, chimera_interpolation, parallel_interpolation
+
+
+        associate( idom => source_elem%idomain_l, ielem => source_elem%ielement_l, iface => source_iface )
+
+        ! Compute neighbor access indices
+        if ( interpolation_source == ME ) then
+            interpolator = differentiate_face_interior_interpolator(interpolation_type,mesh,source_elem,source_iface,donor_elem,donor_iface,fcn_info,itime)
+
+        elseif ( interpolation_source == NEIGHBOR ) then
+
+            chimera_interpolation    = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
+            conforming_interpolation = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
+
+            ! Interpolate from conforming NEIGHBOR element
+            if ( conforming_interpolation ) then
+                parallel_interpolation   = ( IRANK /= mesh%domain(idom)%faces(ielem,iface)%ineighbor_proc )
+                ! If parallel use iface_interp to get an interpolation for an opposite face. Assumes same order and eqns.
+                if (parallel_interpolation) then
+                    interpolator = differentiate_face_parallel_interpolator(interpolation_type,mesh,source_elem,source_iface,donor_elem,donor_iface,fcn_info,itime)
+                else
+                    interpolator = differentiate_face_local_interpolator(interpolation_type,mesh,source_elem,source_iface,donor_elem,donor_iface,fcn_info,itime)
+                end if
+
+
+            ! Interpolate from CHIMERA donor element
+            elseif ( chimera_interpolation ) then
+                ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
+                interpolator = differentiate_face_chimera_interpolator(interpolation_type,mesh,source_elem,source_iface,donor_elem,ChiID,idonor,fcn_info,itime)
+
+            else
+                call chidg_signal(FATAL,"get_elem_interpolation_interpolator_ad: neighbor conforming_interpolation nor chimera_interpolation were detected")
+            end if
+
+        else
+            call chidg_signal(FATAL,"get_elem_interpolation_interpolator_ad: invalid source. ME or NEIGHBOR.")
+        end if
+
+        end associate
+
+
+    end function get_elem_interpolation_interpolator_ad
+    !*****************************************************************************************
 
 
 

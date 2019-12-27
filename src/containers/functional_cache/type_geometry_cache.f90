@@ -107,30 +107,23 @@ contains
         ! If volume integral, initialize geometry_cache
         if (volume_integral) then
             
+            ! Each geometry is a mesh domain
             do igeom = 1,ngeoms
-                
-                ! Each geometry is a mesh domain
                 domain_name = geometries%data_(igeom)%get()
-                !domain_ID   = mesh%get_domain_id(domain_name,'soft')
                 domain_ID   = mesh%get_domain_id(domain_name)
                 if (domain_ID == NO_ID) cycle
 
                 nelems      = mesh%domain(domain_ID)%get_nelements_local()
                 do ielem = 1,nelems
-                    
                     associate( elem => mesh%domain(domain_ID)%elems(ielem) )
-                    
                         idom_g  = elem%idomain_g
                         idom_l  = elem%idomain_l
                         ielem_g = elem%ielement_g
                         ielem_l = elem%ielement_l
                         iface   = NO_ID 
                         call self%push_back(idom_g,idom_l,ielem_g,ielem_l,iface)
-
                     end associate
-                     
                 end do !ielem
-
             end do !igeom
         
         end if
@@ -140,30 +133,24 @@ contains
         ! If surface integral, initialize geometry_cache
         if (surface_integral) then
 
+            ! Each geometry is a patch group
             do igeom = 1,ngeoms
-             
-                ! Each geometry is a patch group
                 group_name = geometries%data_(igeom)%get()
                 group_ID   = mesh%get_bc_patch_group_id(group_name)
                 if (group_ID == NO_ID) cycle
-                
                 npatches = mesh%bc_patch_group(group_ID)%npatches()
                 do ipatch = 1,npatches
 
                     nfaces = mesh%bc_patch_group(group_ID)%patch(ipatch)%nfaces()
                     do patch_iface = 1,nfaces
-                        
                         associate ( face => mesh%bc_patch_group(group_ID)%patch(ipatch) ) 
-                            
                             idom_g  = face%idomain_g()
                             idom_l  = face%idomain_l()
                             ielem_g = face%ielement_g(patch_iface)
                             ielem_l = face%ielement_l(patch_iface)
                             iface   = face%iface(patch_iface) 
                             call self%push_back(idom_g,idom_l,ielem_g,ielem_l,iface)
-                        
                         end associate
-
                     end do !patch_iface
                 end do !ipatch
             end do !igeom

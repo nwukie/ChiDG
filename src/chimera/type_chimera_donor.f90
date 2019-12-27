@@ -47,6 +47,7 @@ module type_chimera_donor
     contains
 
         procedure   :: add_node
+        procedure   :: set_properties
         procedure   :: nnodes
 
         procedure   :: update_interpolations_dx
@@ -180,6 +181,35 @@ contains
     !****************************************************************
 
 
+
+
+
+    !>  Set the properties of the donor.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/25/2017
+    !!
+    !!  Added nodes_to_modes and modal_coords as input
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/30/2018
+    !!
+    !------------------------------------------------------------------
+    subroutine set_properties(self,nodes_to_modes,modal_coords)
+        class(chimera_donor_t),     intent(inout)   :: self
+        real(rk),   allocatable,    intent(in)      :: nodes_to_modes(:,:) 
+        real(rk),   allocatable,    intent(in)      :: modal_coords(:,:) 
+
+        self%nodes_to_modes     = nodes_to_modes
+        self%modal_coords       = modal_coords
+
+    end subroutine set_properties
+    !******************************************************************
+
+
+
+
+
     !>  Return the number of nodes this donor is responsible for.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -231,31 +261,22 @@ contains
 
         spacedim = 3
 
-        !
         ! Check coordiante system is correct
-        !
         if (self%elem_info%coordinate_system == 0) then
             call chidg_signal(FATAL,"type_chimera_donor: coordiante_system not assigned to the donor")
         end if
 
-
-        !
         ! Set default values for optional inputs
-        !
         frame_selector = 'Undeformed'
         scale_metric   = .true.
 
 
-        !
         ! Overwrite optional values if inputs are present
-        !
         if (present(coordinate_scaling)) scale_metric   = coordinate_scaling
         if (present(coordinate_frame)  ) frame_selector = coordinate_frame
 
 
-        !
         ! Retrieve modal coordinates
-        !
         select case(trim(frame_selector))
             case('Undeformed')
                 modal_coords = self%modal_coords
@@ -265,9 +286,7 @@ contains
         end select
 
 
-        !
         ! Allocate differential gradient interpolator 
-        !
         if (allocated(self%dgrad1_dx)) deallocate(self%dgrad1_dx,self%dgrad2_dx,self%dgrad3_dx)
         !allocate( self%dgrad1_dx(self%nnodes(),self%elem_info%nterms_s,self%nnodes_r,3), &
         !          self%dgrad2_dx(self%nnodes(),self%elem_info%nterms_s,self%nnodes_r,3), &
@@ -276,20 +295,12 @@ contains
                   self%dgrad2_dx(self%nnodes(),self%elem_info%nterms_s,self%elem_info%nterms_c,3), &
                   self%dgrad3_dx(self%nnodes(),self%elem_info%nterms_s,self%elem_info%nterms_c,3)  ) 
 
-        !
         ! Loop through each donor node and compute differential gradient interpolators
-        !
         do ipt = 1,self%nnodes()
-
-            !
             ! Donor coordiantes(xi,eta,zeta)
-            !
             coord = self%coords(ipt,:)
 
-
-            !
             ! Evaluate basis modes at node location
-            !
             do iterm = 1,self%elem_info%nterms_c
                 val_c(iterm)    =  polynomial_val(spacedim,self%elem_info%nterms_c,iterm,coord)
                 ddxi_c(iterm)   = dpolynomial_val(spacedim,self%elem_info%nterms_c,iterm,coord,XI_DIR  )
@@ -297,10 +308,7 @@ contains
                 ddzeta_c(iterm) = dpolynomial_val(spacedim,self%elem_info%nterms_c,iterm,coord,ZETA_DIR)
             end do
 
-
-            !
             ! Evaluate mesh point from dot product of modes and polynomial values
-            !
             dXdxi(1,1) = dot_product(ddxi_c,   modal_coords(:,1))
             dXdxi(1,2) = dot_product(ddeta_c,  modal_coords(:,1))
             dXdxi(1,3) = dot_product(ddzeta_c, modal_coords(:,1))

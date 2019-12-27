@@ -734,10 +734,7 @@ contains
         else
 
 
-
-            !
             ! Allocate result and clear
-            !
             if (present(res_init)) then
                 ! Res has the shape of a given chidg vector res_init
                 res = res_init
@@ -748,10 +745,8 @@ contains
             call res%clear
 
 
-            !
             ! Check to see if matrix has been initialized with information about where to locate 
             ! vector information being received from other processors.
-            !
             if ( .not. A%recv_initialized ) then
                 call A%init_recv(x)
             end if
@@ -976,9 +971,6 @@ contains
 
 
 
-
-
-
                     
                     !
                     ! Routine for harmonic balance computations
@@ -1053,14 +1045,12 @@ contains
                     end if  ! HB_flag
 
 
-
                 end do ! idom
 
             end do ! itime
 
 
         
-
 
             !
             ! Begin blocking recv of parallel vector information
@@ -1087,7 +1077,6 @@ contains
                             !!
                             !! Routine for global(parallel) INTERIOR coupling (lblks)
                             !!
-
                             do ielem = 1,size(A%dom(idom)%lblks,1)
                                 do imat = 1,A%dom(idom)%lblks(ielem,itime)%size()
                                 
@@ -1247,7 +1236,6 @@ contains
 
 
 
-
                             !
                             ! Routine for global(parallel) BOUNDARY coupling (bc_blks)
                             !
@@ -1391,7 +1379,6 @@ contains
                             end if !proc_needed
 
                             call MPI_BCast(searching_res_vector,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
-
 
 
                         end do ! while searching_res_vector

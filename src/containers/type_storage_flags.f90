@@ -185,6 +185,8 @@ contains
 
                 self%q                  = .true. 
                 self%q_in               = .true. 
+                self%rhs                = .true. 
+                self%lhs                = .true. 
                 self%function_status    = .true. 
 
                 self%v                  = .true.

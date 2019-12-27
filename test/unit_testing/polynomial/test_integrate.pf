@@ -3,13 +3,13 @@ subroutine test_integrate_boundary_constant()
     use pfunit_mod
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ONE, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  BOUNDARY_ADVECTIVE_FLUX, IO_DESTINATION, NO_ID, CARTESIAN
+                                  BOUNDARY_ADVECTIVE_FLUX, IO_DESTINATION, NO_ID, CARTESIAN, dQ_DIFF
     use mod_integrate,      only: integrate_boundary_scalar_flux
 
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
     use type_element_info,          only: element_info_t, element_info
-    use type_function_info,         only: function_info_t
+    use type_function_info,         only: function_info_t, function_info
     use type_seed,                  only: seed_t
 
     use type_function,              only: function_t
@@ -75,7 +75,6 @@ subroutine test_integrate_boundary_constant()
     !
     ! Set seed. Doesn't really matter what, since we are just checking the values here
     !
-    !call seed%init(1,1,1,1,1,1,0,1,1,1,1)
     call seed%init(idomain_g=1,         &
                    idomain_l=1,         &
                    ielement_g=1,        &
@@ -111,7 +110,6 @@ subroutine test_integrate_boundary_constant()
                              recv_dof=NO_ID)
 
 
-
     idomain = 1
     ieqn    = 1
     itime   = 1
@@ -120,10 +118,19 @@ subroutine test_integrate_boundary_constant()
 
 
 
-    fcn_info%type    = BOUNDARY_ADVECTIVE_FLUX
-    fcn_info%ifcn    = ifcn
-    fcn_info%idepend = idonor
-    fcn_info%seed    = seed
+    fcn_info = function_info(type    = BOUNDARY_ADVECTIVE_FLUX, &
+                             ifcn    = ifcn,                    &
+                             idepend = idonor,                  &
+                             idiff   = NO_ID,                   &
+                             dtype   = dQ_DIFF,                 &
+                             seed    = seed,                    &
+                             bc_param = '',                     &
+                             bc_group_match = .false.)
+
+!    fcn_info%type    = BOUNDARY_ADVECTIVE_FLUX
+!    fcn_info%ifcn    = ifcn
+!    fcn_info%idepend = idonor
+!    fcn_info%seed    = seed
 
 
 

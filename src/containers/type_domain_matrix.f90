@@ -205,7 +205,7 @@ contains
         !
         if (allocated(self%lblks)) deallocate(self%lblks)
         allocate(self%lblks(nelem,ntime),           &
-                 self%ldata(nelem,3),               &
+                 self%ldata(nelem,4),               &
                  self%local_lower_blocks(nelem,ntime),    &
                  self%local_upper_blocks(nelem,ntime), stat=ierr)
         if (ierr /= 0) call AllocationError
@@ -287,6 +287,7 @@ contains
                         self%ldata(ielem,1) = mesh%domain(idom)%elems(ielem)%nfields
                         self%ldata(ielem,2) = mesh%domain(idom)%elems(ielem)%nterms_s
                         self%ldata(ielem,3) = mesh%domain(idom)%elems(ielem)%ntime
+                        self%ldata(ielem,4) = nnodes_r  !mesh%domain(idom)%elems(ielem)%nnodes_r
 
 
                         ! If off-diagonal, store block index as 'upper' or 'lower'

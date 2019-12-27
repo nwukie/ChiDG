@@ -246,6 +246,7 @@ contains
 
         associate (func => self%data%functional_group%fcl_entities(self%ifunc)%func )
 
+
             ! Select the functional computation 
             compute_auxiliary = ( self%geom == 'auxiliary' )
             compute_reference = ( self%geom == 'reference' )
@@ -279,6 +280,7 @@ contains
                                                  face = iface,                  & 
                                                  differentiate = self%dtype,    &
                                                  lift = .false.)
+
                 ! Set up worker
                 idepend = 1
                 idiff   = DIAG

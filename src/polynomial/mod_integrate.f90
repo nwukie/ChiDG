@@ -89,18 +89,18 @@ contains
             flux3 = flux3 * weights * differentiate_jinv(mesh,elem_info,0,fcn_info,'element')
 
             ! FLUX-1: Multiply by column of test function gradients, integrate
-            diff_interp_1 = transpose(differentiate_element_interpolator('grad1',mesh,elem_info,fcn_info))
+            diff_interp_1 = transpose(differentiate_element_interpolator('grad1',mesh,elem_info,fcn_info,itime))
             integral1 = matmul(diff_interp_1,flux1)
             ! The following statement creates issues on norman
             !integral1 = matmul(transpose(differentiate_element_interpolator('grad1',mesh,elem_info,fcn_info)),flux1)
 
             ! FLUX-2: Multiply by column of test function gradients, integrate
-            diff_interp_2 = transpose(differentiate_element_interpolator('grad2',mesh,elem_info,fcn_info))
+            diff_interp_2 = transpose(differentiate_element_interpolator('grad2',mesh,elem_info,fcn_info,itime))
             integral2 = matmul(diff_interp_2,flux2)
             !integral2 = matmul(transpose(differentiate_element_interpolator('grad2',mesh,elem_info,fcn_info)),flux2)
 
             ! FLUX-3: Multiply by column of test function gradients, integrate
-            diff_interp_3 = transpose(differentiate_element_interpolator('grad3',mesh,elem_info,fcn_info))
+            diff_interp_3 = transpose(differentiate_element_interpolator('grad3',mesh,elem_info,fcn_info,itime))
             integral3 = matmul(diff_interp_3,flux3)
             !integral3 = matmul(transpose(differentiate_element_interpolator('grad3',mesh,elem_info,fcn_info)),flux3)
 
@@ -253,11 +253,8 @@ contains
         ! Store quadrature flux for neighbor integral
         integrand_n = integrand
 
-
         ! Integrate and apply once
         associate ( weights  => mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights_face(iface),                          &
-                    jinv     => mesh%domain(idomain_l)%faces(ielement_l,iface)%jinv,                                            &
-                    val      => mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface),             &
                     valtrans => transpose(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface)) )
 
             ! Multiply each component by quadrature weights. The fluxes have already been multiplied by norm
@@ -266,7 +263,6 @@ contains
 
             call store_boundary_integral_residual(     mesh,sdata,elem_info,function_info,iface,ifield,itime,integral)
             call store_boundary_integral_linearization(mesh,sdata,elem_info,function_info,iface,ifield,itime,integral)
-
 
         end associate
 
@@ -327,8 +323,6 @@ contains
 
 
                 associate ( weights_n    => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%basis_s%weights_face(ineighbor_face),               &
-                            jinv_n       => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv,                                          &  
-                            val_n        => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%basis_s%interpolator_face('Value',ineighbor_face),  &
                             valtrans_n   => transpose(mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%basis_s%interpolator_face('Value',ineighbor_face)) )
 
                     integrand_n = integrand_n * weights_n
@@ -824,73 +818,75 @@ contains
         logical         :: boundary_face, chimera_face, conforming_face, diff_interior, diff_none, diff_exterior
         logical         :: add_flux = .false.
 
+        if (function_info%dtype == dQ_DIFF .or. function_info%dtype == NO_DIFF) then
 
-        associate ( idomain_l  => elem_info%idomain_l, ielement_l  => elem_info%ielement_l,     &
-                    ifcn  => function_info%ifcn,       idepend => function_info%idepend,     idiff => function_info%idiff )
+            associate ( idomain_l  => elem_info%idomain_l, ielement_l  => elem_info%ielement_l,     &
+                        ifcn  => function_info%ifcn,       idepend => function_info%idepend,     idiff => function_info%idiff )
 
-            conforming_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
-            boundary_face   = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
-            chimera_face    = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
+                conforming_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
+                boundary_face   = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
+                chimera_face    = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
 
-            diff_none     = (idiff == 0)
-            diff_interior = (idiff == DIAG)
-            diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
-                              (idiff == 3) .or. (idiff == 4) .or. &
-                              (idiff == 5) .or. (idiff == 6) )
+                diff_none     = (idiff == 0)
+                diff_interior = (idiff == DIAG)
+                diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
+                                  (idiff == 3) .or. (idiff == 4) .or. &
+                                  (idiff == 5) .or. (idiff == 6) )
 
-            nterms_s = mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s
-            nfields  = mesh%domain(idomain_l)%faces(ielement_l,iface)%nfields
+                nterms_s = mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s
+                nfields  = mesh%domain(idomain_l)%faces(ielement_l,iface)%nfields
 
-             
-            ! Only store rhs once. 
-            !
-            !   For BOUNDARY faces: only store if diff_exterior or diff_none, since the boundary integrals only get computed
-            !                       for these cases, not diff_interior actually. This is because the interior element is 
-            !                       registered with the boundary condition as a coupled element, and these get computed for
-            !                       icompute = [iface] and not icompute = [DIAG]. Only store for idepend == 1, since 
-            !                       could be computed multiple times.
-            !
-            !   For CHIMERA faces: only store if diff_interior or diff_none. Only store for idepend == 1, since could be
-            !                      computed multiple times. The residual should be the same for any value of idepend, 
-            !                      only the derivatives will change.
-            if ( ((boundary_face .and. diff_exterior) .or. &
-                  (boundary_face .and. diff_none    )) .and. &
-                  function_info%seed%itime == itime ) then
+                 
+                ! Only store rhs once. 
+                !
+                !   For BOUNDARY faces: only store if diff_exterior or diff_none, since the boundary integrals only get computed
+                !                       for these cases, not diff_interior actually. This is because the interior element is 
+                !                       registered with the boundary condition as a coupled element, and these get computed for
+                !                       icompute = [iface] and not icompute = [DIAG]. Only store for idepend == 1, since 
+                !                       could be computed multiple times.
+                !
+                !   For CHIMERA faces: only store if diff_interior or diff_none. Only store for idepend == 1, since could be
+                !                      computed multiple times. The residual should be the same for any value of idepend, 
+                !                      only the derivatives will change.
+                if ( ((boundary_face .and. diff_exterior) .or. &
+                      (boundary_face .and. diff_none    )) .and. &
+                      function_info%seed%itime == itime ) then
 
-                if (idepend == 1) then
-                    vals = integral(:)%x_ad_
-                    call sdata%rhs%add_field(vals,elem_info,ifield,itime)
+                    if (idepend == 1) then
+                        vals = integral(:)%x_ad_
+                        call sdata%rhs%add_field(vals,elem_info,ifield,itime)
+                    end if
+
+
+                else if ( (chimera_face .and. diff_interior) .or. &
+                          (chimera_face .and. diff_none    ) ) then
+
+                    if (idepend == 1) then
+                        vals = integral(:)%x_ad_
+                        call sdata%rhs%add_field(vals,elem_info,ifield,itime)
+                    end if
+
+
+                else if ( conforming_face ) then
+
+                    ! Check if particular flux function has been added already
+                    add_flux = sdata%function_status%compute_function_equation( elem_info,function_info,iface,ifield)
+
+                    ! Store if needed
+                    if ( add_flux ) then
+                        ! Add to residual and store
+                        vals = integral(:)%x_ad_
+                        call sdata%rhs%add_field(vals,elem_info,ifield,itime)
+
+                        ! Register flux was stored
+                        call sdata%function_status%register_function_computed(elem_info,function_info,iface,ifield)
+                    end if
+
                 end if
 
+            end associate
 
-            else if ( (chimera_face .and. diff_interior) .or. &
-                      (chimera_face .and. diff_none    ) ) then
-
-                if (idepend == 1) then
-                    vals = integral(:)%x_ad_
-                    call sdata%rhs%add_field(vals,elem_info,ifield,itime)
-                end if
-
-
-            else if ( conforming_face ) then
-
-                ! Check if particular flux function has been added already
-                add_flux = sdata%function_status%compute_function_equation( elem_info,function_info,iface,ifield)
-
-                ! Store if needed
-                if ( add_flux ) then
-                    ! Add to residual and store
-                    vals = integral(:)%x_ad_
-                    call sdata%rhs%add_field(vals,elem_info,ifield,itime)
-
-                    ! Register flux was stored
-                    call sdata%function_status%register_function_computed(elem_info,function_info,iface,ifield)
-                end if
-
-            end if
-
-
-        end associate
+        end if !function_info%dtype /= 'dX'
 
     end subroutine store_boundary_integral_residual
     !******************************************************************************************
@@ -926,15 +922,22 @@ contains
         integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: integral(:)
 
-        integer(ik)                 :: i, idomain_l, ielement_l, ChiID
-        integer(ik)                 :: idiff, ifcn
-        real(rk)                    :: vals(size(integral))
+        integer(ik) :: i, idomain_l, ielement_l, ChiID
+        integer(ik) :: idiff, ifcn
+        real(rk)    :: vals(size(integral)), integral_bc(size(integral))
 
         logical :: conforming_face, boundary_face, chimera_face, &
-                   diff_none, diff_interior, diff_exterior, add_linearization
+                   diff_none, diff_interior, diff_exterior, add_linearization, &
+                   diff_dq, diff_dx, diff_dbc, diff_dd
 
         associate ( idomain_l => elem_info%idomain_l, ielement_l => elem_info%ielement_l,  &
                     ifcn      => function_info%ifcn,  idepend    => function_info%idepend, idiff => function_info%idiff, seed => function_info%seed )
+
+        ! Define the type of linearization and store location based on this
+        diff_dq  = ( function_info%dtype == dQ_DIFF .or. function_info%dtype == NO_DIFF)
+        diff_dx  = ( function_info%dtype == dX_DIFF)
+        diff_dbc = ( function_info%dtype == dBC_DIFF)
+        diff_dd  = ( function_info%dtype == dD_DIFF)
 
         
         conforming_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
@@ -947,7 +950,10 @@ contains
                           (idiff == 3) .or. (idiff == 4) .or. &
                           (idiff == 5) .or. (idiff == 6) )
 
-        associate ( lhs => sdata%lhs)
+        associate ( lhs => sdata%lhs,           &
+                    !Rd => sdata%adjoint%Rd(1),  &
+                    Rx => sdata%adjointx%Rx,    &
+                    Ra => sdata%adjointbc%Ra )
 
         if (diff_interior .or. diff_exterior) then
 
@@ -956,19 +962,24 @@ contains
 
                 if (diff_exterior) then
                     ! Store linearization of Chimera boundary donor elements.
-                    call lhs%store_chimera(integral,elem_info,seed,ifield,itime)
+                    if (diff_dq) call lhs%store_chimera(integral,elem_info,seed,ifield,itime)
+                    if (diff_dx) call Rx%store_chimera(integral,elem_info,seed,ifield,itime)
+                    if (diff_dd) call sdata%adjoint%Rd(1)%store_chimera(integral,elem_info,seed,ifield,itime)
                 else
                     ! Store linearization of Chimera boundary receiver element. Since this could be computed multiple times,
                     ! we just store it once.
                     if (idepend == 1) then
-                        call lhs%store(integral,elem_info,seed,ifield,itime)
+                        if (diff_dq) call lhs%store(integral,elem_info,seed,ifield,itime)
+                        if (diff_dx) call Rx%store(integral,elem_info,seed,ifield,itime)
+                        if (diff_dd) call sdata%adjoint%Rd(1)%store(integral,elem_info,seed,ifield,itime)
                     end if
                 end if
 
 
-
             else if ( boundary_face ) then
-                call lhs%store_bc(integral,elem_info,seed,ifield,itime)
+                if (diff_dq) call lhs%store_bc(integral,elem_info,seed,ifield,itime)
+                if (diff_dx) call Rx%store_bc(integral,elem_info,seed,ifield,itime)
+                if (diff_dd) call sdata%adjoint%Rd(1)%store_bc(integral,elem_info,seed,ifield,itime)
 
 
             else if ( conforming_face ) then
@@ -977,15 +988,29 @@ contains
 
                 ! Store linearization if not already stored
                 if ( add_linearization ) then
-                    ! Store linearization
-                    call lhs%store(integral,elem_info,seed,ifield,itime)
-
+                    if (diff_dq) call lhs%store(integral,elem_info,seed,ifield,itime)
+                    if (diff_dx) call Rx%store(integral,elem_info,seed,ifield,itime)
+                    if (diff_dd) call sdata%adjoint%Rd(1)%store(integral,elem_info,seed,ifield,itime)
                     ! Register flux as linearized
                     call sdata%function_status%register_function_linearized(elem_info,function_info,iface,ifield)
                 end if
 
-
             end if ! ftype
+
+
+            ! Specialized storage for BC linearization
+            ! Here, we do not really care if it is chimera, conforming or boundary face.
+            ! TODO: this could be moved under 'boundary_face' if-statement, since BC derivatives
+            !       comes only from the boundary faces.
+            if (diff_dbc) then
+                do i = 1,size(integral)
+                     integral_bc(i) = integral(i)%xp_ad_(1)
+                end do
+                !vals = Ra%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime) + integral_bc
+                !call Ra%dom(idomain_l)%vecs(ielement_l)%setvar(ifield,itime,vals)
+                call Ra%add_field(integral_bc,elem_info,ifield,itime)
+                
+            end if
 
         end if ! diff_...
         end associate
@@ -997,6 +1022,100 @@ contains
 
 
 
+
+!    !> Store boundary integral values to RHS vector, and partial derivatives to LIN block matrix
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!
+!    !!
+!    !!  @param[in]      integral    Array of autodiff values containing integrals and partial derivatives for the RHS vector and LIN linearization matrix
+!    !!  @param[inout]   rhs         Right-hand side vector
+!    !!  @param[inout]   lin         Block matrix storing the linearization of the spatial scheme
+!    !!  @param[in]      ielem       Element index for applying to the correct location in RHS and LIN
+!    !!  @param[in]      ieqn        Variable index
+!    !!  @param[in]      idiff       Block index for the correct linearization block for the current element
+!    !!
+!    !---------------------------------------------------------------------------------------
+!    subroutine store_boundary_integral_linearization(mesh,sdata,elem_info,function_info,iface,ieqn,itime,integral)
+!        type(mesh_t),           intent(in)      :: mesh
+!        type(solverdata_t),     intent(inout)   :: sdata
+!        type(element_info_t),   intent(in)      :: elem_info
+!        type(function_info_t),  intent(in)      :: function_info
+!        integer(ik),            intent(in)      :: iface
+!        integer(ik),            intent(in)      :: ieqn
+!        integer(ik),            intent(in)      :: itime
+!        type(AD_D),             intent(inout)   :: integral(:)
+!
+!        integer(ik)                 :: i, idomain_l, ielement_l, ChiID
+!        integer(ik)                 :: idiff, ifcn
+!        real(rk)                    :: vals(size(integral))
+!
+!        logical :: conforming_face, boundary_face, chimera_face, &
+!                   diff_none, diff_interior, diff_exterior, add_linearization
+!
+!        associate ( idomain_l => elem_info%idomain_l, ielement_l => elem_info%ielement_l,  &
+!                    ifcn      => function_info%ifcn,  idepend    => function_info%idepend, idiff => function_info%idiff, seed => function_info%seed )
+!
+!        
+!        conforming_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
+!        boundary_face   = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
+!        chimera_face    = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
+!
+!        diff_none     = ( idiff == 0 )
+!        diff_interior = ( idiff == DIAG )
+!        diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
+!                          (idiff == 3) .or. (idiff == 4) .or. &
+!                          (idiff == 5) .or. (idiff == 6) )
+!
+!        associate ( lhs => sdata%lhs)
+!
+!        if (diff_interior .or. diff_exterior) then
+!
+!            ! Store linearization. Rules for different face types.
+!            if ( chimera_face ) then
+!
+!                if (diff_exterior) then
+!                    ! Store linearization of Chimera boundary donor elements.
+!                    call lhs%store_chimera(integral,elem_info,seed,ieqn,itime)
+!                else
+!                    ! Store linearization of Chimera boundary receiver element. Since this could be computed multiple times,
+!                    ! we just store it once.
+!                    if (idepend == 1) then
+!                        call lhs%store(integral,elem_info,seed,ieqn,itime)
+!                    end if
+!                end if
+!
+!
+!
+!            else if ( boundary_face ) then
+!                call lhs%store_bc(integral,elem_info,seed,ieqn,itime)
+!
+!
+!
+!            else if ( conforming_face ) then
+!
+!
+!                add_linearization = sdata%function_status%linearize_function_equation( elem_info, function_info, iface, ieqn)
+!
+!                ! Store linearization if not already stored
+!                if ( add_linearization ) then
+!                    ! Store linearization
+!                    call lhs%store(integral,elem_info,seed,ieqn,itime)
+!
+!                    ! Register flux as linearized
+!                    call sdata%function_status%register_function_linearized( elem_info, function_info, iface, ieqn)
+!                end if
+!
+!
+!            end if ! ftype
+!
+!        end if ! diff_...
+!        end associate
+!
+!        end associate 
+!
+!    end subroutine store_boundary_integral_linearization
+!    !******************************************************************************************
 
 
 

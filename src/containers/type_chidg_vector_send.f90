@@ -65,42 +65,26 @@ contains
         integer(ik) :: idom, iproc, nprocs_send, ierr, nsends
         integer(ik),    allocatable :: send_procs_array(:)
 
-
-        !
         ! Deallocate storage if necessary in case this is being called as a 
         ! reinitialization routine.
-        !
         if (allocated(self%comm)) deallocate(self%comm)
         if (allocated(self%isend_handles)) deallocate(self%isend_handles)
 
-
-        !
         ! Detect processors that we need to send to, from all mesh instances.
-        !
         send_procs_array = mesh%get_send_procs()
         nprocs_send = size(send_procs_array)
 
-
-
-        !
         ! Get total number of procs we are sending to and allocate send info for each
-        !
         allocate(self%comm(nprocs_send), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
-        !
         ! Call initialization for each proc that we are sending to
-        !
         do iproc = 1,nprocs_send
             call self%comm(iproc)%init(mesh,send_procs_array(iproc))
         end do !iproc
 
-
-        !
         ! Accumulate total number of sends and allocate storage for mpi_requests for each send. 
         ! That way, chidg_vector%comm_wait can wait on them to complete.
-        !
         nsends = 0
         do iproc = 1,nprocs_send
             nsends = nsends + self%comm(iproc)%nsends()

@@ -42,7 +42,6 @@ module mod_differentiate
 
     use type_mesh,              only: mesh_t
     use type_element_info,      only: element_info_t
-    use type_face_info,         only: face_info_t
     use type_function_info,     only: function_info_t
     use type_recv,              only: recv_t
     use type_chidg_vector,      only: chidg_vector_t
@@ -75,61 +74,45 @@ contains
 
         integer(ik) :: nderiv, nfields_seed, nterms_s_seed, nnodes_r, directions
         logical     :: parallel_seed
+        
+        if (function_info%dtype == NO_DIFF) then
+            nderiv = 0
 
-        !
-        ! If ielem_seed == 0 then we aren't interested in tracking derivatives. 
-        !   !So set it to lowest number possible while still having something 
-        !   !allocated in the AD type so the operations are valid.
-        !
-        !   Actually, allocating with size 0 is okay in fortran. Just need to be
-        !   careful not to try and access anything as var%xp_ad_(1)
-        !
-!        if (function_info%seed%ielement_l == 0) then
-!            !nderiv = 1
-!            nderiv = 0
-!
-!        else
+        else if (function_info%dtype == dQ_DIFF) then
+            ! Compute number of unknowns in the seed element, which is the number of 
+            ! partial derivatives we are tracking.
+            nfields_seed  = function_info%seed%nfields
+            nterms_s_seed = function_info%seed%nterms_s
 
+            nderiv = nfields_seed * nterms_s_seed
+
+        else if (function_info%dtype == dD_DIFF) then
+            ! Compute number of unknowns in the seed element, which is the number of 
+            ! partial derivatives we are tracking.
+            !
+            ! For wall_distance field we have only one variables, whereas the 
+            ! nterms are equal to primal problem
+            nfields_seed    = 1
+            nterms_s_seed = function_info%seed%nterms_s
+
+            nderiv = nfields_seed  *  nterms_s_seed
+
+        else if (function_info%dtype == dX_DIFF) then
+            ! The number of derivatives is equal to the number of the reference nodes
+            ! of the element seed times the number of directions (3)
+            nnodes_r   = function_info%seed%nnodes_r 
+            directions = 3
             
-            if (function_info%dtype == NO_DIFF) then
-                nderiv = 0
+            nderiv = nnodes_r * directions
+        
+        else if (function_info%dtype == dBC_DIFF) then
+            ! The number of derivatives is equal to 1, only one BC property
+            nderiv = 1 
 
-            else if (function_info%dtype == dQ_DIFF) then
-                ! Compute number of unknowns in the seed element, which is the number of 
-                ! partial derivatives we are tracking.
-                nfields_seed    = function_info%seed%nfields
-                nterms_s_seed = function_info%seed%nterms_s
+        else
+             call chidg_signal_one(FATAL,"mod_differentiate%get_nderiv: unexpected differentiate type",function_info%dtype)
+        end if
 
-                nderiv = nfields_seed  *  nterms_s_seed
-
-            else if (function_info%dtype == dD_DIFF) then
-                ! Compute number of unknowns in the seed element, which is the number of 
-                ! partial derivatives we are tracking.
-                !
-                ! For wall_distance field we have only one variables, whereas the 
-                ! nterms are equal to primal problem
-                nfields_seed    = 1
-                nterms_s_seed = function_info%seed%nterms_s
-
-                nderiv = nfields_seed  *  nterms_s_seed
-
-            else if (function_info%dtype == dX_DIFF) then
-                ! The number of derivatives is equal to the number of the reference nodes
-                ! of the element seed times the number of directions (3)
-                nnodes_r   = function_info%seed%nnodes_r 
-                directions = 3
-                
-                nderiv = nnodes_r * directions
-            
-            else if (function_info%dtype == dBC_DIFF) then
-                ! The number of derivatives is equal to 1, only one BC property
-                nderiv = 1 
-
-            else
-                 call chidg_signal_one(FATAL,"mod_differentiate%get_nderiv: unexpected differentiate type",function_info%dtype)
-            end if
-
-!        end if
 
 
     end function get_nderiv
@@ -164,20 +147,19 @@ contains
     !!  TODO: create tests
     !!
     !--------------------------------------------------------------------------------
-    function differentiate_modal_coefficients(q_in,fcn_info,elem_info,ifield,nterms_s,min_mode,max_mode) result(q_out)
+    function differentiate_modal_coefficients(q_in,fcn_info,elem_info,ifield,itime,nterms_s,min_mode,max_mode) result(q_out)
         real(rk),                   intent(in)  :: q_in(:)
         type(function_info_t),      intent(in)  :: fcn_info
         type(element_info_t),       intent(in)  :: elem_info
         integer(ik),                intent(in)  :: ifield
+        integer(ik),                intent(in)  :: itime
         integer(ik),                intent(in)  :: nterms_s
         integer(ik),    optional,   intent(in)  :: min_mode
         integer(ik),    optional,   intent(in)  :: max_mode
 
         type(AD_D),     allocatable     :: q_out(:)
-        logical                         :: differentiate_mod_coeff
+        logical                         :: differentiate
         integer(ik)                     :: iterm, ierr, set_deriv, nderiv
-
-        differentiate_mod_coeff = .false.
 
         ! Get number of derivatives
         nderiv = get_nderiv(fcn_info)
@@ -200,18 +182,13 @@ contains
 
 
         ! Select cases
-        if (fcn_info%type        == fcn_info%dtype           .and. &
-            elem_info%idomain_g  == fcn_info%seed%idomain_g  .and. &
-            elem_info%ielement_g == fcn_info%seed%ielement_g       ) then
-
-            differentiate_mod_coeff = .true.
-
-        end if
+        differentiate = ( (fcn_info%type        == fcn_info%dtype)           .and. &
+                          (elem_info%idomain_g  == fcn_info%seed%idomain_g)  .and. &
+                          (elem_info%ielement_g == fcn_info%seed%ielement_g) .and. &
+                          (itime                == fcn_info%seed%itime) ) 
 
 
-        ! Initialize derivatives if (ielem == ielem_seed or iface == iface_seed) 
-        ! otherwise, set NULL derivatives
-        if ( differentiate_mod_coeff ) then 
+        if ( differentiate ) then 
             ! Loop through the terms in q_out, seed appropriate derivatives to ONE
             do iterm = 1,nterms_s
                 ! For the given term, seed its appropriate derivative
@@ -307,10 +284,7 @@ contains
         end if
 
 
-
-        !
         ! Get real BR2 values
-        !
         if (source == 'face interior') then
             br2_rk = mesh%domain(idom_l)%faces(ielem_l,iface)%br2_face
         else if (source == 'face exterior' .and. local_neighbor) then
@@ -324,18 +298,14 @@ contains
         end if
 
 
-        !
         ! Get number of derivatives and interpolation nodes to initialize the AD_D vector
-        !
         nderiv        = get_nderiv(fcn_info)
         br2_size1     = size(br2_rk,1)
         br2_size2     = size(br2_rk,2)
         nnodes_r      = fcn_info%seed%nnodes_r
 
 
-        !
         ! Allocate resultant vector
-        !
         allocate(br2_matrix(br2_size1,br2_size2), stat=ierr)
         if (ierr/=0) call AllocationError
         do irow = 1,br2_size1
@@ -345,14 +315,12 @@ contains
         end do
         
 
-        !
         ! Assign real values of the br2_matrix
-        !
         br2_matrix = br2_rk
-        
         differentiate_me = ( (source_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
                              (source_info%ielement_g == fcn_info%seed%ielement_g) .and. &
                              (fcn_info%dtype         == dX_DIFF) )
+
 
         if (differentiate_me) then
             
@@ -452,8 +420,8 @@ contains
         jinv = jinv_rk
         
         differentiate_me = ( (elem_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-                           (elem_info%ielement_g == fcn_info%seed%ielement_g)   .and. &
-                           (fcn_info%dtype == dX_DIFF) )
+                             (elem_info%ielement_g == fcn_info%seed%ielement_g) .and. &
+                             (dX_DIFF              == fcn_info%dtype))
 
         if (differentiate_me) then
 
@@ -525,31 +493,30 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------
-    function differentiate_normal(mesh,face_info,fcn_info,direction) result(norm_gq)
-        type(mesh_t),                       intent(in)  :: mesh
-        type(face_info_t),                  intent(in)  :: face_info
-        type(function_info_t),              intent(in)  :: fcn_info
-        integer(ik),                        intent(in)  :: direction
+    function differentiate_normal(mesh,elem_info,fcn_info,iface,direction) result(norm_gq)
+        type(mesh_t),           intent(in)  :: mesh
+        type(element_info_t),   intent(in)  :: elem_info
+        type(function_info_t),  intent(in)  :: fcn_info
+        integer(ik),            intent(in)  :: iface
+        integer(ik),            intent(in)  :: direction
     
         type(AD_D), allocatable, dimension(:)       :: norm_gq
         real(rk),   allocatable, dimension(:)       :: norm_rk
         real(rk),   allocatable, dimension(:,:,:,:) :: norm_dx
 
         type(element_info_t)    :: source_info
-        integer(ik)             :: iface_l,  nderiv, interp_nodes, nnodes_r,            &
+        integer(ik)             :: nderiv, interp_nodes, nnodes_r,            &
                                    d1_start, d1_end, d2_start, d2_end, d3_start, d3_end,& 
                                    ierr, irow, icol, idir, inode, deriv_index 
         logical                 :: diff_interior, differentiate, mismatch
 
 
-
-        associate( idom_l  => face_info%idomain_l,   &
-                   ielem_l => face_info%ielement_l,  &
-                   iface_l => face_info%iface       )
+        associate( idom  => elem_info%idomain_l,   &
+                   ielem => elem_info%ielement_l )
 
 
         ! Get real normal values, of the current face
-        norm_rk = mesh%domain(idom_l)%faces(ielem_l,iface_l)%norm(:,direction)
+        norm_rk = mesh%domain(idom)%faces(ielem,iface)%norm(:,direction)
 
 
         ! Get number of derivatives and interpolation nodes to initialize the AD_D vector
@@ -569,13 +536,13 @@ contains
         norm_gq = norm_rk 
         
         differentiate = (fcn_info%dtype == dX_DIFF)
-        diff_interior = ( (face_info%idomain_g  == fcn_info%seed%idomain_g) .and. (face_info%ielement_g == fcn_info%seed%ielement_g) )
+        diff_interior = ( (elem_info%idomain_g  == fcn_info%seed%idomain_g) .and. &
+                          (elem_info%ielement_g == fcn_info%seed%ielement_g) )
 
         if (differentiate .and. diff_interior) then
             
             ! Retrieve derivatives wrt to interior
-            norm_dx = mesh%domain(idom_l)%faces(ielem_l,iface_l)%dnorm_dx
-        
+            norm_dx = mesh%domain(idom)%faces(ielem,iface)%dnorm_dx
         
             do inode = 1,interp_nodes
 
@@ -606,7 +573,6 @@ contains
        
         end if
 
-
         end associate
 
     end function differentiate_normal
@@ -628,19 +594,20 @@ contains
     !!  @date   8/6/2018
     !!
     !--------------------------------------------------------------------------------
-    function differentiate_unit_normal(mesh,face_info,fcn_info,direction) result(unorm_gq)
-        type(mesh_t),                       intent(in)  :: mesh
-        type(face_info_t),                  intent(in)  :: face_info
-        type(function_info_t),              intent(in)  :: fcn_info
-        integer(ik),                        intent(in)  :: direction
+    function differentiate_unit_normal(mesh,elem_info,fcn_info,iface,direction) result(unorm_gq)
+        type(mesh_t),           intent(in)  :: mesh
+        type(element_info_t),   intent(in)  :: elem_info
+        type(function_info_t),  intent(in)  :: fcn_info
+        integer(ik),            intent(in)  :: iface
+        integer(ik),            intent(in)  :: direction
 
         type(AD_D), dimension(:), allocatable :: unorm_gq
 
         type(AD_D), dimension(:), allocatable :: norm1_gq, norm2_gq, norm3_gq, norm_mag
 
-        norm1_gq = differentiate_normal(mesh,face_info,fcn_info,1)
-        norm2_gq = differentiate_normal(mesh,face_info,fcn_info,2)
-        norm3_gq = differentiate_normal(mesh,face_info,fcn_info,3)
+        norm1_gq = differentiate_normal(mesh,elem_info,fcn_info,iface,1)
+        norm2_gq = differentiate_normal(mesh,elem_info,fcn_info,iface,2)
+        norm3_gq = differentiate_normal(mesh,elem_info,fcn_info,iface,3)
         
         norm_mag = sqrt(norm1_gq**TWO + norm2_gq**TWO + norm3_gq**TWO)
 
@@ -655,13 +622,8 @@ contains
                 call chidg_signal_one(FATAL,"differentiate_unit_normal: Invalid direction for selecting coordinate.",direction)
         end select
 
-
-
     end function differentiate_unit_normal
     !********************************************************************************
-
-
-
 
 
 
@@ -675,10 +637,11 @@ contains
     !!  @date   8/6/2018
     !!
     !--------------------------------------------------------------------------------
-    function differentiate_coordinate(mesh,face_info,fcn_info,direction,source) result(coords)
+    function differentiate_coordinate(mesh,elem_info,fcn_info,iface,direction,source) result(coords)
         type(mesh_t),           intent(in)  :: mesh
-        type(face_info_t),      intent(in)  :: face_info
+        type(element_info_t),   intent(in)  :: elem_info
         type(function_info_t),  intent(in)  :: fcn_info
+        integer(ik),            intent(in)  :: iface
         character(*),           intent(in)  :: direction
         character(*),           intent(in)  :: source
 
@@ -689,11 +652,10 @@ contains
         logical                                     :: differentiate_me
         integer(ik)                                 :: nderiv, nnodes_interp, inode, ierr
 
-        associate( idom_l   => face_info%idomain_l,     &
-                   idom_g   => face_info%idomain_g,     &
-                   ielem_l  => face_info%ielement_l,    &
-                   ielem_g  => face_info%ielement_g,    &
-                   iface    => face_info%iface          )
+        associate( idom_l   => elem_info%idomain_l,     &
+                   idom_g   => elem_info%idomain_g,     &
+                   ielem_l  => elem_info%ielement_l,    &
+                   ielem_g  => elem_info%ielement_g )
 
         ! Get coordinates
         if ( (source == 'boundary') .or. (source == 'face interior') .or. (source == 'face exterior') ) then
@@ -888,11 +850,12 @@ contains
     !!  @date   7/29/2018
     !!
     !-----------------------------------------------------------------------------------------
-    function differentiate_element_interpolator(interpolation_type,mesh,elem_info,fcn_info) result(interpolator)
+    function differentiate_element_interpolator(interpolation_type,mesh,elem_info,fcn_info,itime) result(interpolator)
         character(*),           intent(in)  :: interpolation_type
         type(mesh_t),           intent(in)  :: mesh
         type(element_info_t),   intent(in)  :: elem_info
         type(function_info_t),  intent(in)  :: fcn_info
+        integer(ik),            intent(in)  :: itime
         
         type(AD_D), allocatable :: interpolator(:,:)
 
@@ -942,7 +905,8 @@ contains
         interpolator = interpolator_rk
 
         differentiate_me = ( (elem_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-                             (elem_info%ielement_g == fcn_info%seed%ielement_g) )
+                             (elem_info%ielement_g == fcn_info%seed%ielement_g) .and. &
+                             (itime                == fcn_info%seed%itime) )
 
         ! Specify the derivatives if node grid sensitivities are required.
         if (fcn_info%dtype == dX_DIFF .and. (interpolation_type /= 'value') .and. differentiate_me) then
@@ -987,12 +951,15 @@ contains
     !!  @date   7/29/2018
     !!
     !-----------------------------------------------------------------------------------------
-    function differentiate_face_interior_interpolator(interpolation_type,mesh,source_face,donor_face,fcn_info) result(interpolator)
+    function differentiate_face_interior_interpolator(interpolation_type,mesh,source_elem,source_iface,donor_elem,donor_iface,fcn_info,itime) result(interpolator)
         character(*),           intent(in)  :: interpolation_type
         type(mesh_t),           intent(in)  :: mesh
-        type(face_info_t),      intent(in)  :: source_face
-        type(face_info_t),      intent(in)  :: donor_face
+        type(element_info_t),   intent(in)  :: source_elem
+        integer(ik),            intent(in)  :: source_iface
+        type(element_info_t),   intent(in)  :: donor_elem
+        integer(ik),            intent(in)  :: donor_iface
         type(function_info_t),  intent(in)  :: fcn_info
+        integer(ik),            intent(in)  :: itime
         
         type(AD_D), allocatable :: interpolator(:,:)
 
@@ -1001,7 +968,7 @@ contains
         real(rk), allocatable   :: interpolator_rk(:,:), interpolator_dx(:,:,:,:)
         logical                 :: differentiate_me
          
-        associate( idom => source_face%idomain_l, ielem => source_face%ielement_l, iface => source_face%iface )
+        associate( idom => source_elem%idomain_l, ielem => source_elem%ielement_l, iface => source_iface )
         
 
         ! Access grad and dgrad_dx matrices for give indeces
@@ -1042,10 +1009,11 @@ contains
         ! Set the interpolator%x_ad_ equal to the real interpolator
         interpolator = interpolator_rk
 
-        ! Interpolation_source = ME means that donor_face is equal to worker%face_info.
+        ! Interpolation_source = ME means that donor_elem is equal to worker%elem_info.
         ! This is defined by mod_interpolate%get_face_interpolation_info.
-        differentiate_me = ( (donor_face%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-                             (donor_face%ielement_g == fcn_info%seed%ielement_g) )
+        differentiate_me = ( (donor_elem%idomain_g  == fcn_info%seed%idomain_g ) .and. &
+                             (donor_elem%ielement_g == fcn_info%seed%ielement_g) .and. &
+                             (itime                 == fcn_info%seed%itime) )
 
         ! Specify the derivatives if node grid sensitivities are require.
         if (fcn_info%dtype == dX_DIFF .and. (interpolation_type /= 'value') .and. differentiate_me) then
@@ -1089,12 +1057,15 @@ contains
     !!  @date   7/29/2018
     !!
     !-----------------------------------------------------------------------------------------
-    function differentiate_face_parallel_interpolator(interpolation_type,mesh,source_face,donor_face,fcn_info) result(interpolator)
+    function differentiate_face_parallel_interpolator(interpolation_type,mesh,source_elem,source_iface,donor_elem,donor_iface,fcn_info,itime) result(interpolator)
         character(*),           intent(in)  :: interpolation_type
         type(mesh_t),           intent(in)  :: mesh
-        type(face_info_t),      intent(in)  :: source_face
-        type(face_info_t),      intent(in)  :: donor_face
+        type(element_info_t),   intent(in)  :: source_elem
+        integer(ik),            intent(in)  :: source_iface
+        type(element_info_t),   intent(in)  :: donor_elem
+        integer(ik),            intent(in)  :: donor_iface
         type(function_info_t),  intent(in)  :: fcn_info
+        integer(ik),            intent(in)  :: itime
         
         type(AD_D), allocatable :: interpolator(:,:)
 
@@ -1104,13 +1075,13 @@ contains
         logical                     :: differentiate_me
 
         
-        associate( idom => source_face%idomain_l, ielem => source_face%ielement_l, iface => source_face%iface )
+        associate( idom => source_elem%idomain_l, ielem => source_elem%ielement_l, iface => source_iface )
         
         
         ! Access grad and dgrad_dx matrices for give indeces
         select case(interpolation_type)
             case('value')
-                interpolator_rk = mesh%domain(idom)%faces(ielem,iface)%basis_s%interpolator_face('Value',donor_face%iface)
+                interpolator_rk = mesh%domain(idom)%faces(ielem,iface)%basis_s%interpolator_face('Value',donor_iface)
             case('grad1')
                 interpolator_rk = mesh%domain(idom)%faces(ielem,iface)%neighbor_grad1
                 interpolator_dx = mesh%domain(idom)%faces(ielem,iface)%neighbor_dgrad1_dx
@@ -1146,8 +1117,9 @@ contains
         
         ! Set the interpolator%x_ad_ equal to the real interpolator
         interpolator = interpolator_rk
-        differentiate_me = ( (donor_face%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-                             (donor_face%ielement_g == fcn_info%seed%ielement_g) )
+        differentiate_me = ( (donor_elem%idomain_g  == fcn_info%seed%idomain_g ) .and. &
+                             (donor_elem%ielement_g == fcn_info%seed%ielement_g) .and. &
+                             (itime                 == fcn_info%seed%itime) )
 
         ! Specify the derivatives if node grid sensitivities are require.
         if (fcn_info%dtype == dX_DIFF .and. (interpolation_type /= 'value') .and. differentiate_me) then
@@ -1191,12 +1163,15 @@ contains
     !!  @date   7/29/2018
     !!
     !-----------------------------------------------------------------------------------------
-    function differentiate_face_local_interpolator(interpolation_type,mesh,source_face,donor_face,fcn_info) result(interpolator)
+    function differentiate_face_local_interpolator(interpolation_type,mesh,source_elem,source_iface,donor_elem,donor_iface,fcn_info,itime) result(interpolator)
         character(*),           intent(in)  :: interpolation_type
         type(mesh_t),           intent(in)  :: mesh
-        type(face_info_t),      intent(in)  :: source_face
-        type(face_info_t),      intent(in)  :: donor_face
+        type(element_info_t),   intent(in)  :: source_elem
+        integer(ik),            intent(in)  :: source_iface
+        type(element_info_t),   intent(in)  :: donor_elem
+        integer(ik),            intent(in)  :: donor_iface
         type(function_info_t),  intent(in)  :: fcn_info
+        integer(ik),            intent(in)  :: itime
         
         type(AD_D), allocatable :: interpolator(:,:)
 
@@ -1205,13 +1180,11 @@ contains
         real(rk),       allocatable :: interpolator_rk(:,:), interpolator_dx(:,:,:,:)
         logical                     :: differentiate_me
          
-
-        associate( idom         => source_face%idomain_l,   & 
-                   ielem        => source_face%ielement_l,  &
-                   iface        => source_face%iface,       &
-                   donor_idom   => donor_face%idomain_l,    &
-                   donor_ielem  => donor_face%ielement_l,   &
-                   donor_iface  => donor_face%iface)
+        associate( idom         => source_elem%idomain_l,   & 
+                   ielem        => source_elem%ielement_l,  &
+                   iface        => source_iface,       &
+                   donor_idom   => donor_elem%idomain_l,    &
+                   donor_ielem  => donor_elem%ielement_l) 
 
         ! Access grad and dgrad_dx matrices for give indeces of the local neighbor face
         select case(interpolation_type)
@@ -1250,8 +1223,9 @@ contains
         
         ! Set the interpolator%x_ad_ equal to the real interpolator
         interpolator = interpolator_rk
-        differentiate_me = ( (donor_face%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-                             (donor_face%ielement_g == fcn_info%seed%ielement_g) )
+        differentiate_me = ( (donor_elem%idomain_g  == fcn_info%seed%idomain_g ) .and. &
+                             (donor_elem%ielement_g == fcn_info%seed%ielement_g) .and. &
+                             (itime                 == fcn_info%seed%itime) )
 
         ! Specify the derivatives if node grid sensitivities are require.
         if (fcn_info%dtype == dX_DIFF .and. (interpolation_type /= 'value') .and. differentiate_me) then
@@ -1292,14 +1266,16 @@ contains
     !!  @date   7/29/2018
     !!
     !-----------------------------------------------------------------------------------------
-    function differentiate_face_chimera_interpolator(interpolation_type,mesh,source_face,donor_face,ChiID,idonor,fcn_info) result(interpolator)
+    function differentiate_face_chimera_interpolator(interpolation_type,mesh,source_elem,source_iface,donor_elem,ChiID,idonor,fcn_info,itime) result(interpolator)
         character(*),           intent(in)  :: interpolation_type
         type(mesh_t),           intent(in)  :: mesh
-        type(face_info_t),      intent(in)  :: source_face
-        type(face_info_t),      intent(in)  :: donor_face
+        type(element_info_t),   intent(in)  :: source_elem
+        integer(ik),            intent(in)  :: source_iface
+        type(element_info_t),   intent(in)  :: donor_elem
         integer(ik),            intent(in)  :: ChiID
         integer(ik),            intent(in)  :: idonor
         type(function_info_t),  intent(in)  :: fcn_info
+        integer(ik),            intent(in)  :: itime
         
         type(AD_D), allocatable :: interpolator(:,:)
 
@@ -1308,7 +1284,7 @@ contains
         real(rk),       allocatable :: interpolator_rk(:,:),interpolator_dx(:,:,:,:)
         logical                     :: differentiate_me
          
-        associate( idom => source_face%idomain_l, ielem => source_face%ielement_l, iface => source_face%iface )
+        associate( idom => source_elem%idomain_l, ielem => source_elem%ielement_l, iface => source_iface )
         
         
         ! Access grad and dgrad_dx matrices for give indeces of the local neighbor face
@@ -1348,8 +1324,9 @@ contains
         
         ! Set the interpolator%x_ad_ equal to the real interpolator
         interpolator = interpolator_rk
-        differentiate_me = ( (donor_face%idomain_g  == fcn_info%seed%idomain_g ) .and. &
-                             (donor_face%ielement_g == fcn_info%seed%ielement_g) )
+        differentiate_me = ( (donor_elem%idomain_g  == fcn_info%seed%idomain_g ) .and. &
+                             (donor_elem%ielement_g == fcn_info%seed%ielement_g) .and. &
+                             (itime                 == fcn_info%seed%itime) )
 
         ! Specify the derivatives if node grid sensitivities are require.
         if (fcn_info%dtype == dX_DIFF .and. (interpolation_type /= 'value') .and. differentiate_me) then

@@ -1,6 +1,6 @@
 module type_chidg
 #include <messenger.h>
-    use mod_constants,              only: NFACES, ZERO, ONE, TWO, NO_ID, OUTPUT_RES, dD_DIFF
+    use mod_constants,              only: NFACES, ZERO, ONE, TWO, NO_ID, OUTPUT_RES, dD_DIFF, dBC_DIFF, dX_DIFF
     use mod_equations,              only: register_equation_builders
     use mod_operators,              only: register_operators
     use mod_models,                 only: register_models
@@ -26,6 +26,8 @@ module type_chidg
     use mod_spatial,                only: update_space
     use mod_update_functionals,     only: update_functionals
     use operator_chidg_mv,          only: chidg_mv
+    use operator_chidg_dot,         only: dot_comm
+    use mod_plot3dio,               only: write_x_sensitivities_plot3d
     use mod_hdfio
     use mod_hdf_utilities
 
@@ -120,7 +122,8 @@ module type_chidg
         procedure       :: process
         procedure       :: run
         procedure       :: run_adjoint
-        procedure       :: reporter
+        procedure       :: run_adjointx
+        procedure       :: run_adjointbc
 
         ! IO
         procedure       :: read_mesh
@@ -141,6 +144,8 @@ module type_chidg
         procedure       :: read_functionals
         procedure       :: write_vol_sensitivities
         procedure       :: write_BC_sensitivities
+
+        procedure       :: reporter
 
     end type chidg_t
     !*****************************************************************************************
@@ -1523,11 +1528,11 @@ contains
                 call write_line("   writing X-sensitivities for functional: ", func_name%get(), ltrim=.false., io_proc=GLOBAL_MASTER)
 
                 call chidg_signal(FATAL,"chidg%write_vol_sensitivities: sub-called procedures not yet implemented.")
-!                ! Write sensitivities to HDF file
-!                call write_x_sensitivities_hdf(self%data,ifunc,filename)
-!
-!                ! Write sensitivities to plot3d file
-!                call write_x_sensitivities_plot3d(self%data,ifunc,filename)
+                ! Write sensitivities to HDF file
+                call write_x_sensitivities_hdf(self%data,ifunc,filename)
+
+                ! Write sensitivities to plot3d file
+                call write_x_sensitivities_plot3d(self%data,ifunc,filename)
 
             end do !ifunc
 
@@ -1963,7 +1968,7 @@ contains
             do istep = nsteps,1,-1
                 
                 ! Print diagnostics
-                call write_line(' ')
+                call write_line(' ',io_proc=GLOBAL_MASTER)
                 call write_line('Start computing primary adjoint variables for time instance ', self%data%time_manager%t ,' ...', io_proc=GLOBAL_MASTER)
                 
                 ! Pass istep to time_manager
@@ -2020,6 +2025,267 @@ contains
 
 
 
+
+
+
+
+    !>  Run ChiDG Adjointx calculation
+    !!
+    !!      - This routine computes the grid-node sensitivites for a given 
+    !!        primal and adjoint solution for given functionals 
+    !!
+    !!  Optional input parameters:
+    !!      write_initial   control writing initial solution to file. Default: .false.
+    !!      write_final     control writing final solution to file. Default: .true.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/7/2018
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine run_adjointx(self,write_final)
+        class(chidg_t), intent(inout)           :: self
+        logical,        intent(in), optional    :: write_final
+
+        character(:),   allocatable :: prefix,filename
+        integer(ik)                 :: istep, nsteps, ierr, iread, ifunc
+        logical                     :: option_write_initial, option_write_final
+
+
+        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("       Running ChiDG AdjointX calculation...       ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+
+        print*, 'run_adjointx - 1'
+
+        ! Prerun processing
+        !   : Getting/computing auxiliary fields etc.
+        call self%process('primal problem')
+        
+        print*, 'run_adjointx - 2'
+        ! Prerun processing
+        !   : Getting/computing auxiliary mesh sensitivities etc.
+        call self%process('adjointx problem')
+
+        print*, 'run_adjointx - 3'
+        ! Initialize algorithms
+        call self%init('algorithms')
+
+        print*, 'run_adjointx - 4'
+        ! Check optional incoming parameters
+        ! TODO: might need to remove this option
+        option_write_final   = .true.
+        if (present(write_final))   option_write_final   = write_final
+
+        ! Compute adjoint variables
+        call write_line('Start computing primary grid-node sensitivities...', io_proc=GLOBAL_MASTER)
+
+        associate( q            => self%data%sdata%q,                    &
+                   Rx           => self%data%sdata%adjointx%Rx,          &
+                   Jx           => self%data%sdata%adjointx%Jx,          &
+                   vRx          => self%data%sdata%adjointx%vRx,         &
+                   wAx          => self%data%sdata%adjointx%wAx,         &
+                   Jx_unsteady  => self%data%sdata%adjointx%Jx_unsteady, &
+                   v            => self%data%sdata%adjoint%v             )
+
+        print*, 'run_adjointx - 5'
+            ! Loop through all the time steps
+            ! (Number of steps deduced from size of adjoint%q_time but we can also
+            ! use the time_manager)
+            do istep = 1,size(self%data%sdata%adjoint%q_time)
+
+                ! Set time manager (might not be necessary)
+                ! Here we are just worried about adding all the sensitivites coming from 
+                ! all the time steps
+                self%data%time_manager%itime = 1
+                self%data%time_manager%t     = ZERO
+                
+        print*, 'run_adjointx - 6'
+                ! Set vector q equal to the current solution vector at step istep
+                q = self%data%sdata%adjoint%q_time(istep)
+                
+                ! Assemble the system updating spatial linearization wrt grid-nodes
+                ! for istep solution vector
+                ! Stored in: sdata%adjointx%Rx
+                call Rx%clear()
+                call update_space(self%data,differentiate=dX_DIFF)
+
+        print*, 'run_adjointx - 7'
+                ! Update functionals linearization wrt grid-nodes at istep solution
+                ! Stored in: sdata%adjointx%Jx
+                call self%data%sdata%adjointx%Jx_clear()
+        print*, 'run_adjointx - 8'
+                call update_functionals(self%data,differentiate=dX_DIFF)
+        print*, 'run_adjointx - 9'
+
+                ! Clear vRx vectors, this is necessary for unsteady
+                call self%data%sdata%adjointx%vRx_clear()
+                
+        print*, 'run_adjointx - 10'
+                ! Loop through each functional to compute the sensitivities
+                do ifunc = 1,size(Jx)
+
+        print*, 'run_adjointx - 11'
+                    ! Compute v*Rx
+                    vRx(ifunc) = chidg_mv(Rx,v(ifunc,istep),vRx(ifunc))
+            
+        print*, 'run_adjointx - 12'
+                    ! Add to Jx the contribution from vRx
+                    Jx(ifunc) = Jx(ifunc) - vRx(ifunc)
+
+        print*, 'run_adjointx - 13'
+                    ! Add contribution of istep to overall unsteady sensitivities
+                    Jx_unsteady(ifunc) = Jx_unsteady(ifunc) + Jx(ifunc)
+        print*, 'run_adjointx - 14'
+
+                end do !ifunc
+
+            end do !istep
+        
+
+            ! Add sensitivities of the auxiliary problem: wall_distance 
+            ! Assuming only one auxiliary problem: wall_distance
+            if (self%data%sdata%compute_auxiliary) then 
+                call write_line('Adding contribution from auxiliary adjoint sensitivities...', io_proc=GLOBAL_MASTER)
+                do ifunc = 1,self%data%sdata%functional%nfunc()
+                    Jx_unsteady(ifunc) = Jx_unsteady(ifunc) - wAx(ifunc)
+                end do
+            end if
+
+        end associate
+
+        call write_line('Done computing primary grid-node sensitivities.', io_proc=GLOBAL_MASTER)
+
+        
+        ! TODO: ADD here procedure for surface-normal sensitivities
+               
+        print*, 'run_adjointx - 15'
+                
+        ! Write the final solution to hdf file
+        prefix = 'dJdX_'
+        if (option_write_final) then
+            ! Master rank gather all node sensitivities
+            call self%data%sdata%adjointx%gather_all(self%data%mesh)
+        print*, 'run_adjointx - 16'
+            ! Write out solution: hdf, plot3D
+            call self%write_fields(prefix,'X sensitivities')
+        end if
+
+        print*, 'run_adjointx - 17'
+    end subroutine run_adjointx
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Run ChiDG Adjointbc calculation
+    !!
+    !!      - This routine computes the sensitivites of a given functional wrt a BC parameter for a given 
+    !!        primal and adjoint solution.
+    !!
+    !!  Optional input parameters:
+    !!      write_final     control writing final solution to file. Default: .true.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/26/2018
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine run_adjointbc(self,bc_params,write_final)
+        class(chidg_t),  intent(inout)           :: self
+        type(svector_t), intent(in)              :: bc_params
+        logical,         intent(in), optional    :: write_final
+
+        character(:),    allocatable :: prefix,filename
+        integer(ik)                  :: istep, nsteps, ierr, iread, ifunc
+        logical                      :: option_write_initial, option_write_final
+
+
+        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("       Running ChiDG AdjointBC calculation...       ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+
+        ! Prerun processing
+        !   : Getting/computing auxiliary fields etc.
+        call self%process('primal problem')
+        
+        ! Prerun processing
+        !   : Getting/computing auxiliary BC sensitivities etc.
+        call self%process('adjointbc problem')
+
+        ! Initialize algorithms
+        call self%init('algorithms')
+
+        ! Check optional incoming parameters
+        ! TODO: might need to remove this option
+        option_write_final   = .true.
+        if (present(write_final))   option_write_final   = write_final
+
+        ! Compute adjoint variables
+        call write_line('Start computing BC parametric sensitivities...', io_proc=GLOBAL_MASTER)
+
+        associate( q            => self%data%sdata%q,                     &
+                   Ra           => self%data%sdata%adjointbc%Ra,          &
+                   wAa          => self%data%sdata%adjointbc%wAa,         &
+                   vRa          => self%data%sdata%adjointbc%vRa,         &
+                   Ja_unsteady  => self%data%sdata%adjointbc%Ja_unsteady, &
+                   v            => self%data%sdata%adjoint%v             )
+
+            ! Loop through all the time steps
+            ! (Number of steps deduced from size of adjoint%q_time but we can also
+            ! use the time_manager)
+            do istep = 1,size(self%data%sdata%adjoint%q_time)
+
+                ! Set time manager (might not be necessary)
+                ! Here we are just worried about adding all the sensitivites coming from 
+                ! all the time steps
+                self%data%time_manager%itime = 1
+                self%data%time_manager%t     = ZERO
+                
+                ! Set vector q equal to the current solution vector at step istep
+                q = self%data%sdata%adjoint%q_time(istep)
+                
+                ! Assemble the system updating spatial linearization wrt BC parameter
+                ! for istep solution vector
+                ! Stored in: sdata%adjointbc%Ra
+                call Ra%clear()
+                call self%data%sdata%adjointbc%vRa_clear()
+                call update_space(self%data,differentiate=dBC_DIFF,bc_parameters=bc_params)
+
+                ! Loop through each functional to compute the sensitivities
+                do ifunc = 1,size(vRa)
+                    ! Compute v*Ra
+                    vRa(ifunc) = dot_comm(Ra,v(ifunc,istep),ChiDG_COMM)
+            
+                    ! Add contribution of istep to overall unsteady sensitivities
+                    Ja_unsteady(ifunc) = Ja_unsteady(ifunc) - vRa(ifunc)
+                end do !ifunc
+            end do !istep
+
+            ! Add contribution from auxiliary problem (this will be zero if no auxiliary problem exists) 
+            do ifunc = 1,size(wAa)
+                Ja_unsteady(ifunc) = Ja_unsteady(ifunc) - wAa(ifunc)
+            end do
+
+        end associate
+
+        call write_line('Done computing BC parametric sensitivities.', io_proc=GLOBAL_MASTER)
+
+        ! Write the final solution to file
+        prefix = 'dJdBC_'
+        if (option_write_final) then
+            ! Write out solution: .dat file
+            call self%write_fields(prefix,'BC sensitivities')
+        end if
+
+    end subroutine run_adjointbc
+    !*****************************************************************************************
 
 
 

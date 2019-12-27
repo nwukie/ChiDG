@@ -8538,36 +8538,25 @@ contains
 
         filename_init = trim(filename)
         
-
-        !
         ! Check if input file already exists
-        !
         file_exists = check_file_exists_hdf(filename_init)
         if (file_exists) then
             call write_line("Found "//trim(filename_init)//" that already exists. Deleting it to create new file...")
             call delete_file(trim(filename_init))
         end if
 
-
-        !
         ! Create file
-        !
         call open_hdf()
         call h5fcreate_f(trim(filename_init), H5F_ACC_TRUNC_F, fid, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"initialize_xfile_hdf: Error h5fcreate_f.")
         call write_line("File created: "//trim(filename_init))
 
-        !
         ! Set storage formet
-        !
         call set_storage_version_major_hdf(fid,STORAGE_VERSION_MAJOR)
         call set_storage_version_minor_hdf(fid,STORAGE_VERSION_MINOR)
         
-        !
         ! Set contains status for grid/solution 
-        !
         call set_contains_solution_hdf(fid,"False")
-
         
         call h5fclose_f(fid,ierr)
 
@@ -8601,24 +8590,15 @@ contains
             write(domain_name,'(I2.2)') idom
             call create_domain_xhdf(fid,trim(domain_name))
 
-
             ! Set additional attributes
             domain_id = open_domain_hdf(fid,trim(domain_name))
             call set_domain_npoints_hdf(domain_id,mesh%npoints(idom,:))
             call close_domain_hdf(domain_id)
-    
 
         end do !idom
 
-
     end subroutine initialize_file_structure_xhdf
     !***************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -8647,11 +8627,8 @@ contains
         integer(HID_T)  :: domain_id, grid_id, var_id
         logical         :: domain_exists
 
-        !
         ! Check if the domain group already exists
-        !
         domain_exists = check_link_exists_hdf(fid,"D_"//trim(domain_name))
-
         
         if (.not. domain_exists) then
 
@@ -8667,7 +8644,6 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL,"create_domain_xhdf: h5gcreate_f")
             call h5gclose_f(var_id,ierr)
 
-
             ! Close domain
             call close_domain_hdf(domain_id)
 
@@ -8675,7 +8651,6 @@ contains
 
     end subroutine create_domain_xhdf
     !***************************************************************************************
-
 
 
 

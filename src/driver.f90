@@ -25,6 +25,8 @@ program driver
     use mod_chidg_convert,      only: chidg_convert
     use mod_chidg_forces,       only: chidg_forces
     use mod_chidg_adjoint,      only: chidg_adjoint
+    use mod_chidg_adjointx,     only: chidg_adjointx
+    use mod_chidg_adjointbc,    only: chidg_adjointbc
     use mod_chidg_clone,        only: chidg_clone
     use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec
     use mod_chidg_post_hdf2vtk, only: chidg_post_hdf2vtk
@@ -58,6 +60,8 @@ program driver
         trim(chidg_action) == 'clone'      .or. &
         trim(chidg_action) == 'forces'     .or. &
         trim(chidg_action) == 'adjoint'    .or. &
+        trim(chidg_action) == 'adjointx'   .or. &
+        trim(chidg_action) == 'adjointbc'  .or. &
         trim(chidg_action) == 'inputs'     .or. &
         trim(chidg_action) == 'tutorial'   .or. &
         trim(chidg_action) == '-v'         .or. & 
@@ -447,6 +451,88 @@ program driver
                 call chidg_adjoint()
                 call_shutdown = .false.
             !*****************************************************************************
+
+
+
+
+            !>  ChiDG:adjointx src/actions/adjointx
+            !!
+            !!  Compute objective function sensitivities wrt grid nodes based on an 
+            !!  adjoint solution.
+            !!
+            !!  Command-Line:
+            !!  --------------------------------
+            !!  chidg adjointx
+            !!
+            !!
+            !!  The input flow and adjoint solutions are taken from the chidg.nml file
+            !!
+            !!      'solutionfile_in', 'adjoint_solutionfile_out'
+            !!
+            !!  If there are multiple solution in time, such as:
+            !!
+            !!      flow_01.h5, flow_02.h5, flow_03.h5 and adj_flow_01.h5, adj_flow_02.h5, adj_flow_03.h5 
+            !!
+            !!  simply set in chidg.nml:
+            !!
+            !!      'solutionfile_in' = flow.h5 and 'adjoint_solutionfile_out' = adj_flow.h5
+            !!
+            !!  ChiDG will search files with 
+            !!
+            !!      ls flow* and ls adj_flow* 
+            !!
+            !!  WARNING: make sure that only the flow solutions in time are named with the same 
+            !!           prefix.
+            !!
+            !-----------------------------------------------------------------------------
+            case ('adjointx')
+                if (narg /=1) call chidg_signal(FATAL,"the 'adjointx' action does not expect other arguments.")
+                call chidg_adjointx()
+                call_shutdown = .false.
+            !*****************************************************************************
+
+
+
+            !>  ChiDG:adjointx src/actions/adjointbc
+            !!
+            !!  Compute objective function sensitivities wrt BC parameters based on an 
+            !!  adjoint solution.
+            !!
+            !!  Command-Line:
+            !!  --------------------------------
+            !!  chidg adjointx
+            !!
+            !!
+            !!  The input flow and adjoint solutions are taken from the chidg.nml file
+            !!
+            !!      'solutionfile_in', 'adjoint_solutionfile_out'
+            !!
+            !!  If there are multiple solution in time, such as:
+            !!
+            !!      flow_01.h5, flow_02.h5, flow_03.h5 and adj_flow_01.h5, adj_flow_02.h5, adj_flow_03.h5 
+            !!
+            !!  simply set in chidg.nml:
+            !!
+            !!      'solutionfile_in' = flow.h5 and 'adjoint_solutionfile_out' = adj_flow.h5
+            !!
+            !!  ChiDG will search files with 
+            !!
+            !!      ls flow* and ls adj_flow* 
+            !!
+            !!  WARNING: make sure that only the flow solutions in time are named with the same 
+            !!           prefix.
+            !!                                       
+            !!
+            !-----------------------------------------------------------------------------
+            case ('adjointbc')
+                if (narg /=1) call chidg_signal(FATAL,"the 'adjointbc' action does not expect other arguments.")
+                call chidg_adjointbc()
+                call_shutdown = .false.
+            !*****************************************************************************
+
+
+
+
 
 
 

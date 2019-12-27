@@ -1,9 +1,10 @@
 module type_chidg_adjointx
 #include<messenger.h>
-    use type_chidg_matrix,      only: chidg_matrix_t
-    use type_chidg_vector,      only: chidg_vector_t
+    use type_chidg_matrix,      only: chidg_matrix_t, chidg_matrix
+    use type_chidg_vector,      only: chidg_vector_t, chidg_vector
     use mod_kinds,              only: ik, rk
     use mod_constants,          only: ZERO, dX_DIFF
+    use mod_io,                 only: backend
     use type_mesh,              only: mesh_t
     use type_nvector,           only: nvector_t
     use type_node,              only: node_t
@@ -92,41 +93,28 @@ contains
 
         integer(ik)     :: ierr
 
-        !
+        ! Deallocate any data previously allocated
+        call self%release()
+
+        ! Default, no error
+        ierr = 0
+
+
         ! Initialize vRx array of chidg_vectors
-        !
-        if (sflags%vRx) then
-            if (allocated(self%vRx)) deallocate (self%vRx)
-            allocate( self%vRx(nfunc), stat=ierr )
-            if (ierr/=0) call AllocationError
-        end if
+        if (sflags%vRx) allocate( self%vRx(nfunc), stat=ierr )
+        if (ierr/=0) call AllocationError
 
-        !
         ! Initialize Jx array of chidg_vectors
-        !
-        if (sflags%Jx) then
-            if (allocated(self%Jx)) deallocate (self%Jx)
-            allocate( self%Jx(nfunc), stat=ierr )
-            if (ierr/=0) call AllocationError
-        end if
+        if (sflags%Jx) allocate( self%Jx(nfunc), stat=ierr )
+        if (ierr/=0) call AllocationError
 
-        !
         ! Initialize Junsteady array of chidg_vectors
-        !
-        if (sflags%Jx_unsteady) then
-            if (allocated(self%Jx_unsteady)) deallocate (self%Jx_unsteady)
-            allocate( self%Jx_unsteady(nfunc), stat=ierr )
-            if (ierr/=0) call AllocationError
-        end if
+        if (sflags%Jx_unsteady) allocate( self%Jx_unsteady(nfunc), stat=ierr )
+        if (ierr/=0) call AllocationError
         
-        !
         ! Initialize array of sensitivities from auxiliary problem 
-        !
-        if (sflags%wAx) then
-            if (allocated(self%wAx)) deallocate (self%wAx)
-            allocate( self%wAx(nfunc), stat=ierr )
-            if (ierr/=0) call AllocationError
-        end if
+        if (sflags%wAx) allocate( self%wAx(nfunc), stat=ierr )
+        if (ierr/=0) call AllocationError
 
 
         self%adjointx_initialized = .true.
@@ -166,36 +154,32 @@ contains
             nfuncs = 0
         end if
 
-        !
         ! Initialize vectors
-        !
         do ifunc = 1,nfuncs 
-            
             !if (sflags%vRx)         call self%vRx(ifunc)%init(mesh,ntime,specialization)
             !if (sflags%Jx)          call self%Jx(ifunc)%init(mesh,ntime,specialization)
             !if (sflags%Jx_unsteady) call self%Jx_unsteady(ifunc)%init(mesh,ntime,specialization)
+
+            if (sflags%vRx)         self%vRx(ifunc)         = chidg_vector(trim(backend))
+            if (sflags%Jx)          self%Jx(ifunc)          = chidg_vector(trim(backend))
+            if (sflags%Jx_unsteady) self%Jx_unsteady(ifunc) = chidg_vector(trim(backend))
+
             if (sflags%vRx)         call self%vRx(ifunc)%init(mesh,ntime,'grid differentiation')
             if (sflags%Jx)          call self%Jx(ifunc)%init(mesh,ntime,'grid differentiation')
             if (sflags%Jx_unsteady) call self%Jx_unsteady(ifunc)%init(mesh,ntime,'grid differentiation')
-                              
+
         end do !ifunc
 
 
         if (sflags%Rx) then
-            
-            !
             ! Initialize matrix
-            !
+            self%Rx = chidg_matrix(trim(backend))
             mtype = 'dX'
             call self%Rx%init(mesh,mtype)
             call self%Rx%init_recv(self%vRx(1))
 
-            !
             ! Set Rx transpose flag on for matrix-vector product
-            !
-            if (sflags%Rx_trans) then
-                self%Rx%transposed = .true.
-            end if
+            if (sflags%Rx_trans) self%Rx%transposed = .true.
         
         end if
 
@@ -209,11 +193,8 @@ contains
 
 
 
-
-
     !>  Gather all node sensitivities for post-processing
     !!  The master proc receives and manage the post-processing 
-    !!
     !!
     !!  @author Matteo Ugolotti
     !!  @date   8/25/2018
@@ -234,6 +215,7 @@ contains
         type(MPI_Request)               :: irequest0, irequest1, irequest2, irequest3, irequest4, irequest5
         type(MPI_status), allocatable   :: isend_status(:)
         
+        print*, 'gather_all - 1'
 
         ! Find the max domain global index
         !ndoms_g = size(mesh%npoints,1)
@@ -243,29 +225,37 @@ contains
         ! Deduce number of functionals computed
         nfuncs = size(self%Jx_unsteady)
 
+        print*, 'gather_all - 2'
 
         ! Allocate storage for node sensitivities
         if (allocated(self%node_sensitivities)) deallocate (self%node_sensitivities)
         allocate(self%node_sensitivities(nfuncs,ndomains_g), stat=ierr)
         if (ierr/=0) call AllocationError
 
+        print*, 'gather_all - 3'
 
         ! Loop trhough the functionals and gather all sensitivities
         ! This is done by each processor individually.
         do ifunc = 1,nfuncs
 
+            !! Loop through the local nodes and gather sensitivities locally
+            !do idom = 1,size(self%Jx_unsteady(ifunc)%dom)
+            !    idomain_g    = mesh%domain(idom)%idomain_g
+            !    do ielem = 1,size(self%Jx_unsteady(ifunc)%dom(idom)%vecs)
             ! Loop through the local nodes and gather sensitivities locally
-            do idom = 1,size(self%Jx_unsteady(ifunc)%dom)
-                idomain_g    = mesh%domain(idom)%idomain_g
-                do ielem = 1,size(self%Jx_unsteady(ifunc)%dom(idom)%vecs)
+            do idom = 1,mesh%ndomains()
+                idomain_g = mesh%domain(idom)%idomain_g
+                do ielem = 1,mesh%domain(idom)%nelements()
 
                     ! NOTE: Jx has been initialized with specialization 'dX' this means that
                     !       nterms_ attribute of the densevector corresponds to nnodes_r 
                     !       and nvars_ attribute to 3 (3 directions). Therefore, nterms()
                     !       actually return the number of support/reference node of the 
                     !       element
-                    do inode = 1,self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%nterms()
+                    !do inode = 1,self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%nterms()
+                    do inode = 1,mesh%domain(idom)%elems(ielem)%nterms_c
 
+        print*, 'gather_all - 4'
                         ! Find support node coordinates, coordinate system and connectivity (ie local node ID)
                         node_coords(1) = mesh%domain(idom)%elems(ielem)%node_coords(inode,1)
                         node_coords(2) = mesh%domain(idom)%elems(ielem)%node_coords(inode,2)
@@ -274,7 +264,6 @@ contains
                         coords_system  = mesh%domain(idom)%elems(ielem)%coordinate_system
                         
                         ! Read sensitivities in the chidg vector
-                        !node_sens     = self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%get_sensitivities(inode)
                         node_sens(1) = self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%getterm(1,inode,1)
                         node_sens(2) = self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%getterm(2,inode,1)
                         node_sens(3) = self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%getterm(3,inode,1)
@@ -291,6 +280,7 @@ contains
                             call self%node_sensitivities(ifunc,idomain_g)%data(node_index)%add_sensitivities(node_sens)
                         end if
 
+        print*, 'gather_all - 5'
                     end do !inode
                 end do !ielem
             end do !idom
@@ -299,6 +289,7 @@ contains
             ! All the processors send the node data to the master proc
             if (IRANK /= GLOBAL_MASTER) then
                 
+        print*, 'gather_all - 6'
                 ! Count over all information to send and allocate vector of requests
                 n_handles = 1
                 do idom = 1,size(self%Jx_unsteady(ifunc)%dom)
@@ -337,6 +328,7 @@ contains
 
             end if ! All procs but GLOBAL MASTER
 
+        print*, 'gather_all - 7'
 
             ! Synchronize all procs, otherwise the master proc will go on and look for new messages
             call MPI_Barrier(ChiDG_COMM,ierr)
@@ -389,21 +381,19 @@ contains
                 
             end if ! GLOBAL MASTER
 
+        print*, 'gather_all - 8'
             ! Synchronize all procs
             call MPI_Barrier(ChiDG_COMM,ierr)
 
             ! The sender processors (IRANK/=GLOBAL_MASTER) check the send request status
             ! and return an error if any of the request faild.
             if (isend_requests%size() > 0) then
-
-                ! Allocate array of statuses
                 if (allocated(isend_status)) deallocate(isend_status)
                 allocate(isend_status(isend_requests%size()),stat=ierr)
-
-                ! Wait that all isend request are completed
                 call MPI_Waitall(n_handles,isend_requests%data,isend_status,ierr)
             end if
 
+        print*, 'gather_all - 9'
 
             ! Master processor reorder the nodes for each each block in node_index order 
             if (IRANK == GLOBAL_MASTER) then
@@ -412,6 +402,7 @@ contains
                 end do
             end if
 
+        print*, 'gather_all - 10'
 
             ! Synchronize all procs
             call MPI_Barrier(ChiDG_COMM,ierr)
@@ -426,6 +417,7 @@ contains
         !
         !call self%dump(1,2)
 
+        print*, 'gather_all - 11'
 
     end subroutine gather_all
     !************************************************************************************
@@ -549,34 +541,10 @@ contains
 
         integer(ik) :: i
         
-        if (allocated(self%vRx)) then
-            do i = 1,size(self%vRx)
-                call self%vRx(i)%release()
-            end do
-            deallocate (self%vRx)
-        end if 
-
-        if (allocated(self%Jx)) then
-            do i = 1,size(self%Jx)
-                call self%Jx(i)%release()
-            end do
-            deallocate (self%Jx)
-        end if                 
-
-        if (allocated(self%Jx_unsteady)) then
-            do i = 1,size(self%Jx_unsteady)
-                call self%Jx_unsteady(i)%release() 
-            end do 
-            deallocate (self%Jx_unsteady)
-        end if
-
-        if (allocated(self%wAx)) then
-            do i = 1,size(self%wAx)
-                call self%wAx(i)%release() 
-            end do 
-            deallocate (self%wAx)
-        end if
-
+        if (allocated(self%vRx))                deallocate (self%vRx)
+        if (allocated(self%Jx))                 deallocate (self%Jx)
+        if (allocated(self%Jx_unsteady))        deallocate (self%Jx_unsteady)
+        if (allocated(self%wAx))                deallocate (self%wAx)
         if (allocated(self%node_sensitivities)) deallocate (self%node_sensitivities)
 
         call self%Rx%release()

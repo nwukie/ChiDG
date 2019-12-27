@@ -58,7 +58,8 @@
 module mod_hdfio
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik,rdouble
-    use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC, NO_ID
+    use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC, NO_ID, &
+                                          CARTESIAN, CYLINDRICAL
     use mod_bc,                     only: create_bc
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
     use mod_io,                     only: backend
@@ -2116,6 +2117,175 @@ contains
     
     end subroutine write_functionals_hdf
     !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Write a hdf5 file with a specific format for mesh sensitivites.
+    !!  The file is written by the master processor who has gathered all the informations
+    !!  about the node sensitivities of all the nodes for all the blocks. 
+    !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/26/2018
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine write_x_sensitivities_hdf(data,ifunc,file_name)
+        type(chidg_data_t), intent(inout)   :: data
+        integer(ik),        intent(in)      :: ifunc
+        character(*),       intent(in)      :: file_name
+
+
+        character(:),   allocatable     :: field_name, filename
+        integer(HID_T)                  :: fid, domain_id
+        integer                         :: ierr,idom,nnodes,inode
+        logical                         :: file_exists
+        real(rk),       allocatable     :: nodes_coords(:,:), nodes_sens(:,:)
+        real(rk)                        :: r, theta, z,   &
+                                           dJdr, dJdtheta, dJdz
+        integer(ik),    allocatable     :: nodes_info(:,:)
+        character(2)                    :: domain_name
+
+        ! Check for file existence
+        filename    = trim(file_name) // ".h5"
+        file_exists = check_file_exists_hdf(filename)
+        
+        ! Create new file if necessary
+        if (.not. file_exists) then
+
+            ! Create a new file
+            call initialize_file_xhdf(filename)
+
+            ! Initialize the file structure.
+            fid = open_file_hdf(filename)
+            call initialize_file_structure_xhdf(fid,data%mesh)
+            call close_file_hdf(fid)
+
+        end if
+
+
+        associate ( node_sensitivities => data%sdata%adjointx%node_sensitivities )
+
+            ! Master process writs grid-node info and sensitivities fro each block
+            fid = open_file_hdf(filename)
+
+            ! Write solution for each domain
+            do idom = 1,size(data%mesh%npoints,1)
+
+                write(domain_name,'(I2.2)') idom
+                domain_id   = open_domain_hdf(fid,trim(domain_name))
+                nnodes      = node_sensitivities(ifunc,idom)%size()
+
+
+                ! Reallocate array
+                if (allocated(nodes_coords)) deallocate(nodes_coords,nodes_info,nodes_sens)
+                allocate(nodes_coords(nnodes,3),nodes_info(nnodes,2),nodes_sens(nnodes,3),stat=ierr)
+                if (ierr/=0) call AllocationError
+
+
+                ! Write nodes coordinates
+                if (node_sensitivities(ifunc,idom)%data(1)%coordinate_system == CARTESIAN) then
+                    nodes_coords = node_sensitivities(ifunc,idom)%get_nodes_coords()
+                    call set_domain_coordinates_hdf(domain_id,nodes_coords)
+                end if
+
+                if (node_sensitivities(ifunc,idom)%data(1)%coordinate_system == CYLINDRICAL) then
+                    do inode = 1,nnodes
+                        r     = node_sensitivities(ifunc,idom)%data(inode)%coords(1) 
+                        theta = node_sensitivities(ifunc,idom)%data(inode)%coords(2) 
+                        z     = node_sensitivities(ifunc,idom)%data(inode)%coords(3) 
+                        nodes_coords(inode,1) = r*cos(theta) 
+                        nodes_coords(inode,2) = r*sin(theta)
+                        nodes_coords(inode,3) = z
+                    end do
+                end if
+
+
+                ! Write node info
+                nodes_info(:,1) = node_sensitivities(ifunc,idom)%get_nodes_domain_g()
+                nodes_info(:,2) = node_sensitivities(ifunc,idom)%get_nodes_ID()
+                call set_domain_nodeinfo_xhdf(domain_id,nodes_info)
+
+
+                ! Write node sensitivities
+                if (node_sensitivities(ifunc,idom)%data(1)%coordinate_system == CARTESIAN) then
+                    nodes_sens = node_sensitivities(ifunc,idom)%get_nodes_sensitivities()
+                    call set_domain_sensitivities_xhdf(domain_id,nodes_sens)
+                end if
+
+                if (node_sensitivities(ifunc,idom)%data(1)%coordinate_system == CYLINDRICAL) then
+                    do inode = 1,nnodes
+                        theta    = node_sensitivities(ifunc,idom)%data(inode)%coords(2) 
+                        dJdr     = node_sensitivities(ifunc,idom)%data(inode)%sensitivities(1) 
+                        dJdtheta = node_sensitivities(ifunc,idom)%data(inode)%sensitivities(2) 
+                        dJdz     = node_sensitivities(ifunc,idom)%data(inode)%sensitivities(3) 
+                        nodes_sens(inode,1) = dJdr*cos(theta) - dJdtheta*sin(theta)
+                        nodes_sens(inode,2) = dJdr*sin(theta) + dJdtheta*cos(theta)
+                        nodes_sens(inode,3) = dJdz
+                    end do
+                    call set_domain_sensitivities_xhdf(domain_id,nodes_sens)
+                end if
+
+                
+                ! Close domian
+                call close_domain_hdf(domain_id)
+
+
+            end do ! idom
+
+
+        end associate
+
+        call set_contains_solution_hdf(fid,"True")
+        call close_file_hdf(fid)
+
+
+    end subroutine write_x_sensitivities_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

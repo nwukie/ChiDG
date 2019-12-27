@@ -170,21 +170,20 @@ contains
                    jinv    => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv )
 
 
-        ! If dQ differentiation or no differentiation
-        if (fcn_info%dtype == dQ_DIFF .or. fcn_info%dtype == dBC_DIFF .or. fcn_info%dtype == NO_DIFF .or. fcn_info%dtype == dD_DIFF) then
-            ! Multiply each component by quadrature weights and element jacobians
+        ! Multiply each component by quadrature weights and element jacobians
+        if (fcn_info%dtype == dQ_DIFF  .or. &
+            fcn_info%dtype == dBC_DIFF .or. &
+            fcn_info%dtype == NO_DIFF  .or. &
+            fcn_info%dtype == dD_DIFF) then
             source = source_in * weights * jinv
 
-        ! If dX differentiation
         else if (fcn_info%dtype == dX_DIFF) then
-            ! Multiply each component by quadrature weights and element jacobians
-            source = source * weights * differentiate_jinv(mesh,elem_info,0,fcn_info,'element')
+            source = source_in * weights * differentiate_jinv(mesh,elem_info,0,fcn_info,'element')
 
         else
             call chidg_signal_one(FATAL,"integrate_volume_vector_source: unexpected differentiate type",fcn_info%dtype)
         
         end if
-
 
         ! Multiply by column of test functions, integrate
         integral = matmul(transpose(val),source)

@@ -81,6 +81,11 @@ contains
         if (allocated(self%func)) deallocate (self%func)
         allocate (self%func(nfunc), stat = ierr)
         if (ierr/=0) call AllocationError
+
+        ! Make sure storage is cleared, potentially from
+        ! previous problems.
+        call self%step%clear()
+        call self%time%clear()
         
         self%functional_storage_initialized = .true.
 
@@ -302,6 +307,9 @@ contains
         class(chidg_functional_t),      intent(inout)   :: self
 
         if (allocated(self%func)) deallocate (self%func)
+
+        call self%step%clear()
+        call self%time%clear()
 
     end subroutine release
     !******************************************************************************

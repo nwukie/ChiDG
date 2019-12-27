@@ -1527,7 +1527,6 @@ contains
                 ! Write solution for ifunc 
                 call write_line("   writing X-sensitivities for functional: ", func_name%get(), ltrim=.false., io_proc=GLOBAL_MASTER)
 
-                call chidg_signal(FATAL,"chidg%write_vol_sensitivities: sub-called procedures not yet implemented.")
                 ! Write sensitivities to HDF file
                 call write_x_sensitivities_hdf(self%data,ifunc,filename)
 
@@ -2057,22 +2056,17 @@ contains
         call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
         call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
 
-        print*, 'run_adjointx - 1'
-
         ! Prerun processing
         !   : Getting/computing auxiliary fields etc.
         call self%process('primal problem')
         
-        print*, 'run_adjointx - 2'
         ! Prerun processing
         !   : Getting/computing auxiliary mesh sensitivities etc.
         call self%process('adjointx problem')
 
-        print*, 'run_adjointx - 3'
         ! Initialize algorithms
         call self%init('algorithms')
 
-        print*, 'run_adjointx - 4'
         ! Check optional incoming parameters
         ! TODO: might need to remove this option
         option_write_final   = .true.
@@ -2089,7 +2083,6 @@ contains
                    Jx_unsteady  => self%data%sdata%adjointx%Jx_unsteady, &
                    v            => self%data%sdata%adjoint%v             )
 
-        print*, 'run_adjointx - 5'
             ! Loop through all the time steps
             ! (Number of steps deduced from size of adjoint%q_time but we can also
             ! use the time_manager)
@@ -2101,7 +2094,6 @@ contains
                 self%data%time_manager%itime = 1
                 self%data%time_manager%t     = ZERO
                 
-        print*, 'run_adjointx - 6'
                 ! Set vector q equal to the current solution vector at step istep
                 q = self%data%sdata%adjoint%q_time(istep)
                 
@@ -2111,39 +2103,30 @@ contains
                 call Rx%clear()
                 call update_space(self%data,differentiate=dX_DIFF)
 
-        print*, 'run_adjointx - 7'
                 ! Update functionals linearization wrt grid-nodes at istep solution
                 ! Stored in: sdata%adjointx%Jx
                 call self%data%sdata%adjointx%Jx_clear()
-        print*, 'run_adjointx - 8'
                 call update_functionals(self%data,differentiate=dX_DIFF)
-        print*, 'run_adjointx - 9'
 
                 ! Clear vRx vectors, this is necessary for unsteady
                 call self%data%sdata%adjointx%vRx_clear()
                 
-        print*, 'run_adjointx - 10'
                 ! Loop through each functional to compute the sensitivities
                 do ifunc = 1,size(Jx)
 
-        print*, 'run_adjointx - 11'
                     ! Compute v*Rx
                     vRx(ifunc) = chidg_mv(Rx,v(ifunc,istep),vRx(ifunc))
             
-        print*, 'run_adjointx - 12'
                     ! Add to Jx the contribution from vRx
                     Jx(ifunc) = Jx(ifunc) - vRx(ifunc)
 
-        print*, 'run_adjointx - 13'
                     ! Add contribution of istep to overall unsteady sensitivities
                     Jx_unsteady(ifunc) = Jx_unsteady(ifunc) + Jx(ifunc)
-        print*, 'run_adjointx - 14'
 
                 end do !ifunc
 
             end do !istep
         
-
             ! Add sensitivities of the auxiliary problem: wall_distance 
             ! Assuming only one auxiliary problem: wall_distance
             if (self%data%sdata%compute_auxiliary) then 
@@ -2160,19 +2143,16 @@ contains
         
         ! TODO: ADD here procedure for surface-normal sensitivities
                
-        print*, 'run_adjointx - 15'
                 
         ! Write the final solution to hdf file
         prefix = 'dJdX_'
         if (option_write_final) then
             ! Master rank gather all node sensitivities
             call self%data%sdata%adjointx%gather_all(self%data%mesh)
-        print*, 'run_adjointx - 16'
             ! Write out solution: hdf, plot3D
             call self%write_fields(prefix,'X sensitivities')
         end if
 
-        print*, 'run_adjointx - 17'
     end subroutine run_adjointx
     !*****************************************************************************************
 

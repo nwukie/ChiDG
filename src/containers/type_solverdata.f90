@@ -726,6 +726,9 @@ contains
         call self%adjointx%release()
         call self%adjointbc%release()
 
+        ! Release functionals
+        call self%functional%release()
+
         ! Release auxiliary_field vectors
         do iaux = 1,self%nauxiliary_fields()
             call self%auxiliary_field(iaux)%release()

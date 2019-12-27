@@ -1,0 +1,2 @@
+add_subdirectory(scalar_advection)
+#add_subdirectory(scalar_advection_diffusion)

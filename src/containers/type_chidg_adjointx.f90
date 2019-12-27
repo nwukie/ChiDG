@@ -215,7 +215,6 @@ contains
         type(MPI_Request)               :: irequest0, irequest1, irequest2, irequest3, irequest4, irequest5
         type(MPI_status), allocatable   :: isend_status(:)
         
-        print*, 'gather_all - 1'
 
         ! Find the max domain global index
         !ndoms_g = size(mesh%npoints,1)
@@ -225,14 +224,12 @@ contains
         ! Deduce number of functionals computed
         nfuncs = size(self%Jx_unsteady)
 
-        print*, 'gather_all - 2'
 
         ! Allocate storage for node sensitivities
         if (allocated(self%node_sensitivities)) deallocate (self%node_sensitivities)
         allocate(self%node_sensitivities(nfuncs,ndomains_g), stat=ierr)
         if (ierr/=0) call AllocationError
 
-        print*, 'gather_all - 3'
 
         ! Loop trhough the functionals and gather all sensitivities
         ! This is done by each processor individually.
@@ -255,7 +252,6 @@ contains
                     !do inode = 1,self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%nterms()
                     do inode = 1,mesh%domain(idom)%elems(ielem)%nterms_c
 
-        print*, 'gather_all - 4'
                         ! Find support node coordinates, coordinate system and connectivity (ie local node ID)
                         node_coords(1) = mesh%domain(idom)%elems(ielem)%node_coords(inode,1)
                         node_coords(2) = mesh%domain(idom)%elems(ielem)%node_coords(inode,2)
@@ -264,6 +260,9 @@ contains
                         coords_system  = mesh%domain(idom)%elems(ielem)%coordinate_system
                         
                         ! Read sensitivities in the chidg vector
+                        print*, 'chidg_adjointx_t%gather_all: need to correct for petsc backend.'
+                        ! Read sensitivities in the chidg vector
+                        !node_sens = self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%get_sensitivities(inode)
                         node_sens(1) = self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%getterm(1,inode,1)
                         node_sens(2) = self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%getterm(2,inode,1)
                         node_sens(3) = self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%getterm(3,inode,1)
@@ -280,7 +279,6 @@ contains
                             call self%node_sensitivities(ifunc,idomain_g)%data(node_index)%add_sensitivities(node_sens)
                         end if
 
-        print*, 'gather_all - 5'
                     end do !inode
                 end do !ielem
             end do !idom
@@ -289,7 +287,6 @@ contains
             ! All the processors send the node data to the master proc
             if (IRANK /= GLOBAL_MASTER) then
                 
-        print*, 'gather_all - 6'
                 ! Count over all information to send and allocate vector of requests
                 n_handles = 1
                 do idom = 1,size(self%Jx_unsteady(ifunc)%dom)
@@ -328,7 +325,6 @@ contains
 
             end if ! All procs but GLOBAL MASTER
 
-        print*, 'gather_all - 7'
 
             ! Synchronize all procs, otherwise the master proc will go on and look for new messages
             call MPI_Barrier(ChiDG_COMM,ierr)
@@ -381,7 +377,6 @@ contains
                 
             end if ! GLOBAL MASTER
 
-        print*, 'gather_all - 8'
             ! Synchronize all procs
             call MPI_Barrier(ChiDG_COMM,ierr)
 
@@ -393,7 +388,6 @@ contains
                 call MPI_Waitall(n_handles,isend_requests%data,isend_status,ierr)
             end if
 
-        print*, 'gather_all - 9'
 
             ! Master processor reorder the nodes for each each block in node_index order 
             if (IRANK == GLOBAL_MASTER) then
@@ -402,7 +396,6 @@ contains
                 end do
             end if
 
-        print*, 'gather_all - 10'
 
             ! Synchronize all procs
             call MPI_Barrier(ChiDG_COMM,ierr)
@@ -417,7 +410,6 @@ contains
         !
         !call self%dump(1,2)
 
-        print*, 'gather_all - 11'
 
     end subroutine gather_all
     !************************************************************************************

@@ -1851,7 +1851,7 @@ contains
         ! Get nodes_to_modes matrix
         dmodes = nref_elem%nodes_to_modes
 
-         
+    
         ! Compute element jacobian matrix at interpolation nodes
         allocate(jacobian(3,3,nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
@@ -1926,7 +1926,6 @@ contains
         end do
 
 
-
         ! NEW
         !
         ! Compute inverse cell mapping jacobian
@@ -1966,7 +1965,6 @@ contains
         end do
         
         
-        
         !
         ! Invert jacobian matrix at each interpolation node
         !
@@ -1989,6 +1987,7 @@ contains
         ! Compute gradient interpolators derivatives
         associate( nref_elem => ref_elems(self%ineighbor_ref_ID_s) )
         
+
         nnodes   = nref_elem%nnodes_face()
         nnodes_r = nref_elem%nnodes_r()
         val_s    = nref_elem%interpolator_face('Value', self%ineighbor_face)
@@ -2094,6 +2093,7 @@ contains
                 end do
             end do
         end if
+
 
     end subroutine interpolate_neighbor_gradients_dx
     !******************************************************************************************

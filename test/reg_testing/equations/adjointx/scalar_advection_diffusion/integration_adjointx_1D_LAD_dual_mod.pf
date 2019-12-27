@@ -1,0 +1,1776 @@
+!--------------------------------------------------------------------------------
+!
+!           Test volume mesh sensitivities from a 1D linear advection diffusion 
+!           adjoint problem with a source term:
+!               - Primal solution (u)
+!               - Adjoint solution (v) for "Kinetic Energy" objective function, J
+!               - Mesh Adjoint (dJ/dX)
+!
+!   div(cu-mu(u)*grad(u)) = S
+!
+!   Linear advection diffusion Flux Definition:
+!       F(u) = -mu(u)*dudx
+!
+!   advection diffusion Coefficient Model:
+!       mu(u) = 1.0
+!       c(u)  = 2.0
+!
+!   Source Definition:
+!       S(x) = 1
+!
+!   Boundary conditions are:
+!       Dirichlet U(x=0) = 0
+!       Dirichlet U(x=1) = 0
+!
+!   Analytical Primal Solution is:
+!       U(x) = -1/[2(e^2-1)]*e^(2x) + x/2 + 1/[2(e^2-1)]     for x in [0,1]
+!
+!   Adjoint objective function
+!       integral[(U(x)^2)/2] from 0 to 1
+!
+!   Adjoint solution
+!       V(x) = see Matteo's notes
+!
+!   Mesh sensitivities verified with Finite Difference using delta = 10e-7
+!
+!   Tests that are being run here:
+!       - Run the primal calculation with order of accuracy 2
+!       - Run the adjoint calculation with order of accuracy 2
+!       - Run adjointx on each case
+!       - Test sensitivities
+!
+!   Cases:
+!       - single block, 4 elements, linear mapping
+!       - single block, 4 elements, quadratic mapping
+!       - two blocks, 2 elements each block, linear mapping
+!
+!   Parallel:
+!       - up to 4 procs
+!
+!--------------------------------------------------------------------------------
+module integration_adjointx_1D_LAD_dual_mod
+#include <messenger.h>
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_mvector,           only: mvector_t
+    use type_chidg,             only: chidg_t
+    use type_chidg_data,        only: chidg_data_t
+    use mod_string,             only: string_t
+    use type_bc_state,          only: bc_state_t
+    use type_bc_state_group,    only: bc_state_group_t
+    use mod_bc,                 only: create_bc
+    use type_function,          only: function_t
+    use type_ivector,           only: ivector_t
+    use mod_function,           only: create_function
+    use mod_interpolate,        only: interpolate_element_standard
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
+    use type_file_properties,   only: file_properties_t
+    use mod_hdf_utilities,      only: get_properties_hdf 
+
+    use mod_functional,         only: create_functional
+    use type_evaluator,         only: evaluator_t
+    use type_functional_group,  only: functional_group_t
+
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
+    use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
+    use mod_io
+
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+    use DNAD_D
+
+    ! Imports for defining a new operator and model
+    use mod_operators,          only: operator_factory
+    use type_operator,          only: operator_t
+    use mod_models,             only: model_factory
+    use type_model,             only: model_t
+
+    ! Imports for defining a new equation builder
+    use mod_equations,                  only: equation_set_factory
+    use type_equation_builder,          only: equation_builder_t
+    use type_equation_set,              only: equation_set_t
+    implicit none
+
+
+    type(mvector_t) :: case1_sens(2) ! nprocs
+    type(mvector_t) :: case2_sens(2) ! nprocs
+    type(mvector_t) :: case3_sens(2) ! nprocs
+
+
+    public  :: adjointx_LAD_dual_1D
+
+
+
+
+
+
+    !>  A custom source term for the current test case
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!  s(x) = 1
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(operator_t), public :: test_LAD_dual_volume_source_t
+
+
+    contains
+
+        procedure   :: init    => init_source
+        procedure   :: compute => compute_source
+
+    end type test_LAD_dual_volume_source_t
+    !***************************************************************************************
+
+
+
+
+    !>  The advection coefficient model.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(model_t), public :: testing_1D_LAD_dual_model_t
+
+    contains
+
+        procedure   :: init    => init_model
+        procedure   :: compute => compute_model
+
+    end type testing_1D_LAD_dual_model_t
+    !***************************************************************************************
+
+
+
+
+
+
+    !>  A new equation set builder to build a linear advection equation set with the 
+    !!  new custom volume source.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    type, extends(equation_builder_t), public :: test_LAD_dual_builder_t
+
+
+    contains
+
+        procedure   :: init => init_builder
+        procedure   :: build
+
+    end type test_LAD_dual_builder_t
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  This parameter initialize the state for each test
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !-------------------------------------------------------------------------------
+    @TestParameter
+    type, extends(MpiTestParameter) :: case_grid
+        integer(ik)                 :: nelem_xi
+        integer(ik)                 :: nblocks
+        character(:),   allocatable :: gridtype     ! singleblock, doubleblock
+        character(:),   allocatable :: gridfile 
+        character(:),   allocatable :: mapping
+    contains
+        procedure   :: toString
+    end type case_grid
+    !*******************************************************************************
+
+
+
+
+
+
+
+    !>  Main testing fixture with test components that get initialized for each test
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !-------------------------------------------------------------------------------
+    @TestCase(testParameters={getParameters()}, constructor=newTest)
+    type, extends(MpiTestCase) :: adjointx_LAD_dual_1D
+
+        integer(ik)                 :: nelem_xi
+        integer(ik)                 :: nblocks
+        character(:),   allocatable :: gridtype
+        character(:),   allocatable :: gridfile
+        character(:),   allocatable :: mapping
+
+        type(chidg_t)   :: chidg
+        type(chidg_t)   :: chidg_adj
+        type(chidg_t)   :: chidg_adjx
+        type(mpi_comm)  :: ChiDG_COMM
+
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type adjointx_LAD_dual_1D
+    !*******************************************************************************
+
+
+
+
+contains
+
+    !-------------------------------------------------------------------------------
+    !                           Volume Source Methods
+    !-------------------------------------------------------------------------------
+
+    !>  Initialize the new volume source operator.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init_source(self)
+        class(test_LAD_dual_volume_source_t),   intent(inout)      :: self
+
+        ! Set operator name
+        call self%set_name("Test LAD Dual Constant Volume Source")
+
+        ! Set operator type
+        call self%set_operator_type("Volume Diffusive Flux")
+
+        ! Set operator equations
+        call self%add_primary_field("u")
+
+    end subroutine init_source
+    !********************************************************************************
+
+
+
+    !>  Implement the volume source definition.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine compute_source(self,worker,prop)
+        class(test_LAD_dual_volume_source_t),    intent(inout)   :: self
+        type(chidg_worker_t),               intent(inout)   :: worker
+        class(properties_t),                intent(inout)   :: prop
+
+        type(AD_D), allocatable, dimension(:)   :: source, x
+        logical         :: use_lift
+
+        !
+        ! Interpolate solution to quadrature nodes
+        !
+        use_lift = .false.
+        source = worker%get_field('u','grad1','element',use_lift)
+
+        
+        x = worker%x('volume')
+        source = ONE
+
+        !
+        ! Integrate volume flux
+        !
+        call worker%integrate_volume_source('u',source)
+
+
+    end subroutine compute_source
+    !***************************************************************************************
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------------
+    !                       Scalar Advection Diffusion Coefficient Model Methods
+    !----------------------------------------------------------------------------------------
+
+    !>  Initialize scalar advectionn coefficient model with name and model field being 
+    !!  provided.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_model(self)
+        class(testing_1D_LAD_dual_model_t),    intent(inout)   :: self
+
+        call self%set_name('Testing 1D LAD Dual:: Coefficient Model')
+        call self%set_dependency('f(Q-)')
+
+        call self%add_model_field('Scalar Diffusion Coefficient')
+        call self%add_model_field('Scalar Advection Velocity-1')
+        call self%add_model_field('Scalar Advection Velocity-2')
+        call self%add_model_field('Scalar Advection Velocity-3')
+
+    end subroutine init_model
+    !****************************************************************************************
+
+
+
+    !>  Implement the function for providing the scalar advection coefficient field.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine compute_model(self,worker)
+        class(testing_1D_LAD_dual_model_t), intent(in)      :: self
+        type(chidg_worker_t),          intent(inout)   :: worker
+
+        type(AD_D), allocatable, dimension(:)   :: u, cx_model, cy_model, cz_model, mu_model
+
+        u = worker%get_field('u', 'value')
+
+        ! Initialize derivative array
+        mu_model = u
+        cx_model = u
+        cy_model = u
+        cz_model = u
+
+        mu_model = ONE
+        cx_model = TWO
+        cy_model = ZERO
+        cz_model = ZERO
+
+        call worker%store_model_field('Scalar Diffusion Coefficient','value', mu_model)
+        call worker%store_model_field('Scalar Advection Velocity-1', 'value', cx_model)
+        call worker%store_model_field('Scalar Advection Velocity-2', 'value', cy_model)
+        call worker%store_model_field('Scalar Advection Velocity-3', 'value', cz_model)
+
+
+    end subroutine compute_model
+    !****************************************************************************************
+
+
+
+
+
+    
+    !----------------------------------------------------------------------------------------
+    !                           Builder Methods for new equation set
+    !----------------------------------------------------------------------------------------
+
+
+    !>  Initialize the new linear advection builder.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_builder(self)
+        class(test_LAD_dual_builder_t),   intent(inout)  :: self
+
+        call self%set_name("Test AdjointX 1D Linear Advection Diffusion Dual")
+
+    end subroutine init_builder
+    !****************************************************************************************
+
+    
+
+
+
+    !>  Implement the linear advection builder definition.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    function build(self,blueprint) result(LAD_dual_eqn)
+        class(test_LAD_dual_builder_t), intent(in)  :: self
+        character(*),              intent(in)  :: blueprint
+
+        type(equation_set_t)                :: LAD_dual_eqn
+        
+
+        !
+        ! Set equationset name.
+        !
+        call LAD_dual_eqn%set_name("Test AdjointX 1D Linear Advection Diffusion Dual")
+
+        
+        !
+        ! Specify the usage of new BR2x discretization
+        !
+        call LAD_dual_eqn%set_diffusive_type("BR2x")
+        
+        
+        !
+        ! Add spatial operators
+        !
+        call LAD_dual_eqn%add_operator('Scalar Advection Boundary Average Operator')
+        call LAD_dual_eqn%add_operator('Scalar Advection Volume Operator')
+        call LAD_dual_eqn%add_operator('Scalar Advection LaxFriedrichs Operator')
+        call LAD_dual_eqn%add_operator('Scalar Advection BC Operator')
+        call LAD_dual_eqn%add_operator("Test LAD Dual Constant Volume Source")
+        call LAD_dual_eqn%add_operator("Scalar Diffusion Volume No-Lift Operator")
+        call LAD_dual_eqn%add_operator("Scalar Diffusion Boundary Jump Operator")
+        call LAD_dual_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
+        call LAD_dual_eqn%add_operator("Scalar Diffusion Boundary Lift Operator")
+        call LAD_dual_eqn%add_operator("Scalar Diffusion BC Jump Operator")
+        call LAD_dual_eqn%add_operator("Scalar Diffusion BC Grad Operator")
+        call LAD_dual_eqn%add_operator("Scalar Diffusion BC Lift Operator")
+
+        !
+        ! Add model for 'compute_mu' scalar coefficient
+        !
+        call LAD_dual_eqn%add_model("Testing 1D LAD Dual:: Coefficient Model")
+
+
+    end function build
+    !***************************************************************************************
+
+
+
+
+
+
+    !-------------------------------------------------------------------------------
+    !                               Test methods
+    !-------------------------------------------------------------------------------
+
+
+
+    !> Parameter constructors
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function newTest(test_parameter) result(test)
+        type(case_grid),  intent(in)                 :: test_parameter
+        type(adjointx_LAD_dual_1D) :: test
+
+        test%nelem_xi   = test_parameter%nelem_xi
+        test%nblocks    = test_parameter%nblocks
+        test%gridtype   = test_parameter%gridtype
+        test%gridfile   = test_parameter%gridfile
+        test%mapping    = test_parameter%mapping
+
+    end function newTest
+    !******************************************************************************
+
+
+    !> Parameter initialization
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function getParameters() result(params)
+        type(case_grid), allocatable :: params(:)
+    
+        integer(ik),        allocatable :: nelem_xi(:)
+        integer(ik),        allocatable :: nblocks(:)
+        type(string_t),     allocatable :: gridtype(:)
+        type(string_t),     allocatable :: files(:)
+        type(string_t),     allocatable :: mapping(:)
+        integer(ik) :: icase
+
+
+        nelem_xi = [ 4 , 4 , 4 ]
+
+        nblocks  = [ 1 , 2 , 1 ]
+
+        gridtype = [ string_t("singleblock"), &
+                     string_t("doubleblock"), &
+                     string_t("singleblock") ]
+
+
+
+        files = [ string_t("1D_LAD_D1_4x1x1_M1.h5"),         &
+                  string_t("1D_LAD_D2_4x1x1_M1.h5"),         &
+                  string_t("1D_LAD_D1_4x1x1_M2.h5") ]
+
+
+        mapping = [ string_t("linear"),     &
+                    string_t("linear"),     &
+                    string_t("quadratic")   ]
+
+        !Initialize the test case container with the parameter
+        allocate(params(size(files)))
+        do icase = 1,size(files)
+            params(icase)%nelem_xi  = nelem_xi(icase)
+            params(icase)%nblocks   = nblocks(icase)
+            params(icase)%gridtype  = gridtype(icase)%str
+            params(icase)%gridfile  = files(icase)%str
+            params(icase)%mapping   = mapping(icase)%str
+        end do
+
+    end function getParameters
+    !****************************************************************************************
+
+
+
+    !>  Reporting the parameters of the test
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function toString(this) result(string)
+        class (case_grid),    intent(in)    :: this
+        character(:), allocatable           :: string
+
+        character(len=200) :: buffer
+
+        write(buffer,'( "(nelem_xi, gridtype)=","(", I2,",", A11,",", A9,")" )') this%nelem_xi, this%gridtype, this%mapping
+        string = trim(buffer)
+
+    end function toString
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Set up test routine.
+    !!
+    !!  This routine reads the grid file, sets up boundary conditions, initializes storage
+    !!  and sets the appropriate configuration options.
+    !!  This routine also gets the numer of processors and the correct MPI communicator for 
+    !!  the test.
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(adjointx_LAD_dual_1D),  intent(inout)   :: this
+
+        class(function_t),  allocatable :: fcn
+        type(string_t)                  :: group_names_D1(1,6)
+        type(string_t)                  :: group_names_D2(2,6)
+        type(bc_state_group_t)          :: bc_state_groups(3)
+        class(bc_state_t),  allocatable :: bc_state
+        class(evaluator_t), allocatable :: fcl_temp
+        type(functional_group_t)        :: fcl_group
+        type(file_properties_t)         :: file_props
+
+        type(testing_1D_LAD_dual_model_t)        :: LAD_dual_coefficient_model
+        type(test_LAD_dual_volume_source_t)      :: source_test_LAD_dual
+        type(test_LAD_dual_builder_t)            :: builder_test_LAD_dual
+
+
+        integer(ik) :: npes_index, grid_index, order_index, iproc, ierr, istep, nfuncs
+        
+        
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+        !********************
+        !
+        !   PRIMAL RUN
+        !   primal chidg entity
+        !
+        !*********************
+
+            !
+            ! Initialize ChiDG environment
+            !
+            call this%chidg%start_up('mpi',this%ChiDG_COMM)
+            call this%chidg%start_up('core')
+
+
+
+            !-------------------------------------------------------------------------------
+            !               Initialize and register the advection-diffusion coefficient model
+            !-------------------------------------------------------------------------------
+            call LAD_dual_coefficient_model%init()
+            call model_factory%register(LAD_dual_coefficient_model)
+
+
+
+            !-------------------------------------------------------------------------------
+            !
+            !                 Initialize and register the source operator
+            !
+            !   This has to be done before the equation set builder because it needs to be
+            !   able to find this operator.
+            !
+            !-------------------------------------------------------------------------------
+            call source_test_LAD_dual%init()
+            call operator_factory%register(source_test_LAD_dual)
+
+
+
+            !-------------------------------------------------------------------------------
+            !
+            !                 Initialize and register equation set builder
+            !
+            !-------------------------------------------------------------------------------
+            call builder_test_LAD_dual%init()
+            call equation_set_factory%register(builder_test_LAD_dual%build('default'))
+
+
+
+            !------------------------------------------------------------------------------
+            !
+            ! Define input data here that is normally read through the namelist input file
+            !
+            ! As a result, we don't call chidg%init('io')
+            !
+            !------------------------------------------------------------------------------
+            basis            = "legendre"
+            gq_rule          = 3
+            time_integrator  = "steady"
+            nonlinear_solver = "newton"
+            linear_solver    = "fgmres"
+            preconditioner   = "jacobi"
+            IO_DESTINATION   = "file"
+            time_steps       = 1 ! This is important for adjointx
+            !------------------------------------------------------------------------------
+
+
+            ! Set timescheme options to pass during initialization
+            !call toptions%set("dt", 0.1_rk) ! means nothing here
+            !call toptions%set("nsteps",100)
+            !call toptions%set("nwrite",0)
+
+
+            ! Set linear solver options to pass during initialization
+            call loptions%set("tol",1.e-15_rk)
+
+            ! Set nonlinear solver options
+            call noptions%set("tol",5.e-11_rk)
+            call noptions%set("cfl0",1.0_rk)
+            call noptions%set("nsteps",100)
+
+
+
+
+            !
+            ! Create mesh
+            !
+            if (IRANK == GLOBAL_MASTER) then
+
+                bc_state_groups(1)%name = "Left Boundary"
+                call create_bc("Scalar Value",bc_state)
+                call bc_state%set_fcn_option("Value","val",ZERO)
+                call bc_state_groups(1)%add_bc_state(bc_state)
+
+                bc_state_groups(2)%name = "Right Boundary"
+                call create_bc("Scalar Value",bc_state)
+                call bc_state%set_fcn_option("Value","val",ZERO)
+                call bc_state_groups(2)%add_bc_state(bc_state)
+
+                bc_state_groups(3)%name = "Extrapolation"
+                call create_bc("Scalar Extrapolate", bc_state)
+                call bc_state_groups(3)%add_bc_state(bc_state)
+
+
+                if (this%gridtype == 'doubleblock') then
+
+
+                    group_names_D2(1,:) = [string_t("Left Boundary") , &
+                                           string_t("Empty")         , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation")]
+
+                    group_names_D2(2,:) = [string_t("Empty")         , &
+                                           string_t("Right Boundary"), &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation")]
+
+
+                    ! Define functional
+                    call create_functional("Test 1D Energy",fcl_temp)
+                    call fcl_temp%set_ref_geom("01,02")
+                    call fcl_group%add_functional(fcl_temp)
+
+
+                    call create_mesh_file('D2 NxNxN M1',this%gridfile,equation_sets   = [string_t("Test AdjointX 1D Linear Advection Diffusion Dual"),  &
+                                                                                         string_t("Test AdjointX 1D Linear Advection Diffusion Dual")], &
+                                                                      group_names     = group_names_D2,                         &
+                                                                      bc_state_groups = bc_state_groups,                        &
+                                                                      nelem_xi        = this%nelem_xi,                          &
+                                                                      nelem_eta       = 1,                                      &
+                                                                      nelem_zeta      = 1,                                      &
+                                                                      functionals     = fcl_group)
+
+                else if (this%gridtype == 'singleblock' .and. this%nelem_xi == 4 .and. this%mapping == 'quadratic') then
+
+
+                    group_names_D1(1,:) = [string_t("Left Boundary") , &
+                                           string_t("Right Boundary"), &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation")]
+                    
+                    ! Define functional
+                    call create_functional("Test 1D Energy",fcl_temp)
+                    call fcl_temp%set_ref_geom("01")
+                    call fcl_group%add_functional(fcl_temp)
+
+
+                    call create_mesh_file('D1 NxNxN M2',this%gridfile,equation_sets  = [string_t("Test AdjointX 1D Linear Advection Diffusion Dual")],    &
+                                                                     group_names     = group_names_D1,                            &
+                                                                     bc_state_groups = bc_state_groups,                           &
+                                                                     nelem_xi        = this%nelem_xi,                             &
+                                                                     nelem_eta       = 1,                                         &
+                                                                     nelem_zeta      = 1,                                         &
+                                                                     functionals     = fcl_group)
+                
+                
+                else
+
+
+                    group_names_D1(1,:) = [string_t("Left Boundary") , &
+                                           string_t("Right Boundary"), &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation")]
+                    
+                    ! Define functional
+                    call create_functional("Test 1D Energy",fcl_temp)
+                    call fcl_temp%set_ref_geom("01")
+                    call fcl_group%add_functional(fcl_temp)
+
+
+                    call create_mesh_file('D1 NxNxN',this%gridfile,equation_sets  = [string_t("Test AdjointX 1D Linear Advection Diffusion Dual")],    &
+                                                                   group_names     = group_names_D1,                            &
+                                                                   bc_state_groups = bc_state_groups,                           &
+                                                                   nelem_xi        = this%nelem_xi,                             &
+                                                                   nelem_eta       = 1,                                         &
+                                                                   nelem_zeta      = 1,                                         &
+                                                                   functionals     = fcl_group)
+
+                end if
+
+            end if
+
+
+
+            !
+            ! Set ChiDG components
+            !
+            call this%chidg%set('Solution Order',   integer_input=2)
+            call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+            call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+            call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+            call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+
+
+            !
+            ! Read grid
+            !
+            call this%chidg%read_mesh(this%gridfile,'primal storage')
+
+
+
+            !
+            ! Initialize solution
+            !
+            call create_function(fcn,'constant')
+            call fcn%set_option('val',0.1_rk)
+            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+
+
+
+
+            !!
+            !! Run ChiDG simulation
+            !!
+            call this%chidg%run(write_initial=.false., write_final=.false.)
+
+
+            !
+            ! Write out primal solution
+            !
+            call this%chidg%write_solution(this%gridfile,'primary fields')
+
+           
+   
+    
+        !********************
+        !
+        !   ADJOINT RUN
+        !   Adjoint chidg entity
+        !
+        !*********************
+
+
+            !-------------------------------------------------------------------------------
+            !
+            !   Here chidg_adj is setup. Models, source, and equations will be read in from
+            !   the final written file of the primal solution, together with the primal 
+            !   solution itself. This is what is typically done in a routine adjoint run.
+            !
+            !-------------------------------------------------------------------------------
+            
+            
+            
+            !------------------------------------------------------------------------------
+            !
+            ! Define input data here that is normally read through the namelist input file
+            !
+            ! As a result, we don't call chidg%init('io')
+            !
+            !------------------------------------------------------------------------------
+            basis            = "legendre"
+            gq_rule          = 3
+            time_integrator  = "steady"
+            nonlinear_solver = "newton"
+            linear_solver    = "fgmres"
+            preconditioner   = "jacobi"
+            IO_DESTINATION   = "file"
+            time_steps       = 1 ! This is important for adjointx
+            !------------------------------------------------------------------------------
+
+
+            ! Set linear solver options to pass during initialization
+            call loptions%set("tol",1.e-15_rk)
+
+            ! Set nonlinear solver options
+            call noptions%set("tol",5.e-11_rk)
+            call noptions%set("cfl0",1.0_rk)
+            call noptions%set("nsteps",100)
+
+
+
+            !
+            ! Set ChiDG components
+            !
+            call this%chidg_adj%set('Solution Order',   integer_input=2)
+            call this%chidg_adj%set('Time Integrator',  algorithm=time_integrator)
+            call this%chidg_adj%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+            call this%chidg_adj%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+            call this%chidg_adj%set('Preconditioner',   algorithm=preconditioner)
+
+            !
+            ! Read grid
+            !
+            call this%chidg_adj%read_mesh(this%gridfile,storage = 'adjoint storage')
+
+
+            !
+            ! Read Primal Solution
+            !
+            call this%chidg_adj%read_fields(this%gridfile,'primary fields')
+
+            !            
+            ! Process primal solution for adjoint 
+            !
+            do iproc = 0,NRANK-1
+                if (iproc == IRANK) then
+                    file_props  = get_properties_hdf(this%gridfile)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+            end do
+            call this%chidg_adj%data%sdata%adjoint%process_primal_solution( &
+                                    this%chidg_adj%data%sdata%q_in,file_props%istep)
+        
+            
+            !!
+            !! Run ChiDG Adjoint simulation
+            !!
+            call this%chidg_adj%run_adjoint(write_final=.false.)
+           
+   
+            !
+            ! Write out adjoint solution
+            !
+            call this%chidg_adj%write_solution(this%gridfile,'adjoint fields')
+
+           
+    
+        !********************
+        !
+        !   ADJOINTX RUN
+        !   Adjointx chidg entity
+        !
+        !*********************
+
+
+            !-------------------------------------------------------------------------------
+            !
+            !   Here chidg_adj is setup. Models, source, and equations will be read in from
+            !   the final written file of the primal solution, together with the primal 
+            !   solution itself. This is what is typically done in a routine adjoint run.
+            !
+            !-------------------------------------------------------------------------------
+            
+            
+            
+            !------------------------------------------------------------------------------
+            !
+            ! Define input data here that is normally read through the namelist input file
+            !
+            ! As a result, we don't call chidg%init('io')
+            !
+            !------------------------------------------------------------------------------
+            basis            = "legendre"
+            gq_rule          = 3
+            time_integrator  = "steady"
+            nonlinear_solver = "newton"
+            linear_solver    = "fgmres"
+            preconditioner   = "jacobi"
+            IO_DESTINATION   = "file"
+            time_steps       = 1 ! This is important for adjointx
+            !------------------------------------------------------------------------------
+
+
+            ! Set linear solver options to pass during initialization
+            call loptions%set("tol",1.e-15_rk)
+
+            ! Set nonlinear solver options
+            call noptions%set("tol",5.e-11_rk)
+            call noptions%set("cfl0",1.0_rk)
+            call noptions%set("nsteps",100)
+
+
+
+            !
+            ! Set ChiDG components
+            !
+            call this%chidg_adjx%set('Solution Order',   integer_input=2)
+            call this%chidg_adjx%set('Time Integrator',  algorithm=time_integrator)
+            call this%chidg_adjx%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+            call this%chidg_adjx%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+            call this%chidg_adjx%set('Preconditioner',   algorithm=preconditioner)
+
+            !
+            ! Read grid
+            !
+            call this%chidg_adjx%read_mesh(this%gridfile,storage = 'adjointx storage')
+
+
+            !
+            ! Read Primal Solution
+            !
+            call this%chidg_adjx%read_fields(this%gridfile,'primary fields')
+
+            !            
+            ! Process primal solution for adjoint 
+            !
+            do iproc = 0,NRANK-1
+                if (iproc == IRANK) then
+                    file_props  = get_properties_hdf(this%gridfile)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+            end do
+            call this%chidg_adjx%data%sdata%adjoint%process_primal_solution( &
+                                    this%chidg_adjx%data%sdata%q_in,file_props%istep)
+            
+            
+            !
+            ! Read Adjoint Solution
+            !
+            istep   = 1
+            nfuncs  = 1
+            call this%chidg_adjx%data%set_fields_adjoint(nfuncs)
+            call this%chidg_adjx%read_fields(this%gridfile,'adjoint fields')
+            call this%chidg_adjx%data%sdata%adjoint%process_adjoint_solution(istep)
+            call this%chidg_adjx%data%reset_fields()
+
+
+
+        
+
+    end subroutine SetUp
+    !*****************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(adjointx_LAD_dual_1D),  intent(inout)   :: this
+
+        ! Close ChiDG
+        call this%chidg_adjx%shut_down('core')
+        call this%chidg_adj%shut_down('core')
+        call this%chidg%shut_down('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+            call delete_file("Test_1D_Energy.txt")
+        end if
+
+    end subroutine tearDown
+    !*****************************************************************************************
+
+
+
+    !> Run and save senstivities for each case
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[2,4])
+    subroutine run(self)
+        class(adjointx_LAD_dual_1D),  intent(inout)   :: self
+
+        integer(ik)     :: grid_index, nprocs
+
+        !!
+        !! Run ChiDG Adjointx simulation
+        !!
+        call self%chidg_adjx%run_adjointx(write_final=.false.)
+        
+        
+        !
+        ! Gather sensitivities to global master
+        !
+        call self%chidg_adjx%data%sdata%adjointx%gather_all(self%chidg_adjx%data%mesh)
+
+        
+        
+        !
+        ! Store sensitivities
+        !
+        grid_index  = get_case(self%nelem_xi,self%nblocks,self%mapping)
+        nprocs      = NRANK
+        
+        if (IRANK == GLOBAL_MASTER) then 
+
+            select case(grid_index)
+                case(1)
+                    if (nprocs==2) call case1_sens(1)%push_back(self%chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==4) call case1_sens(2)%push_back(self%chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                case(2)
+                    if (nprocs==2) call case2_sens(1)%push_back(self%chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==2) call case2_sens(1)%push_back(self%chidg_adjx%data%sdata%adjointx%node_sensitivities(1,2)%get_nodes_sensitivities())
+                    if (nprocs==4) call case2_sens(2)%push_back(self%chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==4) call case2_sens(2)%push_back(self%chidg_adjx%data%sdata%adjointx%node_sensitivities(1,2)%get_nodes_sensitivities())
+                case(3)
+                    if (nprocs==2) call case3_sens(1)%push_back(self%chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==4) call case3_sens(2)%push_back(self%chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+            end select
+
+        end if
+
+
+
+    end subroutine run
+    !-----------------------------------------------------------------------------------------
+
+
+
+
+
+    !>  Test x-sensitivities based on the type of case 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_xsensitivities(self)
+        class(adjointx_LAD_dual_1D),  intent(inout)   :: self
+
+        real(rk),   allocatable :: node_sens(:,:)
+        real(rk),   allocatable :: ref_xsens(:)
+        real(rk)                :: tol
+        integer(ik)             :: iproc
+
+        tol = 1.e-8_rk 
+
+        !
+        ! Check parallel solutions
+        !
+        do iproc = 1,2
+
+        
+            !
+            ! 1 block, 4 elements, linear mapping
+            !
+
+                !
+                ! Dom 1
+                !
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case1_sens(iproc)%at(1) 
+                
+                if (allocated(ref_xsens)) deallocate(ref_xsens)
+                ref_xsens = [-0.00414804609931430000    , &
+                             0.00005999380246063390     , &
+                             0.00003153369926289780     , &
+                             -0.00024228679826321400    , &
+                             0.00429880460221799000     , &
+                             -0.00414804580007450000    , &
+                             0.00005999390220723380     , &
+                             0.00003153369926289780     , &
+                             -0.00024228689800981400    , &
+                             0.00429880450247139000     , &
+                             -0.00414804589982110000    , &
+                             0.00005999360296743420     , &
+                             0.00003153359951629800     , &
+                             -0.00024228679826321400    , &
+                             0.00429880440272479000     , &
+                             -0.00414804609931430000    , &
+                             0.00005999390220723380     , &
+                             0.00003153369926289780     , &
+                             -0.00024228679826321400    , &
+                             0.00429880440272479000       ]
+
+                @assertEqual(ref_xsens,node_sens(:,1),tol)
+
+            !
+            ! 2 block, 4 elements, linear mapping
+            !
+
+                !
+                ! Dom 1
+                !
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case2_sens(iproc)%at(1) 
+                
+                if (allocated(ref_xsens)) deallocate(ref_xsens)
+                ref_xsens = [-0.00414804560058130000   , &
+                             0.00034578220061559600    , &
+                             0.00380226243286090000    , &
+                             -0.00414804459877849000   , &
+                             0.00034578419988440200    , &
+                             0.00380226243286090000    , &
+                             -0.00414804570032790000   , &
+                             0.00034578340191160400    , &
+                             0.00380226243286089000    , &
+                             -0.00414804589982110000   , &
+                             0.00034578210086899700    , &
+                             0.00380226243286089000      ]
+
+                @assertEqual(ref_xsens,node_sens(:,1),tol)
+                
+                !
+                ! Dom 2
+                !
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case2_sens(iproc)%at(2) 
+                
+                if (allocated(ref_xsens)) deallocate(ref_xsens)
+                ref_xsens = [-0.00434230691867615000   , &
+                             0.00004350410223036280    , &
+                             0.00429880399940158000    , &
+                             -0.00434230691867615000   , &
+                             0.00004350219837134790    , &
+                             0.00429880320142878000    , &
+                             -0.00434230691867616000   , &
+                             0.00004350270144115600    , &
+                             0.00429880300193558000    , &
+                             -0.00434230691867616000   , &
+                             0.00004350369890715470    , &
+                             0.00429880470196459000      ]
+
+                @assertEqual(ref_xsens,node_sens(:,1),tol)
+
+            !
+            ! 1 block, 2 elements, quadratic mapping
+            !
+
+                !
+                ! Dom 1
+                !
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case3_sens(iproc)%at(1) 
+                
+                ! Allocate ref vector and set it to zeros
+                if (allocated(ref_xsens)) deallocate(ref_xsens)
+                allocate(ref_xsens(size(node_sens(:,1))))
+
+                ! Define non-zero entries
+                ref_xsens = [-0.00033509390141156500   , &
+                             -0.00025159960052867400   , &
+                             0.00018937619701564500    , &
+                             -0.00011382760185807400   , &
+                             0.00000955189920215371    , &
+                             0.00010173159623733100    , &
+                             -0.00020410610267890300   , &
+                             0.00025263829656757600    , &
+                             0.00035132539672605400    , &
+                             -0.00134038200243908000   , &
+                             -0.00100639190123847000   , &
+                             0.00075751099837262400    , &
+                             -0.00045530700303747500   , &
+                             0.00003820579703300850    , &
+                             0.00040692609871995100    , &
+                             -0.00081642490077499200   , &
+                             0.00101054989896932000    , &
+                             0.00140530150016804000    , &
+                             -0.00033509340267856600   , &
+                             -0.00025160020334508100   , &
+                             0.00018937809653785100    , &
+                             -0.00011382669980186700   , &
+                             0.00000955089739934634    , &
+                             0.00010173180006734000    , &
+                             -0.00020410570369250300   , &
+                             0.00025263789758117600    , &
+                             0.00035132519723285500    , &
+                             -0.00134038270066528000   , &
+                             -0.00100639239997147000   , &
+                             0.00075751079887942400    , &
+                             -0.00045530690329087500   , &
+                             0.00003820630010281660    , &
+                             0.00040692479767734400    , &
+                             -0.00081642390330899400   , &
+                             0.00101055009846251000    , &
+                             0.00140530259738064000    , &
+                             -0.00536152790133609000   , &
+                             -0.00402556660315107000   , &
+                             0.00303004419732050000    , &
+                             -0.00182122740065987000   , &
+                             0.00015282119753684500    , &
+                             0.00162770089941200000    , &
+                             -0.00326569270323734000   , &
+                             0.00404220459621768000    , &
+                             0.00562120909715358000    , &
+                             -0.00134038230167888000   , &
+                             -0.00100639320228108000   , &
+                             0.00075751229941523100    , &
+                             -0.00045530560224826800   , &
+                             0.00003820649959601630    , &
+                             0.00040692539615694300    , &
+                             -0.00081642410280219300   , &
+                             0.00101054999871591000    , &
+                             0.00140530150016804000    , &
+                             -0.00033509430039796500   , &
+                             -0.00025159880255587500   , &
+                             0.00018937689957865300    , &
+                             -0.00011382780135127400   , &
+                             0.00000955099714594621    , &
+                             0.00010173119725093200    , &
+                             -0.00020410560394590300   , &
+                             0.00025263829656757600    , &
+                             0.00035132569596585400    , &
+                             -0.00134038200243908000   , &
+                             -0.00100639210073167000   , &
+                             0.00075751109811922300    , &
+                             -0.00045530840382668200   , &
+                             0.00003820519855340930    , &
+                             0.00040692479767734400    , &
+                             -0.00081642349998578600   , &
+                             0.00101055039770231000    , &
+                             0.00140530229814084000    , &
+                             -0.00033509400115816500   , &
+                             -0.00025159800024626700   , &
+                             0.00018937659600204400    , &
+                             -0.00011382750211147400   , &
+                             0.00000955039866634699    , &
+                             0.00010173279753333800    , &
+                             -0.00020410690065170200   , &
+                             0.00025263719935497700    , &
+                             0.00035132589979586200    ]
+
+                @assertEqual(ref_xsens,node_sens(:,1),tol)
+
+
+    
+        end do !iproc
+
+    end subroutine test_xsensitivities
+    !*****************************************************************************************
+
+
+
+
+
+
+
+    !>  Test y-sensitivities based on the type of case 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_ysensitivities(self)
+        class(adjointx_LAD_dual_1D),  intent(inout)   :: self
+
+        real(rk),   allocatable :: node_sens(:,:)
+        real(rk),   allocatable :: ref_ysens(:)
+        real(rk)                :: tol
+        integer(ik)             :: iproc
+
+        tol = 1.e-8_rk 
+
+        !
+        ! Check serial and parallel solution
+        !
+        do iproc = 1,2
+
+        
+            !
+            ! 1 block, 4 elements, linear mapping
+            !
+
+                !
+                ! Dom 1
+                !
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case1_sens(iproc)%at(1) 
+                
+                if (allocated(ref_ysens)) deallocate(ref_ysens)
+                ref_ysens = [0.00057548269968843400     , &
+                             -0.00010558740080185400    , &
+                             -0.00171767620092689000    , &
+                             -0.00086817410031858600    , &
+                             0.00040060680033676700     , &
+                             -0.00057548279943503400    , &
+                             0.00010558670257565500     , &
+                             0.00171767580194049000     , &
+                             0.00086817429981178600     , &
+                             -0.00040060670059016700    , &
+                             0.00057548289918163400     , &
+                             -0.00010558709722524600    , &
+                             -0.00171767599709688000    , &
+                             -0.00086817429981178600    , &
+                             0.00040060680033676700     , &
+                             -0.00057548309867483400    , &
+                             0.00010558680232225500     , &
+                             0.00171767590168709000     , &
+                             0.00086817429981178600     , &
+                             -0.00040060660084356700      ]
+
+                @assertEqual(ref_ysens,node_sens(:,2),tol)
+
+            !
+            ! 2 block, 4 elements, linear mapping
+            !
+
+                !
+                ! Dom 1
+                !
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case2_sens(iproc)%at(1) 
+                
+                if (allocated(ref_ysens)) deallocate(ref_ysens)
+                ref_ysens = [0.00057548400073104100    , &
+                             -0.00006986329917357810   , &
+                             -0.00121710936849555000   , &
+                             -0.00057548179763222700   , &
+                             0.00006986290018717870    , &
+                             0.00121710936849554000    , &
+                             0.00057548439971744100    , &
+                             -0.00006986270069397890   , &
+                             -0.00121710936849555000   , &
+                             -0.00057548289918163400   , &
+                             0.00006986420122978560    , &
+                             0.00121710936849555000      ]
+
+                @assertEqual(ref_ysens,node_sens(:,2),tol)
+                
+                !
+                ! Dom 2
+                !
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case2_sens(iproc)%at(2) 
+                
+                !f (allocated(ref_ysens)) deallocate(ref_ysens)
+                ref_ysens = [-0.00050056661725580200   , &
+                             -0.00090389700065085500   , &
+                             0.00040060719932316600    , &
+                             0.00050056661725580200    , &
+                             0.00090389759913045400    , &
+                             -0.00040060640135036700   , &
+                             -0.00050056661725580000   , &
+                             -0.00090389550011504800   , &
+                             0.00040060690008336700    , &
+                             0.00050056661725580000    , &
+                             0.00090389820194686200    , &
+                             -0.00040060719932316600     ]
+
+                @assertEqual(ref_ysens,node_sens(:,2),tol)
+
+            !
+            ! 1 block, 2 elements, quadratic mapping
+            !
+
+                !
+                ! Dom 1
+                !
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case3_sens(iproc)%at(1) 
+                
+                ! Allocate ref vector and set it to zeros
+                if (allocated(ref_ysens)) deallocate(ref_ysens)
+                allocate(ref_ysens(size(node_sens(:,2))))
+                ref_ysens = ZERO
+
+                ! Define non-zero entries
+                ref_ysens = [0.00007036729705867110    , &
+                             0.00024292119964880500    , &
+                             -0.00001658890039224480   , &
+                             -0.00028013819996369800   , &
+                             -0.00021827610031943700   , &
+                             -0.00042842890259770000   , &
+                             -0.00012846590111137400   , &
+                             0.00010657860011198400    , &
+                             0.00008024679878926300    , &
+                             -0.00000000040332320816   , &
+                             0.00000000099746599869    , &
+                             -0.00000000050306980803   , &
+                             -0.00000000170002900646   , &
+                             0.00000000059847959921    , &
+                             -0.00000000020383000843   , &
+                             -0.00000000130104260698   , &
+                             -0.00000000070256300777   , &
+                             -0.00000000010408340856   , &
+                             -0.00007036690240908030   , &
+                             -0.00024292130373221300   , &
+                             0.00001658769909623770    , &
+                             0.00028013859895009700    , &
+                             0.00021827419646042200    , &
+                             0.00042842779671148400    , &
+                             0.00012846599652116500    , &
+                             -0.00010657960191479100   , &
+                             -0.00008024560183006460   , &
+                             0.00028146759662589500    , &
+                             0.00097168229625660400    , &
+                             -0.00006634990300236070   , &
+                             -0.00112055090033258000   , &
+                             -0.00087310230226234100   , &
+                             -0.00171371480374438000   , &
+                             -0.00051386530013769500   , &
+                             0.00042631309940532900    , &
+                             0.00032098549946485400    , &
+                             -0.00000000190385901488   , &
+                             0.00000000099746599869    , &
+                             -0.00000000130104260698   , &
+                             -0.00000000040332320816   , &
+                             0.00000000059847959921    , &
+                             0.00000000089771939882    , &
+                             -0.00000000130104260698   , &
+                             -0.00000000020383000843   , &
+                             -0.00000000040332320816   , &
+                             -0.00028146750121610400   , &
+                             -0.00097168320264962000   , &
+                             0.00006634899660934450    , &
+                             0.00112055100007918000    , &
+                             0.00087310119637612500    , &
+                             0.00171371599636677000    , &
+                             0.00051386469732128700    , &
+                             -0.00042631300399553800   , &
+                             -0.00032098590278806200   , &
+                             0.00007036619984607250    , &
+                             0.00024292029759259700    , &
+                             -0.00001658900013884470   , &
+                             -0.00028013920176650500   , &
+                             -0.00021827460412043900   , &
+                             -0.00042842910209089900   , &
+                             -0.00012846620035117400   , &
+                             0.00010657839628197600    , &
+                             0.00008024679878926300    , &
+                             -0.00000000020383000843   , &
+                             0.00000000019949319974    , &
+                             -0.00000000010408340856   , &
+                             -0.00000000050306980803   , &
+                             -0.00000000120129600711   , &
+                             -0.00000000060281640790   , &
+                             0.00000000059847959921    , &
+                             -0.00000000140078920685   , &
+                             0.00000000019949319974    , &
+                             -0.00007036750088867950   , &
+                             -0.00024292130373221300   , &
+                             0.00001658609881383110    , &
+                             0.00028013809588028900    , &
+                             0.00021827549750302900    , &
+                             0.00042842729797848400    , &
+                             0.00012846639984437400    , &
+                             -0.00010657869985858400   , &
+                             -0.00008024600081646400   ]
+                
+                
+                
+                
+
+                @assertEqual(ref_ysens,node_sens(:,2),tol)
+
+
+    
+        end do !iproc
+
+    end subroutine test_ysensitivities
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Test z-sensitivities based on the type of case 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_zsensitivities(self)
+        class(adjointx_LAD_dual_1D),  intent(inout)   :: self
+
+        real(rk),   allocatable :: node_sens(:,:)
+        real(rk),   allocatable :: ref_zsens(:)
+        real(rk)                :: tol
+        integer(ik)             :: iproc
+
+        tol = 1.e-8_rk 
+
+        !
+        ! Check serial and parallel solution
+        !
+        do iproc = 1,2
+
+        
+            !
+            ! 1 block, 4 elements, linear mapping
+            !
+
+                !
+                ! Dom 1
+                !
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case1_sens(iproc)%at(1) 
+                
+                if (allocated(ref_zsens)) deallocate(ref_zsens)
+                ref_zsens = [0.00057548289918163400     , &
+                             -0.00010558709722524600    , &
+                             -0.00171767609684348000    , &
+                             -0.00086817429981178600    , &
+                             0.00040060660084356700     , &
+                             0.00057548259994183400     , &
+                             -0.00010558730105525400    , &
+                             -0.00171767609684348000    , &
+                             -0.00086817420006518600    , &
+                             0.00040060670059016700     , &
+                             -0.00057548299892823400    , &
+                             0.00010558700181545500     , &
+                             0.00171767610118029000     , &
+                             0.00086817439955838600     , &
+                             -0.00040060670059016700    , &
+                             -0.00057548279943503400    , &
+                             0.00010558660282905500     , &
+                             0.00171767610118029000     , &
+                             0.00086817439955838600     , &
+                             -0.00040060670059016700      ]
+
+                @assertEqual(ref_zsens,node_sens(:,3),tol)
+
+            !
+            ! 2 block, 4 elements, linear mapping
+            !
+
+                !
+                ! Dom 1
+                !
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case2_sens(iproc)%at(1) 
+                
+                if (allocated(ref_zsens)) deallocate(ref_zsens)
+                ref_zsens = [0.00057548330250484200    , &
+                             -0.00006986299993377850   , &
+                             -0.00121710936849554000   , &
+                             0.00057548299892823400    , &
+                             -0.00006986159914457170   , &
+                             -0.00121710936849555000   , &
+                             -0.00057548149839242700   , &
+                             0.00006986339892017800    , &
+                             0.00121710936849555000    , &
+                             -0.00057548250019523500   , &
+                             0.00006986460021618510    , &
+                             0.00121710936849555000      ]
+
+                @assertEqual(ref_zsens,node_sens(:,3),tol)
+                
+                !
+                ! Dom 2
+                !
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case2_sens(iproc)%at(2) 
+                
+                if (allocated(ref_zsens)) deallocate(ref_zsens)
+                ref_zsens = [-0.00050056661725580100   , &
+                             -0.00090389789837025400   , &
+                             0.00040060690008336700    , &
+                             -0.00050056661725580100   , &
+                             -0.00090389670141105500   , &
+                             0.00040060690008336700    , &
+                             0.00050056661725580100    , &
+                             0.00090389800245366200    , &
+                             -0.00040060749856296600   , &
+                             0.00050056661725580100    , &
+                             0.00090389909966626100    , &
+                             -0.00040060630160376800     ]
+
+                @assertEqual(ref_zsens,node_sens(:,3),tol)
+
+            !
+            ! 1 block, 2 elements, quadratic mapping
+            !
+
+                !
+                ! Dom 1
+                !
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case3_sens(iproc)%at(1) 
+                
+                ! Allocate ref vector and set it to zeros
+                if (allocated(ref_zsens)) deallocate(ref_zsens)
+                allocate(ref_zsens(size(node_sens(:,3))))
+                ref_zsens = ZERO
+
+                ! Define non-zero entries
+                ref_zsens = [0.00007036799962167880    , &
+                             0.00024291969911299800    , &
+                             -0.00001658730010983820   , &
+                             -0.00028013620069489200   , &
+                             -0.00021827510285343800   , &
+                             -0.00042842910209089900   , &
+                             -0.00012846580136477400   , &
+                             0.00010657860011198400    , &
+                             0.00008024679878926300    , &
+                             0.00028146969997811000    , &
+                             0.00097168279932641200    , &
+                             -0.00006634880145295340   , &
+                             -0.00112055090033258000   , &
+                             -0.00087310160403614200   , &
+                             -0.00171371510298418000   , &
+                             -0.00051386420292509600   , &
+                             0.00042631349839172800    , &
+                             0.00032098549946485400    , &
+                             0.00007036839860807830    , &
+                             0.00024292059683239700    , &
+                             -0.00001658890039224480   , &
+                             -0.00028013860328690600   , &
+                             -0.00021827610031943700   , &
+                             -0.00042842850361130000   , &
+                             -0.00012846540237837500   , &
+                             0.00010657829653537600    , &
+                             0.00008024559749325590    , &
+                             0.00000000029923979961    , &
+                             0.00000000179977560633    , &
+                             -0.00000000050306980803   , &
+                             -0.00000000160028240659   , &
+                             -0.00000000040332320816   , &
+                             -0.00000000130104260698   , &
+                             0.00000000029923979961    , &
+                             -0.00000000110154940725   , &
+                             0.00000000089771939882    , &
+                             -0.00000000090205620751   , &
+                             0.00000000119695919842    , &
+                             0.00000000009974659987    , &
+                             -0.00000000110154940725   , &
+                             0.00000000069822619908    , &
+                             -0.00000000050306980803   , &
+                             0.00000000000000000000    , &
+                             0.00000000049873299934    , &
+                             -0.00000000020383000843   , &
+                             0.00000000019949319974    , &
+                             0.00000000149619899803    , &
+                             0.00000000000000000000    , &
+                             -0.00000000260208521397   , &
+                             0.00000000039898639947    , &
+                             -0.00000000130104260698   , &
+                             -0.00000000160028240659   , &
+                             -0.00000000050306980803   , &
+                             -0.00000000020383000843   , &
+                             -0.00007036800395848750   , &
+                             -0.00024292020218280600   , &
+                             0.00001658699653322990    , &
+                             0.00028013719816089000    , &
+                             0.00021827579674282800    , &
+                             0.00042842669949888500    , &
+                             0.00012846589677456600    , &
+                             -0.00010657990115459100   , &
+                             -0.00008024680312607170   , &
+                             -0.00028146940073831000   , &
+                             -0.00097168420011561900   , &
+                             0.00006634939993255260    , &
+                             0.00112055019776958000    , &
+                             0.00087310389820793900    , &
+                             0.00171371369785817000    , &
+                             0.00051386559937749400    , &
+                             -0.00042631480377114400   , &
+                             -0.00032098610228126200   , &
+                             -0.00007036740114207960   , &
+                             -0.00024292150322541300   , &
+                             0.00001658449853142450    , &
+                             0.00028013829971029700    , &
+                             0.00021827489902343000    , &
+                             0.00042842749747168400    , &
+                             0.00012846649959097300    , &
+                             -0.00010657940242159200   , &
+                             -0.00008024630005626370   ]
+                
+            
+                
+
+                @assertEqual(ref_zsens,node_sens(:,3),tol)
+
+
+    
+        end do !iproc
+
+    end subroutine test_zsensitivities
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    ! Utility for returning the index associated with a certain grid file
+    ! igrid represents the case
+    !------------------------------------------------------------------------------
+    function get_case(nelem,nblocks,mapping) result(igrid)
+        integer(ik),   intent(in)  :: nelem
+        integer(ik),   intent(in)  :: nblocks
+        character(*),  intent(in)  :: mapping
+
+        integer(ik) :: igrid
+
+
+        if (nblocks == 1 .and. trim(mapping) == "linear") then
+            igrid = 1
+        else if (nblocks == 2 .and. trim(mapping) == "linear") then
+            igrid = 2
+        else
+            igrid = 3
+        end if
+
+    end function get_case
+    !******************************************************************************
+
+
+
+
+end module integration_adjointx_1D_LAD_dual_mod

@@ -67,8 +67,6 @@ contains
 
 
         real(rk),   allocatable, dimension(:)   ::  &
-            norm_1,      norm_2,      norm_3,       &
-            norm_1_phys, norm_2_phys, norm_3_phys,  &
             weights, det_jacobian_grid
 
         real(rk),   allocatable                 ::  &
@@ -80,7 +78,9 @@ contains
             tau_21,     tau_22,     tau_23,         &
             tau_31,     tau_32,     tau_33,         &
             stress_x,   stress_y,   stress_z,       &
-            pressure
+            pressure,                               &
+            norm_1,      norm_2,      norm_3,       &
+            norm_1_phys, norm_2_phys, norm_3_phys
 
 
         call write_line('Computing Force...', io_proc=GLOBAL_MASTER)

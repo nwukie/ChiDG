@@ -87,9 +87,8 @@ contains
             dvel2_ddensity, dvel2_dmom2, &
             dvel3_ddensity, dvel3_dmom3, &
             dp_ddensity, dp_dmom1, dp_dmom2, dp_dmom3, dp_denergy, &
-            vel1_m, vel2_m, vel3_m, p_m, T_m, invdensity
+            vel1_m, vel2_m, vel3_m, p_m, T_m, invdensity, r
 
-        real(rk),   allocatable, dimension(:)   :: r
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
 
 

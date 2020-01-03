@@ -74,9 +74,7 @@ contains
         type(AD_D), dimension(:), allocatable   ::          &
             density, mom1, mom2, mom3,  density_omega,    &
             density_k, &
-            invdensity, u, v, w, flux_1, flux_2, flux_3
-
-        real(rk),   allocatable,    dimension(:)    :: r
+            invdensity, u, v, w, flux_1, flux_2, flux_3, r
 
 
         !

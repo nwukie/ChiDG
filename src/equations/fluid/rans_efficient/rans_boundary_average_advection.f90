@@ -83,12 +83,10 @@ contains
             u_m, v_m, w_m, invdensity_m, p_m, temperature_m, H_m,           &
             u_p, v_p, w_p, invdensity_p, p_p, temperature_p, H_p,           &
             flux_1_m, flux_2_m, flux_3_m,                                   &
-            flux_1_p, flux_2_p, flux_3_p
+            flux_1_p, flux_2_p, flux_3_p, r
 
         type(AD_D), allocatable, dimension(:)   ::  &
             density_nutilde_m, density_nutilde_p
-
-        real(rk), allocatable, dimension(:) :: r
 
 
 

@@ -243,7 +243,7 @@ contains
                                     mu, lambda,                                         &
                                     shear_11,shear_22,shear_33,shear_12,shear_13,shear_23)
         character(*),               intent(in)      :: coordinate_system
-        real(rk),                   intent(in)      :: r(:)
+        type(AD_D),                 intent(in)      :: r(:)
         type(AD_D),                 intent(in)      :: density(:)
         type(AD_D),                 intent(in)      :: grad1_density(:)
         type(AD_D),                 intent(in)      :: grad2_density(:)
@@ -449,7 +449,7 @@ contains
                                  mom3,   grad1_mom3,   grad2_mom3,   grad3_mom3,     &
                                  vorticity_1, vorticity_2, vorticity_3)
         character(*),               intent(in)      :: coordinate_system
-        real(rk),                   intent(in)      :: r(:)
+        type(AD_D),                 intent(in)      :: r(:)
         type(AD_D),                 intent(in)      :: density(:)
         type(AD_D),                 intent(in)      :: grad1_density(:)
         type(AD_D),                 intent(in)      :: grad2_density(:)

@@ -48,34 +48,25 @@ contains
     subroutine init(self)
         class(inlet_total_t),   intent(inout) :: self
         
-        !
         ! Set name, family
-        !
         call self%set_name("Inlet - Total")
         call self%set_family("Inlet")
 
 
-
-        !
         ! Add functions
-        !
-        call self%bcproperties%add('Total Pressure',       'Required')
-        call self%bcproperties%add('Total Temperature',    'Required')
-        !call self%bcproperties%add('Density Perturbation', 'Required')
-
-        call self%bcproperties%add('Normal-1',         'Required')
-        call self%bcproperties%add('Normal-2',         'Required')
-        call self%bcproperties%add('Normal-3',         'Required')
+        call self%bcproperties%add('Total Pressure',    'Required')
+        call self%bcproperties%add('Total Temperature', 'Required')
+        call self%bcproperties%add('Normal-1',          'Required')
+        call self%bcproperties%add('Normal-2',          'Required')
+        call self%bcproperties%add('Normal-3',          'Required')
 
 
-        !
         ! Set default values
-        !
         call self%set_fcn_option('Total Pressure',    'val', 110000._rk)
         call self%set_fcn_option('Total Temperature', 'val', 300._rk)
-        call self%set_fcn_option('Normal-1', 'val', 1._rk)
-        call self%set_fcn_option('Normal-2', 'val', 0._rk)
-        call self%set_fcn_option('Normal-3', 'val', 0._rk)
+        call self%set_fcn_option('Normal-1',          'val', 1._rk)
+        call self%set_fcn_option('Normal-2',          'val', 0._rk)
+        call self%set_fcn_option('Normal-3',          'val', 0._rk)
 
     end subroutine init
     !********************************************************************************
@@ -104,35 +95,29 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::                                      &
-            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,  p_m,                      &
-            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, p_bc,                     &
-            grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
-            grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
-            grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            u_m,    v_m,    w_m,                                                        &
-            u_bc,   v_bc,   w_bc,                                                       &
-            T_bc,   vmag2_m, vmag, f, df, dT, T, vel, veln, rminus, asp_ext, asp_int, M
+        type(AD_D), allocatable, dimension(:)   ::                                          &
+            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,  p_m,                          &
+            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, p_bc,                         &
+            grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,      &
+            grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,      &
+            grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,      &
+            u_m,    v_m,    w_m,                                                            &
+            u_bc,   v_bc,   w_bc,                                                           &
+            T_bc,   vmag2_m, vmag, f, df, dT, T, vel, veln, rminus, asp_ext, asp_int, M,    &
+            PT, TT, n1, n2, n3, nmag, alpha, r, unorm_1, unorm_2, unorm_3
 
-        real(rk),       allocatable, dimension(:)   ::  &
-            PT, TT, DRHO, n1, n2, n3, nmag, alpha, r, unorm_1, unorm_2, unorm_3
-
-
-        real(rk)    :: K0, u_axial
-            
-        integer(ik) :: ierr, igq, inewton, nmax
+        integer(ik) :: ierr
 
         logical :: converged
 
-
         ! Get boundary condition Total Temperature, Total Pressure, and normal vector
-        PT   = self%bcproperties%compute('Total Pressure',        worker%time(), worker%coords())
-        TT   = self%bcproperties%compute('Total Temperature',     worker%time(), worker%coords())
+        PT   = self%bcproperties%compute('Total Pressure',        worker%time(), worker%coords(), worker%function_info)
+        TT   = self%bcproperties%compute('Total Temperature',     worker%time(), worker%coords(), worker%function_info)
 
         ! Get user-input normal vector and normalize
-        n1 = self%bcproperties%compute('Normal-1', worker%time(), worker%coords())
-        n2 = self%bcproperties%compute('Normal-2', worker%time(), worker%coords())
-        n3 = self%bcproperties%compute('Normal-3', worker%time(), worker%coords())
+        n1 = self%bcproperties%compute('Normal-1', worker%time(), worker%coords(), worker%function_info)
+        n2 = self%bcproperties%compute('Normal-2', worker%time(), worker%coords(), worker%function_info)
+        n3 = self%bcproperties%compute('Normal-3', worker%time(), worker%coords(), worker%function_info)
 
         !   Explicit allocation to handle GCC bug:
         !       GCC/GFortran Bugzilla Bug 52162 
@@ -187,18 +172,6 @@ contains
         w_m = mom3_m/density_m
 
 
-!        ! Radial equilibrium START
-!        ! Compute normal vector
-!        K0      = 150._rk
-!        u_axial = 125._rk
-!        !alpha = atan2(K0/r,u_axial)
-!        alpha = atan2(K0/u_axial,r)
-!        
-!        n1 = ZERO
-!        n2 = sin(alpha)
-!        n3 = cos(alpha)
-!        ! Radial equilibrium END
-
         ! Compute velocity magnitude squared from interior state
         vmag2_m = (u_m*u_m) + (v_m*v_m) + (w_m*w_m)
         vmag = sqrt(vmag2_m)
@@ -216,10 +189,6 @@ contains
 
         ! Compute boundary condition density from ideal gas law
         density_bc = p_bc/(T_bc*Rgas)
-
-
-        ! Compute perturbation quantities
-        !density_bc = density_bc + drho
 
 
         ! Compute bc momentum

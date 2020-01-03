@@ -244,7 +244,7 @@ contains
     subroutine idft_eval(inreal,inimag,theta,outreal,outimag,negate,symmetric)
         type(AD_D),     intent(in)           :: inreal(:)
         type(AD_D),     intent(in)           :: inimag(:)
-        real(rk),       intent(in)           :: theta(:)
+        type(AD_D),     intent(in)           :: theta(:)
         type(AD_D),     intent(inout)        :: outreal(:)
         type(AD_D),     intent(inout)        :: outimag(:)
         logical,        intent(in), optional :: negate

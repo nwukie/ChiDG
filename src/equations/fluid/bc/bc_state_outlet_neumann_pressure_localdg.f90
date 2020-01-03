@@ -342,12 +342,9 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc, p_modes
+            u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc, p_modes, r
 
         type(AD_D)  :: p_avg
-
-        real(rk),   allocatable, dimension(:)   :: r
-            
 
         ! Compute average pressure: p_avg
         call self%compute_averages(worker,bc_comm,p_avg)
@@ -474,14 +471,10 @@ contains
             grad1_density, grad1_mom1, grad1_mom2, grad1_mom3, grad1_energy,    &
             grad2_density, grad2_mom1, grad2_mom2, grad2_mom3, grad2_energy,    &
             grad3_density, grad3_mom1, grad3_mom2, grad3_mom3, grad3_energy,    &
-            dp_ddensity, dp_dmom1, dp_dmom2, dp_dmom3, dp_denergy
-
-        real(rk),   allocatable, dimension(:)   :: r
+            dp_ddensity, dp_dmom1, dp_dmom2, dp_dmom3, dp_denergy, r
 
 
-        !
         ! Interpolate solution to quadrature nodes
-        !
         density       = worker%get_field('Density',    'value')
         mom1          = worker%get_field('Momentum-1', 'value')
         mom2          = worker%get_field('Momentum-2', 'value')
@@ -613,14 +606,12 @@ contains
 
         integer(ik) :: iface, iface_bc, idomain_l, ielement_l
 
-        real(rk),   allocatable, dimension(:) :: p_avg_user, gradn_p_user, grad1_p_user, grad2_p_user, grad3_p_user
+        type(AD_D), allocatable, dimension(:) :: p_avg_user, gradn_p_user, grad1_p_user, grad2_p_user, grad3_p_user
 
         type(AD_D)  :: delta_p
 
 
-        !
         ! Get user parameter settings
-        !
         p_avg_user   = self%bcproperties%compute('Average Pressure',         worker%time(),worker%coords())
         gradn_p_user = self%bcproperties%compute('Normal Pressure Gradient', worker%time(),worker%coords())
         grad1_p_user = gradn_p_user*worker%unit_normal(1)

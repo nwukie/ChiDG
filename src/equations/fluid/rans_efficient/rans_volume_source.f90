@@ -121,7 +121,7 @@ contains
 
         ! Inviscid/Viscous
         type(AD_D), allocatable, dimension(:) :: tau_22, source 
-        real(rk),   allocatable               :: r(:), ale_g(:), ale_Dinv(:,:,:)
+        real(rk),   allocatable               :: ale_g(:), ale_Dinv(:,:,:)
 
         ! Spalart Allmaras
         type(AD_D), allocatable, dimension(:)   ::                  &
@@ -135,7 +135,7 @@ contains
             mu_l, mu_t, lambda_l, lambda_t, nu, nutilde,            &
             dwall, chi, f_v1, f_n1, vorticity2, vorticity, vorticity_bar, vorticity_mod, r_sa, rbar, g, f_w, f_t2, &
             destruction, production, dnutilde_ddensity, dnutilde_ddensity_nutilde, grad1_nutilde, grad2_nutilde, grad3_nutilde, &
-            f_v2, invdensity, T, p
+            f_v2, invdensity, T, p, r
 
         real(rk)    :: eps, epsilon_vorticity
 

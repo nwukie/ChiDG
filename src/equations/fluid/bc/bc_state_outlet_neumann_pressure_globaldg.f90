@@ -81,10 +81,8 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc
+            u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc, r
             
-
-        real(rk),   allocatable, dimension(:) :: r
 
 
         ! Get back pressure from function.

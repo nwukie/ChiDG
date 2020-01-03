@@ -112,22 +112,18 @@ contains
             density_omega_ff, density_omega_m, density_omega_bc,              &
             grad1_density_omega_m, grad2_density_omega_m, grad3_density_omega_m, mu_m
 
-        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, u_infty, density, k_t_ff, mu_t_ff
+        type(AD_D), allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, u_infty, density, k_t_ff, mu_t_ff
         logical,    allocatable, dimension(:)   :: inflow, outflow
 
         integer(ik) :: ii
 
-
-        !
         ! Interpolate interior solution to quadrature nodes
-        !
         density_m = worker%get_field('Density',    'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
         mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
-        !
+
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / worker%coordinate('1','boundary')
         end if
@@ -135,17 +131,13 @@ contains
         u_infty = self%bcproperties%compute('Freestream Flow Speed', worker%time(), worker%coords() )
         density = self%bcproperties%compute('Freestream Density', worker%time(), worker%coords() )
         
-        !
         ! Get unit normal vector
-        !
         unorm_1 = worker%unit_normal(1)
         unorm_2 = worker%unit_normal(2)
         unorm_3 = worker%unit_normal(3)
 
 
-        !
         ! Determine which modes are inflow/outflow
-        !
         normal_momentum = mom1_m*unorm_1 + mom2_m*unorm_2 + mom3_m*unorm_3
 
         !allocate(inflow(size(unorm_1)))

@@ -98,13 +98,13 @@ contains
             dp_ddensity, dp_dmom1, dp_dmom2, dp_dmom3, dp_denergy, &
             vel1_m, vel2_m, vel3_m, p_m, T_m, invdensity, k
 
-        real(rk),   allocatable, dimension(:)   :: r, q_input
+        type(AD_D), allocatable, dimension(:)   :: r, q_input
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
         logical :: k_exists
 
 
         ! Get boundary heat flux
-        q_input = self%bcproperties%compute('Heat Flux', worker%time(), worker%coords())
+        q_input = self%bcproperties%compute('Heat Flux', worker%time(), worker%coords(), worker%function_info)
 
 
         ! Interpolate interior solution to quadrature nodes

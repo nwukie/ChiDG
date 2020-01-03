@@ -9,11 +9,6 @@ module fcn_cantilevered_beam
 
 
 
-
-
-
-
-
     !>  This function defines an analytical solution to the 2D Euler equations.
     !!  It may be used to provide initial conditions for an unsteady simulation,
     !!  as well as to compute numerical errors.

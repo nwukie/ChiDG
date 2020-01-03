@@ -3,7 +3,9 @@ module fcn_gaussian
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE
     use type_point,     only: point_t
+    use type_point_ad,  only: point_ad_t
     use type_function,  only: function_t
+    use DNAD_D
     implicit none
 
 
@@ -88,17 +90,15 @@ contains
     !!
     !----------------------------------------------------------------------------------
     impure elemental function compute(self,time,coord) result(val)
-        class(gaussian_f),  intent(inout)  :: self
-        real(rk),           intent(in)  :: time
-        type(point_t),      intent(in)  :: coord
+        class(gaussian_f),  intent(inout)   :: self
+        real(rk),           intent(in)      :: time
+        type(point_ad_t),   intent(in)      :: coord
 
-        real(rk)                        :: val
+        type(AD_D)                      :: val
 
-        
+        type(AD_D)  :: x, y, z, v_x, v_y, v_z
         integer(ik) :: fcn_dim
-        real(rk)    :: x,   y,   z, &
-                       a,   b_x, b_y, b_z, c, &
-                       v_x, v_y, v_z
+        real(rk)    :: a,   b_x, b_y, b_z, c
 
         !
         ! Get inputs and function parameters

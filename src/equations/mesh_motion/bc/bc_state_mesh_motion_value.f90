@@ -12,11 +12,6 @@ module bc_state_mesh_motion_value
 
 
 
-    !>  Extrapolation boundary condition 
-    !!      - Extrapolate interior variables to be used for calculating the boundary flux.
-    !!  
-    !!  @author Nathan A. Wukie(AFRL)
-    !!  @date   8/16/2016
     !!
     !---------------------------------------------------------------------------------------
     type, public, extends(bc_state_t) :: mesh_motion_value_t
@@ -36,33 +31,26 @@ contains
 
 
 
-    !>  Procedure for registering boundary condition options. Needs executed upon allocation.
-    !!
-    !!  @author Nathan A. Wukie(AFRL)
-    !!  @date   8/16/2016
     !!
     !------------------------------------------------------------------------------------------
     subroutine init(self)    
         class(mesh_motion_value_t),  intent(inout)   :: self
 
-        !
         ! Set name
-        !
         call self%set_name('Mesh Motion Value')
         call self%set_family('Mesh Motion')
 
 
-        !
         ! Add functions
-        !
         call self%bcproperties%add('Value1','Required')
         call self%bcproperties%add('Value2','Required')
         call self%bcproperties%add('Value3','Required')
 
-
+        ! Default values
         call self%set_fcn_option('Value1','val',ZERO)
         call self%set_fcn_option('Value2','val',ZERO)
         call self%set_fcn_option('Value3','val',ZERO)
+
     end subroutine init
     !******************************************************************************************
 
@@ -93,32 +81,12 @@ contains
         type(mpi_comm),             intent(in)      :: bc_COMM
 
         ! Equation indices
-        integer(ik)     :: iu1, iu2, iu3
-
-        integer(ik)     :: igq
-        real(rk)        :: time
-
         type(AD_D),     allocatable, dimension(:)   :: u_bc, u1_bc, du1dx_bc, du1dy_bc, du1dz_bc,  &
                                                         u2_bc, du2dx_bc, du2dy_bc, du2dz_bc,  &
-                                                        u3_bc, du3dx_bc, du3dy_bc, du3dz_bc
-
-        real(rk),     allocatable, dimension(:)   :: u_input
-        type(point_t),  allocatable, dimension(:)   :: coords
+                                                        u3_bc, du3dx_bc, du3dy_bc, du3dz_bc, u_input
 
 
-
-        !
-        ! Get equation index
-        !
-        !iu1 = prop%get_primary_field_index("grid_displacement1")
-        !iu2 = prop%get_primary_field_index("grid_displacement2")
-        !iu3 = prop%get_primary_field_index("grid_displacement3")
-
-
-
-        !
         ! Get u_m from face interior to initialize derivatives
-        !
         u1_bc    = worker%get_field('grid_displacement1','value', 'face interior')
         du1dx_bc = worker%get_field('grid_displacement1','grad1', 'face interior')
         du1dy_bc = worker%get_field('grid_displacement1','grad2', 'face interior')
@@ -138,13 +106,11 @@ contains
         !
         ! Get derivative value from boundary condition parameter
         !
-        coords = worker%coords()
-        time   = worker%time()
 
         u_bc = u1_bc
         u_bc = ZERO
         !GD1
-        u_input   = self%bcproperties%compute("Value1",time,coords)
+        u_input   = self%bcproperties%compute("Value1",worker%time(),worker%coords())
         u_bc   = u_input 
 
         !
@@ -164,7 +130,7 @@ contains
 
         !GD2
 
-        u_input   = self%bcproperties%compute("Value2",time,coords)
+        u_input   = self%bcproperties%compute("Value2",worker%time(),worker%coords())
         u_bc   = u_input 
 
 
@@ -187,7 +153,7 @@ contains
         !GD3
 
 
-        u_input   = self%bcproperties%compute("Value3",time,coords)
+        u_input   = self%bcproperties%compute("Value3",worker%time(),worker%coords())
         u_bc   = u_input 
 
 

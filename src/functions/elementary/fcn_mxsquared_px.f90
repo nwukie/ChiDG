@@ -1,39 +1,34 @@
-module fcn_ysquared
+module fcn_mxsquared_px
     use mod_kinds,      only: rk,ik
     use type_function,  only: function_t
     use type_point,     only: point_t
-    use type_point_ad,  only: point_ad_t
-    use DNAD_D
+    use mod_constants,   only: ONE
     implicit none
     private
 
 
 
-
-
-    !> y-squared function.
+    !>  x-squared function.
     !!
-    !!  \f$     f(t,\vec{x}) = y^2      \f$
+    !!  \f$     f(t,\vec{x}) = x^2  \f$
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!
-    !------------------------------------------------------------------------------------
-    type, extends(function_t), public :: ysquared_f
+    !-------------------------------------------------------------------------
+    type, extends(function_t), public :: mxsquared_px_f
 
     contains
 
         procedure   :: init
         procedure   :: compute
-        
-    end type ysquared_f
-    !************************************************************************************
+
+    end type mxsquared_px_f
+    !**************************************************************************
 
 
 
 contains
-
 
 
     !>
@@ -43,12 +38,12 @@ contains
     !!
     !-------------------------------------------------------------------------
     subroutine init(self)
-        class(ysquared_f),  intent(inout)   :: self
+        class(mxsquared_px_f),  intent(inout)   :: self
 
         !
         ! Set function name
         !
-        call self%set_name("y_squared")
+        call self%set_name("-x_squared+x")
 
 
         !
@@ -62,26 +57,24 @@ contains
 
 
 
-
     !>
-    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
     !!
     !!
-    !------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     impure elemental function compute(self,time,coord) result(val)
-        class(ysquared_f),  intent(inout)  :: self
+        class(mxsquared_px_f),  intent(inout)  :: self
         real(rk),           intent(in)  :: time
-        type(point_ad_t),   intent(in)  :: coord
+        type(point_t),      intent(in)  :: coord
 
-        type(AD_D)                        :: val
+        real(rk)                        :: val
 
-        ! f(x) = y**2
-        val = coord%c2_  *  coord%c2_
+        ! f(x) = -x**2+x
+        val = -(ONE) * coord%c1_  *  coord%c1_ + coord%c1_
 
     end function compute
-    !************************************************************************************
+    !**************************************************************************
 
 
-end module fcn_ysquared
+end module fcn_mxsquared_px

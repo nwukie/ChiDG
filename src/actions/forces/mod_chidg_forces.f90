@@ -50,16 +50,16 @@ contains
         type(element_info_t)        :: elem_info
 
         real(rk),   allocatable, dimension(:)   ::  &
-            norm_1,  norm_2,  norm_3,               &
-            unorm_1, unorm_2, unorm_3,              &
-            weights, areas
+            weights
 
         type(AD_D), allocatable, dimension(:)   ::  &
+            norm_1,  norm_2,  norm_3,               &
+            unorm_1, unorm_2, unorm_3,              &
             tau_11,     tau_12,     tau_13,         &
             tau_21,     tau_22,     tau_23,         &
             tau_31,     tau_32,     tau_33,         &
             stress_x,   stress_y,   stress_z,       &
-            pressure, normal_stress
+            pressure, normal_stress, areas
 
         type(AD_D)  :: lift, drag, force(3)
 

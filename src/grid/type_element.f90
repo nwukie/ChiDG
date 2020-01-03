@@ -15,6 +15,7 @@ module type_element
 
 
     use type_point,                 only: point_t
+    use type_point_ad,              only: point_ad_t
     use type_densevector,           only: densevector_t
     use type_function,              only: function_t
     use type_element_connectivity,  only: element_connectivity_t
@@ -222,6 +223,7 @@ module type_element
 
         ! Compute a projection of a function onto the solution basis
         procedure, public   :: project
+        procedure, public   :: differentiate_interp_coords
 
         ! Get connected face
         procedure, public   :: get_face_from_corners
@@ -2553,30 +2555,142 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   10/25/2016
     !!
+    !!  Convert real coodinates to dummy AD coordinates since fcn%compute works with
+    !!  AD coordinates
+    !!  @author Matteo Ugolotti
+    !!  @date   9/4/2018
+    !!
     !-----------------------------------------------------------------------------------------
     function project(self,fcn) result(fmodes)
         class(element_t),       intent(in)      :: self
         class(function_t),      intent(inout)   :: fcn
 
-        real(rk),       allocatable     :: fmodes(:)
-
-        type(point_t),  allocatable     :: pts(:)
-        real(rk),       allocatable     :: fvals(:), temp(:)
         real(rk)                        :: time
+        real(rk),       allocatable     :: fvals_rk(:), fmodes(:), temp(:)
+        type(AD_D),     allocatable     :: coords(:,:),fvals_ad(:)
 
+        coords = self%differentiate_interp_coords(dummy_opt=.true.)
 
         ! Call function for evaluation at quadrature nodes and multiply by quadrature weights
-        time  = 0._rk
-        fvals = fcn%compute(time,point_t(self%interp_coords)) * self%basis_s%weights_element() * self%jinv
+        time     = ZERO
+        fvals_ad = fcn%compute(time,point_ad_t(coords)) * self%basis_s%weights_element() * self%jinv
+        fvals_rk = fvals_ad%x_ad_
 
 
         ! Project
-        temp = matmul(transpose(self%basis_s%interpolator_element('Value')),fvals)
+        temp = matmul(transpose(self%basis_s%interpolator_element('Value')),fvals_rk)
         fmodes = matmul(self%invmass,temp)
+
+
+
+!        ! Call function for evaluation at quadrature nodes and multiply by quadrature weights
+!        time  = 0._rk
+!        fvals = fcn%compute(time,point_t(self%interp_coords)) * self%basis_s%weights_element() * self%jinv
+!
+!
+!        ! Project
+!        temp = matmul(transpose(self%basis_s%interpolator_element('Value')),fvals)
+!        fmodes = matmul(self%invmass,temp)
 
 
     end function project
     !*****************************************************************************************
+
+
+
+
+
+
+    !>  Return interpolation coordinate with derivatives wrt to reference nodes.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/11/2018
+    !!
+    !-------------------------------------------------------------------
+    function differentiate_interp_coords(self,dummy_opt) result(interp_coords_ad)  
+        class(element_t),               intent(in)  :: self
+        logical,        optional,       intent(in)  :: dummy_opt
+
+        type(AD_D),       allocatable :: interp_coords_ad(:,:)
+      
+        logical                 :: add_derivatives
+        integer(ik)             :: nnodes_i, inode, idir, nnodes_r, directions, &
+                                   ierr
+        real(rk),   allocatable :: interp_coords(:,:)
+        character(1)            :: direction
+        
+        
+        ! Check for dummy initialization
+        if ( (present(dummy_opt)) .and. dummy_opt ) then
+            add_derivatives = .false.
+        else
+            add_derivatives = .true.
+        end if
+        
+
+        ! Get number of support nodes and directions
+        !nnodes_r    = self%nnodes_r
+        nnodes_r    = self%nterms_c
+        directions  = 3
+        nnodes_i    = size(self%interp_coords,1)
+
+
+        ! Allocate result of differentiated coordinates 
+        allocate(interp_coords_ad(nnodes_i,directions),stat=ierr)
+        if (ierr/=0) call AllocationError
+
+
+        ! Initialize derivatives
+        do inode = 1,nnodes_i
+            do idir = 1,directions
+                if (add_derivatives) then
+                    interp_coords_ad(inode,idir) = AD_D(nnodes_r*directions)
+                else
+                    interp_coords_ad(inode,idir) = AD_D(0)
+                end if
+            end do
+        end do
+       
+        
+        ! Set real parts of the interpolation coordinates
+        interp_coords_ad = self%interp_coords
+
+
+        ! If you need also the derivatives, add them
+        if (add_derivatives) then
+
+            do inode = 1,nnodes_i
+                do idir = 1,directions
+                    
+                    write(direction, "(A1)") idir
+                    interp_coords_ad(inode,idir)%xp_ad_ = self%basis_c%get_coord_derivatives('element',direction,inode,0)
+
+                end do
+            end do
+
+        end if
+
+    end function differentiate_interp_coords
+    !*******************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

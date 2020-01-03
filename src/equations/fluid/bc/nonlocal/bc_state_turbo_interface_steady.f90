@@ -70,9 +70,6 @@ contains
         call self%bcproperties%add('Pitch A', 'Required')
         call self%bcproperties%add('Pitch B', 'Required')
 
-!        call self%bcproperties%add('Spatial Periodicity A', 'Required')
-!        call self%bcproperties%add('Spatial Periodicity A', 'Required')
-
     end subroutine init
     !********************************************************************************
 
@@ -123,7 +120,7 @@ contains
             density_grid_m, vel1_grid_m, vel2_grid_m, vel3_grid_m, pressure_grid_m, c_grid_m,                                       &
             density_grid_p, vel1_grid_p, vel2_grid_p, vel3_grid_p, pressure_grid_p, c_grid_p
 
-        real(rk), allocatable, dimension(:)   :: r
+        type(AD_D), allocatable, dimension(:)   :: r
         character(1)    :: side
 
         ! Interpolate interior solution to face quadrature nodes

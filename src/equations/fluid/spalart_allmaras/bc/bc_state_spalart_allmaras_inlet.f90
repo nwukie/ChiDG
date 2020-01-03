@@ -88,9 +88,7 @@ contains
             grad1_density_nutilde_m,                    &
             grad2_density_nutilde_m,                    &
             grad3_density_nutilde_m,                    &
-            density_m, mu_m, nu_m
-
-        real(rk),       allocatable, dimension(:)   :: nutilde_nu
+            density_m, mu_m, nu_m, nutilde_nu
 
 
         !

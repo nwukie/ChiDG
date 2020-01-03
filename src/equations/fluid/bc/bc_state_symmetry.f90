@@ -45,22 +45,9 @@ contains
     subroutine init(self)
         class(symmetry_t),   intent(inout) :: self
         
-
-        !
         ! Set operator name
-        !
         call self%set_name("Symmetry")
         call self%set_family("Symmetry")
-
-
-!        !
-!        ! Set operator equations
-!        !
-!        call self%set_equation("Density"   )
-!        call self%set_equation("Momentum-1")
-!        call self%set_equation("Momentum-2")
-!        call self%set_equation("Momentum-3")
-!        call self%set_equation("Energy"    )
 
 
     end subroutine init
@@ -93,10 +80,7 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            normal_momentum, normal_grad
-
-        real(rk), allocatable, dimension(:) :: &
-            unorm_1, unorm_2, unorm_3, r
+            normal_momentum, normal_grad, unorm_1, unorm_2, unorm_3, r
 
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
 

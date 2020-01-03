@@ -99,21 +99,18 @@ contains
         type(mpi_comm),         intent(in)      :: bc_COMM
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::                      &
-            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,            &
-            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, p_bc,     &
+        type(AD_D), allocatable, dimension(:)   ::                                      &
+            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,                            &
+            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, p_bc,                     &
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            normal_momentum, normal_velocity, R_inf, R_extrapolated,    &
-            u_bc_norm, v_bc_norm, w_bc_norm, u_bc_tang, v_bc_tang,      &
-            w_bc_tang, entropy_bc, c_bc, c_m, p_m, T_m, u_m, v_m, w_m
-
-        real(rk), allocatable, dimension(:) ::  &
+            normal_momentum, normal_velocity, R_inf, R_extrapolated,                    &
+            u_bc_norm, v_bc_norm, w_bc_norm, u_bc_tang, v_bc_tang,                      &
+            w_bc_tang, entropy_bc, c_bc, c_m, p_m, T_m, u_m, v_m, w_m,                  &
             unorm_1, unorm_2, unorm_3, r,       &
             rho_input, p_input, u_input,        &
-            v_input, w_input, T_input, c_input, &
-            u_grid, v_grid, w_grid
+            v_input, w_input, T_input, c_input
 
         logical, allocatable, dimension(:)  ::  &
             inflow, outflow
@@ -122,11 +119,11 @@ contains
         !
         ! Get boundary condition input parameters
         !
-        rho_input = self%bcproperties%compute('Density',    worker%time(), worker%coords())
-        p_input   = self%bcproperties%compute('Pressure',   worker%time(), worker%coords())
-        u_input   = self%bcproperties%compute('Velocity-1', worker%time(), worker%coords())
-        v_input   = self%bcproperties%compute('Velocity-2', worker%time(), worker%coords())
-        w_input   = self%bcproperties%compute('Velocity-3', worker%time(), worker%coords())
+        rho_input = self%bcproperties%compute('Density',    worker%time(), worker%coords(), worker%function_info)
+        p_input   = self%bcproperties%compute('Pressure',   worker%time(), worker%coords(), worker%function_info)
+        u_input   = self%bcproperties%compute('Velocity-1', worker%time(), worker%coords(), worker%function_info)
+        v_input   = self%bcproperties%compute('Velocity-2', worker%time(), worker%coords(), worker%function_info)
+        w_input   = self%bcproperties%compute('Velocity-3', worker%time(), worker%coords(), worker%function_info)
         T_input   = p_input/(rho_input*Rgas)
         c_input   = T_input ! allocate to silence error on DEBUG build
         c_input   = sqrt(gam*Rgas*T_input)

@@ -98,8 +98,7 @@ contains
             grad1_w,       grad2_w,       grad3_w,          &
             du_ddensity,   dv_ddensity,   dw_ddensity,      &
             du_dmom1,      dv_dmom2,      dw_dmom3,         &
-            invdensity
-        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, distance_field
+            invdensity, unorm_1, unorm_2, unorm_3, distance_field
         real(rk),   allocatable, dimension(:,:) :: h_sm
         real(rk) :: h(3), distance, alpha_p, y_plus
         integer(ik) :: ii, nnodes, order

@@ -77,9 +77,7 @@ contains
             density, mom1, mom2, mom3,  density_omega,    &
             density_reynolds_11, density_reynolds_22, density_reynolds_33, &
             density_reynolds_12, density_reynolds_13, density_reynolds_23, &
-            invdensity, u, v, w, flux_1, flux_2, flux_3
-
-        real(rk),   allocatable,    dimension(:)    :: r
+            invdensity, u, v, w, flux_1, flux_2, flux_3, r
 
 
         !

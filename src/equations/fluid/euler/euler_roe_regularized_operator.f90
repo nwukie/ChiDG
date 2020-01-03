@@ -38,10 +38,6 @@ module euler_roe_regularized_operator
 
 
 
-
-
-
-
 contains
 
 
@@ -121,13 +117,13 @@ contains
             vmag_p, vmag_m,                                         &
             delr,   delp,   delvmag, delu, delv, delw,              &
             lamda1, lamda2, lamda3,                                 &
-            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, upwind, ctilpre
+            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, upwind, ctilpre, &
+            norm_1,         norm_2,         norm_3,         &
+            unorm_1,        unorm_2,        unorm_3, r
 
         real(rk), allocatable, dimension(:) ::              &
-            norm_1,         norm_2,         norm_3,         &
-            unorm_1,        unorm_2,        unorm_3,        &
             unorm_1_ale,    unorm_2_ale,    unorm_3_ale,    &
-            ale_area_ratio, r, grid_vel_n
+            ale_area_ratio, grid_vel_n
 
         real(rk), allocatable, dimension(:,:) :: grid_vel
 

@@ -1,9 +1,13 @@
 module type_bcproperty_set
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ONE, dBC_DIFF
     use type_bcproperty,    only: bcproperty_t
     use type_point,         only: point_t
+    use type_point_ad,      only: point_ad_t
     use type_function,      only: function_t
+    use type_function_info, only: function_info_t
+    use DNAD_D
     implicit none
 
 
@@ -39,7 +43,11 @@ module type_bcproperty_set
         procedure   :: set_fcn_option       ! Procedure for setting options of an allocated function; bcfunction_t%fcn
 
         ! compute bcfunction%fcn
-        procedure   :: compute              ! Compute values from a bcfunction_t definition.
+        procedure   :: compute_real         ! Compute values from a bcfunction_t definition.
+        procedure   :: compute_ad           ! Compute values from a bcfunction_t definition.
+
+        ! compute generic procedure
+        generic     :: compute => compute_real,compute_ad
 
     end type bcproperty_set_t
     !********************************************************************************
@@ -66,47 +74,26 @@ contains
         type(bcproperty_t), allocatable :: temp_bcprop(:)
         integer(ik)                     :: ierr, ifcn
 
-        !
         ! Increment nfunctions
-        !
         self%nproperties_ = self%nproperties_ + 1
         ifcn = self%nproperties_
 
-
-        !
         ! Resize array storage
-        !
         allocate(temp_bcprop(self%nproperties_), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
-        !
         ! Copy previously initialized instances to new array.
-        !
-        if (self%nproperties_ > 1) then
-            temp_bcprop(1:size(self%bcprop)) = self%bcprop(1:size(self%bcprop))
-        end if
+        if (self%nproperties_ > 1) temp_bcprop(1:size(self%bcprop)) = self%bcprop(1:size(self%bcprop))
 
-
-        !
         ! Initialize new bcproperty
-        !
         temp_bcprop(ifcn)%name_  = bcprop
         temp_bcprop(ifcn)%type_  = ftype
 
-
-        !
         ! Set default function to f(t,x,y,z) = constant
-        !
         call temp_bcprop(ifcn)%set('function','constant')
 
-
-
-        !
         ! Move resized temp allocation back to self%bcprop(:)
-        !
         call move_alloc(temp_bcprop,self%bcprop)
-
 
     end subroutine add
     !********************************************************************************
@@ -133,18 +120,11 @@ contains
 
         integer(ik)     :: ind
         
-
-        !
         ! Get index of bcfcn in self%bcfcn(:)
-        !
         ind = self%get_property_index(bcprop)
 
-
-        !
         ! Set concrete function
-        !
         call self%bcprop(ind)%set('function',fcn)
-
 
     end subroutine set_fcn
     !************************************************************************************
@@ -173,28 +153,14 @@ contains
 
         integer(ik) :: ifcn
 
-        !
         ! Get index of bcfcn in self%bcfcn(:)
-        !
         ifcn = self%get_property_index(bcprop)
 
-
-        !
         ! Set function option
-        !
         call self%bcprop(ifcn)%fcn%set_option(key,val)
-
-
 
     end subroutine set_fcn_option
     !*************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -219,23 +185,15 @@ contains
         logical     :: name_matches
 
         
-        !
         ! Set known error value
-        !
         ind = 0
 
         
-        !
         ! Search through functions
-        !
         do ifcn = 1,size(self%bcprop)
 
-        
-            !
             ! Check for matching name
-            !
             name_matches = ( trim(bcprop) == trim(self%bcprop(ifcn)%get_name()) )
-
 
             if ( name_matches ) then
                 ind = ifcn
@@ -244,21 +202,11 @@ contains
 
         end do !ifcn
 
-        
-        !
         ! Check that 'ind' has been set.
-        !
         if ( ind == 0 ) call chidg_signal_one(FATAL,"bcfunction_set%get_fcn_index: function key not found",bcprop)
-
 
     end function get_property_index
     !*************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -280,17 +228,10 @@ contains
 
         character(len=:),   allocatable :: pname
 
-
         pname = self%bcprop(iprop)%get_name()
-
 
     end function get_property_name
     !*************************************************************************************
-
-
-
-
-
 
 
 
@@ -318,6 +259,43 @@ contains
 
 
 
+!    !>  Procedure to compute values from a bcfunction_t definition.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!  @param[in]  bcprop  String of the property to be computed.
+!    !!  @param[in]  time    Real value of the global time.
+!    !!  @param[in]  coord   point_t instance containing the coordinates.
+!    !!  @result     val     Real value of the function. f = f(t,coord)
+!    !!
+!    !---------------------------------------------------------------------------------------
+!    impure elemental function compute(self,bcprop,time,coord) result(val)
+!        class(bcproperty_set_t),    intent(inout)   :: self
+!        character(*),               intent(in)      :: bcprop
+!        real(rk),                   intent(in)      :: time
+!        type(point_t),              intent(in)      :: coord
+!
+!        integer(ik) :: ifcn
+!        real(rk)    :: val
+!        logical     :: fcn_set
+!
+!        ! Get index of bcfunction_t specified by bcfcn in self%bcfcn(:)
+!        ifcn = self%get_property_index(bcprop)
+!
+!        ! Check function status
+!        fcn_set = self%bcprop(ifcn)%status()
+!        
+!        ! Compute function
+!        if (fcn_set) then
+!            val = self%bcprop(ifcn)%fcn%compute(time,coord)
+!        else
+!            call chidg_signal(FATAL,"bcfunction_set%compute: bcfcn%fcn not allocated")
+!        end if
+!
+!    end function compute
+!    !***************************************************************************************
+
 
 
 
@@ -334,39 +312,46 @@ contains
     !!  @result     val     Real value of the function. f = f(t,coord)
     !!
     !---------------------------------------------------------------------------------------
-    impure elemental function compute(self,bcprop,time,coord) result(val)
+    impure elemental function compute_real(self,bcprop,time,coord_rk) result(val_rk)
         class(bcproperty_set_t),    intent(inout)   :: self
         character(*),               intent(in)      :: bcprop
         real(rk),                   intent(in)      :: time
-        type(point_t),              intent(in)      :: coord
+        type(point_t),              intent(in)      :: coord_rk
 
-        integer(ik) :: ifcn
-        real(rk)    :: val
-        logical     :: fcn_set
+        real(rk)    :: val_rk
+        
+        integer(ik)         :: ifcn
+        logical             :: fcn_set
+        type(AD_D)          :: val, x_ad, y_ad, z_ad
+        type(point_ad_t)    :: coord_ad
 
-        !
         ! Get index of bcfunction_t specified by bcfcn in self%bcfcn(:)
-        !
         ifcn = self%get_property_index(bcprop)
 
-
-        !
         ! Check function status
-        !
         fcn_set = self%bcprop(ifcn)%status()
         
+        ! Initialize dummy AD_D type for coordinates
+        ! This is because fcn%compute accepts coordinates in AD_D form
+        x_ad = AD_D(0)
+        y_ad = AD_D(0)
+        z_ad = AD_D(0)
 
+        x_ad = coord_rk%c1_
+        y_ad = coord_rk%c2_
+        z_ad = coord_rk%c3_
 
-        !
+        call coord_ad%set(x_ad,y_ad,z_ad)
+
         ! Compute function
-        !
         if (fcn_set) then
-            val = self%bcprop(ifcn)%fcn%compute(time,coord)
+            val    = self%bcprop(ifcn)%fcn%compute(time,coord_ad)
+            val_rk = val%x_ad_
         else
             call chidg_signal(FATAL,"bcfunction_set%compute: bcfcn%fcn not allocated")
         end if
 
-    end function compute
+    end function compute_real
     !***************************************************************************************
 
 
@@ -376,10 +361,65 @@ contains
 
 
 
+    !>  Procedure to compute values from a bcfunction_t definition.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/31/2018
+    !!
+    !!  @param[in]  bcprop  String of the property to be computed.
+    !!  @param[in]  time    Real value of the global time.
+    !!  @param[in]  coord   point_add_t instance containing the coordinates.
+    !!  @result     val     Real value of the function. f = f(t,coord)
+    !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/26/2018
+    !!
+    !!  Added initialization of derivatives for BC parameter sensitivities.
+    !!
+    !---------------------------------------------------------------------------------------
+    impure elemental function compute_ad(self,bcprop,time,coord,fcn_info) result(val)
+        class(bcproperty_set_t),    intent(inout)           :: self
+        character(*),               intent(in)              :: bcprop
+        real(rk),                   intent(in)              :: time
+        type(point_ad_t),           intent(in)              :: coord
+        type(function_info_t),      intent(in),    optional :: fcn_info
 
+        integer(ik) :: ifcn
+        type(AD_D)  :: val
+        logical     :: fcn_set, diff_me
 
+        ! Get index of bcfunction_t specified by bcfcn in self%bcfcn(:)
+        ifcn = self%get_property_index(bcprop)
 
+        ! Check function status
+        fcn_set = self%bcprop(ifcn)%status()
+        
+        ! Compute function
+        if (fcn_set) then
+            val = self%bcprop(ifcn)%fcn%compute(time,coord)
+        else
+            call chidg_signal(FATAL,"bcfunction_set%compute: bcfcn%fcn not allocated")
+        end if
 
+        ! Initialize derivatives if BC linearization
+        !diff_me = (present(fcn_info)          .and. &
+        !           fcn_info%dtype == dBC_DIFF .and. &
+        !           fcn_info%bc_group_match    .and. &
+        !           fcn_info%bc_param == bcprop     )
+        diff_me = .false.
+        if (present(fcn_info)) then
+            diff_me = (fcn_info%dtype == dBC_DIFF .and. &
+                       fcn_info%bc_group_match    .and. &
+                       fcn_info%bc_param == bcprop     )
+        end if
+
+        if (diff_me) then
+            val%xp_ad_ = ONE
+        end if
+
+    end function compute_ad
+    !***************************************************************************************
 
 
 

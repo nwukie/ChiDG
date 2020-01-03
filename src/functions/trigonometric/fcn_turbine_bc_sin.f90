@@ -3,7 +3,9 @@ module fcn_turbine_bc_sine
     use mod_kinds,      only: rk, ik
     use mod_constants,  only: ZERO,ONE,TWO,THREE,FOUR,FIVE,PI
     use type_point,     only: point_t
+    use type_point_ad,  only: point_ad_t
     use type_function,  only: function_t
+    use DNAD_D
     implicit none
 
 
@@ -84,12 +86,13 @@ contains
     impure elemental function compute(self,time,coord) result(val)
         class(turbine_bc_sine_f),   intent(inout)       :: self
         real(rk),                   intent(in)          :: time
-        type(point_t),              intent(in)          :: coord
+        type(point_ad_t),           intent(in)          :: coord
 
-        real(rk)                                        :: val
+        type(AD_D)                                      :: val
 
-        real(rk)        :: x,y,z,mean,amp,freq_1,freq_2,coord_1,coord_2, &
-                           phase,compute_coord_1,compute_coord_2
+        type(AD_D)      :: x,y,z, compute_coord_1, compute_coord_2
+        real(rk)        :: mean,amp,freq_1,freq_2,coord_1,coord_2,  &
+                           phase
 
         !
         ! Get inputs and function parameters
@@ -116,8 +119,12 @@ contains
         else if (coord_1 == THREE) then
             compute_coord_1 = z
         else if (coord_1 == FOUR) then
+            ! Dummy initialization of AD_D type
+            compute_coord_1 = x
             compute_coord_1 = time
         else
+            ! Dummy initialization of AD_D type
+            compute_coord_1 = x
             compute_coord_1 = ZERO
         end if
 
@@ -131,8 +138,12 @@ contains
         else if (coord_2 == THREE) then
             compute_coord_2 = z
         else if (coord_2 == FOUR) then
+            ! Dummy initialization of AD_D type
+            compute_coord_2 = x
             compute_coord_2 = time
         else
+            ! Dummy initialization of AD_D type
+            compute_coord_2 = x
             compute_coord_2 = ZERO
         end if
         

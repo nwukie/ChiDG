@@ -89,14 +89,10 @@ contains
             vorticity_1,   vorticity_2,   vorticity_3,      &
             du_ddensity,   dv_ddensity,   dw_ddensity,      &
             du_dmom1,      dv_dmom2,      dw_dmom3,         &
-            invdensity, v
-
-        real(rk),   allocatable,    dimension(:) :: r
+            invdensity, v, r
 
 
-        !
         ! Interpolate solution to quadrature nodes
-        !
         density = worker%get_field('Density',    'value')
         mom1    = worker%get_field('Momentum-1', 'value')
         mom2    = worker%get_field('Momentum-2', 'value')

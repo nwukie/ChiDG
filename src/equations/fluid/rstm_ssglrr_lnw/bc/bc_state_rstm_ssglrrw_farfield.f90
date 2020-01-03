@@ -84,9 +84,9 @@ contains
             density_reynolds_ff, density_reynolds_m, density_reynolds_bc, &
             grad1_density_reynolds_m, grad2_density_reynolds_m, grad3_density_reynolds_m, &
             density_omega_ff, density_omega_m, density_omega_bc,              &
-            grad1_density_omega_m, grad2_density_omega_m, grad3_density_omega_m, mu_m
+            grad1_density_omega_m, grad2_density_omega_m, grad3_density_omega_m, mu_m, &
+            unorm_1, unorm_2, unorm_3
 
-        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3
         logical,    allocatable, dimension(:)   :: inflow, outflow
 
         integer(ik) :: ii

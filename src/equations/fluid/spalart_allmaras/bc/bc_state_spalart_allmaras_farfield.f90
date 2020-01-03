@@ -86,7 +86,7 @@ contains
             density_nutilde_m, density_nutilde_bc,              &
             grad1_density_nutilde_m, grad2_density_nutilde_m, grad3_density_nutilde_m, mu_m, nu_m
 
-        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, nutilde_over_nu
+        type(AD_D), allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, nutilde_over_nu
         logical,    allocatable, dimension(:)   :: inflow, outflow
 
 

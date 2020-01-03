@@ -296,7 +296,8 @@ contains
 
         type(AD_D)  :: p_avg, delta_p_avg 
 
-        real(rk),   allocatable, dimension(:)   :: p_user, gradn_p, r, delta_n
+        type(AD_D), allocatable, dimension(:)   :: p_user, gradn_p, r
+        real(rk),   allocatable, dimension(:)   :: delta_n
         real(rk),   allocatable, dimension(:,:) :: ref_coords, phys_coords, phys_coords_offset
         real(rk)                                :: offset
 

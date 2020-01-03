@@ -97,14 +97,10 @@ contains
             shear_12,      shear_13,      shear_23,         &
             du_ddensity,   dv_ddensity,   dw_ddensity,      &
             du_dmom1,      dv_dmom2,      dw_dmom3,         &
-            invdensity, div_velocity, u, v
-
-        real(rk),   allocatable,    dimension(:) :: r
+            invdensity, div_velocity, u, v, r
 
 
-        !
         ! Interpolate solution to quadrature nodes
-        !
         density = worker%get_field('Density',    'value')
         mom1    = worker%get_field('Momentum-1', 'value')
         mom2    = worker%get_field('Momentum-2', 'value')
@@ -112,9 +108,7 @@ contains
         energy  = worker%get_field('Energy',     'value')
 
 
-        !
         ! Interpolate gradient to quadrature nodes
-        !
         grad1_density    = worker%get_field('Density'   , 'grad1')
         grad2_density    = worker%get_field('Density'   , 'grad2')
         grad3_density    = worker%get_field('Density'   , 'grad3')

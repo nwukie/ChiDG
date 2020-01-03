@@ -88,13 +88,11 @@ contains
             u,             v,             w,       p,       &
             dT_ddensity,   dT_dmom1,   dT_dmom2,   dT_dmom3,   dT_denergy,  &
             dp_ddensity,   dp_dmom1,   dp_dmom2,   dp_dmom3,   dp_denergy,  &
-            dke_ddensity,  dke_dmom1,  dke_dmom2,  dke_dmom3
+            dke_ddensity,  dke_dmom1,  dke_dmom2,  dke_dmom3, r
 
 
         type(AD_D), allocatable, dimension(:,:) :: grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
 
-
-        real(rk),   allocatable,    dimension(:) :: r
         real(rk)    :: const
 
 

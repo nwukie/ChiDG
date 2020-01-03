@@ -91,27 +91,14 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc, mom_norm
+            u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc, mom_norm, r, unorm1, unorm2, unorm3, p_input
             
 
-        real(rk),   allocatable, dimension(:) :: r, unorm1, unorm2, unorm3
-        real(rk),   allocatable, dimension(:) :: p_input
-
-        real(rk)    :: rho0, K0
-        integer :: igq
-
-
-
-
-        !
         ! Get back pressure from function.
-        !
-        p_input = self%bcproperties%compute('Static Pressure',worker%time(),worker%coords())
+        p_input = self%bcproperties%compute('Static Pressure',worker%time(),worker%coords(),worker%function_info)
 
 
-        !
         ! Interpolate interior solution to face quadrature nodes
-        !
         density_m = worker%get_field('Density'    , 'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1' , 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2' , 'value', 'face interior')
@@ -143,22 +130,11 @@ contains
 
 
 
-
-        !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
         end if
-
-
-
-!        K0   = 100._rk
-!        rho0 = 1.2_rk
-!        p_input = p_input(1)  +  0.5_rk*rho0*K0*K0*(ONE/(FOUR*FOUR)  -  ONE/(r*r))
-
-
 
 
         ! Extrapolate temperature and velocity

@@ -101,10 +101,7 @@ contains
             tau_11_m, tau_22_m, tau_33_m, tau_12_m, tau_13_m, tau_23_m, &
             tau_11_p, tau_22_p, tau_33_p, tau_12_p, tau_13_p, tau_23_p, &
             flux_1_m, flux_2_m, flux_3_m,                               &
-            flux_1_p, flux_2_p, flux_3_p
-
-
-        real(rk), allocatable, dimension(:) :: r
+            flux_1_p, flux_2_p, flux_3_p, r
 
 
         !

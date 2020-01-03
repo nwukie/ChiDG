@@ -5,7 +5,6 @@ module eqn_scalar_diffusion
     use type_equation_builder,          only: equation_builder_t
     use type_chidg_worker,              only: chidg_worker_t
     use type_model,                     only: model_t
-    use type_operator,                  only: operator_t
     use type_properties,                only: properties_t
     use mod_models,                     only: model_factory
     use mod_operators,                  only: operator_factory
@@ -51,30 +50,6 @@ module eqn_scalar_diffusion
 
     end type default_diffusion_model
     !******************************************************************************************
-
-
-    !>  A custom source term for the current test case
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/19/2016
-    !!
-    !!  S(x) = 4*pi*pi*sin(2*pi*x)
-    !!
-    !---------------------------------------------------------------------------------------
-    type, extends(operator_t), public :: pressure_gradient_bc_source_t
-
-
-    contains
-
-        procedure   :: init    => init_source
-        procedure   :: compute => compute_source
-
-    end type pressure_gradient_bc_source_t
-    !***************************************************************************************
-
-
-
-
 
 
 contains
@@ -138,85 +113,6 @@ contains
 
 
 
-    !-------------------------------------------------------------------------------
-    !                           Volume Source Methods
-    !-------------------------------------------------------------------------------
-
-    !>  Initialize the new volume source operator.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   10/31/2017
-    !!
-    !--------------------------------------------------------------------------------
-    subroutine init_source(self)
-        class(pressure_gradient_bc_source_t),   intent(inout)      :: self
-
-        ! Set operator name
-        call self%set_name("Pressure Gradient Source")
-
-        ! Set operator type
-        call self%set_operator_type("Volume Diffusive Flux")
-
-        ! Set operator equations
-        call self%add_primary_field("u")
-
-    end subroutine init_source
-    !********************************************************************************
-
-
-
-    !>  Implement the volume source definition.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   10/31/2017
-    !!
-    !!
-    !------------------------------------------------------------------------------------
-    subroutine compute_source(self,worker,prop)
-        class(pressure_gradient_bc_source_t),   intent(inout)   :: self
-        type(chidg_worker_t),                   intent(inout)   :: worker
-        class(properties_t),                    intent(inout)   :: prop
-
-        type(AD_D), allocatable, dimension(:)   :: source
-        real(rk),   allocatable, dimension(:)   :: r
-
-
-        !
-        ! Interpolate solution to quadrature nodes
-        !
-        source = worker%get_field('u','grad1','element')
-
-        r = worker%coordinate('1','volume')
-
-        source = (200._rk/r  +  200_rk)
-
-
-        !
-        ! Integrate volume flux
-        !
-        call worker%integrate_volume_source('u',source)
-
-
-    end subroutine compute_source
-    !***************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -258,9 +154,7 @@ contains
         ! Instantiate/Register advection model, bc source
         !
         type(default_diffusion_model)           :: diffusion_model
-        type(pressure_gradient_bc_source_t)     :: pressure_gradient_source
         call model_factory%register(diffusion_model)
-        call operator_factory%register(pressure_gradient_source)
 
 
         !
@@ -281,9 +175,6 @@ contains
                 call scalar_diffusion_eqn%add_operator("Scalar Diffusion BC Operator")
 
                 call scalar_diffusion_eqn%add_model("Default Diffusion Coefficient Model")
-
-!                call scalar_diffusion_eqn%add_operator("Pressure Gradient Source")
-
 
             case default
                 user_msg = "build scalar diffusion: I didn't recognize the construction &

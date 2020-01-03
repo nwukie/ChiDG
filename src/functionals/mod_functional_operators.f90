@@ -39,8 +39,8 @@ contains
         type(AD_D), allocatable,intent(in),  optional   :: integrand(:)
 
         type(AD_D), allocatable, dimension(:) :: density, mom_1, mom_2, mom_3, &
-                                                 u_1, u_2, u_3, vn
-        real(rk),   allocatable, dimension(:) :: unorm_1, unorm_2, unorm_3,    &
+                                                 u_1, u_2, u_3, vn,            &
+                                                 unorm_1, unorm_2, unorm_3,    &
                                                  norm_1, norm_2, norm_3, r,    &
                                                  areas
         real(rk),   allocatable, dimension(:)   :: weights
@@ -174,8 +174,7 @@ contains
         type(AD_D)                              :: integral
 
         real(rk),   allocatable, dimension(:)   :: weights
-        !type(AD_D), allocatable, dimension(:)   :: norm_1, norm_2, norm_3, dareas
-        real(rk),   allocatable, dimension(:)   :: norm_1, norm_2, norm_3, dareas
+        type(AD_D), allocatable, dimension(:)   :: norm_1, norm_2, norm_3, dareas
         
         ! Compute normals
         norm_1  = worker%normal(1)
@@ -217,8 +216,7 @@ contains
         type(AD_D), allocatable,    intent(in)          :: integrand(:)
 
         real(rk),   allocatable, dimension(:)   :: weights
-        !type(AD_D), allocatable, dimension(:)   :: jinv
-        real(rk),   allocatable, dimension(:)   :: jinv
+        type(AD_D), allocatable, dimension(:)   :: jinv
         integer(ik)                             :: idomain_l, ielement_l
         type(AD_D)                              :: integral
 
@@ -296,8 +294,8 @@ contains
         real(rk)        :: mass_sum
         
         type(AD_D), allocatable, dimension(:) :: density, mom_1, mom_2, mom_3, &
-                                                 u_1, u_2, u_3, vn, gq_vals   
-        real(rk),   allocatable, dimension(:) :: unorm_1, unorm_2, unorm_3,    &
+                                                 u_1, u_2, u_3, vn, gq_vals,   &
+                                                 unorm_1, unorm_2, unorm_3,    &
                                                  norm_1, norm_2, norm_3, r,    &
                                                  areas
         real(rk),   allocatable, dimension(:) :: weights, m_vals

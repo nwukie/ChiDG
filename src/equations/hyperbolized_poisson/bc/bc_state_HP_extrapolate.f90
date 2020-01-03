@@ -72,9 +72,7 @@ contains
             grad1_p_bc, grad2_p_bc, grad3_p_bc,     &
             grad1_q_bc, grad2_q_bc, grad3_q_bc,     &
             grad1_r_bc, grad2_r_bc, grad3_r_bc, gradu_normal, gradu_normal_old, gradu_normal_new, gradu_tang, &
-            pt_bc, qt_bc, rt_bc, mag
-
-        real(rk), allocatable, dimension(:) :: unorm_1, unorm_2, unorm_3
+            pt_bc, qt_bc, rt_bc, mag, unorm_1, unorm_2, unorm_3
                     
 
 

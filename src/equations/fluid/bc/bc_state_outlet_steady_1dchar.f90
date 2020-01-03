@@ -333,7 +333,7 @@ contains
         type(AD_D)  :: p_avg, v1_avg, v2_avg, v3_avg, vn_avg, density_avg, M_avg, c_avg, c4_1d,    &
                        ddensity_avg, dvn_avg, dp_avg
 
-        real(rk),       allocatable, dimension(:)   ::  p_user, r
+        type(AD_D),     allocatable, dimension(:)   ::  p_user, r
         integer :: i
 
         ! Get back pressure from function.

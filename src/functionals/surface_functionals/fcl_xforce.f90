@@ -131,17 +131,15 @@ contains
         type(chidg_worker_t),           intent(inout)   :: worker
         type(functional_cache_t),       intent(inout)   :: cache
 
-        type(AD_D), allocatable, dimension(:) :: pressure, tau_11, tau_22, tau_33,   &
-                                                 tau_12, tau_13, tau_23, tau_21,     &
-                                                 tau_31, tau_32, xforce_gq, stress_x,&
-                                                 stress_y, stress_z
-!                                                 norm_1, norm_2, norm_3,             &
-!                                                 unorm_1, unorm_2, unorm_3
+        type(AD_D), allocatable, dimension(:) :: pressure, tau_11, tau_22, tau_33,      &
+                                                 tau_12, tau_13, tau_23, tau_21,        &
+                                                 tau_31, tau_32, xforce_gq, stress_x,   &
+                                                 stress_y, stress_z,                    &
+                                                 norm_1, norm_2, norm_3,                &
+                                                 unorm_1, unorm_2, unorm_3
+
         type(AD_D)                            :: xforce
 
-        real(rk), allocatable, dimension(:) ::   norm_1, norm_2, norm_3,             &
-                                                 unorm_1, unorm_2, unorm_3
-        
         ! Get pressure
         pressure = worker%get_field('Pressure', 'value', 'face interior')
 

@@ -94,9 +94,7 @@ contains
             density_bc,  mom1_bc, mom2_bc, mom3_bc, energy_bc,  &
             u_bc,    v_bc,    w_bc,                             &
             H_bc,    p_bc,                                      &
-            flux_1,  flux_2,  flux_3
-
-        real(rk),   allocatable, dimension(:) :: r
+            flux_1,  flux_2,  flux_3, r
 
 
         !

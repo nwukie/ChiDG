@@ -96,10 +96,9 @@ contains
             grad1_p, grad2_p, grad3_p, pgrad1_p, pgrad2_p, pgrad3_p,    &
             av_m, av_p,                                                 &
             flux_1_m, flux_2_m, flux_3_m,                               &
-            flux_1_p, flux_2_p, flux_3_p
+            flux_1_p, flux_2_p, flux_3_p, r
 
 
-        real(rk), allocatable, dimension(:) :: r
 !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !

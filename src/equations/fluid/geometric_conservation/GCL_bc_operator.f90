@@ -87,11 +87,11 @@ contains
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            g_bar, flux_1, flux_2, flux_3, integrand
+            g_bar, flux_1, flux_2, flux_3, integrand, &
+            norm_1, norm_2, norm_3
 
         real(rk),   allocatable, dimension(:)   ::  &
-            det_jacobian_grid,   &
-            norm_1, norm_2, norm_3
+            det_jacobian_grid
 
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
 

@@ -10,6 +10,7 @@ module bc_state_outlet_giles_quasi3d_unsteady_HB
     use mod_chimera,            only: find_gq_donor, find_gq_donor_parallel
 
     use type_point,             only: point_t
+    use type_point_ad,          only: point_ad_t
     use type_mesh,              only: mesh_t
     use type_bc_state,          only: bc_state_t
     use bc_giles_HB_base,       only: giles_HB_base_t
@@ -140,7 +141,7 @@ contains
 
         type(AD_D)  :: density_avg, vel1_avg, vel2_avg, vel3_avg, pressure_avg, c_avg, c5_1d
 
-        real(rk),       allocatable, dimension(:)   :: p_user, r
+        type(AD_D),     allocatable, dimension(:)   :: p_user, r
         integer(ik) :: igq
 
 
@@ -544,7 +545,7 @@ contains
 
         type(AD_D), allocatable, dimension(:)   :: ddensity, dvel1, dvel2, dvel3, dpressure, c1_1d, c2_1d, c3_1d, c4_1d, c5_1d
 
-        real(rk),   allocatable, dimension(:)   :: p_user
+        type(AD_D), allocatable, dimension(:)   :: p_user
         integer(ik) :: iradius, itheta, itime, ntheta
 
         ! Retrieve target average pressure

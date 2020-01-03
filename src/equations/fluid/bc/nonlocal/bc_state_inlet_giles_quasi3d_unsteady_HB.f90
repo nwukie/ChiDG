@@ -148,8 +148,8 @@ contains
             density_grid_p, vel1_grid_p, vel2_grid_p, vel3_grid_p, pressure_grid_p, c_grid_p
 
 
-        real(rk),       allocatable, dimension(:)   :: r
-        real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag
+        type(AD_D),     allocatable, dimension(:)   :: r
+        type(AD_D),     allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag
         integer(ik) :: ierr, igq
 
 
@@ -668,7 +668,7 @@ contains
 
         type(AD_D), allocatable, dimension(:) :: c5_1d, ddensity, dvel1, dvel2, dvel3, dpressure
 
-        real(rk),       allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag
+        type(AD_D),     allocatable, dimension(:)   :: PT, TT, n1, n2, n3, nmag
         type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, T_avg, vmag
         integer(ik) :: ierr, iradius
 

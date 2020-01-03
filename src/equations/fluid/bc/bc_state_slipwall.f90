@@ -74,9 +74,7 @@ contains
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
             normal_momentum, wmom1_m, wmom2_m, wmom3_m, wmom1_bc, wmom2_bc, wmom3_bc,   &
-            wmom_mag_m, wmom_mag_bc
-
-        real(rk), allocatable, dimension(:) :: &
+            wmom_mag_m, wmom_mag_bc, &
             unorm_1, unorm_2, unorm_3, r
 
         real(rk),   allocatable, dimension(:,:) :: grid_velocity

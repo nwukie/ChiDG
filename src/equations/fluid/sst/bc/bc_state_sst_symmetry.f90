@@ -74,9 +74,8 @@ contains
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   :: &
-            density_m, grad1_density_m, grad2_density_m, grad3_density_m, normal_grad
-            
-        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3
+            density_m, grad1_density_m, grad2_density_m, grad3_density_m, normal_grad,  &
+            unorm_1, unorm_2, unorm_3
 
         !
         ! Get unit normal vector

@@ -91,12 +91,10 @@ contains
         type(AD_D), allocatable, dimension(:) ::    &
             density, mom1, mom2, mom3, energy,      &
             u, v, w, invdensity, H, p, T,           &
-            flux_1, flux_2, flux_3
+            flux_1, flux_2, flux_3, r
 
         type(AD_D), allocatable, dimension(:)   ::  &
             density_nutilde, nutilde
-
-        real(rk),   allocatable, dimension(:)   ::  r
 
 
         ! Interpolate boundary condition state to face quadrature nodes

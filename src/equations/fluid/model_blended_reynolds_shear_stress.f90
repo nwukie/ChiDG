@@ -123,9 +123,7 @@ contains
             du_dmom1,      dv_dmom2,      dw_dmom3,         &
             reynolds_11,    reynolds_22, reynolds_33,       &
             reynolds_12,    reynolds_13, reynolds_23,       &
-            invdensity, div_velocity, u, v
-
-        real(rk),   allocatable,    dimension(:) :: r
+            invdensity, div_velocity, u, v, r
 
         integer(ik) :: ii, nnodes
 

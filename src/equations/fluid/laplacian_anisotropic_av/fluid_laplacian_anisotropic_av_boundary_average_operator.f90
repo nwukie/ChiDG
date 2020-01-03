@@ -113,10 +113,9 @@ contains
             av2_m, av2_p,                                                 &
             av3_m, av3_p,                                                 &
             flux_1_m, flux_2_m, flux_3_m,                               &
-            flux_1_p, flux_2_p, flux_3_p
+            flux_1_p, flux_2_p, flux_3_p, r
 
 
-        real(rk), allocatable, dimension(:) :: r
         if (self%apply_boundary_ops) then
             !
             ! Account for cylindrical. Get tangential momentum from angular momentum.

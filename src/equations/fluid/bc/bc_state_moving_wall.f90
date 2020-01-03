@@ -145,9 +145,9 @@ contains
         !
         ! Get boundary condition wall velocity
         !
-        u_bc = self%bcproperties%compute('Velocity-1', worker%time(), worker%coords())
-        v_bc = self%bcproperties%compute('Velocity-2', worker%time(), worker%coords())
-        w_bc = self%bcproperties%compute('Velocity-3', worker%time(), worker%coords())
+        u_bc = self%bcproperties%compute('Velocity-1', worker%time(), worker%coords(), worker%function_info)
+        v_bc = self%bcproperties%compute('Velocity-2', worker%time(), worker%coords(), worker%function_info)
+        w_bc = self%bcproperties%compute('Velocity-3', worker%time(), worker%coords(), worker%function_info)
 
 
 

@@ -60,6 +60,7 @@ module integration_convecting_vortex_pmm_mod
     use type_model,             only: model_t
 
     use type_point,                     only: point_t
+    use type_point_ad,                  only: point_ad_t
     implicit none
 
 
@@ -548,13 +549,15 @@ contains
         real(rk), allocatable, dimension(:) :: &
             u_dg, u_analytical, x_gq, y_gq, gq_error_squared, ale_g_gq
 
+        type(AD_D), allocatable, dimension(:) :: &
+            u_analytical_ad
 
         integer(ik) :: idens, imom1, imom2, imom3, ienergy
         integer(ik) :: ielem, idom, ierr, itime, igq
         real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
 
         class(function_t),  allocatable :: fcn
-        type(point_t), allocatable, dimension(:) :: test_points
+        type(point_ad_t), allocatable, dimension(:) :: test_points
 
         associate (mesh   => data%mesh,     &
                    sdata  => data%sdata,    &
@@ -596,15 +599,17 @@ contains
                     x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     y_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,2)
                     do igq = 1, size(x_gq)
-                        test_points(igq)%c1_ = x_gq(igq)
-                        test_points(igq)%c2_ = y_gq(igq)
+                        call test_points(igq)%set(x_gq(igq),y_gq(igq),0.0_rk)
+                        !test_points(igq)%c1_ = x_gq(igq)
+                        !test_points(igq)%c2_ = y_gq(igq)
                     end do
 
                     ale_g_gq = mesh%domain(idom)%elems(ielem)%ale_g
 
                     u_analytical = ZERO*x_gq
                     call fcn%set_option('ivar',1.0_rk)
-                    u_analytical = fcn%compute(10.0_rk, test_points)
+                    u_analytical_ad = fcn%compute(10.0_rk, test_points)
+                    u_analytical    = u_analytical_ad%x_ad_
 
 
                     !
@@ -638,10 +643,10 @@ contains
                     !
                     ! Momentum-1
                     !
-
                     u_analytical = ZERO*x_gq
                     call fcn%set_option('ivar',2.0_rk)
-                    u_analytical = fcn%compute(10.0_rk, test_points)
+                    u_analytical_ad = fcn%compute(10.0_rk, test_points)
+                    u_analytical    = u_analytical_ad%x_ad_
 
                     !
                     ! Interpolate DG numerical solution
@@ -673,10 +678,10 @@ contains
                     !
                     ! Momentum-2
                     !
-
                     u_analytical = ZERO*x_gq
                     call fcn%set_option('ivar',3.0_rk)
-                    u_analytical = fcn%compute(10.0_rk, test_points)
+                    u_analytical_ad = fcn%compute(10.0_rk, test_points)
+                    u_analytical    = u_analytical_ad%x_ad_
 
                     !
                     ! Interpolate DG numerical solution
@@ -707,10 +712,10 @@ contains
                     !
                     ! Momentum-3
                     !
-
                     u_analytical = ZERO*x_gq
                     call fcn%set_option('ivar',4.0_rk)
-                    u_analytical = fcn%compute(10.0_rk, test_points)
+                    u_analytical_ad = fcn%compute(10.0_rk, test_points)
+                    u_analytical    = u_analytical_ad%x_ad_
 
                     !
                     ! Interpolate DG numerical solution
@@ -742,10 +747,11 @@ contains
                     !
                     ! Energy 
                     !
-
                     u_analytical = ZERO*x_gq
                     call fcn%set_option('ivar',5.0_rk)
-                    u_analytical = fcn%compute(10.0_rk, test_points)
+                    u_analytical_ad = fcn%compute(10.0_rk, test_points)
+                    u_analytical    = u_analytical_ad%x_ad_
+
 
                     !
                     ! Interpolate DG numerical solution

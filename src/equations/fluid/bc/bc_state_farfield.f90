@@ -45,18 +45,12 @@ contains
     subroutine init(self)
         class(farfield_t),   intent(inout) :: self
         
-
-        !
         ! Set operator name, family
-        !
         call self%set_name("Farfield")
         call self%set_family("Farfield")
 
 
-
-        !
         ! Add boundary condition parameters
-        !
         call self%bcproperties%add('Density',   'Required')
         call self%bcproperties%add('Pressure',  'Required')
         call self%bcproperties%add('Velocity-1','Required')
@@ -64,16 +58,12 @@ contains
         call self%bcproperties%add('Velocity-3','Required')
 
 
-
-        !
         ! Set default parameter values
-        !
         call self%set_fcn_option('Density',    'val', 1.2_rk)
         call self%set_fcn_option('Pressure',   'val', 100000._rk)
         call self%set_fcn_option('Velocity-1', 'val', 0._rk)
         call self%set_fcn_option('Velocity-2', 'val', 0._rk)
         call self%set_fcn_option('Velocity-3', 'val', 0._rk)
-
 
 
     end subroutine init
@@ -108,13 +98,14 @@ contains
             normal_momentum, normal_velocity, R_inf, R_extrapolated,                    &
             u_bc_norm, v_bc_norm, w_bc_norm, u_bc_tang, v_bc_tang,                      &
             w_bc_tang, entropy_bc, c_bc, c_m, p_m, T_m, u_m, v_m, w_m,                  &
-            unorm_1, unorm_2, unorm_3, r,       &
+            r,       &
             rho_input, p_input, u_input,        &
             v_input, w_input, T_input, c_input
 
+        real(rk), allocatable, dimension(:) :: unorm_1, unorm_2, unorm_3
+
         logical, allocatable, dimension(:)  ::  &
             inflow, outflow
-
 
         !
         ! Get boundary condition input parameters
@@ -127,7 +118,6 @@ contains
         T_input   = p_input/(rho_input*Rgas)
         c_input   = T_input ! allocate to silence error on DEBUG build
         c_input   = sqrt(gam*Rgas*T_input)
-
 
 
         !
@@ -147,7 +137,6 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
         end if
-
 
 
         !

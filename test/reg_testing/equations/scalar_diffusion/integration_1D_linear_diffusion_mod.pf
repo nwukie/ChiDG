@@ -248,8 +248,7 @@ contains
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
 
-        type(AD_D), allocatable, dimension(:)   :: source
-        real(rk),   allocatable, dimension(:)   :: x
+        type(AD_D), allocatable, dimension(:)   :: source, x
 
         ! Interpolate solution to quadrature nodes
         source = worker%get_field('u','grad1','element')

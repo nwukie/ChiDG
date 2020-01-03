@@ -144,11 +144,11 @@ contains
         !
         ! Get boundary condition Total Temperature, Total Pressure, and normal vector
         !
-        density_bc = self%bcproperties%compute("Density",    worker%time(), worker%coords())
-        mom1_bc    = self%bcproperties%compute("Momentum-1", worker%time(), worker%coords())
-        mom2_bc    = self%bcproperties%compute("Momentum-2", worker%time(), worker%coords())
-        mom3_bc    = self%bcproperties%compute("Momentum-3", worker%time(), worker%coords())
-        energy_bc  = self%bcproperties%compute("Energy",     worker%time(), worker%coords())
+        density_bc = self%bcproperties%compute("Density",    worker%time(), worker%coords(), worker%function_info)
+        mom1_bc    = self%bcproperties%compute("Momentum-1", worker%time(), worker%coords(), worker%function_info)
+        mom2_bc    = self%bcproperties%compute("Momentum-2", worker%time(), worker%coords(), worker%function_info)
+        mom3_bc    = self%bcproperties%compute("Momentum-3", worker%time(), worker%coords(), worker%function_info)
+        energy_bc  = self%bcproperties%compute("Energy",     worker%time(), worker%coords(), worker%function_info)
 
 
         !

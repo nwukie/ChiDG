@@ -4,12 +4,13 @@ module test__project_function_xyz__mod
     use mod_constants,              only: ZERO, FIVE, THREE, IO_DESTINATION
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
+    use type_point_ad,              only: point_ad_t
     use type_function,              only: function_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use mod_function,               only: create_function
     use mod_grid,                   only: compute_element_mappings
     use mod_polynomial,             only: polynomial_val
-    
+    use DNAD_D 
     implicit none
 
     public  :: test_project_function_xyz
@@ -135,11 +136,13 @@ contains
         class(function_t), allocatable                       :: fcn
         integer(ik), parameter      :: npt = 11
         integer(ik)                 :: ipt, iterm
-        type(point_t)               :: pts(npt), rpts(npt)
+        type(point_ad_t)            :: pts(npt), rpts(npt)
         
-        real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
+        real(rk)                    :: x(npt), y(npt), z(npt), rvals_rk(npt), fvals(npt)
         real(rk)                    :: pvals(npt,this%nterms_s)
         real(rk)                    :: ref_integral, fintegral, xi, tol, time
+        real(rk)                    :: c1, c2, c3
+        type(AD_D)                  :: rvals_ad(npt)
 
         tol = 1.e-12_rk
 
@@ -166,7 +169,8 @@ contains
             ! Compute reference values for function
             !
             time  = 0._rk
-            rvals = fcn%compute(time,pts)
+            rvals_ad = fcn%compute(time,pts)
+            rvals_rk = rvals_ad%x_ad_
     
             
             !
@@ -180,7 +184,10 @@ contains
             !
             do iterm = 1,size(fmodes)
                 do ipt = 1,npt
-                    pvals(ipt,iterm) = polynomial_val(3,size(fmodes),iterm,[rpts(ipt)%c1_,rpts(ipt)%c2_,rpts(ipt)%c3_])
+                    c1 = rpts(ipt)%c1_%x_ad_
+                    c2 = rpts(ipt)%c2_%x_ad_
+                    c3 = rpts(ipt)%c3_%x_ad_
+                    pvals(ipt,iterm) = polynomial_val(3,size(fmodes),iterm,[c1,c2,c3])
                 end do
             end do
     
@@ -206,7 +213,7 @@ contains
         @assertEqual(ref_integral,fintegral,tol)
         
         ! Test that the discrete values of the projected function match the expected values
-        @assertEqual(rvals,fvals,tol)
+        @assertEqual(rvals_rk,fvals,tol)
         
         
     end subroutine test_project__x2
@@ -229,11 +236,13 @@ contains
         class(function_t), allocatable                       :: fcn
         integer(ik), parameter      :: npt = 11
         integer(ik)                 :: ipt, iterm
-        type(point_t)               :: pts(npt), rpts(npt)
+        type(point_ad_t)            :: pts(npt), rpts(npt)
         
-        real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
+        real(rk)                    :: x(npt), y(npt), z(npt), rvals_rk(npt), fvals(npt)
         real(rk)                    :: pvals(npt,self%nterms_s)
+        real(rk)                    :: c1, c2, c3
         real(rk)                    :: ref_integral, fintegral, eta, tol, time
+        type(AD_D)                  :: rvals_ad(npt)
 
         tol = 1.e-13_rk
 
@@ -248,7 +257,6 @@ contains
         
         do ipt = 1,npt
             call pts(ipt)%set(x(ipt),y(ipt),z(ipt)) !> Cartesian points
-            
             eta = -1._rk + 2._rk * y(ipt)/(1._rk)
             call rpts(ipt)%set(ZERO,eta,ZERO)        !> Reference element points
         end do
@@ -258,7 +266,8 @@ contains
         ! Compute reference values for function
         !
         time  = 0._rk
-        rvals = fcn%compute(time,pts)
+        rvals_ad = fcn%compute(time,pts)
+        rvals_rk = rvals_ad%x_ad_
 
 
         !
@@ -272,7 +281,10 @@ contains
         !
         do iterm = 1,size(fmodes)
             do ipt = 1,npt
-                pvals(ipt,iterm) = polynomial_val(3,size(fmodes),iterm,[rpts(ipt)%c1_,rpts(ipt)%c2_,rpts(ipt)%c3_])
+                c1 = rpts(ipt)%c1_%x_ad_
+                c2 = rpts(ipt)%c2_%x_ad_
+                c3 = rpts(ipt)%c3_%x_ad_
+                pvals(ipt,iterm) = polynomial_val(3,size(fmodes),iterm,[c1,c2,c3])
             end do
         end do
 
@@ -298,7 +310,7 @@ contains
         @assertEqual(ref_integral,fintegral,tol)
         
         ! Test that the discrete values of the projected function match the expected values
-        @assertEqual(rvals,fvals,tol)
+        @assertEqual(rvals_rk,fvals,tol)
         
         
     end subroutine test_project__y2
@@ -320,11 +332,13 @@ contains
         class(function_t), allocatable                       :: fcn
         integer(ik), parameter      :: npt = 11
         integer(ik)                 :: ipt, iterm
-        type(point_t)               :: pts(npt), rpts(npt)
+        type(point_ad_t)            :: pts(npt), rpts(npt)
         
-        real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
+        real(rk)                    :: x(npt), y(npt), z(npt), rvals_rk(npt), fvals(npt)
+        real(rk)                    :: c1, c2, c3
         real(rk)                    :: pvals(npt,self%nterms_s)
         real(rk)                    :: ref_integral, fintegral, zeta, tol, time
+        type(AD_D)                  :: rvals_ad(npt)
 
         tol = 1.e-13_rk
 
@@ -349,7 +363,8 @@ contains
         ! Compute reference values for function
         !
         time  = 0._rk
-        rvals = fcn%compute(time,pts)
+        rvals_ad = fcn%compute(time,pts)
+        rvals_rk = rvals_ad%x_ad_
 
 
         !
@@ -363,7 +378,10 @@ contains
         !
         do iterm = 1,size(fmodes)
             do ipt = 1,npt
-                pvals(ipt,iterm) = polynomial_val(3,size(fmodes),iterm,[rpts(ipt)%c1_,rpts(ipt)%c2_,rpts(ipt)%c3_])
+                c1 = rpts(ipt)%c1_%x_ad_
+                c2 = rpts(ipt)%c2_%x_ad_
+                c3 = rpts(ipt)%c3_%x_ad_
+                pvals(ipt,iterm) = polynomial_val(3,size(fmodes),iterm,[c1,c2,c3])
             end do
         end do
 
@@ -389,7 +407,7 @@ contains
         @assertEqual(ref_integral,fintegral,tol)
         
         ! Test that the discrete values of the projected function match the expected values
-        @assertEqual(rvals,fvals,tol)
+        @assertEqual(rvals_rk,fvals,tol)
         
         
     end subroutine test_project__z2
@@ -413,11 +431,12 @@ contains
         real(rk)                                             :: fmodes(self%nterms_s)
         class(function_t), allocatable                       :: fcn
         integer(ik)                 :: ipt, iterm
-        type(point_t)               :: pts(npt), rpts(npt)
+        type(point_ad_t)            :: pts(npt), rpts(npt)
         
-        real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
-        real(rk)                    :: pvals(npt,self%nterms_s)
+        real(rk)                    :: x(npt), y(npt), z(npt), rvals_rk(npt), fvals(npt)
+        real(rk)                    :: pvals(npt,self%nterms_s), c1, c2, c3
         real(rk)                    :: ref_integral, fintegral, xi, eta, zeta, tol, time
+        type(AD_D)                  :: rvals_ad(npt)
 
         tol = 1.e-13_rk
 
@@ -450,7 +469,8 @@ contains
         ! Compute reference values for function
         !
         time  = 0._rk
-        rvals = fcn%compute(time,pts)
+        rvals_ad = fcn%compute(time,pts)
+        rvals_rk = rvals_ad%x_ad_
 
 
         !
@@ -464,7 +484,10 @@ contains
         !
         do iterm = 1,size(fmodes)
             do ipt = 1,npt
-                pvals(ipt,iterm) = polynomial_val(3,size(fmodes),iterm,[rpts(ipt)%c1_,rpts(ipt)%c2_,rpts(ipt)%c3_])
+                c1 = rpts(ipt)%c1_%x_ad_
+                c2 = rpts(ipt)%c2_%x_ad_
+                c3 = rpts(ipt)%c3_%x_ad_
+                pvals(ipt,iterm) = polynomial_val(3,size(fmodes),iterm,[c1,c2,c3])
             end do
         end do
 
@@ -490,7 +513,7 @@ contains
         @assertEqual(ref_integral,fintegral,tol)
         
         ! Test that the discrete values of the projected function match the expected values
-        @assertEqual(rvals,fvals,tol)
+        @assertEqual(rvals_rk,fvals,tol)
         
         
     end subroutine test_project__xyz

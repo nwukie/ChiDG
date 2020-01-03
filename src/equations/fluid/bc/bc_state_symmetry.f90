@@ -80,7 +80,9 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            normal_momentum, normal_grad, unorm_1, unorm_2, unorm_3, r
+            normal_momentum, normal_grad, r
+            
+        real(rk), allocatable, dimension(:) :: unorm_1, unorm_2, unorm_3
 
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
 

@@ -102,7 +102,8 @@ module integration_test_DIRK_mod
     use type_bc_state_group,    only: bc_state_group_t
     use type_function,          only: function_t
     use type_ivector,           only: ivector_t
-    use type_point
+    use type_point,             only: point_t
+    use type_point_ad,          only: point_ad_t
     use mod_function,           only: create_function, registered_fcns
     use mod_interpolate,        only: interpolate_element_standard
     use mod_test_utilities,     only: create_mesh_file
@@ -181,10 +182,8 @@ module integration_test_DIRK_mod
 
 
     contains
-
         procedure   :: init
         procedure   :: compute
-
     end type gaussian_test_t
     !*************************************************************************************
 
@@ -308,8 +307,8 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine compute_model(self,worker)
-        class(testing_1D_linear_adv_model_t),  intent(in)      :: self
-        type(chidg_worker_t),                       intent(inout)   :: worker
+        class(testing_1D_linear_adv_model_t),   intent(in)      :: self
+        type(chidg_worker_t),                   intent(inout)   :: worker
 
         type(AD_D), allocatable, dimension(:)   :: u, cx_model,cy_model,cz_model
 
@@ -420,11 +419,8 @@ contains
     subroutine init(self)
         class(gaussian_test_t),  intent(inout)   :: self
 
-        !
         ! Set function name
-        !
         call self%set_name("Gaussian Test")
-
 
     end subroutine init
     !**********************************************************************************
@@ -440,9 +436,10 @@ contains
     impure elemental function compute(self,time,coord) result(val)
         class(gaussian_test_t), intent(inout)   :: self
         real(rk),               intent(in)      :: time
-        type(point_t),          intent(in)      :: coord
+        type(point_ad_t),       intent(in)      :: coord
 
-        real(rk)    :: x, y, z, a, b, c, val
+        type(AD_D)  :: x, y, z, val
+        real(rk)    :: a, b, c
 
 
         !
@@ -895,6 +892,8 @@ contains
         real(rk), allocatable, dimension(:) :: &
             u_dg, u_analytical, x_gq, gq_error_squared
 
+        type(AD_D), allocatable :: interp_coords_ad(:,:), u_analytical_ad(:)
+
         type(gaussian_test_t) :: gaussian
 
         integer(ik) :: ielem, idom, ierr, itime, iu
@@ -903,60 +902,39 @@ contains
 
         associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, prop => data%eqnset(1)%prop)
 
-            !
             ! Get equation indices
-            !
             iu = prop%get_primary_field_index("u")
 
-            !
             ! Zero error accumulator
-            !
             error_squared_sum = ZERO
 
-            !
             ! Loop over elements and accumulate error
-            !
             itime = 1
             time  = ZERO
             do idom = 1,data%mesh%ndomains()
                 do ielem = 1,data%mesh%domain(idom)%nelements()
 
-
-                    !
                     ! Compute the analytical solution at the quadrature nodes
-                    !
-                    u_analytical = gaussian%compute(time,point_t(mesh%domain(idom)%elems(ielem)%interp_coords))
+                    interp_coords_ad = mesh%domain(idom)%elems(ielem)%differentiate_interp_coords(dummy_opt = .true.)
+                    u_analytical_ad  = gaussian%compute(time,point_ad_t(interp_coords_ad))
+                    u_analytical     = u_analytical_ad%x_ad_
 
-                    !
                     ! Interpolate DG numerical solution
-                    !
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,itime,'value')
 
-
-                    !
                     ! Compute error at GQ nodes
-                    !                    
                     gq_error_squared = (u_analytical - u_dg)**TWO
 
-
-                    !
                     ! Integrate error
-                    !
                     element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights_element())
 
-
-                    !
                     ! Accumulate error from each element
-                    !
                     error_squared_sum = error_squared_sum + element_error_squared
-
 
                 end do ! ielem
             end do ! idom
 
-
         end associate
-
 
         ! Reduce the total error across processors
         call MPI_AllReduce(error_squared_sum,error_squared_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)

@@ -425,9 +425,6 @@ contains
 
         ! These go together
         backends  = [string_t("native"), string_t("petsc") ]
-        !backends  = [string_t("native")]
-        !backends  = [string_t("petsc")]
-
 
         ncases = size(nelem_xi)*size(backends)
         if (allocated(params)) deallocate(params)
@@ -446,24 +443,6 @@ contains
 
             end do
         end do
-
-
-!        nelem_xi = [4,4,2]
-!        nblocks  = [1,2,1]
-!        gridtype = [ string_t("singleblock"), &
-!                     string_t("doubleblock"), &
-!                     string_t("singleblock") ]
-!        files = [ string_t("1D_linear_advection_D1_4x1x1.h5"),         &
-!                  string_t("1D_linear_advection_D2_4x1x1.h5"),         &
-!                  string_t("1D_linear_advection_D1_2x1x1.h5") ]
-!
-!        allocate(params(size(files)))
-!        do icase = 1,size(files)
-!            params(icase)%nelem_xi  = nelem_xi(icase)
-!            params(icase)%nblocks   = nblocks(icase)
-!            params(icase)%gridtype  = gridtype(icase)%str
-!            params(icase)%gridfile  = files(icase)%str
-!        end do
 
     end function getParameters
     !****************************************************************************************

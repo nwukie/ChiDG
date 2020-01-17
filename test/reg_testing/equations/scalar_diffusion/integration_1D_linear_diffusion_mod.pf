@@ -204,7 +204,7 @@ module integration_1D_linear_diffusion_mod
     end type linear_diffusion_1D
     !*******************************************************************************
 
-    type(chidg_t)               :: chidg
+    type(chidg_t)   :: chidg
 
 
 contains
@@ -684,12 +684,6 @@ contains
 
 
 
-
-
-
-
-
-
     !>  Run the simulation.
     !!
     !!      - compute the entropy error, test against the reference values.
@@ -717,19 +711,13 @@ contains
         backend_index = get_backend_index(this%backend)
 
 
-        !
         ! Run ChiDG simulation
-        !
         call chidg%run(write_initial=.false., write_final=.false.)
 
 
-
-
-        !
         ! Store the number of nonlinear iterations that the solution converged in. Problem 
         ! is linear so it should converge in 1 Newton Step. Really, just the solution 
         ! of 1 linear system of equations.
-        !
         if (this%gridtype == 'single') then
             nsteps_convergence(npes_index,grid_index,order_index,backend_index)         = chidg%nonlinear_solver%newton_iterations
         elseif (this%gridtype == 'overset') then

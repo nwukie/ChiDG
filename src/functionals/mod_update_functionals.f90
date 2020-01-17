@@ -42,7 +42,6 @@ contains
         character(:),   allocatable :: func_name
         type(timer_t)               :: comm_timer, func_timer
 
-        
         ! Initialize Chidg Worker references
         call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, data%time_manager, cache)
 
@@ -113,12 +112,14 @@ contains
 
         type(functional_cache_handler_t)     :: functional_cache_handler
         type(functional_cache_t)             :: functional_cache
-        
+
         ! Update auxiliary        
         call functional_cache_handler%update(worker,functional_cache,data,ifunc,'auxiliary',differentiate)
+        call functional_cache%release()
 
         ! Update reference        
         call functional_cache_handler%update(worker,functional_cache,data,ifunc,'reference',differentiate)
+        call functional_cache%release()
 
     end subroutine update_functional
     !********************************************************************************

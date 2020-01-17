@@ -62,6 +62,10 @@ contains
         call self%set_eval_type("Functional")
         call self%set_int_type("FACE INTEGRAL")
 
+        call self%add_integral("temperature flux")
+        call self%add_integral("mass flux")
+        call self%add_integral("MA total temperature")
+
     end subroutine init
     !******************************************************************************************
 
@@ -160,11 +164,11 @@ contains
         temperature_flux = integrate_surface_mass_weighted(worker,tot_temperature)
         
         ! Call the averaging subroutine for computing pure mass flux through the face
-        mass_flux    = integrate_surface_mass_weighted(worker)
+        mass_flux = integrate_surface_mass_weighted(worker)
      
         ! Store in cache 
-        call cache%set_value(worker%mesh,temperature_flux,'temperature flux','reference',worker%function_info) 
-        call cache%set_value(worker%mesh,mass_flux,       'mass flux',       'reference',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,temperature_flux,'temperature flux','reference',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,mass_flux,       'mass flux',       'reference',worker%function_info) 
     
     end subroutine compute_functional
     !******************************************************************************************
@@ -198,10 +202,10 @@ contains
 
         type(AD_D)        :: temperature_flux, mass_flux
         
-        temperature_flux = cache%get_value(worker%mesh,'temperature flux','reference')
-        mass_flux        = cache%get_value(worker%mesh,'mass flux',    'reference')
+        temperature_flux = cache%get_global_value(worker%mesh,'temperature flux','reference')
+        mass_flux        = cache%get_global_value(worker%mesh,'mass flux',    'reference')
 
-        call cache%set_value(worker%mesh,temperature_flux/mass_flux,'MA total temperature','reference')
+        call cache%set_global_value(worker%mesh,temperature_flux/mass_flux,'MA total temperature','reference')
 
     end subroutine finalize_functional
     !*********************************************************************************************

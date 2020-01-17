@@ -2049,7 +2049,6 @@ contains
         integer(ik)                 :: istep, nsteps, ierr, iread, ifunc
         logical                     :: option_write_initial, option_write_final
 
-
         call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
         call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
         call write_line("       Running ChiDG AdjointX calculation...       ", io_proc=GLOBAL_MASTER, delimiter='none')
@@ -2096,7 +2095,7 @@ contains
                 
                 ! Set vector q equal to the current solution vector at step istep
                 q = self%data%sdata%adjoint%q_time(istep)
-                
+
                 ! Assemble the system updating spatial linearization wrt grid-nodes
                 ! for istep solution vector
                 ! Stored in: sdata%adjointx%Rx

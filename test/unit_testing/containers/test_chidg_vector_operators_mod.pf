@@ -91,45 +91,29 @@ contains
 
         IO_DESTINATION = 'file'
 
-        !
         ! Initialize ChiDG environment
-        !
         call this%chidg%start_up('core')
 
 
-        !
         ! Set accuracy for the solution expansion
-        !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
 
 
-        !
         ! Create grid file
-        !
-        !call create_mesh('222',nodes,connectivity)
         this%file_name = 'file.h5'
         call create_mesh_file('D1 NxNxN', this%file_name, equation_sets=[string_t('Scalar Advection')], &
                                                      nelem_xi=2, nelem_eta=2, nelem_zeta=2)
 
-        
-        !
         ! Read grid file
-        !
         call this%chidg%read_mesh(this%file_name)
 
 
-
-        !
         ! Initialize solution data containers
-        !
-        call this%vec_a%init(this%chidg%data%mesh,this%chidg%data%mesh%domain(1)%ntime)
-        call this%vec_b%init(this%chidg%data%mesh,this%chidg%data%mesh%domain(1)%ntime)
+        call this%vec_a%init(this%chidg%data%mesh,this%chidg%data%mesh%domain(1)%ntime,'primal')
+        call this%vec_b%init(this%chidg%data%mesh,this%chidg%data%mesh%domain(1)%ntime,'primal')
 
 
-
-        !
         ! Set vector values
-        !
         this%vec_a%dom(1)%vecs(1)%vec = ONE
         this%vec_a%dom(1)%vecs(2)%vec = TWO
         this%vec_a%dom(1)%vecs(3)%vec = THREE

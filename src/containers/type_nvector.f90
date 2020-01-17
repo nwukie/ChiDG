@@ -332,7 +332,6 @@ contains
     !!  @author Matteo Ugolotti
     !!  @date   8/20/2018
     !!
-    !!
     !----------------------------------------------------------------------------------------
     subroutine reorder_by_index(self)
         class(nvector_t),       intent(inout)  :: self
@@ -340,26 +339,17 @@ contains
         integer(ik)                     :: inode, current_index, ierr
         type(node_t),   allocatable     :: temp_nodes(:)
 
-
-        !
         ! Allocate vectors 
-        !
         allocate(temp_nodes(self%size()),stat=ierr)
         if (ierr/=0) call AllocationError
         
-        !
         ! Create a list of all the nodes ordered by node_ID
-        !
         do inode = 1,self%size()
             temp_nodes(self%data(inode)%node_ID_l) = self%at(inode)
         end do
 
-        
-        !
         ! Move alloc to move data back to self%data and deallocate temp
-        !
         call move_alloc(FROM=temp_nodes,TO=self%data)
-        
         
     end subroutine reorder_by_index
     !****************************************************************************************

@@ -73,6 +73,8 @@ contains
         call self%set_eval_type("Functional")
         call self%set_int_type("FACE INTEGRAL")
 
+        call self%add_integral("zforce")
+
     end subroutine init
     !******************************************************************************************
 
@@ -206,7 +208,7 @@ contains
         zforce = integrate_surface(worker,zforce_gq)
 
         ! Store in cache 
-        call cache%set_value(worker%mesh,zforce,'zforce','reference',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,zforce,'zforce','reference',worker%function_info) 
 
     end subroutine compute_functional
     !******************************************************************************************

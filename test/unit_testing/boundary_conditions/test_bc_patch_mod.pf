@@ -174,34 +174,21 @@ contains
         ielement_l = 2
         iface      = 5
 
-        !
         ! THIS IS BEING TESTED
-        !
         bc_patch%idomain_g_ = idomain_g
         bc_patch%idomain_l_ = idomain_l
         patch_face = bc_patch%add_face(ielement_g, ielement_l, iface)
 
-
-        !
         ! Test first face
-        !
         @assertEqual(bc_patch%nfaces(), 1)
         @assertEqual(patch_face, 1)
 
-        !
         ! Test components were set correctly
-        !
         @assertEqual(bc_patch%idomain_g(), idomain_g)
         @assertEqual(bc_patch%idomain_l(), idomain_l)
         @assertEqual(bc_patch%ielement_g(patch_face), ielement_g)
         @assertEqual(bc_patch%ielement_l(patch_face), ielement_l)
         @assertEqual(bc_patch%iface(     patch_face), iface)
-
-
-
-
-
-
 
 
 
@@ -211,23 +198,17 @@ contains
         ielement_l = 3
         iface      = 6
 
-        !
         ! THIS IS BEING TESTED
-        !
         bc_patch%idomain_g_ = idomain_g
         bc_patch%idomain_l_ = idomain_l
         patch_face = bc_patch%add_face(ielement_g, ielement_l, iface)
 
 
-        !
         ! Test second face
-        !
         @assertEqual(bc_patch%nfaces(), 2)
         @assertEqual(patch_face, 2)
 
-        !
         ! Test components were set correctly
-        !
         @assertEqual(bc_patch%idomain_g(), idomain_g)
         @assertEqual(bc_patch%idomain_l(), idomain_l)
         @assertEqual(bc_patch%ielement_g(patch_face), ielement_g)
@@ -239,15 +220,6 @@ contains
         
     end subroutine test_bc_patch__add_face__two
     !**********************************************************************************
-
-
-
-
-
-
-
-
-
 
 
 
@@ -277,24 +249,19 @@ contains
                                        proc, patch_face, iface,  &
                                        nfields, nterms_s, ntime, &
                                        dof_start, dof_local_start, &
+                                       xdof_start, xdof_local_start, &
                                        nterms_c, coordinate_system
         real(rk)                    :: total_area
         real(rk),       allocatable :: areas(:)
         real(rk)                    :: quad_pts(4,3)
 
 
-
-        !
         ! First, add a bc_patch face so there is storage allocated for element coupling
-        !
         bc_patch%idomain_g_ = 1
         bc_patch%idomain_l_ = 1
         patch_face = bc_patch%add_face(ielement_g=1,&
                                        ielement_l=1,&
                                        iface=1)
-
-
-
 
 
 
@@ -310,6 +277,8 @@ contains
         coordinate_system = CARTESIAN
         dof_start       = 24
         dof_local_start = 24
+        xdof_start       = 24
+        xdof_local_start = 24
         total_area      = 1._rk
         areas           = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
         quad_pts(1,:) = [0.1_rk,0.2_rk,0.3_rk]
@@ -318,9 +287,7 @@ contains
         quad_pts(4,:) = [0.1_rk,0.2_rk,0.3_rk]
         proc          = 5
 
-        !
         ! THIS IS BEING TESTED
-        !
         call bc_patch%add_coupled_element(patch_face, idomain_g,    &
                                                       idomain_l,    &
                                                       ielement_g,   &
@@ -337,20 +304,18 @@ contains
                                                           coordinate_system, &
                                                           dof_start,         &
                                                           dof_local_start,   &
+                                                          xdof_start,        &
+                                                          xdof_local_start,  &
                                                           total_area,        &
                                                           areas,             &
                                                           quad_pts)
 
 
-        !
         ! Test first face
-        !
         @assertEqual(bc_patch%ncoupled_elements(patch_face), 1)
 
 
-        !
         ! Test components were set correctly
-        !
         @assertEqual(bc_patch%coupling(patch_face)%idomain_g(1),  idomain_g)
         @assertEqual(bc_patch%coupling(patch_face)%idomain_l(1),  idomain_l)
         @assertEqual(bc_patch%coupling(patch_face)%ielement_g(1), ielement_g)
@@ -360,10 +325,8 @@ contains
         @assertEqual(bc_patch%coupling(patch_face)%ntime(1),      ntime)
         @assertEqual(bc_patch%coupling(patch_face)%nterms_s(1),   nterms_s)
         @assertEqual(bc_patch%coupling(patch_face)%dof_start(1),  dof_start)
+        @assertEqual(bc_patch%coupling(patch_face)%xdof_start(1), xdof_start)
         @assertEqual(bc_patch%coupling(patch_face)%proc(1),       proc)
-
-
-
 
 
 
@@ -382,6 +345,8 @@ contains
         coordinate_system = CARTESIAN
         dof_start       = 1
         dof_local_start = 1
+        xdof_start       = 1
+        xdof_local_start = 1
         total_area      = 1._rk
         areas           = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
         quad_pts(1,:) = [0.1_rk,0.2_rk,0.3_rk]
@@ -390,9 +355,7 @@ contains
         quad_pts(4,:) = [0.1_rk,0.2_rk,0.3_rk]
         proc       = 6
 
-        !
         ! THIS IS BEING TESTED
-        !
         call bc_patch%add_coupled_element(patch_face, idomain_g,    &
                                                       idomain_l,    &
                                                       ielement_g,   &
@@ -409,18 +372,16 @@ contains
                                                           coordinate_system, &
                                                           dof_start,        &
                                                           dof_local_start,  &
+                                                          xdof_start,        &
+                                                          xdof_local_start,  &
                                                           total_area,       &
                                                           areas,            &
                                                           quad_pts)
 
-        !
         ! Test second face
-        !
         @assertEqual(bc_patch%ncoupled_elements(patch_face), 2)
 
-        !
         ! Test components were set correctly
-        !
         @assertEqual(bc_patch%coupling(patch_face)%idomain_g(2),  idomain_g)
         @assertEqual(bc_patch%coupling(patch_face)%idomain_l(2),  idomain_l)
         @assertEqual(bc_patch%coupling(patch_face)%ielement_g(2), ielement_g)
@@ -430,28 +391,12 @@ contains
         @assertEqual(bc_patch%coupling(patch_face)%ntime(2),      ntime)
         @assertEqual(bc_patch%coupling(patch_face)%nterms_s(2),   nterms_s)
         @assertEqual(bc_patch%coupling(patch_face)%dof_start(2),  dof_start)
+        @assertEqual(bc_patch%coupling(patch_face)%xdof_start(2), xdof_start)
         @assertEqual(bc_patch%coupling(patch_face)%proc(2),       proc)
-
-
 
         
     end subroutine test_bc_patch__add_coupled_element__two
     !**********************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

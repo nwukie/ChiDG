@@ -85,6 +85,11 @@ contains
         call self%set_eval_type("Functional")
         call self%set_int_type("FACE INTEGRAL")
 
+        call self%add_integral("dynamic pressure")
+        call self%add_integral("cell count")
+        call self%add_integral("zforce")
+        call self%add_integral("Fz coefficient")
+
     end subroutine init
     !******************************************************************************************
 
@@ -194,8 +199,8 @@ contains
         
          
         ! Store in cache 
-        call cache%set_value(worker%mesh,ave_dynamic_pressure,'dynamic pressure','auxiliary',worker%function_info) 
-        call cache%set_value(worker%mesh,cell_count,          'cell count',      'auxiliary',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,ave_dynamic_pressure,'dynamic pressure','auxiliary',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,cell_count,          'cell count',      'auxiliary',worker%function_info) 
 
     
     end subroutine compute_auxiliary
@@ -232,12 +237,10 @@ contains
         
         type(AD_D)        :: dynamic_pressure, cell_count
         
-        
-        dynamic_pressure = cache%get_value(worker%mesh,'dynamic pressure','auxiliary')
-        cell_count       = cache%get_value(worker%mesh,'cell count',      'auxiliary')
+        dynamic_pressure = cache%get_global_value(worker%mesh,'dynamic pressure','auxiliary')
+        cell_count       = cache%get_global_value(worker%mesh,'cell count',      'auxiliary')
 
-
-        call cache%set_value(worker%mesh,dynamic_pressure/cell_count,'dynamic pressure','auxiliary')
+        call cache%set_global_value(worker%mesh,dynamic_pressure/cell_count,'dynamic pressure','auxiliary')
 
     end subroutine finalize_auxiliary
     !*********************************************************************************************
@@ -334,7 +337,7 @@ contains
         zforce = integrate_surface(worker,zforce_gq)
 
         ! Store in cache 
-        call cache%set_value(worker%mesh,zforce,'zforce','reference',worker%function_info)
+        call cache%set_entity_value(worker%mesh,zforce,'zforce','reference',worker%function_info)
 
     end subroutine compute_functional
     !******************************************************************************************
@@ -369,10 +372,10 @@ contains
 
         type(AD_D)        :: zforce, dynamic_pressure
         
-        zforce           = cache%get_value(worker%mesh,'zforce',          'reference')
-        dynamic_pressure = cache%get_value(worker%mesh,'dynamic pressure','auxiliary')
+        zforce           = cache%get_global_value(worker%mesh,'zforce',          'reference')
+        dynamic_pressure = cache%get_global_value(worker%mesh,'dynamic pressure','auxiliary')
 
-        call cache%set_value(worker%mesh,zforce/dynamic_pressure,'Fz coefficient','reference')
+        call cache%set_global_value(worker%mesh,zforce/dynamic_pressure,'Fz coefficient','reference')
 
     end subroutine finalize_functional
     !*********************************************************************************************

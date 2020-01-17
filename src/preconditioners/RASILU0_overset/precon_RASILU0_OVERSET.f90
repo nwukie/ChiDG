@@ -134,7 +134,7 @@ contains
         !
         ! Initialize Lower-Diagonal matrix for processor-local data
         !
-        call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
+        call self%LD%init(mesh=data%mesh, storage_config='LowerDiagonal',dof_type='primal')
         self%initialized = .true.
 
  

@@ -222,7 +222,7 @@ contains
         ! Initialize update vector array
         do istage = 1, nstage
             dq(istage) = chidg_vector(trim(backend))
-            call dq(istage)%init(data%mesh, data%time_manager%ntime)
+            call dq(istage)%init(data%mesh, data%time_manager%ntime,'primal')
             call dq(istage)%set_ntime(data%time_manager%ntime)
             call dq(istage)%clear()
         end do
@@ -241,7 +241,7 @@ contains
                         select type(an => self%system)
                             type is (assemble_DIRK_t)
                                 an%q_n_stage = chidg_vector(trim(backend))
-                                call an%q_n_stage%init(data%mesh,data%time_manager%ntime)
+                                call an%q_n_stage%init(data%mesh,data%time_manager%ntime,'primal')
                                 call an%q_n_stage%set_ntime(data%time_manager%ntime)
                                 call an%q_n_stage%clear()
                         end select

@@ -28,6 +28,8 @@ module type_evaluator
         type(svector_t)     :: reference_geom           ! List of reference geometries
         type(svector_t)     :: auxiliary_geom           ! List of auxiliary geometries (if any)
         integer(ik)         :: ID                       ! Identification number
+
+        type(svector_t)     :: intermediate_integrals
         
         !type(zone_t),               :: zone_ID
 
@@ -62,6 +64,8 @@ module type_evaluator
         procedure, public   :: finalize_auxiliary
         procedure, public   :: store_value 
         procedure, public   :: store_deriv
+
+        procedure, public   :: add_integral
         
 
     end type evaluator_t
@@ -612,6 +616,29 @@ contains
 
     end function store_deriv
     !*********************************************************************************************
+
+
+
+
+
+
+
+    !>  Add intermediate integral to the functional. This will trigger allocation in the
+    !!  integral_cache.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/16/2020
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine add_integral(self,integral_name)
+        class(evaluator_t), intent(inout)   :: self
+        character(*),       intent(in)      :: integral_name
+
+        call self%intermediate_integrals%push_back_unique(string_t(trim(integral_name)))
+
+    end subroutine add_integral
+    !*********************************************************************************************
+
 
 
 end module type_evaluator

@@ -30,6 +30,7 @@ module type_element_coupling_data
         integer(ik) :: recv_domain  = NO_ID
         integer(ik) :: recv_element = NO_ID
         integer(ik) :: recv_dof     = NO_ID
+        integer(ik) :: recv_xdof    = NO_ID
 
         
         ! Element data
@@ -38,8 +39,10 @@ module type_element_coupling_data
         integer(ik)                 :: ntime       = 0
         integer(ik)                 :: nterms_s    = 0
         integer(ik)                 :: nnodes_r    = 0
-        integer(ik)                 :: dof_start   = 0
-        integer(ik)                 :: dof_local_start   = 0
+        integer(ik)                 :: dof_start        = 0
+        integer(ik)                 :: dof_local_start  = 0
+        integer(ik)                 :: xdof_start       = 0
+        integer(ik)                 :: xdof_local_start = 0
         real(rk)                    :: total_area  = ZERO
         real(rk),       allocatable :: areas(:)
         type(point_t),  allocatable :: quad_pts(:)
@@ -96,17 +99,19 @@ contains
     !!
     !!
     !----------------------------------------------------------------------
-    subroutine set_recv(self,recv_comm,recv_domain,recv_element,recv_dof)
+    subroutine set_recv(self,recv_comm,recv_domain,recv_element,recv_dof,recv_xdof)
         class(element_coupling_data_t), intent(inout)   :: self
         integer(ik),                    intent(in)      :: recv_comm
         integer(ik),                    intent(in)      :: recv_domain
         integer(ik),                    intent(in)      :: recv_element
         integer(ik),                    intent(in)      :: recv_dof
+        integer(ik),                    intent(in)      :: recv_xdof
 
         self%recv_comm    = recv_comm
         self%recv_domain  = recv_domain
         self%recv_element = recv_element
         self%recv_dof     = recv_dof
+        self%recv_xdof    = recv_xdof
 
     end subroutine set_recv
     !**********************************************************************
@@ -123,7 +128,7 @@ contains
     !!  @date   4/18/2017
     !!
     !----------------------------------------------------------------------
-    subroutine set_data(self,nfields,ntime,nterms_s,nnodes_r,coordinate_system,dof_start,dof_local_start,total_area,areas,quad_pts)
+    subroutine set_data(self,nfields,ntime,nterms_s,nnodes_r,coordinate_system,dof_start,dof_local_start,xdof_start,xdof_local_start,total_area,areas,quad_pts)
         class(element_coupling_data_t), intent(inout)   :: self
         integer(ik),                    intent(in)      :: nfields
         integer(ik),                    intent(in)      :: ntime
@@ -132,6 +137,8 @@ contains
         integer(ik),                    intent(in)      :: coordinate_system
         integer(ik),                    intent(in)      :: dof_start
         integer(ik),                    intent(in)      :: dof_local_start
+        integer(ik),                    intent(in)      :: xdof_start
+        integer(ik),                    intent(in)      :: xdof_local_start
         real(rk),                       intent(in)      :: total_area
         real(rk),                       intent(in)      :: areas(:)
         type(point_t),                  intent(in)      :: quad_pts(:)
@@ -143,6 +150,8 @@ contains
         self%coordinate_system = coordinate_system
         self%dof_start         = dof_start
         self%dof_local_start   = dof_local_start
+        self%xdof_start        = xdof_start
+        self%xdof_local_start  = xdof_local_start
         self%total_area        = total_area
         self%areas             = areas
         self%quad_pts          = quad_pts

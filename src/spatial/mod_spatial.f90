@@ -162,10 +162,14 @@ contains
 
 
         call data%sdata%rhs%assemble()
-        if (differentiate == dD_DIFF .or. &
-            differentiate == dQ_DIFF .or. &
-            differentiate == dX_DIFF .or. &
-            differentiate == dBC_DIFF) call data%sdata%lhs%assemble()
+        !if (differentiate == dD_DIFF .or. &
+        !    differentiate == dQ_DIFF .or. &
+        !    differentiate == dX_DIFF .or. &
+        !    differentiate == dBC_DIFF) call data%sdata%lhs%assemble()
+        if (differentiate == dQ_DIFF)  call data%sdata%lhs%assemble()
+        if (differentiate == dD_DIFF)  call data%sdata%adjoint%Rd(1)%assemble()
+        if (differentiate == dX_DIFF)  call data%sdata%adjointx%Rx%assemble()
+        if (differentiate == dBC_DIFF) call data%sdata%adjointbc%Ra%assemble()
 
         ! Synchronize
         call MPI_Barrier(ChiDG_COMM,ierr)

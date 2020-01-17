@@ -724,7 +724,11 @@ contains
             call timer_comm%stop()
             call timer_blas%start()
 
-            res = x
+            if (present(res_init)) then
+                res = res_init
+            else
+                res = x
+            end if
 
             call MatMultTranspose(A%wrapped_petsc_matrix%petsc_matrix,x%wrapped_petsc_vector%petsc_vector,res%wrapped_petsc_vector%petsc_vector,perr)
             if (perr /= 0) call chidg_signal(FATAL,'chidg_mv: error calling petsc MatMultTranspose.')

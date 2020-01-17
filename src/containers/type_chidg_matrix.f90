@@ -44,9 +44,10 @@ module type_chidg_matrix
         type(domain_matrix_t), allocatable    :: dom(:) ! Array of domain-matrices. One for each domain
 
         ! Initialization and Math flags
-        logical     :: local_initialized = .false.      ! Has the matrix processor-local data been initialized
-        logical     :: recv_initialized  = .false.      ! Has matrix been initialized with information about chidg_vector%recv
-        logical     :: transposed        = .false.
+        logical                     :: local_initialized = .false.      ! Has the matrix processor-local data been initialized
+        logical                     :: recv_initialized  = .false.      ! Has matrix been initialized with information about chidg_vector%recv
+        logical                     :: transposed        = .false.
+        character(:),   allocatable :: dof_type
 
 
         ! backend dynamic procedures
@@ -64,7 +65,7 @@ module type_chidg_matrix
 
 
         ! Stamp for uniqueness
-        integer     :: stamp(8) = NO_ID                 ! Stamp from date_and_time that gets updated when store routines are called
+        integer :: stamp(8) = NO_ID     ! Stamp from date_and_time that gets updated when store routines are called
 
     contains
 
@@ -86,12 +87,13 @@ module type_chidg_matrix
 
 
     interface 
-        subroutine init_interface(self,mesh,mtype)
+        subroutine init_interface(self,mesh,storage_config,dof_type)
             import chidg_matrix_t
             import mesh_t
             class(chidg_matrix_t),  intent(inout)   :: self
             type(mesh_t),           intent(in)      :: mesh
-            character(*),           intent(in)      :: mtype
+            character(*),           intent(in)      :: storage_config
+            character(*),           intent(in)      :: dof_type
         end subroutine init_interface
     end interface
 
@@ -216,10 +218,11 @@ contains
     !!  @date   2/1/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_init(self,mesh,mtype)
+    subroutine chidg_init(self,mesh,storage_config,dof_type)
         class(chidg_matrix_t),  intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh
-        character(*),           intent(in)      :: mtype
+        character(*),           intent(in)      :: storage_config
+        character(*),           intent(in)      :: dof_type
 
         integer(ik) :: ierr, ndomains, idom
 
@@ -234,12 +237,13 @@ contains
 
         ! Call initialization procedure for each domain_matrix_t
         do idom = 1,ndomains
-             call self%dom(idom)%init(mesh,idom,mtype=mtype)
+             call self%dom(idom)%init(mesh,idom,mtype=storage_config)
         end do
 
         ! Set flags
         self%transposed = .false.
         self%local_initialized = .true.
+        self%dof_type = dof_type
 
     end subroutine chidg_init
     !******************************************************************************************
@@ -263,10 +267,7 @@ contains
                        drecv_g, erecv_g, recv_domain, recv_elem, imat
         logical     :: local_multiply, parallel_multiply, match_found
 
-        
-        !
         ! Loop through INTERIOR coupling and look for parallel multiply
-        !
         do idom = 1,size(self%dom)
             do ielem = 1,size(self%dom(idom)%lblks,1)
                 do itime = 1,size(self%dom(idom)%lblks,2)
@@ -280,18 +281,14 @@ contains
 
 
                         if ( parallel_multiply ) then
-                            !
+
                             ! Get information about element we need to multiply with
-                            !
                             dparent_g   = self%dom(idom)%lblks(ielem,itime)%dparent_g(imat)
                             eparent_g   = self%dom(idom)%lblks(ielem,itime)%eparent_g(imat)
                             parent_proc = self%dom(idom)%lblks(ielem,itime)%parent_proc(imat)
 
 
-
-                            !
                             ! Loop through chidg_vector%recv to find match
-                            !
                             match_found = .false.
                             do icomm = 1,size(x%recv%comm)
 
@@ -321,11 +318,7 @@ contains
 
                             if (.not. match_found) call chidg_signal(FATAL,"chidg_matrix%init_recv: no matching recv element found in vector")
 
-
-
                         end if
-
-
 
                     end do !imat
                 end do !itime
@@ -335,14 +328,7 @@ contains
 
 
 
-
-
-
-
-
-        !
         ! Loop through CHIMERA coupling and look for parallel multiply
-        !
         do idom = 1,size(self%dom)
 
             if (allocated(self%dom(idom)%chi_blks)) then
@@ -358,18 +344,14 @@ contains
 
 
                             if ( parallel_multiply ) then
-                                !
+
                                 ! Get information about element we need to multiply with
-                                !
                                 dparent_g   = self%dom(idom)%chi_blks(ielem,itime)%dparent_g(imat)
                                 eparent_g   = self%dom(idom)%chi_blks(ielem,itime)%eparent_g(imat)
                                 parent_proc = self%dom(idom)%chi_blks(ielem,itime)%parent_proc(imat)
 
 
-
-                                !
                                 ! Loop through chidg_vector%recv to find match
-                                !
                                 match_found = .false.
                                 do icomm = 1,size(x%recv%comm)
 
@@ -425,10 +407,7 @@ contains
 
 
 
-
-        !
         ! Loop through BOUNDARY coupling and look for parallel multiply
-        !
         do idom = 1,size(self%dom)
 
             if (allocated(self%dom(idom)%bc_blks)) then
@@ -444,18 +423,13 @@ contains
 
 
                             if ( parallel_multiply ) then
-                                !
                                 ! Get information about element we need to multiply with
-                                !
                                 dparent_g   = self%dom(idom)%bc_blks(ielem,itime)%dparent_g(imat)
                                 eparent_g   = self%dom(idom)%bc_blks(ielem,itime)%eparent_g(imat)
                                 parent_proc = self%dom(idom)%bc_blks(ielem,itime)%parent_proc(imat)
 
 
-
-                                !
                                 ! Loop through chidg_vector%recv to find match
-                                !
                                 match_found = .false.
                                 do icomm = 1,size(x%recv%comm)
 
@@ -509,9 +483,7 @@ contains
 
 
 
-        !
         ! Loop through Harmonic Balance coupling and look for parallel multiply
-        !
         do idom = 1,size(self%dom)
 
             if (allocated(self%dom(idom)%hb_blks)) then
@@ -526,17 +498,14 @@ contains
                             parallel_multiply = ( matrix_proc /= vector_proc )
 
                             if ( parallel_multiply ) then
-                                !
+
                                 ! Get information about element we need to multiply with
-                                !
                                 dparent_g   = self%dom(idom)%hb_blks(ielem,itime)%dparent_g(imat)
                                 eparent_g   = self%dom(idom)%hb_blks(ielem,itime)%eparent_g(imat)
                                 parent_proc = self%dom(idom)%hb_blks(ielem,itime)%parent_proc(imat)
 
 
-                                !
                                 ! Loop through chidg_vector%recv to find match
-                                !
                                 match_found = .false.
                                 do icomm = 1,size(x%recv%comm)
                                     comm_proc = x%recv%comm(icomm)%proc
@@ -943,15 +912,16 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine petsc_init(self,mesh,mtype)
+    subroutine petsc_init(self,mesh,storage_config,dof_type)
         class(chidg_matrix_t),  intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh
-        character(*),           intent(in)      :: mtype
+        character(*),           intent(in)      :: storage_config
+        character(*),           intent(in)      :: dof_type
 
         integer(ik)     :: ndomains, idom, ielem
         PetscErrorCode  :: ierr
         PetscInt        :: nlocal_rows, nlocal_cols, nglobal_rows, nglobal_cols,    &
-                           dof_per_element, nlocal_coupling, nparallel_coupling,    &
+                           coupled_dofs_per_element_dof, nlocal_coupling, nparallel_coupling,    &
                            aij_nnonzeros_per_row_local, aij_nnonzeros_per_row_parallel
 
         ! Allocate matrix wrapper
@@ -964,28 +934,42 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error creating PETSc matrix.')
 
 
-
-        !
         ! Set matrix size
-        !
         !---------------------------------------------
+        select case (trim(dof_type))
+            case('primal')
+                ! Compute proc-local degress-of-freedom
+                nlocal_rows = 0
+                nlocal_cols = 0
+                do idom = 1,mesh%ndomains()
+                    do ielem = 1,mesh%domain(idom)%nelements()
+                        nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nterms_s * mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%ntime)
+                        nlocal_cols = nlocal_cols + (mesh%domain(idom)%elems(ielem)%nterms_s * mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%ntime)
+                    end do !ielem
+                end do !idom
+                
+            case('coordinate')
+                ! Compute proc-local degress-of-freedom
+                nlocal_rows = 0
+                nlocal_cols = 0
+                do idom = 1,mesh%ndomains()
+                    do ielem = 1,mesh%domain(idom)%nelements()
+                        nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nterms_s * mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%ntime)
+                        nlocal_cols = nlocal_cols + (mesh%domain(idom)%elems(ielem)%nterms_c * 3                                      * mesh%domain(idom)%elems(ielem)%ntime)
+                    end do !ielem
+                end do !idom
+                
+            case default
+                call chidg_signal_one(FATAL,"chidg_matrix%petsc_init: invalid input for 'dof_type'.",trim(dof_type))
 
-        ! Compute proc-local degress-of-freedom
-        nlocal_rows = 0
-        do idom = 1,mesh%ndomains()
-            do ielem = 1,mesh%domain(idom)%nelements()
-                nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nterms_s * mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%ntime)
-            end do !ielem
-        end do !idom
+        end select
 
         ! Compute global degrees-of-freedom via reduction
         call MPI_AllReduce(nlocal_rows,nglobal_rows,1,MPI_INTEGER4,MPI_SUM,ChiDG_COMM,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error reducing global degrees-of-freedom.')
-        
 
-        nlocal_cols  = nlocal_rows ! local partition is square
-        nglobal_cols = nglobal_rows
-
+        call MPI_AllReduce(nlocal_cols,nglobal_cols,1,MPI_INTEGER4,MPI_SUM,ChiDG_COMM,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error reducing global degrees-of-freedom.')
 
         call MatSetSizes(self%wrapped_petsc_matrix%petsc_matrix,nlocal_rows,nlocal_cols,nglobal_rows,nglobal_cols,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting up PETSc matrix sizes.')
@@ -993,41 +977,65 @@ contains
 
 
 
-        ! Set matrix type
-!        call MatSetType(self%petsc_matrix, 'aij', ierr)
-        call MatSetType(self%wrapped_petsc_matrix%petsc_matrix, 'baij', ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting PETSc matrix type.')
-
-
 
         ! Preallocation
-        if (mesh%ndomains() < 1) then
-            dof_per_element = 1
-        else
-            dof_per_element = mesh%domain(1)%elems(1)%nterms_s * mesh%domain(1)%elems(1)%nfields * mesh%domain(1)%elems(1)%ntime
-        end if
+        select case (trim(dof_type))
+            case('primal')
+                if (mesh%ndomains() < 1) then
+                    coupled_dofs_per_element_dof = 1
+                else
+                    coupled_dofs_per_element_dof = mesh%domain(1)%elems(1)%nterms_s * mesh%domain(1)%elems(1)%nfields * mesh%domain(1)%elems(1)%ntime
+                end if
+
+            case('coordinate')
+                if (mesh%ndomains() < 1) then
+                    coupled_dofs_per_element_dof = 1
+                else
+                    coupled_dofs_per_element_dof = mesh%domain(1)%elems(1)%nterms_c * 3                               * mesh%domain(1)%elems(1)%ntime
+                end if
+            case default
+                call chidg_signal_one(FATAL,"chidg_matrix%petsc_init: invalid input for 'dof_type'.",trim(dof_type))
+        end select
+
+
         nlocal_coupling = 7
         nparallel_coupling = 7
 
-        aij_nnonzeros_per_row_local    = nlocal_coupling    * dof_per_element
-        aij_nnonzeros_per_row_parallel = nparallel_coupling * dof_per_element
+        ! Set matrix type
+        select case (trim(dof_type))
+            case('primal')
+                ! For the primal problem (df/du), the matrix is square, so we can use the block-matrix format
+                ! and leverage some extra efficiencies.
+                call MatSetType(self%wrapped_petsc_matrix%petsc_matrix, 'baij', ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting PETSc matrix type.')
 
+                call MatMPIBAIJSetPreallocation(self%wrapped_petsc_matrix%petsc_matrix,coupled_dofs_per_element_dof,nlocal_coupling,PETSC_NULL_INTEGER,nparallel_coupling,PETSC_NULL_INTEGER,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatMPIBAIJSetPreallocation.')
+                call MatSeqBAIJSetPreallocation(self%wrapped_petsc_matrix%petsc_matrix,coupled_dofs_per_element_dof,nlocal_coupling,PETSC_NULL_INTEGER,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqBAIJSetPreallocation.')
 
-!        ! WARNING! might need to change preallocation approach for AIJ. currently set for BAIJ
-!        call MatMPIAIJSetPreallocation(self%petsc_matrix,aij_nnonzeros_per_row_local,PETSC_NULL_INTEGER,aij_nnonzeros_per_row_parallel,PETSC_NULL_INTEGER,ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatMPIAIJSetPreallocation.')
-!        call MatSeqAIJSetPreallocation(self%petsc_matrix,aij_nnonzeros_per_row_local,PETSC_NULL_INTEGER,ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqAIJSetPreallocation.')
+                call MatSetBlockSize(self%wrapped_petsc_matrix%petsc_matrix, coupled_dofs_per_element_dof, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSetBlockSize.')
 
+            case('coordinate')
+                ! For the coordinate differentiation problem (df/dx), the matrix is not square, so we can use AIJ
+                ! format.
+                call MatSetType(self%wrapped_petsc_matrix%petsc_matrix, 'aij', ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error setting PETSc matrix type.')
 
-        call MatMPIBAIJSetPreallocation(self%wrapped_petsc_matrix%petsc_matrix,dof_per_element,nlocal_coupling,PETSC_NULL_INTEGER,nparallel_coupling,PETSC_NULL_INTEGER,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatMPIBAIJSetPreallocation.')
-        call MatSeqBAIJSetPreallocation(self%wrapped_petsc_matrix%petsc_matrix,dof_per_element,nlocal_coupling,PETSC_NULL_INTEGER,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqBAIJSetPreallocation.')
+                aij_nnonzeros_per_row_local    = nlocal_coupling    * coupled_dofs_per_element_dof
+                aij_nnonzeros_per_row_parallel = nparallel_coupling * coupled_dofs_per_element_dof
 
+                call MatMPIAIJSetPreallocation(self%wrapped_petsc_matrix%petsc_matrix,aij_nnonzeros_per_row_local,PETSC_NULL_INTEGER,aij_nnonzeros_per_row_parallel,PETSC_NULL_INTEGER,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatMPIAIJSetPreallocation.')
+                call MatSeqAIJSetPreallocation(self%wrapped_petsc_matrix%petsc_matrix,aij_nnonzeros_per_row_local,PETSC_NULL_INTEGER,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSeqAIJSetPreallocation.')
 
-        call MatSetBlockSize(self%wrapped_petsc_matrix%petsc_matrix, dof_per_element, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSetBlockSize.')
+            case default
+                call chidg_signal_one(FATAL,"chidg_matrix%petsc_init: invalid input for 'dof_type'.",trim(dof_type))
+
+        end select
+
 
         call MatSetOption(self%wrapped_petsc_matrix%petsc_matrix, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'chidg_matrix%petsc_init: error calling MatSetOption.')
@@ -1037,6 +1045,7 @@ contains
 
         ! Set initialization to true
         self%local_initialized = .true.
+        self%dof_type = dof_type
 
     end subroutine petsc_init
     !******************************************************************************************
@@ -1117,8 +1126,17 @@ contains
         PetscInt, allocatable   :: col_indices(:)
         
         row_index_start = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
-        col_index_start = seed%dof_start  + (seed%itime-1)*(seed%nfields*seed%nterms_s)
-        col_index_stop  = col_index_start + (seed%nfields*seed%nterms_s) - 1
+
+        select case (trim(self%dof_type))
+            case('primal')
+                col_index_start = seed%dof_start  + (seed%itime-1)*(seed%nfields*seed%nterms_s)
+                col_index_stop  = col_index_start + (seed%nfields*seed%nterms_s) - 1
+            case('coordinate')
+                col_index_start = seed%xdof_start  + (seed%itime-1)*(3*seed%nnodes_r)
+                col_index_stop  = col_index_start  + (3*seed%nnodes_r) - 1
+            case default
+                call chidg_signal_one(FATAL,"chidg_matrix%petsc_store: invalid value for 'self%dof_type'.",trim(self%dof_type))
+        end select
         col_indices = [(i, i=col_index_start,col_index_stop,1)]
 
         nrows = 1

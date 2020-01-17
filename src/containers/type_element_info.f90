@@ -27,8 +27,10 @@ module type_element_info
         integer(ik) :: ntime           = NO_ID
         integer(ik) :: nterms_s        = NO_ID
         integer(ik) :: nterms_c        = NO_ID
-        integer(ik) :: dof_start       = NO_ID
-        integer(ik) :: dof_local_start = NO_ID
+        integer(ik) :: dof_start       = NO_ID      ! access indices for solution dofs
+        integer(ik) :: dof_local_start = NO_ID      ! access indices for solution dofs
+        integer(ik) :: xdof_start       = NO_ID     ! access indices for coordinate dofs
+        integer(ik) :: xdof_local_start = NO_ID     ! access indices for coordinate dofs
 
         ! parallel access indices for native storage
         integer(ik) :: recv_comm    = NO_ID
@@ -36,6 +38,7 @@ module type_element_info
         integer(ik) :: recv_element = NO_ID
         ! parallel access indices for petsc storage
         integer(ik) :: recv_dof     = NO_ID
+        integer(ik) :: recv_xdof    = NO_ID
 
     end type element_info_t
     !*********************************************************************
@@ -56,7 +59,10 @@ contains
     !!  @date   5/7/2019
     !!
     !----------------------------------------------------------------------------------
-    function element_info_constructor(idomain_g, idomain_l, ielement_g, ielement_l, iproc, pelem_ID, coordinate_system, eqn_ID, nfields, ntime, nterms_s, nterms_c, dof_start, dof_local_start, recv_comm, recv_domain, recv_element, recv_dof) result(elem_info)
+    function element_info_constructor(idomain_g, idomain_l, ielement_g, ielement_l, iproc, pelem_ID, &
+                                      coordinate_system, eqn_ID, nfields, ntime, nterms_s, nterms_c, &
+                                      dof_start, dof_local_start, xdof_start, xdof_local_start,      &
+                                      recv_comm, recv_domain, recv_element, recv_dof, recv_xdof) result(elem_info)
         integer(ik),    intent(in)  :: idomain_g
         integer(ik),    intent(in)  :: idomain_l
         integer(ik),    intent(in)  :: ielement_g
@@ -71,10 +77,13 @@ contains
         integer(ik),    intent(in)  :: nterms_c
         integer(ik),    intent(in)  :: dof_start
         integer(ik),    intent(in)  :: dof_local_start
+        integer(ik),    intent(in)  :: xdof_start
+        integer(ik),    intent(in)  :: xdof_local_start
         integer(ik),    intent(in)  :: recv_comm
         integer(ik),    intent(in)  :: recv_domain
         integer(ik),    intent(in)  :: recv_element
         integer(ik),    intent(in)  :: recv_dof
+        integer(ik),    intent(in)  :: recv_xdof
 
         type(element_info_t)   :: elem_info
 
@@ -92,10 +101,13 @@ contains
         elem_info%nterms_c          = nterms_c
         elem_info%dof_start         = dof_start
         elem_info%dof_local_start   = dof_local_start
+        elem_info%xdof_start        = xdof_start
+        elem_info%xdof_local_start  = xdof_local_start
         elem_info%recv_comm         = recv_comm
         elem_info%recv_domain       = recv_domain
         elem_info%recv_element      = recv_element
         elem_info%recv_dof          = recv_dof
+        elem_info%recv_xdof         = recv_xdof
 
     end function element_info_constructor
     !**********************************************************************************

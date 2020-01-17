@@ -60,7 +60,7 @@ contains
         select case (trim(backend))
             case('native')
                 self%D = chidg_matrix(trim(backend))
-                call self%D%init(data%mesh,mtype='Diagonal')
+                call self%D%init(data%mesh,storage_config='Diagonal',dof_type='primal')
 
             case('petsc')
 

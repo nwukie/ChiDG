@@ -285,10 +285,13 @@ contains
                                            nterms_c          = NO_DATA,                                                                   &
                                            dof_start         = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start,        &
                                            dof_local_start   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_local_start,  &
+                                           xdof_start        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_xdof_start,       &
+                                           xdof_local_start  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_xdof_local_start, &
                                            recv_comm         = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,                  &
                                            recv_domain       = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,                &
                                            recv_element      = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_element,               &
-                                           recv_dof          = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_dof)
+                                           recv_dof          = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_dof,                   &
+                                           recv_xdof         = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_xdof)
 
 
                 ! Get neighbor face: we have already decided it is a proc-local, interior face, 

@@ -152,7 +152,7 @@ contains
         if(ierr/=0) call AllocationError
         do istep = 1,2
             do ifunc = 1,2
-                call this%chidg%data%sdata%adjoint%v(ifunc,istep)%init(this%chidg%data%mesh,1) 
+                call this%chidg%data%sdata%adjoint%v(ifunc,istep)%init(this%chidg%data%mesh,1,'primal')
             end do
         end do
        

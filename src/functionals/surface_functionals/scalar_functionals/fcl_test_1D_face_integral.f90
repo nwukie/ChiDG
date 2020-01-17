@@ -61,6 +61,8 @@ contains
         call self%set_name("Test 1D Face Integral")
         call self%set_eval_type("Functional")
         call self%set_int_type("FACE INTEGRAL")
+
+        call self%add_integral("u integral")
         
     end subroutine init
     !******************************************************************************************
@@ -137,7 +139,7 @@ contains
         integral = integrate_surface(worker,u)
 
         ! Store in cache
-        call cache%set_value(worker%mesh,integral,'u integral','reference',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,integral,'u integral','reference',worker%function_info) 
 
     end subroutine compute_functional
     !******************************************************************************************

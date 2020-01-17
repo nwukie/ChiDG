@@ -257,7 +257,8 @@ contains
                                                                                                                             recv_comm    = comm,         &
                                                                                                                             recv_domain  = idom_recv,    &
                                                                                                                             recv_element = ielem_recv,   &
-                                                                                                                            recv_dof     = NO_ID)
+                                                                                                                            recv_dof     = NO_ID,        &
+                                                                                                                            recv_xdof    = NO_ID)
                                                 
                                                 bc_recv_found = .true.
                                                 exit

@@ -1031,24 +1031,27 @@ contains
             ! Interpolate from conforming NEIGHBOR element
             if ( conforming_interpolation ) then
 
-                donor_info = element_info(idomain_g         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_domain_g,        &
-                                          idomain_l         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_domain_l,        &
-                                          ielement_g        = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_element_g,       &
-                                          ielement_l        = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_element_l,       &
-                                          iproc             = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_proc,            &
-                                          pelem_ID          = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_pelem_ID,        &
-                                          coordinate_system = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%coordinate_system,         &
-                                          eqn_ID            = NO_ID,                                                                                                   &
-                                          nfields           = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_nfields,         &
-                                          ntime             = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_ntime,           &
-                                          nterms_s          = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_nterms_s,        &
-                                          nterms_c          = NO_DATA,                                                                                                 &
-                                          dof_start         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_dof_start,       &
-                                          dof_local_start   = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_dof_local_start, &
-                                          recv_comm         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_comm,                 &
-                                          recv_domain       = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_domain,               &
-                                          recv_element      = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_element,              &
-                                          recv_dof          = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_dof)
+                donor_info = element_info(idomain_g         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_domain_g,         &
+                                          idomain_l         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_domain_l,         &
+                                          ielement_g        = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_element_g,        &
+                                          ielement_l        = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_element_l,        &
+                                          iproc             = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_proc,             &
+                                          pelem_ID          = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_pelem_ID,         &
+                                          coordinate_system = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%coordinate_system,          &
+                                          eqn_ID            = NO_ID,                                                                                                    &
+                                          nfields           = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_nfields,          &
+                                          ntime             = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_ntime,            &
+                                          nterms_s          = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_nterms_s,         &
+                                          nterms_c          = NO_DATA,                                                                                                  &
+                                          dof_start         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_dof_start,        &
+                                          dof_local_start   = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_dof_local_start,  &
+                                          xdof_start        = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_xdof_start,       &
+                                          xdof_local_start  = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%ineighbor_xdof_local_start, &
+                                          recv_comm         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_comm,                  &
+                                          recv_domain       = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_domain,                &
+                                          recv_element      = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_element,               &
+                                          recv_dof          = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_dof,                   &
+                                          recv_xdof         = mesh%domain(source_info%idomain_l)%faces(source_info%ielement_l,source_iface)%recv_xdof)
 
 
 

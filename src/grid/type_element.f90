@@ -63,7 +63,7 @@ module type_element
         integer(ik)                 :: iproc                ! Processor the element is associated with.
 
         ! Element data
-        integer(ik)                 :: element_data(9)      ! [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level, dof_start]
+        integer(ik)                 :: element_data(10)     ! [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level, dof_start, xdof_start]
         integer(ik)                 :: element_type         ! 1=linear, 2=quadratic, 3=cubic, 4=quartic, etc.
         integer(ik)                 :: spacedim             ! Number of spatial dimensions for the element.
         integer(ik)                 :: coordinate_system    ! CARTESIAN, CYLINDRICAL. parameters from mod_constants.
@@ -72,13 +72,16 @@ module type_element
         integer(ik)                 :: nterms_s             ! Number of terms in solution expansion.  
         integer(ik)                 :: nterms_c             ! Number of terms in coordinate expansion. 
         integer(ik)                 :: ntime                ! Number of time levels in solution.
-        integer(ik)                 :: dof_start            ! Starting DOF index in ChiDG-global index
-        integer(ik)                 :: dof_local_start      ! Starting DOF index in ChiDG-local index
+        integer(ik)                 :: dof_start            ! Starting solution dof index in ChiDG-global index
+        integer(ik)                 :: dof_local_start      ! Starting solution dof index in ChiDG-local index
+        integer(ik)                 :: xdof_start           ! Starting coordinate dof index in ChiDG-global index
+        integer(ik)                 :: xdof_local_start     ! Starting coordinate dof index in ChiDG-local index
         integer(ik)                 :: interpolation_level  ! 1=lowest, 2-> are higher.
         integer(ik)                 :: recv_comm    = NO_ID ! chidg_vector access if element is initialized on another processor.
         integer(ik)                 :: recv_domain  = NO_ID ! chidg_vector access if element is initialized on another processor.
         integer(ik)                 :: recv_element = NO_ID ! chidg_vector access if element is initialized on another processor.
         integer(ik)                 :: recv_dof     = NO_ID ! Starting DOF index in local petsc vector for parallel storage.
+        integer(ik)                 :: recv_xdof    = NO_ID ! Starting DOF index in local petsc vector for parallel storage.
 
 
         ! Connectivty and linear transformation martrix for 
@@ -441,7 +444,7 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------
-    subroutine init_sol(self,interpolation,level,nterms_s,nfields,ntime,dof_start,dof_local_start)
+    subroutine init_sol(self,interpolation,level,nterms_s,nfields,ntime,dof_start,dof_local_start,xdof_start,xdof_local_start)
         class(element_t),   intent(inout)   :: self
         character(*),       intent(in)      :: interpolation
         integer(ik),        intent(in)      :: level
@@ -450,17 +453,21 @@ contains
         integer(ik),        intent(in)      :: ntime
         integer(ik),        intent(in)      :: dof_start
         integer(ik),        intent(in)      :: dof_local_start
+        integer(ik),        intent(in)      :: xdof_start
+        integer(ik),        intent(in)      :: xdof_local_start
 
         integer(ik) :: ierr
         integer(ik) :: nnodes
         integer(ik) :: ref_ID_s, ref_ID_c
         
 
-        self%nterms_s        = nterms_s     ! number of terms in solution expansion
-        self%nfields         = nfields      ! number of equations being solved
-        self%ntime           = ntime        ! number of time steps in solution
-        self%dof_start       = dof_start
-        self%dof_local_start = dof_local_start
+        self%nterms_s         = nterms_s     ! number of terms in solution expansion
+        self%nfields          = nfields      ! number of equations being solved
+        self%ntime            = ntime        ! number of time steps in solution
+        self%dof_start        = dof_start
+        self%dof_local_start  = dof_local_start
+        self%xdof_start       = xdof_start
+        self%xdof_local_start = xdof_local_start
 
 
         !
@@ -543,28 +550,21 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-
-        !
         ! Call element metric and matrix calculation routines
-        !
         call self%update_interpolations()
         call self%update_interpolations_ale()
 
 
-        !
         ! Store element_data(4-8)
-        !
-        self%element_data(4) = self%nfields
-        self%element_data(5) = self%nterms_s
-        self%element_data(6) = self%nterms_c
-        self%element_data(7) = self%ntime
-        self%element_data(8) = level
-        self%element_data(9) = self%dof_start
+        self%element_data(4)  = self%nfields
+        self%element_data(5)  = self%nterms_s
+        self%element_data(6)  = self%nterms_c
+        self%element_data(7)  = self%ntime
+        self%element_data(8)  = level
+        self%element_data(9)  = self%dof_start
+        self%element_data(10) = self%xdof_start
 
-
-        !
         ! Confirm element numerics were initialized
-        !
         self%sol_initialized = .true.    
 
     end subroutine init_sol

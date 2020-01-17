@@ -159,17 +159,11 @@ contains
     subroutine init_initial_solution(self)
         class(initial_solution_f),  intent(inout)  :: self
 
-        !
         ! Set function name
-        !
         call self%set_name("Test Compute Initial Solution")
-
 
     end subroutine init_initial_solution
     !*************************************************************************
-
-
-
 
 
 
@@ -179,7 +173,6 @@ contains
     !!  @author Matteo Ugolotti
     !!  @date   9/28/2018
     !!
-    !!
     !-----------------------------------------------------------------------------------------
     impure elemental function compute_initial_solution(self,time,coord) result(val)
         class(initial_solution_f),  intent(inout)   :: self
@@ -188,17 +181,14 @@ contains
 
         type(AD_D)  :: x, y, z, val
 
-
         x = coord%c1_
         y = coord%c2_
         z = coord%c3_
 
         val = x
-        
 
     end function compute_initial_solution
     !**********************************************************************************
-    
     
     
     
@@ -222,22 +212,13 @@ contains
         class(bc_state_t),  allocatable :: bc_state
         class(function_t),  allocatable :: fcn
        
-        
-        
-        
-
-        !
         ! Get MPI communicator information from pFUnit
-        !
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
        
-       
         
-        !
         ! Initialize ChiDG environment
-        !
         call this%chidg%start_up('mpi',this%ChiDG_COMM)
         call this%chidg%start_up('core')
         
@@ -254,15 +235,9 @@ contains
         !-------------------------------------------!
         IO_DESTINATION   = 'file'
 
-
-
         call this%chidg%data%time_manager%init()
 
-       
-        
-        !
         ! Let the first chidg instance to create common gridfile
-        !
         if (IRANK == GLOBAL_MASTER) then
         
             group_names(1,:) = [string_t("LHS")           , &
@@ -297,31 +272,20 @@ contains
                                              x_max_in        = 1._rk                )
         
 
-            !
             ! Add functional to gridfile
-            !
             call meshfile_add_functional(this%gridfile,'Test 1D integral','01')
         
         end if
         
-        
-        !
         ! Set the accuracy for the solution expansion
-        !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
 
-        !
         ! Read grid + bcs
-        !
         call this%chidg%read_mesh(this%gridfile,'adjointx storage')
 
-        !
         ! Initialize solution
-        !
         call create_function(fcn,'Test Compute Initial Solution')
         call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
-
-
 
     end subroutine setUp
     !******************************************************************************************
@@ -336,9 +300,7 @@ contains
     subroutine tearDown(this)
         class(test_functional_dx_lin),    intent(inout)   :: this
 
-        !
         ! Close all ChiDG interface
-        !
         call this%chidg%shut_down('core')
             
         if (IRANK == GLOBAL_MASTER) then
@@ -368,43 +330,29 @@ contains
         real(rk),           allocatable     :: dJdx(:), ref_deriv(:)
         class(function_t),  allocatable     :: fcn
 
-
-        
         tol = 1.e-6_rk
         self%chidg%data%time_manager%istep = 1
 
-        !
         ! Test updated functionals dX linearization
-        !
         call update_functionals(self%chidg%data,differentiate=dX_DIFF)
 
-        !
         ! Allocate reference vectors
-        !
-        nnodes_r = self%chidg%data%mesh%domain(1)%elems(1)%nnodes_r
+        nnodes_r = self%chidg%data%mesh%domain(1)%elems(1)%nterms_c
 
-
-        !
         ! TEST
-        !
         do ielem = 1,self%chidg%data%sdata%adjointx%Jx(1)%dom(1)%nelements()
 
-            !
             ! Allocate ref_deriv
-            !
             ref_deriv = [-ONE,ONE,-ONE,ONE,-ONE,ONE,-ONE,ONE]
             ref_deriv = ref_deriv * 0.125_rk
 
+        print*, 'test_functional_dx_lin%test_functional_cache__dx_lin: Fix for petsc!'
             dJdx = self%chidg%data%sdata%adjointx%Jx(1)%dom(1)%vecs(ielem)%vec
 
             ! TEST
             @assertEqual(ref_deriv,dJdx(1:nnodes_r),tol)
         
         end do
-
-
-
-
 
     end subroutine test_functional_cache__dx_lin
     !******************************************************************************************

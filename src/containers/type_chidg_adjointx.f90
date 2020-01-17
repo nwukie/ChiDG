@@ -8,6 +8,7 @@ module type_chidg_adjointx
     use type_mesh,              only: mesh_t
     use type_nvector,           only: nvector_t
     use type_node,              only: node_t
+    use type_element_info,      only: element_info_t
     use type_storage_flags,     only: storage_flags_t
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
     use mpi_f08,                only: MPI_BCast, MPI_ISend, MPI_Recv, MPI_INTEGER4,MPI_REAL8,   &
@@ -141,12 +142,6 @@ contains
         type(storage_flags_t),      intent(in)      :: sflags
              
         integer(ik)                 :: ifunc,istep,nfuncs
-!        integer(ik)                 :: specialization
-        character(2)                :: mtype
-
-        
-!        specialization = dX_DIFF
-        
 
         if (allocated(self%Jx)) then
             nfuncs = size(self%Jx)
@@ -156,17 +151,13 @@ contains
 
         ! Initialize vectors
         do ifunc = 1,nfuncs 
-            !if (sflags%vRx)         call self%vRx(ifunc)%init(mesh,ntime,specialization)
-            !if (sflags%Jx)          call self%Jx(ifunc)%init(mesh,ntime,specialization)
-            !if (sflags%Jx_unsteady) call self%Jx_unsteady(ifunc)%init(mesh,ntime,specialization)
-
             if (sflags%vRx)         self%vRx(ifunc)         = chidg_vector(trim(backend))
             if (sflags%Jx)          self%Jx(ifunc)          = chidg_vector(trim(backend))
             if (sflags%Jx_unsteady) self%Jx_unsteady(ifunc) = chidg_vector(trim(backend))
 
-            if (sflags%vRx)         call self%vRx(ifunc)%init(mesh,ntime,'grid differentiation')
-            if (sflags%Jx)          call self%Jx(ifunc)%init(mesh,ntime,'grid differentiation')
-            if (sflags%Jx_unsteady) call self%Jx_unsteady(ifunc)%init(mesh,ntime,'grid differentiation')
+            if (sflags%vRx)         call self%vRx(ifunc)%init(mesh,ntime,dof_type='coordinate')
+            if (sflags%Jx)          call self%Jx(ifunc)%init(mesh,ntime,dof_type='coordinate')
+            if (sflags%Jx_unsteady) call self%Jx_unsteady(ifunc)%init(mesh,ntime,dof_type='coordinate')
 
         end do !ifunc
 
@@ -174,8 +165,7 @@ contains
         if (sflags%Rx) then
             ! Initialize matrix
             self%Rx = chidg_matrix(trim(backend))
-            mtype = 'dX'
-            call self%Rx%init(mesh,mtype)
+            call self%Rx%init(mesh,storage_config='dX',dof_type='coordinate')
             call self%Rx%init_recv(self%vRx(1))
 
             ! Set Rx transpose flag on for matrix-vector product
@@ -193,8 +183,8 @@ contains
 
 
 
-    !>  Gather all node sensitivities for post-processing
-    !!  The master proc receives and manage the post-processing 
+    !>  Gather all node sensitivities for post-processing. The master proc receives and 
+    !!  manages the post-processing.
     !!
     !!  @author Matteo Ugolotti
     !!  @date   8/25/2018
@@ -208,48 +198,52 @@ contains
              
         integer(ik)                     :: ifunc, istep, ndomains_g, nfuncs, idom, ielem, inode,   &
                                            idomain_g, node_ID_l, coords_system, node_index,     &
-                                           itag, ntags, ierr, iproc, n_handles
+                                           itag, ntags, ierr, iproc, n_handles, itime
         real(rk)                        :: node_coords(3), node_sens(3)
+        real(rk), allocatable           :: node_sens_x(:), node_sens_y(:), node_sens_z(:)
         type(node_t)                    :: temp_node
         type(mpi_request_vector_t)      :: isend_requests
         type(MPI_Request)               :: irequest0, irequest1, irequest2, irequest3, irequest4, irequest5
         type(MPI_status), allocatable   :: isend_status(:)
+        type(element_info_t)            :: elem_info
         
 
         ! Find the max domain global index
         !ndoms_g = size(mesh%npoints,1)
         ndomains_g = mesh%ndomains_g()
 
-
         ! Deduce number of functionals computed
         nfuncs = size(self%Jx_unsteady)
-
 
         ! Allocate storage for node sensitivities
         if (allocated(self%node_sensitivities)) deallocate (self%node_sensitivities)
         allocate(self%node_sensitivities(nfuncs,ndomains_g), stat=ierr)
         if (ierr/=0) call AllocationError
 
-
-        ! Loop trhough the functionals and gather all sensitivities
+        ! Loop through the functionals and gather all sensitivities
         ! This is done by each processor individually.
+        itime = 1
         do ifunc = 1,nfuncs
 
-            !! Loop through the local nodes and gather sensitivities locally
-            !do idom = 1,size(self%Jx_unsteady(ifunc)%dom)
-            !    idomain_g    = mesh%domain(idom)%idomain_g
-            !    do ielem = 1,size(self%Jx_unsteady(ifunc)%dom(idom)%vecs)
+            call self%Jx_unsteady(ifunc)%assemble()
+
             ! Loop through the local nodes and gather sensitivities locally
             do idom = 1,mesh%ndomains()
                 idomain_g = mesh%domain(idom)%idomain_g
                 do ielem = 1,mesh%domain(idom)%nelements()
+
+                    ! Get element_info and reset data to correspond to coordinate dofs
+                    elem_info = mesh%get_element_info(idom,ielem)
+
+                    node_sens_x = self%Jx_unsteady(ifunc)%get_field(elem_info,1,itime)
+                    node_sens_y = self%Jx_unsteady(ifunc)%get_field(elem_info,2,itime)
+                    node_sens_z = self%Jx_unsteady(ifunc)%get_field(elem_info,3,itime)
 
                     ! NOTE: Jx has been initialized with specialization 'dX' this means that
                     !       nterms_ attribute of the densevector corresponds to nnodes_r 
                     !       and nvars_ attribute to 3 (3 directions). Therefore, nterms()
                     !       actually return the number of support/reference node of the 
                     !       element
-                    !do inode = 1,self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%nterms()
                     do inode = 1,mesh%domain(idom)%elems(ielem)%nterms_c
 
                         ! Find support node coordinates, coordinate system and connectivity (ie local node ID)
@@ -259,13 +253,10 @@ contains
                         node_ID_l      = mesh%domain(idom)%elems(ielem)%connectivity(inode)
                         coords_system  = mesh%domain(idom)%elems(ielem)%coordinate_system
                         
-                        ! Read sensitivities in the chidg vector
-                        print*, 'chidg_adjointx_t%gather_all: need to correct for petsc backend.'
-                        ! Read sensitivities in the chidg vector
-                        !node_sens = self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%get_sensitivities(inode)
-                        node_sens(1) = self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%getterm(1,inode,1)
-                        node_sens(2) = self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%getterm(2,inode,1)
-                        node_sens(3) = self%Jx_unsteady(ifunc)%dom(idom)%vecs(ielem)%getterm(3,inode,1)
+                        ! Assemble nodal sensitivity
+                        node_sens(1) = node_sens_x(inode)
+                        node_sens(2) = node_sens_y(inode)
+                        node_sens(3) = node_sens_z(inode)
                         
                         ! Find out if the same node has been already added
                         node_index = self%node_sensitivities(ifunc,idomain_g)%search_by_coords(node_coords,node_ID_l)
@@ -289,7 +280,8 @@ contains
                 
                 ! Count over all information to send and allocate vector of requests
                 n_handles = 1
-                do idom = 1,size(self%Jx_unsteady(ifunc)%dom)
+                !do idom = 1,size(self%Jx_unsteady(ifunc)%dom)
+                do idom = 1,mesh%ndomains()
                     idomain_g = mesh%domain(idom)%idomain_g
                     n_handles = n_handles + 5*self%node_sensitivities(ifunc,idomain_g)%size()
                 end do   
@@ -299,7 +291,8 @@ contains
                 call MPI_ISend(n_handles,1,MPI_INTEGER4,GLOBAL_MASTER,itag,ChiDG_COMM,irequest0,ierr)
                 call isend_requests%push_back(irequest0)
 
-                do idom = 1,size(self%Jx_unsteady(ifunc)%dom)
+                !do idom = 1,size(self%Jx_unsteady(ifunc)%dom)
+                do idom = 1,mesh%ndomains()
                     idomain_g = mesh%domain(idom)%idomain_g
                     do inode = 1,self%node_sensitivities(ifunc,idomain_g)%size()
                         
@@ -482,7 +475,7 @@ contains
     subroutine Jx_clear(self)
         class(chidg_adjointx_t),     intent(inout)   :: self
         
-        integer(ik)     :: ifunc 
+        integer(ik) :: ifunc 
 
         do ifunc = 1,size(self%Jx)
             call self%Jx(ifunc)%clear()
@@ -507,7 +500,7 @@ contains
     subroutine vRx_clear(self)
         class(chidg_adjointx_t),     intent(inout)   :: self
        
-        integer(ik)     :: ifunc 
+        integer(ik) :: ifunc 
 
         do ifunc = 1,size(self%Jx)
             call self%vRx(ifunc)%clear()

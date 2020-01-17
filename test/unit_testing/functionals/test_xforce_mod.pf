@@ -495,9 +495,7 @@ contains
     subroutine init_constant_viscosity(self)   
         class(test_xforce_constant_viscosity_t), intent(inout)   :: self
 
-        !
         ! Initialize model object
-        !
         call self%set_name('Test X-Force Constant Viscosity')
         call self%set_dependency('f(Q-)')
         call self%add_model_field('Laminar Viscosity')
@@ -523,23 +521,16 @@ contains
 
         type(AD_D), dimension(:),   allocatable :: viscosity, T
 
-        !
         ! Interpolate solution to quadrature nodes
-        !
         T = worker%get_field('Temperature','value')
     
-
-        !
         ! Constant Viscosity for Laminar Viscosity
         !   - initialize derivatives first...
-        !
         viscosity = T
         viscosity = ONE
 
 
-        !
         ! Contribute laminar viscosity
-        !
         call worker%store_model_field('Laminar Viscosity', 'value', viscosity)
 
 
@@ -551,18 +542,9 @@ contains
 
 
 
-
-
-
-
-
     !----------------------------------------------------------------------------------------
     !                           pFUnit test infrastructure
     !----------------------------------------------------------------------------------------
-
-
-
-
 
     !> Parameter constructors
     !!
@@ -659,23 +641,14 @@ contains
         class(function_t),  allocatable :: fcn
         real(rk)                        :: tol, entropy_error
 
-        !
         ! Get MPI communicator information from pFUnit
-        !
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
-
-        !
         ! Initialize ChiDG environment
-        !
         call this%chidg%start_up('mpi',this%ChiDG_COMM)
         call this%chidg%start_up('core')
-
-
-
-
 
         !-------------------------------------------!
         !     Register initial solution function    !
@@ -683,14 +656,11 @@ contains
         call initial_solution%init()
         call registered_fcns%push_back(initial_solution)
 
-
-
         !-------------------------------------------!
         !     Register viscosity model              !
         !-------------------------------------------!
         call test_xforce_constant_viscosity%init()
         call model_factory%register(test_xforce_constant_viscosity)
-
 
         !-------------------------------------------!
         !     Register equation builder             !
@@ -698,8 +668,6 @@ contains
         call test_xforce_equation_builder%init()
         call equation_set_factory%register(test_xforce_equation_builder%build('default'))
 
-
-        
         tol = 1.e-6_rk
 
         !------------------------------------------------------------------------------
@@ -712,20 +680,11 @@ contains
         basis            = 'legendre'
         gq_rule          = 3
         time_integrator  = 'steady'
-        nonlinear_solver = 'quasi_newton'
-        linear_solver    = 'fgmres_cgs'
+        nonlinear_solver = 'newton'
+        linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
-
-
-
-
-
-        ! Set timescheme options to pass during initialization
-        !call toptions%set('dt', 0.1_rk) ! means nothing here
-        !call toptions%set('nsteps',100)
-        !call toptions%set('nwrite',0)
 
         call this%chidg%data%time_manager%init()
 
@@ -739,11 +698,7 @@ contains
 
 
 
-
-
-        !
         ! Create mesh
-        !
         if (IRANK == GLOBAL_MASTER) then
             bc_state_groups(1)%name = 'Farfield'
             bc_state_groups(2)%name = 'Symmetry'
@@ -795,9 +750,7 @@ contains
         end if
 
 
-        !
         ! Set ChiDG components
-        !
         call this%chidg%set('Solution Order',   integer_input=this%order)
         call this%chidg%set('Time Integrator',  algorithm=time_integrator)
         call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
@@ -805,17 +758,11 @@ contains
         call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
 
-        !
         ! Read grid
-        !
         call this%chidg%read_mesh(this%gridfile,'primal storage')
 
 
-
-
-        !
         ! Initialize solution
-        !
         call create_function(fcn,'Test Compute X-Force Initial Solution')
 
         call fcn%set_option('ivar',1._rk)
@@ -845,6 +792,7 @@ contains
 
         ! Close ChiDG
         call this%chidg%shut_down('core')
+        call this%chidg%shut_down('mpi')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -852,12 +800,6 @@ contains
 
     end subroutine tearDown
     !******************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -875,30 +817,17 @@ contains
 
         real(rk)    :: tol, xforce_computed, xforce_expected
 
-
-        !
         ! Compute xforce: THIS IS BEING TESTED
-        !
         call update_functionals(self%chidg%data,differentiate = NO_DIFF)
 
-
-
-        !
         ! Test that computed entropy error is the expected value
-        !
         xforce_expected = 100._rk
         xforce_computed = self%chidg%data%sdata%functional%func(1)%at(1)
         tol = 1.e-6_rk
         @assertEqual(xforce_expected,xforce_computed,tol)
 
-
     end subroutine test_compute_xforce
     !*******************************************************************************************
-
-
-
-
-
 
 
 

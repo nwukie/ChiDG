@@ -77,6 +77,11 @@ contains
         call self%set_eval_type("Functional")
         call self%set_int_type("FACE INTEGRAL")
 
+        call self%add_integral("u1 flux")
+        call self%add_integral("u3 flux")
+        call self%add_integral("mass flux")
+        call self%add_integral("MA flow angle")
+
     end subroutine init
     !******************************************************************************************
 
@@ -176,9 +181,9 @@ contains
         mass_flux =  integrate_surface_mass_weighted(worker)
         
         ! Store in cache 
-        call cache%set_value(worker%mesh,u1_flux,  'u1 flux',  'reference',worker%function_info)
-        call cache%set_value(worker%mesh,u3_flux,  'u3 flux',  'reference',worker%function_info)
-        call cache%set_value(worker%mesh,mass_flux,'mass flux','reference',worker%function_info)
+        call cache%set_entity_value(worker%mesh,u1_flux,  'u1 flux',  'reference',worker%function_info)
+        call cache%set_entity_value(worker%mesh,u3_flux,  'u3 flux',  'reference',worker%function_info)
+        call cache%set_entity_value(worker%mesh,mass_flux,'mass flux','reference',worker%function_info)
 
     end subroutine compute_functional
     !******************************************************************************************
@@ -215,9 +220,9 @@ contains
         type(AD_D)        :: u1_flux, u3_flux, mass_flux, MA_u1, MA_u3, angle_rad, angle_deg
         
         ! Compute MA velocities
-        u1_flux   = cache%get_value(worker%mesh,'u1 flux',  'reference')
-        u3_flux   = cache%get_value(worker%mesh,'u3 flux',  'reference')
-        mass_flux = cache%get_value(worker%mesh,'mass flux','reference')
+        u1_flux   = cache%get_global_value(worker%mesh,'u1 flux',  'reference')
+        u3_flux   = cache%get_global_value(worker%mesh,'u3 flux',  'reference')
+        mass_flux = cache%get_global_value(worker%mesh,'mass flux','reference')
 
         MA_u1 = u1_flux/mass_flux
         MA_u3 = u3_flux/mass_flux
@@ -230,7 +235,7 @@ contains
         angle_deg = (angle_rad*180._rk)/PI
 
         ! Store MA flow angle
-        call cache%set_value(worker%mesh,angle_deg,'MA flow angle','reference')
+        call cache%set_global_value(worker%mesh,angle_deg,'MA flow angle','reference')
 
     end subroutine finalize_functional
     !*********************************************************************************************

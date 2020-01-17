@@ -194,9 +194,6 @@ find_package(MPI REQUIRED COMPONENTS CXX Fortran)
 include_directories(${MPI_Fortran_INCLUDE_PATH})
 include_directories(${MPI_CXX_INCLUDE_PATH})
 
-message(STATUS "        " ${MPI_Fortran_LIBRARIES})
-message(STATUS "        " ${MPI_CXX_LIBRARIES})
-
 if (MPI_Fortran_FOUND)
     message(STATUS "    MPI Fortran Libraries: ")
     foreach (L ${MPI_Fortran_LIBRARIES})

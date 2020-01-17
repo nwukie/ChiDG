@@ -216,7 +216,7 @@ contains
         !
         do istage = 1, nstage
 
-            call dq(istage)%init(data%mesh, data%time_manager%ntime)
+            call dq(istage)%init(data%mesh, data%time_manager%ntime,'primal')
             call dq(istage)%set_ntime(data%time_manager%ntime)
             call dq(istage)%clear()
 
@@ -237,7 +237,7 @@ contains
                     case(1)
                         select type(an => self%system)
                             type is (assemble_DIRK_coupled_oscillator_t)
-                                call an%q_n_stage%init(data%mesh,data%time_manager%ntime)
+                                call an%q_n_stage%init(data%mesh,data%time_manager%ntime,'primal')
                                 call an%q_n_stage%set_ntime(data%time_manager%ntime)
                                 call an%q_n_stage%clear()
 
@@ -351,7 +351,7 @@ contains
             ! Compute \f$ \Delta Q^{m}_{i}\f$
             ! Used to assemble rhs
             !
-            call delta_q%init(data%mesh,data%time_manager%ntime)
+            call delta_q%init(data%mesh,data%time_manager%ntime,'primal')
             call delta_q%set_ntime(data%time_manager%ntime)
             call delta_q%clear()
             delta_q = (q - self%q_n - self%q_n_stage)/alpha

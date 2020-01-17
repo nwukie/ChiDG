@@ -138,10 +138,13 @@ subroutine test_domain_matrix__store_1eq_8terms()
                               nterms_c=8,           &
                               dof_start=104,        &
                               dof_local_start=104,  &
+                              xdof_start=104,        &
+                              xdof_local_start=104,  &
                               recv_comm=NO_ID,      &
                               recv_domain=NO_ID,    &
                               recv_element=NO_ID,   &
-                              recv_dof=NO_ID)
+                              recv_dof=NO_ID,       &
+                              recv_xdof=NO_ID)
 
     call seed%init(idomain_g=1,         &
                    idomain_l=1,         &
@@ -153,6 +156,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
                    iproc=0,             &
                    itime=itime,         &
                    dof_start=96,        &
+                   xdof_start=289,      &
                    recv_comm=0,         &
                    recv_domain=0,       &
                    recv_element=0)
@@ -299,24 +303,27 @@ subroutine test_domain_matrix__store_2eq_8terms()
     !
     ! PROCEDURE BEING TESTED, bmat%store
     !
-    elem_info = element_info(idomain_g=1,         &
-                             idomain_l=1,         &
-                             ielement_g=14,       &
-                             ielement_l=14,       &
-                             iproc=0,             &
-                             pelem_ID=NO_ID,      &
+    elem_info = element_info(idomain_g=1,           &
+                             idomain_l=1,           &
+                             ielement_g=14,         &
+                             ielement_l=14,         &
+                             iproc=0,               &
+                             pelem_ID=NO_ID,        &
                              coordinate_system=CARTESIAN, &
-                             eqn_ID=1,            &
-                             nfields=nfields,     &
-                             ntime=1,             &
-                             nterms_s=8,          &
-                             nterms_c=8,          &
-                             dof_start=104,       &
-                             dof_local_start=104, &
-                             recv_comm=NO_ID,     &
-                             recv_domain=NO_ID,   &
-                             recv_element=NO_ID,  &
-                             recv_dof=NO_ID)
+                             eqn_ID=1,              &
+                             nfields=nfields,       &
+                             ntime=1,               &
+                             nterms_s=8,            &
+                             nterms_c=8,            &
+                             dof_start=104,         &
+                             dof_local_start=104,   &
+                             xdof_start=104,        &
+                             xdof_local_start=104,  &
+                             recv_comm=NO_ID,       &
+                             recv_domain=NO_ID,     &
+                             recv_element=NO_ID,    &
+                             recv_dof=NO_ID,        &
+                             recv_xdof=NO_ID)
 
 
     call seed%init(idomain_g=1,         &
@@ -329,6 +336,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
                    iproc=0,             &
                    itime=itime,         &
                    dof_start=96,        &
+                   xdof_start=289,      &
                    recv_comm=0,         &
                    recv_domain=0,       &
                    recv_element=0)
@@ -471,24 +479,27 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     ! Store Derivatives
     ivar  = 1
     itime = 1
-    elem_info = element_info(idomain_g=1,         &
-                             idomain_l=1,         &
-                             ielement_g=14,       &
-                             ielement_l=14,       &
-                             iproc=0,             &
-                             pelem_ID=NO_ID,      &
+    elem_info = element_info(idomain_g=1,           &
+                             idomain_l=1,           &
+                             ielement_g=14,         &
+                             ielement_l=14,         &
+                             iproc=0,               &
+                             pelem_ID=NO_ID,        &
                              coordinate_system=CARTESIAN, &
-                             eqn_ID=1,            &
-                             nfields=nfields,     &
-                             ntime=1,             &
-                             nterms_s=8,          &
-                             nterms_c=8,          &
-                             dof_start=104,       &
-                             dof_local_start=104, &
-                             recv_comm=NO_ID,     &
-                             recv_domain=NO_ID,   &
-                             recv_element=NO_ID,  &
-                             recv_dof=NO_ID)
+                             eqn_ID=1,              &
+                             nfields=nfields,       &
+                             ntime=1,               &
+                             nterms_s=8,            &
+                             nterms_c=8,            &
+                             dof_start=104,         &
+                             dof_local_start=104,   &
+                             xdof_start=104,        &
+                             xdof_local_start=104,  &
+                             recv_comm=NO_ID,       &
+                             recv_domain=NO_ID,     &
+                             recv_element=NO_ID,    &
+                             recv_dof=NO_ID,        &
+                             recv_xdof=NO_ID)
 
 
     call seed%init(idomain_g=1,         &
@@ -501,6 +512,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
                    iproc=0,             &
                    itime=itime,         &
                    dof_start=96,        &
+                   xdof_start=289,      &
                    recv_comm=0,         &
                    recv_domain=0,       &
                    recv_element=0)

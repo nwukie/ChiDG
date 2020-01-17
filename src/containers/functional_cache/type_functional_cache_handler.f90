@@ -100,7 +100,7 @@ contains
 
         ! Initialize functional_cache_handler 
         call self%init(data,fcl_cache,ifunc,geom_feature,differentiate)
-        
+
         ! Compute functional
         call self%compute(worker)
 
@@ -147,35 +147,22 @@ contains
         character(*),                       intent(in)              :: geom_feature
         integer(ik),                        intent(in)              :: differentiate
 
+        ! Currently working on auxiliary geometry
+        self%geom  =  trim(geom_feature)
+        self%cache => fcl_cache
+        self%data  => data
 
         associate (func => data%functional_group%fcl_entities(ifunc)%func )
 
             ! Assign active geometry (reference/auxiliary),data, cache, initialize active_cache
             select case (trim(geom_feature))
                 case("auxiliary")
-
-                    ! Currently working on auxiliary geometry
-                    self%geom  =  trim(geom_feature)
-                    
-                    ! Create pointers
-                    self%cache => fcl_cache
-                    self%data  => data
-
                     ! Initialize fuctional auxiliary cache
-                    call self%cache%init(self%geom,data%mesh,func%auxiliary_geom,func%get_int_type(),differentiate)
-
+                    call self%cache%init(self%geom,data%mesh,func%auxiliary_geom,func%intermediate_integrals,func%get_int_type(),differentiate)
 
                 case("reference")
-                    
-                    ! Currently working on reference geometry
-                    self%geom  =  trim(geom_feature)
-                    
-                    ! Create pointers
-                    self%cache => fcl_cache
-                    self%data  => data
-                    
                     ! Initialize fuctional auxiliary cache
-                    call self%cache%init(self%geom,data%mesh,func%reference_geom,func%get_int_type(),differentiate)
+                    call self%cache%init(self%geom,data%mesh,func%reference_geom,func%intermediate_integrals,func%get_int_type(),differentiate)
                     
                 case default
                     call chidg_signal_two(FATAL,"functional_cache_handler_t%init: wrong geometry string provided to the functional cache handler", trim(geom_feature),".") 
@@ -265,6 +252,7 @@ contains
                     iface      = self%cache%ref_cache%iface%at(ientity)
                 end if
 
+
                 elem_info = worker%mesh%get_element_info(idomain_l,ielement_l)
                 call worker%set_element(elem_info)
 
@@ -305,9 +293,11 @@ contains
                 worker%function_info%idiff   = idiff
                 worker%function_info%dtype   = self%dtype
 
+
                 ! Compute functional on the entity (element/face)
                 if (compute_auxiliary) call func%compute_auxiliary(worker,self%cache)
                 if (compute_reference) call func%compute_functional(worker,self%cache)
+
 
                 ! Release differential interpolators allocated memory
                 call worker%mesh%release_derivatives_dx(elem_info,self%dtype)
@@ -316,7 +306,7 @@ contains
 
             ! Communicate integrals through processors
             call self%cache%comm(self%geom)
-            
+
             ! Finalize functional on auxiliary/reference geometry
             if (compute_auxiliary) call func%finalize_auxiliary(worker,self%cache)
             if (compute_reference) call func%finalize_functional(worker,self%cache)
@@ -371,7 +361,6 @@ contains
         real(rk)                :: time
         Integer(ik)             :: idomain_l, ielement_l, ientity, i_int, step
 
-
         ! Prepare the type of store we need to execute
         if ( (self%geom == 'reference') .and. (self%dtype == dQ_DIFF) ) then
             store_derivatives_dQ = .true.
@@ -404,14 +393,12 @@ contains
                 call self%data%sdata%adjoint%Jq(self%ifunc)%assemble()
             end if
 
-
             ! Update local integrals with overall value coming from all ranks and store
             ! dX derivatives in the Jx(ifunc) vector
             if (store_derivatives_dX) then
                 self%data%sdata%adjointx%Jx(self%ifunc) = func%store_deriv(self%cache)
                 call self%data%sdata%adjointx%Jx(self%ifunc)%assemble()
             end if
-
 
             ! Store real value of the functional
             if (store_functional) then

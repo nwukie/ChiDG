@@ -93,27 +93,21 @@ contains
 
         integer(ik)     :: ierr
 
-        !
         ! Initialize vRx array of chidg_vectors
-        !
         if (sflags%vRa) then
             if (allocated(self%vRa)) deallocate (self%vRa)
             allocate( self%vRa(nfunc), stat=ierr )
             if (ierr/=0) call AllocationError
         end if
 
-        !
         ! Initialize Jx array of chidg_vectors
-        !
         if (sflags%wAa) then
             if (allocated(self%wAa)) deallocate (self%wAa)
             allocate( self%wAa(nfunc), stat=ierr )
             if (ierr/=0) call AllocationError
         end if
 
-        !
         ! Initialize Junsteady array of chidg_vectors
-        !
         if (sflags%Ja_unsteady) then
             if (allocated(self%Ja_unsteady)) deallocate (self%Ja_unsteady)
             allocate( self%Ja_unsteady(nfunc), stat=ierr )
@@ -145,24 +139,17 @@ contains
              
         integer(ik)                 :: ifunc,istep,nfuncs
 
-
-        !
         ! Initialize vector
-        !
-        if (sflags%Ra)  call self%Ra%init(mesh,ntime)
+        if (sflags%Ra)  call self%Ra%init(mesh,ntime,'primal')
 
-        !
         ! Set Ja = 0
-        !
         if (sflags%wAa) then
             do ifunc = 1,size(self%wAa)
                 self%wAa(ifunc) = ZERO
             end do
         end if
 
-        !
         ! Set Ja_unsteady = 0
-        !
         if (sflags%Ja_unsteady) then
             do ifunc = 1,size(self%Ja_unsteady)
                 self%Ja_unsteady(ifunc) = ZERO

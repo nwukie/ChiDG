@@ -129,15 +129,11 @@ contains
     subroutine init_initial_solution(self)
         class(initial_solution_dq_f),  intent(inout)  :: self
 
-        !
         ! Set function name
-        !
         call self%set_name("Test Compute Initial Solution for dQ")
-
 
     end subroutine init_initial_solution
     !*************************************************************************
-
 
 
 
@@ -187,11 +183,8 @@ contains
     subroutine init_functional_solution(self)
         class(functional_solution_f),  intent(inout)  :: self
 
-        !
         ! Set function name
-        !
         call self%set_name("Test Compute Functional Solution")
-
 
     end subroutine init_functional_solution
     !*************************************************************************
@@ -251,20 +244,12 @@ contains
         integer(ik)                     :: ierr
        
         
-        
-        
-
-        !
         ! Get MPI communicator information from pFUnit
-        !
         IRANK                   = this%getProcessRank()
         NRANK                   = this%getNumProcessesRequested()
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
        
-        
-        !
         ! Initialize ChiDG environment
-        !
         call this%chidg%start_up('mpi',this%ChiDG_COMM)
         call this%chidg%start_up('core')
         
@@ -290,11 +275,8 @@ contains
 
         call this%chidg%data%time_manager%init()
 
-       
         
-        !
         ! Let the first chidg instance to create common gridfile
-        !
         if (IRANK == GLOBAL_MASTER) then
         
             group_names(1,:) = [string_t("LHS")           , &
@@ -327,28 +309,20 @@ contains
                                              nelem_zeta      = 1                    )
         
 
-            !
             ! Add functional to gridfile
-            !
             call meshfile_add_functional(this%gridfile,'Test 1D Energy','01')
         
         end if
         call MPI_Barrier(this%ChiDG_COMM,ierr)
         
         
-        !
         ! Set the accuracy for the solution expansion
-        !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
 
-        !
         ! Read grid + bcs
-        !
         call this%chidg%read_mesh(this%gridfile,'adjoint storage')
 
-        !
         ! Initialize solution
-        !
         call create_function(fcn,'Test Compute Initial Solution for dQ')
         call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
 
@@ -367,10 +341,9 @@ contains
     subroutine tearDown(this)
         class(test_functional_dq_lin),    intent(inout)   :: this
 
-        !
         ! Close all ChiDG interface
-        !
         call this%chidg%shut_down('core')
+        call this%chidg%shut_down('mpi')
             
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -398,19 +371,12 @@ contains
         real(rk),           allocatable     :: ref(:), dJdq(:), invmass(:,:), vec(:)
         class(function_t),  allocatable     :: fcn
 
-
-        
         tol = 1.e-6_rk
         self%chidg%data%time_manager%istep = 1
 
-        !
         ! Test updated functionals dQ linearization
-        !
         call update_functionals(self%chidg%data,differentiate=dQ_DIFF)
 
-
-
-        !
         ! TEST: dJ/dq should be identical to the solution vector q
         !       Since
         !           d/du(1/2*u^2) = u
@@ -431,23 +397,13 @@ contains
             dJdq = matmul(invmass,vec)
             ref = self%chidg%data%sdata%q%dom(1)%vecs(ielem)%vec
             
-            
             ! TEST
             @assertEqual(ref,dJdq,tol)
         
         end do
 
-
-
-
-
     end subroutine test_functional_cache__dq_lin
     !******************************************************************************************
-
-
-
-
-
 
 
 end module test_functional_dQ_linearization_mod

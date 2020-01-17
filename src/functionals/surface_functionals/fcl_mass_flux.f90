@@ -61,6 +61,8 @@ contains
         call self%set_eval_type("Functional")
         call self%set_int_type("FACE INTEGRAL")
 
+        call self%add_integral("mass flux")
+
     end subroutine init
     !******************************************************************************************
 
@@ -164,7 +166,7 @@ contains
         mass_flux = integrate_surface(worker,mass)
        
         ! Store in cache 
-        call cache%set_value(worker%mesh,mass_flux,'mass flux','reference',worker%function_info)
+        call cache%set_entity_value(worker%mesh,mass_flux,'mass flux','reference',worker%function_info)
 
     end subroutine compute_functional
     !******************************************************************************************

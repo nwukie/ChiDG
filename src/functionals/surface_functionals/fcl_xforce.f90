@@ -67,6 +67,8 @@ contains
         call self%set_eval_type("Functional")
         call self%set_int_type("FACE INTEGRAL")
 
+        call self%add_integral("xforce")
+
     end subroutine init
     !******************************************************************************************
 
@@ -189,12 +191,12 @@ contains
 
         ! Compute xforce Force at quadrature nodes
         xforce_gq = stress_x !* dcos(self%AoA) + stress_y * dsin(self%AoA)
-        
+
         ! Compute face integral over the element face
         xforce = integrate_surface(worker,xforce_gq)
         
         ! Store in cache 
-        call cache%set_value(worker%mesh,xforce,'xforce','reference',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,xforce,'xforce','reference',worker%function_info) 
 
     end subroutine compute_functional
     !******************************************************************************************
@@ -241,7 +243,7 @@ contains
         type(functional_cache_t),       intent(inout)   :: cache
 
         type(chidg_vector_t)       :: res
-        
+
         res = cache%ref_cache%get_deriv('xforce')
 
     end function store_deriv

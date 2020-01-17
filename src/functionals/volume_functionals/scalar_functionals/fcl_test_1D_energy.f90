@@ -67,6 +67,8 @@ contains
         call self%set_eval_type("Functional")
         call self%set_int_type("VOLUME INTEGRAL")
 
+        call self%add_integral("kinetic energy")
+
     end subroutine init
     !******************************************************************************************
 
@@ -143,7 +145,7 @@ contains
         energy_integral = integrate_volume(worker,Ek)
 
         ! Store in cache
-        call cache%set_value(worker%mesh,energy_integral,'kinetic energy','reference',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,energy_integral,'kinetic energy','reference',worker%function_info) 
 
     end subroutine compute_functional
     !******************************************************************************************

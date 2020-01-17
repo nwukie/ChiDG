@@ -61,6 +61,10 @@ contains
         call self%set_eval_type("Functional")
         call self%set_int_type("FACE INTEGRAL")
 
+        call self%add_integral("pressure flux")
+        call self%add_integral("mass flux")
+        call self%add_integral("MA total pressure")
+
     end subroutine init
     !******************************************************************************************
 
@@ -170,9 +174,8 @@ contains
      
         
         ! Store in cache 
-        !call cache%set_value(temperature_flux,'temperature flux','reference',worker%function_info) 
-        call cache%set_value(worker%mesh,pressure_flux,   'pressure flux',   'reference',worker%function_info) 
-        call cache%set_value(worker%mesh,mass_flux,       'mass flux',       'reference',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,pressure_flux,   'pressure flux',   'reference',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,mass_flux,       'mass flux',       'reference',worker%function_info) 
     
     end subroutine compute_functional
     !******************************************************************************************
@@ -208,11 +211,10 @@ contains
         
         
         !temperature_flux = cache%get_value('temperature flux','reference')
-        pressure_flux    = cache%get_value(worker%mesh,'pressure flux','reference')
-        mass_flux        = cache%get_value(worker%mesh,'mass flux',    'reference')
+        pressure_flux = cache%get_global_value(worker%mesh,'pressure flux','reference')
+        mass_flux     = cache%get_global_value(worker%mesh,'mass flux',    'reference')
 
-        call cache%set_value(worker%mesh,pressure_flux/mass_flux,   'MA total pressure',   'reference')
-        !call cache%set_value(temperature_flux/mass_flux,'MA total temperature','reference')
+        call cache%set_global_value(worker%mesh,pressure_flux/mass_flux,   'MA total pressure',   'reference')
 
     end subroutine finalize_functional
     !*********************************************************************************************

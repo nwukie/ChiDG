@@ -55,7 +55,7 @@ subroutine test_domain_vector_distribute()
     !
     ! Call initailization on domain_vector
     !
-    call bvec%init(chidg%data%mesh%domain(1))
+    call bvec%init(chidg%data%mesh%domain(1),'primal')
 
 
 

@@ -170,6 +170,7 @@ contains
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 8,     &
+                                    xdof_start   = 25,    &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -192,10 +193,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 1,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 1,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm    = NO_ID,      &
                                      recv_domain  = NO_ID,      &
                                      recv_element = NO_ID,      &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,      &
+                                     recv_xdof     = NO_ID)
 
 
 
@@ -275,6 +279,7 @@ contains
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 8,     &
+                                    xdof_start   = 25,    &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -297,10 +302,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 1,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 1,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm    = NO_ID,      &
                                      recv_domain  = NO_ID,      &
                                      recv_element = NO_ID,      &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,      &
+                                     recv_xdof     = NO_ID)
 
 
             tol    = 1.e-13_rk
@@ -378,6 +386,7 @@ contains
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 40,    &
+                                    xdof_start   = 97,    &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -401,10 +410,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 1,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 1,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm    = NO_ID,      &
                                      recv_domain  = NO_ID,      &
                                      recv_element = NO_ID,      &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,      &
+                                     recv_xdof     = NO_ID)
 
 
 
@@ -490,6 +502,7 @@ contains
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 40,    &
+                                    xdof_start   = 97,    &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -512,10 +525,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 0,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 0,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm    = NO_ID,      &
                                      recv_domain  = NO_ID,      &
                                      recv_element = NO_ID,      &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,      &
+                                     recv_xdof     = NO_ID)
 
 
             

@@ -85,6 +85,7 @@ subroutine test_integrate_boundary_constant()
                    iproc=0,             &
                    itime=1,             &
                    dof_start=0,         &
+                   xdof_start=0,        &
                    recv_comm=NO_ID,     &
                    recv_domain=NO_ID,   &
                    recv_element=NO_ID)
@@ -104,10 +105,13 @@ subroutine test_integrate_boundary_constant()
                              nterms_c=8,        &
                              dof_start=1,       &
                              dof_local_start=1, &
+                             xdof_start=1,       &
+                             xdof_local_start=1, &
                              recv_comm=NO_ID,   &
                              recv_domain=NO_ID, &
                              recv_element=NO_ID,&
-                             recv_dof=NO_ID)
+                             recv_dof=NO_ID,    &
+                             recv_xdof=NO_ID)
 
 
     idomain = 1

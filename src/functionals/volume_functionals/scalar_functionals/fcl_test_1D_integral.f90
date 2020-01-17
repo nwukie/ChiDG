@@ -69,14 +69,12 @@ contains
     subroutine init(self)
         class(test_1D_integral_t), intent(inout)   :: self
 
-
-        !
         ! Start defining the evaluator information
-        !
         call self%set_name("Test 1D Integral")
         call self%set_eval_type("Functional")
         call self%set_int_type("VOLUME INTEGRAL")
         
+        call self%add_integral("u integral")
 
     end subroutine init
     !******************************************************************************************
@@ -153,30 +151,17 @@ contains
         type(AD_D), allocatable, dimension(:) :: u, Ek
         type(AD_D)                            :: integral
 
-        
-        ! 
         ! Get primary fields
-        !
         u = worker%get_field('u','value','element')
 
-        !
         ! Compute integral over the volume of the functional
-        !
         integral = integrate_volume(worker,u)
-
         
-        !
         ! Store in cache
-        !
-        call cache%set_value(worker%mesh,integral,'u integral','reference',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,integral,'u integral','reference',worker%function_info) 
 
     end subroutine compute_functional
     !******************************************************************************************
-
-
-
-
-
 
 
 

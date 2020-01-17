@@ -749,7 +749,9 @@ contains
         integer(ik),            intent(in)      :: level
         integer(ik),            intent(in)      :: nterms_s
 
-        integer(ik) :: idomain, nfields, ntime, eqn_ID, domain_dof_start, domain_dof_local_start
+        integer(ik) :: idomain, nfields, ntime, eqn_ID, nterms_c, &
+                       domain_dof_start, domain_dof_local_start,  &
+                       domain_xdof_start, domain_xdof_local_start
 
         ! Initialize mesh numerics based on equation set and polynomial expansion order
         call write_line(" ", ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -762,24 +764,29 @@ contains
         do idomain = 1,self%mesh%ndomains()
 
             ! Initialize mesh_dof_start
-            eqn_ID = self%mesh%domain(idomain)%elems(1)%eqn_ID
-            ntime   = self%time_manager%ntime
-            nfields = self%eqnset(eqn_ID)%prop%nprimary_fields()
-            self%mesh%mesh_dof_start = sum(self%mesh%nelements_per_proc(1:IRANK))*nterms_s*nfields*ntime + 1
-
+            eqn_ID   = self%mesh%domain(idomain)%elems(1)%eqn_ID
+            nterms_c = self%mesh%domain(idomain)%elems(1)%nterms_c
+            ntime    = self%time_manager%ntime
+            nfields  = self%eqnset(eqn_ID)%prop%nprimary_fields()
+            self%mesh%mesh_dof_start  = sum(self%mesh%nelements_per_proc(1:IRANK))*nterms_s*nfields*ntime + 1
+            self%mesh%mesh_xdof_start = sum(self%mesh%nelements_per_proc(1:IRANK))*nterms_c*3      *ntime + 1
 
             ! Get the starting dof index for the domain
             if (idomain==1) then
-                domain_dof_start       = self%mesh%mesh_dof_start
-                domain_dof_local_start = 1
+                domain_dof_start        = self%mesh%mesh_dof_start
+                domain_dof_local_start  = 1
+                domain_xdof_start       = self%mesh%mesh_xdof_start
+                domain_xdof_local_start = 1
             else
-                domain_dof_start       = self%mesh%domain(idomain-1)%get_dof_end() + 1
-                domain_dof_local_start = self%mesh%domain(idomain-1)%get_dof_local_end() + 1
+                domain_dof_start        = self%mesh%domain(idomain-1)%get_dof_end('primal') + 1
+                domain_dof_local_start  = self%mesh%domain(idomain-1)%get_dof_local_end('primal') + 1
+                domain_xdof_start       = self%mesh%domain(idomain-1)%get_dof_end('coordinate') + 1
+                domain_xdof_local_start = self%mesh%domain(idomain-1)%get_dof_local_end('coordinate') + 1
             end if
 
             ! Call initialization
             self%mesh%ntime_ = self%time_manager%ntime
-            call self%mesh%domain(idomain)%init_sol(interpolation,level,nterms_s,nfields,self%time_manager%ntime,domain_dof_start,domain_dof_local_start)
+            call self%mesh%domain(idomain)%init_sol(interpolation,level,nterms_s,nfields,self%time_manager%ntime,domain_dof_start,domain_dof_local_start,domain_xdof_start,domain_xdof_local_start)
             call self%mesh%domain(idomain)%update_interpolations_ale()
         end do
 

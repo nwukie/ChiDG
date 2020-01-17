@@ -1,6 +1,7 @@
 module test_fcl_group_mod
     use pfunit_mod
     use mod_kinds,              only: rk,ik
+    use mod_chidg_mpi,          only: ChiDG_COMM, IRANK, NRANK
     use type_chidg,             only: chidg_t
     use type_functional_group,  only: functional_group_t
     use type_evaluator,         only: evaluator_t
@@ -43,16 +44,15 @@ contains
     subroutine setUp(this)
         class(test_fcl),    intent(inout)   :: this
 
-        
-        !
+        IRANK              = this%getProcessRank()
+        NRANK              = this%getNumProcessesRequested()
+        ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
         ! Start up ChiDG
-        ! 
+        call this%chidg%start_up('mpi',ChiDG_COMM)
         call this%chidg%start_up('core')
 
-
-        !-------------------------------------------!
-        !     Send io to file                       !
-        !-------------------------------------------!
+        ! Send io to file
         IO_DESTINATION   = 'file'
 
 
@@ -67,19 +67,11 @@ contains
     subroutine tearDown(this)
         class(test_fcl),    intent(inout)   :: this
 
-
-        !
         ! Close ChiDG interface
-        !
         call this%chidg%shut_down('core')
 
     end subroutine tearDown
     !**************************************************************************************
-
-
-
-
-
 
 
 
@@ -100,30 +92,16 @@ contains
         type(functional_group_t)         :: fcl_group
 
         
-        !
         ! Initialize the functional_group
         ! This being tested
-        !
         call fcl_group%init(2)
         
-        !
         ! Test
-        !
         @assertEqual(2,size(fcl_group%fcl_entities))
         @assertTrue(fcl_group%compute_functionals)
 
-
-
-
     end subroutine test_fcl__init_fcl_group
     !**************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -145,44 +123,27 @@ contains
         type(functional_group_t)         :: fcl_group
         class(evaluator_t), allocatable  :: fcl_entity1, fcl_entity2
 
-        !
         ! Check number of functional added, should be zero
-        !
         @assertEqual(0,fcl_group%n_functionals())
 
-
-        !
         ! Create functional entities 
-        !
         call create_functional('Test 1D Energy'  ,fcl_entity1)
         call create_functional('Test 1D integral',fcl_entity2)
 
-
-        !
         ! Add fcl entities to functional group
         ! This being tested
-        !
         call fcl_group%add_functional(fcl_entity1)
         
-        !
         ! test
-        !
         @assertEqual(1,fcl_group%n_functionals())
 
-        !
         ! Add fcl entities to functional group
         ! This being tested
-        !
         call fcl_group%add_functional(fcl_entity2)
         
-        !
         ! test
-        !
         @assertEqual(2,fcl_group%n_functionals())
         @assertTrue(fcl_group%compute_functionals)
-
-
-
 
     end subroutine test_fcl__add_functional
     !**************************************************************************************

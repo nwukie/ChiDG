@@ -3,6 +3,7 @@ module type_geometry_cache
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO, ONE, NO_ID, dQ_DIFF, dX_DIFF, NO_DIFF, dQ_DIFF
     use mod_io,                 only: backend
+    use mod_string,             only: string_t
     use type_mesh,              only: mesh_t
     use type_chidg_vector,      only: chidg_vector_t, chidg_vector
     use type_ivector,           only: ivector_t
@@ -41,7 +42,7 @@ module type_geometry_cache
         ! Number of entities and integrals
         integer(ik)                         :: nentities = 0
         integer(ik)                         :: nintegrals = 0
-        integer(ik)                         :: integral_cache_size = 5
+!        integer(ik)                         :: integral_cache_size = 5
 
     contains
         
@@ -50,16 +51,19 @@ module type_geometry_cache
         procedure,  private :: push_back            
 
         ! Memory access
-        procedure,  public  :: set_value
-        procedure,  public  :: get_value
+        procedure,  public  :: set_entity_value
+        procedure,  public  :: set_global_value
+        procedure,  public  :: get_entity_value
+        procedure,  public  :: get_global_value
         procedure,  public  :: update_global
         procedure,  public  :: get_real
         procedure,  public  :: get_deriv
+        procedure,  public  :: get_id
         
         ! Parallel communication
         procedure,  public  :: comm
 
-        procedure,  public  :: get_id
+        procedure,  public  :: release
 
     end type geometry_cache_t
     !***************************************************************************************************
@@ -80,19 +84,22 @@ contains
     !!  @param[in]         integral_type    type of integral to compute 
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine init(self,mesh,geometries,integral_type,differentiate)
+    subroutine init(self,mesh,geometries,integrals,integral_type,differentiate,derivative_vector_template)
         class(geometry_cache_t),    intent(inout)   :: self
         type(mesh_t),               intent(in)      :: mesh
         type(svector_t),            intent(in)      :: geometries
+        type(svector_t),            intent(in)      :: integrals
         character(*),               intent(in)      :: integral_type
         integer(ik),                intent(in)      :: differentiate
+        type(chidg_vector_t),       intent(in)      :: derivative_vector_template
 
         integer(ik)                 :: ngeoms, ierr, domain_ID, nelems, group_ID, igeom, ielem,   &
                                        idom_g, idom_l, ielem_g, ielem_l, iface, ipatch, npatches, &
-                                       nfaces, patch_iface
+                                       nfaces, patch_iface, iintegral, int_ID
         logical                     :: volume_integral = .false.
         logical                     :: surface_integral = .false.
         character(:),   allocatable :: domain_name, group_name
+        type(string_t)              :: integral_name
 
 
         ! Overall number of geometries 
@@ -113,7 +120,7 @@ contains
                 domain_ID   = mesh%get_domain_id(domain_name)
                 if (domain_ID == NO_ID) cycle
 
-                nelems      = mesh%domain(domain_ID)%get_nelements_local()
+                nelems = mesh%domain(domain_ID)%get_nelements_local()
                 do ielem = 1,nelems
                     associate( elem => mesh%domain(domain_ID)%elems(ielem) )
                         idom_g  = elem%idomain_g
@@ -160,8 +167,34 @@ contains
 
         ! Start allocating storage for 5 integrals, if more integral will be needed this will be reallocated
         if ( allocated(self%integral_cache) ) deallocate (self%integral_cache)
-        allocate ( self%integral_cache(self%integral_cache_size), stat=ierr )
+        allocate ( self%integral_cache(integrals%size()), stat=ierr )
         if (ierr /= 0) call AllocationError
+
+
+        ! Initialize integrals
+        self%nintegrals = 0
+        do iintegral = 1,integrals%size()
+
+            ! Get string from vector
+            integral_name = integrals%at(iintegral)
+
+            ! Check if already added
+            int_ID = self%get_id(trim(integral_name%str))
+
+            ! If not added already, do it!
+            if (int_ID == 0) then
+                self%nintegrals = self%nintegrals + 1
+
+                !! Integral cache size is hardocded, check if the max limit is reached
+                !if (self%nintegrals > self%integral_cache_size) then
+                !    call chidg_signal(FATAL,"type_geometry_cache%set_value: reached maximum number of integral.")
+                !end if
+
+                int_ID = self%nintegrals
+                call self%integral_cache(int_ID)%init(trim(integral_name%str),derivative_vector_template)
+            end if
+
+        end do
 
 
     end subroutine init
@@ -173,7 +206,6 @@ contains
 
 
     !>  Push back indicies for new geometry entity and check if it has already been added 
-    !!
     !!
     !!  @author Matteo Ugolotti
     !!  @date   2/25/2018
@@ -194,8 +226,7 @@ contains
         integer(ik),                intent(inout)   :: iface 
   
         logical             :: duplicate 
-        integer(ik)         :: idomain_g, idomain_l, ielement_g, ielement_l, iface_, &
-                               item
+        integer(ik)         :: idomain_g, idomain_l, ielement_g, ielement_l, iface_, item
 
         duplicate = .false.
 
@@ -250,13 +281,11 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine set_value(self,mesh,int_name,value_add,vec_model,dtype,fcn_info)
+    subroutine set_entity_value(self,mesh,int_name,value_add,fcn_info)
         class(geometry_cache_t),               intent(inout)   :: self
         type(mesh_t),                          intent(in)      :: mesh
         character(*),                          intent(in)      :: int_name
         type(AD_D),                            intent(in)      :: value_add
-        type(chidg_vector_t),                  intent(in)      :: vec_model
-        integer(ik),                           intent(in)      :: dtype
         type(function_info_t),      optional,  intent(in)      :: fcn_info
 
         integer(ik)     :: int_ID
@@ -264,31 +293,51 @@ contains
         ! Find integral 
         int_ID = self%get_id(int_name)
 
-
-        ! If the integral is not initialized yet, initialize it
         if (int_ID == 0) then
-            self%nintegrals = self%nintegrals + 1
-
-            ! Integral cache size is hardocded, check if the max limit is reached
-            if (self%nintegrals > self%integral_cache_size) then
-                call chidg_signal(FATAL,"type_geometry_cache%set_value: reached maximum number of integral.")
-            end if
-
-            int_ID = self%nintegrals
-            call self%integral_cache(int_ID)%init(trim(int_name))
+            call chidg_signal_one(FATAL,'geometry_cache%set_entity_value: integral not added. Warning, functionality has changed, so all integrals must be registered with their associated evaluator_t during initialization.',trim(int_name))
         end if
 
-        
-        ! Set 
-        if ( present(fcn_info) ) then
-            call self%integral_cache(int_ID)%set_value(mesh,value_add,vec_model,fcn_info)
-        else
-            call self%integral_cache(int_ID)%set_value(mesh,value_add,vec_model,dtype)
-        end if
+        call self%integral_cache(int_ID)%set_entity_value(mesh,value_add,fcn_info)
 
-
-    end subroutine set_value
+    end subroutine set_entity_value
     !***************************************************************************************************
+
+
+
+
+
+
+    !>  Set Value of integral evaluated either on the single geometry entity or on the overall geometry.
+    !!  If it is a local integral (computed on a face or element) then the real value will be added
+    !!  toward the overall summmation of all face/element integral belonging to the geometry, whereas
+    !!  the derivatives wrt to the current element will be simply stored.
+    !!  If it is a overall integral, then the real value and derivatives will be easily stored
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   3/6/2019
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine set_global_value(self,mesh,int_name,value_add,dtype)
+        class(geometry_cache_t),               intent(inout)   :: self
+        type(mesh_t),                          intent(in)      :: mesh
+        character(*),                          intent(in)      :: int_name
+        type(AD_D),                            intent(in)      :: value_add
+        integer(ik),                           intent(in)      :: dtype
+
+        integer(ik)     :: int_ID
+        
+        ! Find integral 
+        int_ID = self%get_id(int_name)
+
+        if (int_ID == 0) then
+            call chidg_signal_one(FATAL,'geometry_cache%set_global_value: integral not added. Warning, functionality has changed, so all integrals must be registered with their associated evaluator_t during initialization.',trim(int_name))
+        end if
+
+        call self%integral_cache(int_ID)%set_global_value(mesh,value_add,dtype)
+
+    end subroutine set_global_value
+    !***************************************************************************************************
+
 
 
 
@@ -303,13 +352,11 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    function get_value(self,mesh,int_name,vec_model,dtype,fcn_info) result(integral)
+    function get_entity_value(self,mesh,int_name,fcn_info) result(integral)
         class(geometry_cache_t),               intent(inout)   :: self
         type(mesh_t),                          intent(in)      :: mesh
         character(*),                          intent(in)      :: int_name
-        type(chidg_vector_t),                  intent(in)      :: vec_model
-        integer(ik),                           intent(in)      :: dtype
-        type(function_info_t),      optional,  intent(in)      :: fcn_info
+        type(function_info_t),                 intent(in)      :: fcn_info
 
         integer(ik)     :: int_ID
         type(AD_D)      :: integral
@@ -317,24 +364,43 @@ contains
         ! Find integral 
         int_ID = self%get_id(int_name)
 
-
-        ! If the integral is not initialized yet, initialize it
         if (int_ID == 0) then
-            call chidg_signal_one(FATAL,"type_geometry_cache%get_value: integral has not been computed yet.", trim(int_name))
+            call chidg_signal_one(FATAL,'geometry_cache%get_entity_value: integral not added. Warning, functionality has changed, so all integrals must be registered with their associated evaluator_t during initialization.',trim(int_name))
         end if
 
+        integral = self%integral_cache(int_ID)%get_entity_value(mesh,fcn_info)
 
-        ! Set 
-        if ( present(fcn_info) ) then
-            integral = self%integral_cache(int_ID)%get_value(mesh,fcn_info)
-        else
-            integral = self%integral_cache(int_ID)%get_value(mesh,vec_model,dtype)
-        end if
-
-    end function get_value
+    end function get_entity_value
     !***************************************************************************************************
 
 
+    !>  
+    !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   3/6/2019
+    !!
+    !---------------------------------------------------------------------------------------------------
+    function get_global_value(self,mesh,int_name,dtype) result(integral)
+        class(geometry_cache_t),               intent(inout)   :: self
+        type(mesh_t),                          intent(in)      :: mesh
+        character(*),                          intent(in)      :: int_name
+        integer(ik),                           intent(in)      :: dtype
+
+        integer(ik)     :: int_ID
+        type(AD_D)      :: integral
+        
+        ! Find integral 
+        int_ID = self%get_id(int_name)
+
+        if (int_ID == 0) then
+            call chidg_signal_one(FATAL,'geometry_cache%get_global_value: integral not added. Warning, functionality has changed, so all integrals must be registered with their associated evaluator_t during initialization.',trim(int_name))
+        end if
+
+        integral = self%integral_cache(int_ID)%get_global_value(mesh,dtype)
+
+    end function get_global_value
+    !***************************************************************************************************
 
 
 
@@ -346,45 +412,23 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine update_global(self,int_name,value_rk,vec_model,dtype)
+    subroutine update_global(self,int_name,value_rk,dtype)
         class(geometry_cache_t),    intent(inout)   :: self
         character(*),               intent(in)      :: int_name
         real(rk),                   intent(in)      :: value_rk
-        type(chidg_vector_t),       intent(in)      :: vec_model
         integer(ik),                intent(in)      :: dtype
 
         integer(ik)     :: int_ID
-        
+
         ! Loop through integrals to check it already exists
         int_ID = self%get_id(int_name)
         
-
-        ! If the integral is not initialized yet, initialize it and set derivatives to zero.
-        if (int_ID == 0) then
-            self%nintegrals = self%nintegrals + 1
-
-            ! Integral cache size is hardcoded, check if the max limit is reached
-            if (self%nintegrals > self%integral_cache_size) then
-                call chidg_signal(FATAL,"type_geometry_cache%set_value: reached maximum number of integral.")
-            end if
-
-            int_ID = self%nintegrals
-            call self%integral_cache(int_ID)%init(trim(int_name))
-
-            ! If dtype /= NO_DIFF, initialize derivatives and set them to zero.
-            ! This is need if a proc has no entities from this geometry
-            if (dtype /= NO_DIFF) then
-                self%integral_cache(int_ID)%integral_deriv = vec_model
-                call self%integral_cache(int_ID)%integral_deriv%assemble()
-                self%integral_cache(int_ID)%derivatives_initialized = .true.
-            end if
-
-        end if
-        
+        ! Assemble derivative vector
+        call self%integral_cache(int_ID)%integral_deriv%assemble()
+        self%integral_cache(int_ID)%derivatives_initialized = .true.
         
         ! Update to global value 
         self%integral_cache(int_ID)%integral_value = value_rk
-
 
     end subroutine update_global
     !***************************************************************************************************
@@ -510,9 +554,8 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine comm(self,vec_model,dtype)
+    subroutine comm(self,dtype)
         class(geometry_cache_t),    intent(inout)   :: self
-        type(chidg_vector_t),       intent(in)      :: vec_model
         integer(ik),                intent(in)      :: dtype
 
 
@@ -528,7 +571,6 @@ contains
         ! Synchronize
         call MPI_Barrier(ChiDG_COMM,ierr)        
 
-        
         ! Check if at least one processor has computed the functional
         ! NOTE: It might be that the entire functional geometry is handled by one single 
         !       processor. This means that all other processors do not carry out any functional
@@ -537,11 +579,10 @@ contains
         local_cache_found = (local_entities /= 0)
         call MPI_AllReduce(local_cache_found,global_store,1,MPI_LOGICAL,MPI_LOR,ChiDG_COMM,ierr)
 
-
         ! If at least a processor have computed something, share information to store
         ! If the auxiliary geometry is not needed, global_store will be false
         if (global_store) then
-        
+
             ! Master processor allocate number of flags. Flags = .true. means that the irank has a cache
             ! that can be used to share information regarding the functional
             if (IRANK==GLOBAL_MASTER) then
@@ -549,11 +590,9 @@ contains
                 if (ierr /= 0) call AllocationError
             end if
 
-            
             ! The master processor receive from all the ranks  
             call MPI_Gather(local_cache_found,1,MPI_LOGICAL,receive_info,1,MPI_LOGICAL,GLOBAL_MASTER,ChiDG_COMM,ierr)
 
-            
             ! The root processor loops throught receive_info buffer and return the rank ID of the first
             ! processor that contains functional info (leader_rank)
             ! NOTE: here we want to make sure that the leader_rank is one that contains integrals to store
@@ -566,13 +605,11 @@ contains
             end if
             call MPI_Bcast(leader_rank,1,MPI_INTEGER4,GLOBAL_MASTER,ChiDG_COMM,ierr)
 
-            
             ! The leader_rank broadcast the number of integrals necessary for this functional
             if (IRANK == leader_rank) then
                 global_nint = self%nintegrals
             end if
             call MPI_Bcast(global_nint,1,MPI_INTEGER4,leader_rank,ChiDG_COMM,ierr)
-           
            
             ! Loop through the integrals, share name and reduce_all
             do i_int = 1,global_nint
@@ -583,7 +620,6 @@ contains
                 end if
                 call MPI_Bcast(string_to_send,50,MPI_CHARACTER,leader_rank,ChiDG_COMM,ierr)
 
-           
                 ! Find integral value by name 
                 integral_name = trim(string_to_send)
                 integral_id   = self%get_id(integral_name)
@@ -597,7 +633,7 @@ contains
                 call MPI_AllReduce(local_value,global_value,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 
                 ! Update to global value
-                call self%update_global(integral_name,real(global_value,rk),vec_model,dtype)
+                call self%update_global(integral_name,real(global_value,rk),dtype)
 
             end do
 
@@ -605,6 +641,29 @@ contains
            
     end subroutine comm
     !***************************************************************************************************
+
+
+
+
+
+    !>  Release memory.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/16/2020
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine release(self)
+        class(geometry_cache_t),    intent(inout)   :: self
+
+        integer(ik) :: iintegral
+
+        do iintegral = 1,self%nintegrals
+            call self%integral_cache(iintegral)%release()
+        end do
+
+    end subroutine release
+    !***************************************************************************************************
+
 
 
 

@@ -224,6 +224,7 @@ contains
                                      iproc        = IRANK, &
                                      itime        = 1,     &
                                      dof_start    = NO_ID, &
+                                     xdof_start   = NO_ID, &
                                      recv_comm    = NO_ID, &
                                      recv_domain  = NO_ID, &
                                      recv_element = NO_ID)
@@ -244,18 +245,19 @@ contains
         function_info%idepend = 1
         function_info%idiff   = 1
         function_info%dtype   = dQ_DIFF
-        call function_info%seed%init(idomain_g    = 1,     &
-                                     idomain_l    = 1,     &
-                                     ielement_g   = 27,    &
-                                     ielement_l   = 27,    &
-                                     nfields      = 1,     &
-                                     nterms_s     = 8,     &
-                                     nnodes_r     = 8,     &
-                                     iproc        = IRANK, &
-                                     itime        = 1,     &
-                                     dof_start    = 209,   &
-                                     recv_comm    = NO_ID,     &
-                                     recv_domain  = NO_ID,     &
+        call function_info%seed%init(idomain_g    = 1,      &
+                                     idomain_l    = 1,      &
+                                     ielement_g   = 27,     &
+                                     ielement_l   = 27,     &
+                                     nfields      = 1,      &
+                                     nterms_s     = 8,      &
+                                     nnodes_r     = 8,      &
+                                     iproc        = IRANK,  &
+                                     itime        = 1,      &
+                                     dof_start    = 209,    &
+                                     xdof_start   = 625,    &
+                                     recv_comm    = NO_ID,  &
+                                     recv_domain  = NO_ID,  &
                                      recv_element = NO_ID)
         
         
@@ -275,18 +277,19 @@ contains
         function_info%idepend = 1
         function_info%idiff   = 1
         function_info%dtype   = dX_DIFF
-        call function_info%seed%init(idomain_g    = 1,     &
-                                     idomain_l    = 1,     &
-                                     ielement_g   = 15,    &
-                                     ielement_l   = 15,    &
-                                     nfields      = 1,     &
-                                     nterms_s     = 8,     &
-                                     nnodes_r     = 8,     &
-                                     iproc        = IRANK, &
-                                     itime        = 1,     &
-                                     dof_start    = 113,   &
-                                     recv_comm    = NO_ID,     &
-                                     recv_domain  = NO_ID,     &
+        call function_info%seed%init(idomain_g    = 1,      &
+                                     idomain_l    = 1,      &
+                                     ielement_g   = 15,     &
+                                     ielement_l   = 15,     &
+                                     nfields      = 1,      &
+                                     nterms_s     = 8,      &
+                                     nnodes_r     = 8,      &
+                                     iproc        = IRANK,  &
+                                     itime        = 1,      &
+                                     dof_start    = 113,    &
+                                     xdof_start   = 337,    &
+                                     recv_comm    = NO_ID,  &
+                                     recv_domain  = NO_ID,  &
                                      recv_element = NO_ID)
         
         
@@ -317,8 +320,9 @@ contains
                                      iproc        = IRANK, &
                                      itime        = 1,     &
                                      dof_start    = 113,   &
-                                     recv_comm    = NO_ID,     &
-                                     recv_domain  = NO_ID,     &
+                                     xdof_start   = 337,   &
+                                     recv_comm    = NO_ID,  &
+                                     recv_domain  = NO_ID,  &
                                      recv_element = NO_ID)
         
         
@@ -425,6 +429,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -465,6 +470,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -509,6 +515,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -617,6 +624,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -652,6 +660,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -692,6 +701,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -733,6 +743,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -774,6 +785,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -869,6 +881,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -913,6 +926,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -1035,6 +1049,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -1079,6 +1094,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -1135,6 +1151,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -1250,6 +1267,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -1294,6 +1312,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -1350,6 +1369,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -1479,6 +1499,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -1534,6 +1555,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -1685,6 +1707,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -1740,6 +1763,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -1900,6 +1924,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -1953,6 +1978,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -2123,6 +2149,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -2178,6 +2205,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -2315,6 +2343,7 @@ contains
                                      iproc        = IRANK, &
                                      itime        = 1,     &
                                      dof_start    = NO_ID, &
+                                     xdof_start   = NO_ID, &
                                      recv_comm    = NO_ID,     &
                                      recv_domain  = NO_ID,     &
                                      recv_element = NO_ID)
@@ -2382,6 +2411,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -2435,6 +2465,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -2615,6 +2646,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -2684,6 +2716,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -2750,6 +2783,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -2792,6 +2826,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -2854,6 +2889,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -2981,6 +3017,7 @@ contains
                                      iproc        = IRANK, &
                                      itime        = 1,     &
                                      dof_start    = NO_ID, &
+                                     xdof_start   = NO_ID, &
                                      recv_comm    = NO_ID, &
                                      recv_domain  = NO_ID, &
                                      recv_element = NO_ID)
@@ -3035,6 +3072,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)
@@ -3079,6 +3117,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = 1,     &
                                          dof_start    = NO_ID, &
+                                         xdof_start   = NO_ID, &
                                          recv_comm    = NO_ID,     &
                                          recv_domain  = NO_ID,     &
                                          recv_element = NO_ID)

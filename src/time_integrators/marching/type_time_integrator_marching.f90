@@ -192,7 +192,7 @@ contains
 
         associate (q_out => data%sdata%q_out, q_in => data%sdata%q_in)
 
-            call q_out%init(data%mesh,data%time_manager%ntime)
+            call q_out%init(data%mesh,data%time_manager%ntime,'primal')
             call q_out%set_ntime(data%time_manager%ntime)
             call q_out%clear()
 

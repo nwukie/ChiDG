@@ -321,45 +321,38 @@ subroutine test_function_status__compute(this)
     type(element_info_t)       :: elem_info
     type(function_info_t)   :: function_info
 
-
-    !
     ! Assemble function_data from eqnset instances.
-    !
     ndom = this%chidg%data%mesh%ndomains()
     allocate(function_data(ndom))
     function_data(1) = this%chidg%data%eqnset(1)%function_data
 
-
-    !
     ! Initialize the function_status container. 
-    !
     call this%chidg%data%sdata%function_status%init(this%chidg%data%mesh, function_data)
     call this%chidg%data%sdata%function_status%clear()
 
 
-    !
     ! Initialize elem_info and function_info containers to pass to function_status%compute_function
-    !
-    elem_info = element_info(idomain_g=1,        &
-                             idomain_l=1,        &
-                             ielement_g=2,       &
-                             ielement_l=2,       &
-                             iproc=0,            &
-                             pelem_ID=NO_ID,     &
+    elem_info = element_info(idomain_g=1,           &
+                             idomain_l=1,           &
+                             ielement_g=2,          &
+                             ielement_l=2,          &
+                             iproc=0,               &
+                             pelem_ID=NO_ID,        &
                              coordinate_system=CARTESIAN, &
-                             eqn_ID=1,           &
-                             nfields=1,          &
-                             ntime=1,            &
-                             nterms_s=8,         &
-                             nterms_c=8,         &
-                             dof_start=8,        &
-                             dof_local_start=8,  &
-                             recv_comm=NO_ID,    &
-                             recv_domain=NO_ID,  &
-                             recv_element=NO_ID, &
-                             recv_dof=NO_ID)
-
-
+                             eqn_ID=1,              &
+                             nfields=1,             &
+                             ntime=1,               &
+                             nterms_s=8,            &
+                             nterms_c=8,            &
+                             dof_start=8,           &
+                             dof_local_start=8,     &
+                             xdof_start=8,          &
+                             xdof_local_start=8,    &
+                             recv_comm=NO_ID,       &
+                             recv_domain=NO_ID,     &
+                             recv_element=NO_ID,    &
+                             recv_dof=NO_ID,        &
+                             recv_xdof=NO_ID)
 
 
     function_info%type  = 1
@@ -369,61 +362,27 @@ subroutine test_function_status__compute(this)
     iface = 2
     ieqn = 2
 
-    !
     ! Register function as computed.
-    !
     call this%chidg%data%sdata%function_status%register_function_computed(elem_info,function_info,iface,ieqn)
 
-
-    !
     ! Get status of function. THIS IS BEING TESTED.
-    !
     compute_function            = this%chidg%data%sdata%function_status%compute_function(elem_info,function_info,iface)
     compute_function_equation_1 = this%chidg%data%sdata%function_status%compute_function_equation(elem_info,function_info,iface,1)
     compute_function_equation_2 = this%chidg%data%sdata%function_status%compute_function_equation(elem_info,function_info,iface,2)
 
-
-    
-    !
     ! Test that compute_function is false, because we set that the function in general had been executed at some point.
-    !
     @assertFalse(compute_function)
 
-
-    !
     ! Test that compute_function_equation_1 is true, becuase only ieqn=2 was registered as computed. So if requested, ieqn=1 
     ! should be computed => compute_function_equation_1 = .true.
-    !
     @assertTrue(compute_function_equation_1)
 
-
-    !
     ! Test that compute_function_eqaution_2 is false, because it was registered as computed.
-    !
     @assertFalse(compute_function_equation_2)
 
 
 end subroutine test_function_status__compute
 !*******************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -453,43 +412,38 @@ subroutine test_function_status__linearize(this)
     type(element_info_t)    :: elem_info
     type(function_info_t)   :: function_info
 
-
-    !
     ! Assemble function_data from eqnset instances.
-    !
     ndom = this%chidg%data%mesh%ndomains()
     allocate(function_data(ndom))
     function_data(1) = this%chidg%data%eqnset(1)%function_data
 
-
-    !
     ! Initialize the function_status container. 
-    !
     call this%chidg%data%sdata%function_status%init(this%chidg%data%mesh, function_data)
     call this%chidg%data%sdata%function_status%clear()
 
 
-    !
     ! Initialize elem_info and function_info containers to pass to function_status%compute_function
-    !
-    elem_info = element_info(idomain_g=1,       &
-                             idomain_l=1,       &
-                             ielement_g=2,      &
-                             ielement_l=2,      &
-                             iproc=0,           &
-                             pelem_ID=NO_ID,    &
+    elem_info = element_info(idomain_g=1,           &
+                             idomain_l=1,           &
+                             ielement_g=2,          &
+                             ielement_l=2,          &
+                             iproc=0,               &
+                             pelem_ID=NO_ID,        &
                              coordinate_system=CARTESIAN, &
-                             eqn_ID=1,          &
-                             nfields=1,         &
-                             ntime=1,           &
-                             nterms_s=8,        &
-                             nterms_c=8,        &
-                             dof_start=8,       &
-                             dof_local_start=8, &
-                             recv_comm=NO_ID,   &
-                             recv_domain=NO_ID, &
-                             recv_element=NO_ID,&
-                             recv_dof=NO_ID)
+                             eqn_ID=1,              &
+                             nfields=1,             &
+                             ntime=1,               &
+                             nterms_s=8,            &
+                             nterms_c=8,            &
+                             dof_start=8,           &
+                             dof_local_start=8,     &
+                             xdof_start=8,          &
+                             xdof_local_start=8,    &
+                             recv_comm=NO_ID,       &
+                             recv_domain=NO_ID,     &
+                             recv_element=NO_ID,    &
+                             recv_dof=NO_ID,        &
+                             recv_xdof=NO_ID)
 
     function_info%type  = 1
     function_info%ifcn  = 1
@@ -498,37 +452,22 @@ subroutine test_function_status__linearize(this)
     iface = 2
     ieqn  = 2
 
-    !
     ! Register function as computed.
-    !
     call this%chidg%data%sdata%function_status%register_function_linearized(elem_info,function_info,iface,ieqn)
 
-
-    !
     ! Get status of function. THIS IS BEING TESTED.
-    !
     linearize_function            = this%chidg%data%sdata%function_status%linearize_function(elem_info,function_info,iface)
     linearize_function_equation_1 = this%chidg%data%sdata%function_status%linearize_function_equation(elem_info,function_info,iface,1)
     linearize_function_equation_2 = this%chidg%data%sdata%function_status%linearize_function_equation(elem_info,function_info,iface,2)
 
-
-    
-    !
     ! Test that compute_function is false, because we set that the function in general had been executed at some point.
-    !
     @assertFalse(linearize_function)
 
-
-    !
     ! Test that compute_function_equation_1 is true, becuase only ieqn=2 was registered as computed. So if requested, ieqn=1 
     ! should be computed => compute_function_equation_1 = .true.
-    !
     @assertTrue(linearize_function_equation_1)
 
-
-    !
     ! Test that compute_function_eqaution_2 is false, because it was registered as computed.
-    !
     @assertFalse(linearize_function_equation_2)
 
 

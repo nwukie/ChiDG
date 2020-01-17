@@ -282,6 +282,7 @@ contains
                                iproc        = IRANK,                                                        &
                                itime        = itime,                                                        &
                                dof_start    = mesh%domain(idomain_l)%elems(ielement_l)%dof_start,           &
+                               xdof_start   = mesh%domain(idomain_l)%elems(ielement_l)%xdof_start,          &
                                recv_comm    = 0,                                                            &
                                recv_domain  = 0,                                                            &
                                recv_element = 0)
@@ -308,6 +309,7 @@ contains
                                    iproc        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,        &
                                    itime        = itime,                                                                &
                                    dof_start    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start,   &
+                                   xdof_start   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_xdof_start,  &
                                    recv_comm    = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,             &
                                    recv_domain  = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,           &
                                    recv_element = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_element)
@@ -326,15 +328,13 @@ contains
                                    iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%iproc,          &
                                    itime        = itime,                                                                              &
                                    dof_start    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%dof_start,      &
+                                   xdof_start   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%xdof_start,     &
                                    recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_comm,      &
                                    recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_domain,    &
                                    recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_element )
 
 
-
-                !
                 ! Boudnary face, linearize wrt Current element
-                !
                 elseif ( boundary_face ) then
 
                     group_ID = mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
@@ -351,6 +351,7 @@ contains
                                    iproc        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend),        &
                                    itime        = itime,                                                                                &
                                    dof_start    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(idepend),   &
+                                   xdof_start   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%xdof_start(idepend),  &
                                    recv_comm    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(idepend),   &
                                    recv_domain  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(idepend), &
                                    recv_element = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(idepend) )
@@ -382,11 +383,10 @@ contains
                            iproc        = 0,            &
                            itime        = itime,        &  ! need itime here because the residual storage relies on it
                            dof_start    = 0,            &
+                           xdof_start   = 0,            &
                            recv_comm    = 0,            &
                            recv_domain  = 0,            &
                            recv_element = 0)
-
-
 
         end if ! linearize
 
@@ -427,11 +427,11 @@ contains
     !-----------------------------------------------------------------------------------------------------------
     function element_compute_seed(mesh,idomain_l,ielement_l,idepend,idiff,itime_couple) result(seed)
         type(mesh_t),   intent(in)  :: mesh
-        integer(ik),        intent(in)  :: idomain_l
-        integer(ik),        intent(in)  :: ielement_l
-        integer(ik),        intent(in)  :: idepend
-        integer(ik),        intent(in)  :: idiff
-        integer(ik),        intent(in)  :: itime_couple
+        integer(ik),    intent(in)  :: idomain_l
+        integer(ik),    intent(in)  :: ielement_l
+        integer(ik),    intent(in)  :: idepend
+        integer(ik),    intent(in)  :: idiff
+        integer(ik),    intent(in)  :: itime_couple
 
 
         type(seed_t)    :: seed
@@ -449,9 +449,7 @@ contains
 
         if (linearize) then
 
-            !
             ! Check for linearization of current element (ielem)
-            !
             if ( linearize_interior ) then
 
                 call seed%init(idomain_g    = mesh%domain(idomain_l)%elems(ielement_l)%idomain_g,           &
@@ -463,33 +461,26 @@ contains
                                nnodes_r     = mesh%domain(idomain_l)%elems(ielement_l)%basis_c%nnodes_r(),  &
                                iproc        = IRANK,                                                        &
                                itime        = itime_couple,                                                 &
-                               dof_start    = mesh%get_dof_start(idomain_l,ielement_l),                     &
+                               dof_start    = mesh%get_dof_start(idomain_l,ielement_l,'primal'),            &
+                               xdof_start   = mesh%get_dof_start(idomain_l,ielement_l,'coordinate'),        &
                                recv_comm    = 0,                                                            &
                                recv_domain  = 0,                                                            &
                                recv_element = 0)
 
 
-            !
             ! Check for linearization of exterior element (neighbor of face(ielem,iface) )
-            !
             elseif ( linearize_exterior ) then
 
-                !
                 ! Check face in the direction of idiff
-                !
                 iface = idiff
 
-                !
                 ! Check if linearization direction (iface) is a Interior or Chimera face
-                !
                 chimera_face  = ( mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA  )
                 interior_face = ( mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR )
                 boundary_face = ( mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY )
 
 
-                !
                 ! Linearize wrt Standard Interior Neighbor
-                !
                 if ( interior_face ) then
 
                     call seed%init(idomain_g    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,    &
@@ -502,14 +493,13 @@ contains
                                    iproc        = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,        &
                                    itime        = itime_couple,                                                         &
                                    dof_start    = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_dof_start,   &
+                                   xdof_start   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_xdof_start,  &
                                    recv_comm    = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_comm,             &
                                    recv_domain  = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_domain,           &
                                    recv_element = mesh%domain(idomain_l)%faces(ielement_l,iface)%recv_element)
 
 
-                !
                 ! Linearize wrt Chimera Interior Neighbor
-                !
                 elseif ( chimera_face ) then
                     ChiID = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
 
@@ -523,14 +513,13 @@ contains
                                    iproc        = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%iproc,          &
                                    itime        = itime_couple,                                                                       &
                                    dof_start    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%dof_start,      &
+                                   xdof_start   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%xdof_start,     &
                                    recv_comm    = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_comm,      &
                                    recv_domain  = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_domain,    &
                                    recv_element = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(idepend)%elem_info%recv_element )
 
 
-                !
                 ! Boundary face, linearize wrt bc coupled element
-                !
                 elseif ( boundary_face ) then
 
                     group_ID = mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
@@ -547,6 +536,7 @@ contains
                                    iproc        = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend),        &
                                    itime        = itime_couple,                                                                         &
                                    dof_start    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(idepend),   &
+                                   xdof_start   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%xdof_start(idepend),   &
                                    recv_comm    = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(idepend),   &
                                    recv_domain  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(idepend), &
                                    recv_element = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(idepend) )
@@ -574,6 +564,7 @@ contains
                            iproc        = 0, &
                            itime        = 0, &
                            dof_start    = 0, &
+                           xdof_start   = 0, &
                            recv_comm    = 0, &
                            recv_domain  = 0, &
                            recv_element = 0)

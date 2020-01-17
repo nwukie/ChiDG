@@ -213,6 +213,7 @@ contains
                                          iproc        = IRANK, &
                                          itime        = itime, &
                                          dof_start    = 112,   & 
+                                         xdof_start   = 337,   & 
                                          recv_comm    = 0,     &
                                          recv_domain  = 0,     &
                                          recv_element = 0)

@@ -280,10 +280,10 @@ contains
 
         type(AD_D)  :: u_aux2
 
-        u_aux2 = cache%get_value(worker%mesh,'u_aux2','auxiliary') 
+        u_aux2 = cache%get_global_value(worker%mesh,'u_aux2','auxiliary') 
 
-        call cache%set_value(worker%mesh,u_aux2+2._rk,'u_aux2','auxiliary')
-        call cache%set_value(worker%mesh,u_aux2-1._rk,'u_aux1','auxiliary')
+        call cache%set_global_value(worker%mesh,u_aux2+2._rk,'u_aux2','auxiliary')
+        call cache%set_global_value(worker%mesh,u_aux2-1._rk,'u_aux1','auxiliary')
 
     end subroutine finalize_auxiliary
     !****************************************************************************************
@@ -305,10 +305,10 @@ contains
 
         type(AD_D)  :: u_aux2,u_ref1
 
-        u_aux2 = cache%get_value(worker%mesh,'u_aux2','auxiliary') 
-        u_ref1 = cache%get_value(worker%mesh,'u_ref1','reference') 
+        u_aux2 = cache%get_global_value(worker%mesh,'u_aux2','auxiliary') 
+        u_ref1 = cache%get_global_value(worker%mesh,'u_ref1','reference') 
 
-        call cache%set_value(worker%mesh,u_aux2+u_ref1,'functional 2','reference')
+        call cache%set_global_value(worker%mesh,u_aux2+u_ref1,'functional 2','reference')
 
     end subroutine finalize_functional
     !****************************************************************************************
@@ -702,7 +702,7 @@ contains
             fcn_info%seed%ielement_l = ielem
             fcn_info%seed%ielement_g = ielem
             fcn_info%dtype           = NO_DIFF
-            call fcl_cache%set_value(self%chidg_v_none%data%mesh,int_value,int_name,'reference',fcn_info)
+            call fcl_cache%set_entity_value(self%chidg_v_none%data%mesh,int_value,int_name,'reference',fcn_info)
         end do
 
         
@@ -871,7 +871,7 @@ contains
             fcn_info%seed%ielement_l = ielem
             fcn_info%seed%ielement_g = ielem
             fcn_info%dtype           = dQ_DIFF
-            call fcl_cache%set_value(self%chidg_v_dq%data%mesh,int_value,int_name,'reference',fcn_info)
+            call fcl_cache%set_entity_value(self%chidg_v_dq%data%mesh,int_value,int_name,'reference',fcn_info)
         end do
 
         
@@ -1057,7 +1057,7 @@ contains
             fcn_info%seed%ielement_l = fcl_cache%ref_cache%ielement_l%at(ielem)
             fcn_info%seed%ielement_g = fcl_cache%ref_cache%ielement_g%at(ielem)
             fcn_info%dtype           = dQ_DIFF
-            call fcl_cache%set_value(self%chidg_f_dq%data%mesh,int_value,int_name,'reference',fcn_info)
+            call fcl_cache%set_entity_value(self%chidg_f_dq%data%mesh,int_value,int_name,'reference',fcn_info)
         end do
 
         
@@ -1245,7 +1245,7 @@ contains
             fcn_info%seed%ielement_l = ielem
             fcn_info%seed%ielement_g = ielem
             fcn_info%dtype           = dX_DIFF
-            call fcl_cache%set_value(self%chidg_v_dx%data%mesh,int_value,int_name,'reference',fcn_info)
+            call fcl_cache%set_entity_value(self%chidg_v_dx%data%mesh,int_value,int_name,'reference',fcn_info)
         end do
 
         
@@ -1425,7 +1425,7 @@ contains
             fcn_info%seed%ielement_l = fcl_cache%ref_cache%ielement_l%at(ielem)
             fcn_info%seed%ielement_g = fcl_cache%ref_cache%ielement_g%at(ielem)
             fcn_info%dtype           = dX_DIFF
-            call fcl_cache%set_value(self%chidg_f1_dx%data%mesh,int_value,int_name,'reference',fcn_info)
+            call fcl_cache%set_entity_value(self%chidg_f1_dx%data%mesh,int_value,int_name,'reference',fcn_info)
         end do
 
         
@@ -1630,7 +1630,7 @@ contains
             fcn_info%seed%ielement_l = fcl_cache%aux_cache%ielement_l%at(ielem)
             fcn_info%seed%ielement_g = fcl_cache%aux_cache%ielement_g%at(ielem)
             fcn_info%dtype           = dX_DIFF
-            call fcl_cache%set_value(self%chidg_f2_dx%data%mesh,int_value,int_name,'auxiliary',fcn_info)
+            call fcl_cache%set_entity_value(self%chidg_f2_dx%data%mesh,int_value,int_name,'auxiliary',fcn_info)
         end do
 
         
@@ -1818,8 +1818,8 @@ contains
             fcn_info%seed%ielement_g = fcl_cache%ref_cache%ielement_g%at(ielem)
             fcn_info%dtype           = dX_DIFF
 
-            u_aux1 = fcl_cache%get_value(self%chidg_f2_dx%data%mesh,'u_aux1','auxiliary',fcn_info)
-            call fcl_cache%set_value(self%chidg_f2_dx%data%mesh,int_value+u_aux1,int_name,'reference',fcn_info)
+            u_aux1 = fcl_cache%get_entity_value(self%chidg_f2_dx%data%mesh,'u_aux1','auxiliary',fcn_info)
+            call fcl_cache%set_entity_value(self%chidg_f2_dx%data%mesh,int_value+u_aux1,int_name,'reference',fcn_info)
         end do
 
         

@@ -209,8 +209,8 @@ contains
         call chidg%shut_down('mpi')
 
         ! Delete tmp files
-        call delete_file(tmp_flow_file)
-        call delete_file(tmp_adj_file)
+        if (IRANK == GLOBAL_MASTER) call delete_file(tmp_flow_file)
+        if (IRANK == GLOBAL_MASTER) call delete_file(tmp_adj_file)
 
     end subroutine chidg_adjointx
     !******************************************************************************************

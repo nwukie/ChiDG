@@ -41,6 +41,8 @@ module type_bc_element_coupling
         procedure   :: coordinate_system
         procedure   :: dof_start
         procedure   :: dof_local_start
+        procedure   :: xdof_start
+        procedure   :: xdof_local_start
 
         procedure   :: proc
 
@@ -48,6 +50,7 @@ module type_bc_element_coupling
         procedure   :: recv_domain
         procedure   :: recv_element
         procedure   :: recv_dof
+        procedure   :: recv_xdof
 
     end type bc_element_coupling_t
     !********************************************************************
@@ -151,7 +154,7 @@ contains
     !!
     !!
     !----------------------------------------------------------------------
-    subroutine set_coupled_element_recv(self,idomain_g,ielement_g,recv_comm,recv_domain,recv_element,recv_dof)
+    subroutine set_coupled_element_recv(self,idomain_g,ielement_g,recv_comm,recv_domain,recv_element,recv_dof,recv_xdof)
         class(bc_element_coupling_t),   intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g
         integer(ik),                    intent(in)      :: ielement_g
@@ -159,13 +162,14 @@ contains
         integer(ik),                    intent(in)      :: recv_domain
         integer(ik),                    intent(in)      :: recv_element
         integer(ik),                    intent(in)      :: recv_dof
+        integer(ik),                    intent(in)      :: recv_xdof
 
         integer(ik) :: elem_ID
 
         ! Get location of coupled element
         elem_ID = self%find_coupled_element(idomain_g,ielement_g)
 
-        call self%data(elem_ID)%set_recv(recv_comm,recv_domain,recv_element,recv_dof)
+        call self%data(elem_ID)%set_recv(recv_comm,recv_domain,recv_element,recv_dof,recv_xdof)
 
     end subroutine set_coupled_element_recv
     !**********************************************************************
@@ -180,7 +184,7 @@ contains
     !!  @date   4/18/2017
     !!
     !----------------------------------------------------------------------
-    subroutine set_coupled_element_data(self,idomain_g,ielement_g,nfields,ntime,nterms_s,nnodes_r,coordinate_system,dof_start,dof_local_start,total_area,areas,quad_pts)
+    subroutine set_coupled_element_data(self,idomain_g,ielement_g,nfields,ntime,nterms_s,nnodes_r,coordinate_system,dof_start,dof_local_start,xdof_start,xdof_local_start,total_area,areas,quad_pts)
         class(bc_element_coupling_t),   intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g
         integer(ik),                    intent(in)      :: ielement_g
@@ -191,6 +195,8 @@ contains
         integer(ik),                    intent(in)      :: coordinate_system
         integer(ik),                    intent(in)      :: dof_start
         integer(ik),                    intent(in)      :: dof_local_start
+        integer(ik),                    intent(in)      :: xdof_start
+        integer(ik),                    intent(in)      :: xdof_local_start
         real(rk),                       intent(in)      :: total_area
         real(rk),                       intent(in)      :: areas(:)
         type(point_t),                  intent(in)      :: quad_pts(:)
@@ -200,7 +206,7 @@ contains
         ! Get location of coupled element
         elem_ID = self%find_coupled_element(idomain_g,ielement_g)
 
-        call self%data(elem_ID)%set_data(nfields,ntime,nterms_s,nnodes_r,coordinate_system,dof_start,dof_local_start,total_area,areas,quad_pts)
+        call self%data(elem_ID)%set_data(nfields,ntime,nterms_s,nnodes_r,coordinate_system,dof_start,dof_local_start,xdof_start,xdof_local_start,total_area,areas,quad_pts)
 
     end subroutine set_coupled_element_data
     !**********************************************************************
@@ -478,6 +484,45 @@ contains
 
 
 
+    !>  Return the starting coordinate DOF index in the ChiDG-global index.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/27/2019
+    !!
+    !-----------------------------------------------------------------------
+    function xdof_start(self,elem_ID) result(xdof_start_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: xdof_start_
+
+        xdof_start_ = self%data(elem_ID)%xdof_start
+
+    end function xdof_start
+    !************************************************************************
+
+
+
+
+    !>  Return the starting coordinate DOF index in the proc-localindex.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/27/2019
+    !!
+    !-----------------------------------------------------------------------
+    function xdof_local_start(self,elem_ID) result(xdof_local_start_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: xdof_local_start_
+
+        xdof_local_start_ = self%data(elem_ID)%xdof_local_start
+
+    end function xdof_local_start
+    !************************************************************************
+
+
+
     !>  Return the identifier proc
     !!
     !!  @author Nathan A. Wukie
@@ -584,6 +629,27 @@ contains
     end function recv_dof
     !************************************************************************
 
+
+
+
+    !>  Return the identifier recv_xdof for the coupled element.
+    !!
+    !!  NOTE: recv_xdof is for PETSC storage containers.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/16/2020
+    !!
+    !-----------------------------------------------------------------------
+    function recv_xdof(self,elem_ID) result(recv_xdof_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: recv_xdof_
+
+        recv_xdof_ = self%data(elem_ID)%recv_xdof
+
+    end function recv_xdof
+    !************************************************************************
 
 
 

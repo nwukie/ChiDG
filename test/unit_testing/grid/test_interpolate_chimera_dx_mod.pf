@@ -135,7 +135,7 @@ contains
     subroutine test__interpolate_face_chimera_AD__dx_values__idE(self)
         class(test_interpolate_chimera_dx),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ifield, ngq, idomain, itime, nterms_s, nfields
+        integer(ik)                 :: ielem, iface, ifield, ngq, idomain, itime, nterms_s, nfields, nterms_c
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val, slope
@@ -150,6 +150,7 @@ contains
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             nterms_s = 8
+            nterms_c = 8
             nfields = 1
             itime   = 1
             iface   = XI_MAX    ! given face
@@ -171,10 +172,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 1,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 1,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm    = NO_ID,      &
                                      recv_domain  = NO_ID,      &
                                      recv_element = NO_ID,      &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,      &
+                                     recv_xdof    = NO_ID)
 
             
 
@@ -191,6 +195,7 @@ contains
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = (ielem-1)*nterms_s*nfields + 1, &
+                                    xdof_start   = (ielem-1)*nterms_c*3 + 1, &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -263,7 +268,7 @@ contains
     subroutine test__interpolate_face_chimera_AD__dx_derivatives__idF(self)
         class(test_interpolate_chimera_dx),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ifield, ngq, igq, nderiv, idomain, itime, nterms_s, nfields
+        integer(ik)                 :: ielem, iface, ifield, ngq, igq, nderiv, idomain, itime, nterms_s, nfields, nterms_c
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
@@ -276,6 +281,7 @@ contains
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             nterms_s = 8
+            nterms_c = 8
             nfields = 1
             iface   = XI_MAX    ! given face
             itime   = 1
@@ -297,10 +303,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 1,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 1,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm    = NO_ID,      &
                                      recv_domain  = NO_ID,      &
                                      recv_element = NO_ID,      &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,      &
+                                     recv_xdof    = NO_ID)
 
 
             !
@@ -317,6 +326,7 @@ contains
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = (ielem-1)*nterms_s*nfields + 1, &
+                                    xdof_start   = (ielem-1)*nterms_c*3 + 1, &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -388,7 +398,7 @@ contains
     subroutine test__interpolate_face_chimera_dx_AD__values__idG(self)
         class(test_interpolate_chimera_dx),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ifield, ngq, idomain, itime, nterms_s, nfields
+        integer(ik)                 :: ielem, iface, ifield, ngq, idomain, itime, nterms_s, nfields, nterms_c
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val, slope
@@ -401,6 +411,7 @@ contains
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             nterms_s = 8
+            nterms_c = 8
             nfields = 1
             iface   = XI_MAX    ! given face
             itime   = 1
@@ -422,10 +433,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 1,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 1,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm    = NO_ID,      &
                                      recv_domain  = NO_ID,      &
                                      recv_element = NO_ID,      &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,      &
+                                     recv_xdof    = NO_ID)
 
 
             !
@@ -442,6 +456,7 @@ contains
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = (ielem-1)*nterms_s*nfields + 1, &
+                                    xdof_start   = (ielem-1)*nterms_c*3 + 1, &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -516,7 +531,7 @@ contains
     subroutine test__interpolate_face_chimera_dx_AD__derivatives__idH(self)
         class(test_interpolate_chimera_dx),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ifield, igq, ngq, nderiv, idomain, itime, nterms_s, nfields
+        integer(ik)                 :: ielem, iface, ifield, igq, ngq, nderiv, idomain, itime, nterms_s, nfields, nterms_c
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
@@ -533,6 +548,7 @@ contains
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
             nterms_s = 8
+            nterms_c = 8
             nfields = 1
             itime   = 1
             idonor  = 1
@@ -554,10 +570,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 0,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 0,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm    = NO_ID,      &
                                      recv_domain  = NO_ID,      &
                                      recv_element = NO_ID,      &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,      &
+                                     recv_xdof    = NO_ID)
 
 
             ChiID = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%ChiID
@@ -576,6 +595,7 @@ contains
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = (ielem-1)*nterms_s*nfields + 1, &
+                                    xdof_start   = (ielem-1)*nterms_c*3 + 1, &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -663,7 +683,7 @@ contains
     subroutine test__interpolate_face_chimera_dx_AD__grad1__idI(self)
         class(test_interpolate_chimera_dx),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ifield, ngq, idomain, itime, nterms_s, nfields
+        integer(ik)                 :: ielem, iface, ifield, ngq, idomain, itime, nterms_s, nfields, nterms_c
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val, slope
@@ -678,6 +698,7 @@ contains
             iface   = XI_MAX    ! given face
             nfields = 1
             nterms_s = 8
+            nterms_c = 8
             itime   = 1
             
 
@@ -698,10 +719,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 0,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 0,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm    = NO_ID,      &
                                      recv_domain  = NO_ID,      &
                                      recv_element = NO_ID,      &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,      &
+                                     recv_xdof    = NO_ID)
 
 
 
@@ -722,6 +746,7 @@ contains
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = (ielem-1)*nterms_s*nfields + 1, &
+                                    xdof_start   = (ielem-1)*nterms_c*3 + 1, &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -805,7 +830,7 @@ contains
     subroutine test__interpolate_face_chimera_dx_AD__grad1_derivatives__idJ(self)
         class(test_interpolate_chimera_dx),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ifield, igq, ngq, nderiv, idomain, itime, nterms_s, nfields, nnodes_r
+        integer(ik)                 :: ielem, iface, ifield, igq, ngq, nderiv, idomain, itime, nterms_s, nfields, nnodes_r, nterms_c
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
@@ -822,6 +847,7 @@ contains
             ielem    = 2         ! given element
             iface    = XI_MAX    ! given face
             nterms_s = 8
+            nterms_c = 8
             nfields  = 1
             itime    = 1
             idonor   = 1
@@ -844,10 +870,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 0,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 0,       &
+                                     xdof_local_start = 1,       &
                                      recv_comm    = NO_ID,      &
                                      recv_domain  = NO_ID,      &
                                      recv_element = NO_ID,      &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,      &
+                                     recv_xdof    = NO_ID)
 
             !
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
@@ -863,6 +892,7 @@ contains
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = (ielem-1)*nterms_s*nfields + 1, &
+                                    xdof_start   = (ielem-1)*nterms_c*3 + 1, &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)

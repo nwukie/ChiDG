@@ -28,7 +28,7 @@ module type_functional_cache
         type(geometry_cache_t)              :: aux_cache        ! Integrals computed on the auxiliary geom
 
         ! Info needed for storing derivatives
-        type(chidg_vector_t)                :: vector_model
+        type(chidg_vector_t)                :: derivative_vector_template
         integer(ik)                         :: dtype
     
     contains
@@ -37,12 +37,16 @@ module type_functional_cache
         procedure,  public  :: init
         
         ! Storage access
-        procedure,  public  :: set_value
-        procedure,  public  :: get_value
+        procedure,  public  :: set_entity_value
+        procedure,  public  :: set_global_value
+        procedure,  public  :: get_entity_value
+        procedure,  public  :: get_global_value
         procedure,  public  :: nentities
 
         ! Communication
         procedure,  public  :: comm
+
+        procedure,  public  :: release
 
     end type functional_cache_t
     !***************************************************************************************************
@@ -59,37 +63,36 @@ contains
     !!  @date   3/7/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine init(self,geometry,mesh,geometries,integral_type,differentiate)
+    subroutine init(self,geometry_type,mesh,geometries,integrals,integral_type,differentiate)
         class(functional_cache_t),  intent(inout)       :: self
-        character(*),               intent(in)          :: geometry
+        character(*),               intent(in)          :: geometry_type
         type(mesh_t),               intent(inout)       :: mesh
         type(svector_t),            intent(in)          :: geometries
+        type(svector_t),            intent(in)          :: integrals
         character(*),               intent(in)          :: integral_type
         integer(ik),                intent(in)          :: differentiate
 
-        self%vector_model = chidg_vector(trim(backend))
-        
-        ! Initialize spcific geometry cache
-        select case (geometry)
-            case("reference")
-                call self%ref_cache%initialize(mesh,geometries,integral_type,differentiate)
-
-            case("auxiliary")
-                call self%aux_cache%initialize(mesh,geometries,integral_type,differentiate)
-
-            case default
-                call chidg_signal(FATAL,"functional_cache_t%init: incorrect 'geometry' reference.")
-        end select
+        self%derivative_vector_template = chidg_vector(trim(backend))
 
         ! Create chidg vector model
         if (differentiate == dX_DIFF) then
-            call self%vector_model%init(mesh,1,'grid differentiation')
+            call self%derivative_vector_template%init(mesh,1,dof_type='coordinate')
         else if (differentiate == dD_DIFF) then
-            call self%vector_model%init(mesh,1,'auxiliary differentiation')
+            call self%derivative_vector_template%init(mesh,1,dof_type='auxiliary')
         else 
-            call self%vector_model%init(mesh,1,'primal differentiation')
+            call self%derivative_vector_template%init(mesh,1,dof_type='primal')
         end if
-
+        call self%derivative_vector_template%assemble()
+        
+        ! Initialize spcific geometry cache
+        select case (geometry_type)
+            case("reference")
+                call self%ref_cache%initialize(mesh,geometries,integrals,integral_type,differentiate,self%derivative_vector_template)
+            case("auxiliary")
+                call self%aux_cache%initialize(mesh,geometries,integrals,integral_type,differentiate,self%derivative_vector_template)
+            case default
+                call chidg_signal(FATAL,"functional_cache_t%init: incorrect input for 'geometry_type'.")
+        end select
 
         ! Differentiation type
         self%dtype = differentiate
@@ -108,30 +111,51 @@ contains
     !!  @date   3/7/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine set_value(self,mesh,integral,int_name,geometry,fcn_info)
+    subroutine set_entity_value(self,mesh,integral,int_name,geometry,fcn_info)
         class(functional_cache_t),              intent(inout)   :: self
         type(mesh_t),                           intent(in)      :: mesh
         type(AD_D),                             intent(in)      :: integral
         character(*),                           intent(in)      :: int_name
         character(*),                           intent(in)      :: geometry
-        type(function_info_t),      optional,   intent(in)      :: fcn_info
+        type(function_info_t),                  intent(in)      :: fcn_info
 
         select case (geometry)
             case("reference")
-                call self%ref_cache%set_value(mesh,int_name,integral,self%vector_model,self%dtype,fcn_info)
-
+                call self%ref_cache%set_entity_value(mesh,int_name,integral,fcn_info)
             case("auxiliary")
-                call self%aux_cache%set_value(mesh,int_name,integral,self%vector_model,self%dtype,fcn_info)
-
+                call self%aux_cache%set_entity_value(mesh,int_name,integral,fcn_info)
             case default
-                call chidg_signal(FATAL,"functional_cache_t%set_value: incorrect 'geometry' reference.")
+                call chidg_signal(FATAL,"functional_cache_t%set_entity_value: incorrect 'geometry' reference.")
         end select
-
         
-    end subroutine set_value
+    end subroutine set_entity_value
     !***************************************************************************************************
 
     
+    !>  Store integral based on the geometry   
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   3/7/2019
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine set_global_value(self,mesh,integral,int_name,geometry)
+        class(functional_cache_t),              intent(inout)   :: self
+        type(mesh_t),                           intent(in)      :: mesh
+        type(AD_D),                             intent(in)      :: integral
+        character(*),                           intent(in)      :: int_name
+        character(*),                           intent(in)      :: geometry
+
+        select case (geometry)
+            case("reference")
+                call self%ref_cache%set_global_value(mesh,int_name,integral,self%dtype)
+            case("auxiliary")
+                call self%aux_cache%set_global_value(mesh,int_name,integral,self%dtype)
+            case default
+                call chidg_signal(FATAL,"functional_cache_t%set_global_value: incorrect 'geometry' reference.")
+        end select
+        
+    end subroutine set_global_value
+    !***************************************************************************************************
     
     
     
@@ -141,27 +165,53 @@ contains
     !!  @date   3/7/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    function get_value(self,mesh,int_name,geometry,fcn_info) result(integral)
+    function get_entity_value(self,mesh,int_name,geometry,fcn_info) result(integral)
         class(functional_cache_t),              intent(inout)   :: self
         type(mesh_t),                           intent(in)      :: mesh
         character(*),                           intent(in)      :: int_name
         character(*),                           intent(in)      :: geometry
-        type(function_info_t),      optional,   intent(in)      :: fcn_info
+        type(function_info_t),                  intent(in)      :: fcn_info
 
         type(AD_D)      :: integral
 
         select case (geometry)
             case("reference")
-                integral = self%ref_cache%get_value(mesh,int_name,self%vector_model,self%dtype,fcn_info)
-
+                integral = self%ref_cache%get_entity_value(mesh,int_name,fcn_info)
             case("auxiliary")
-                integral = self%aux_cache%get_value(mesh,int_name,self%vector_model,self%dtype,fcn_info)
-
+                integral = self%aux_cache%get_entity_value(mesh,int_name,fcn_info)
             case default
-                call chidg_signal(FATAL,"functional_cache_t%get_value: incorrect 'geometry' reference.")
+                call chidg_signal(FATAL,"functional_cache_t%get_entity_value: incorrect 'geometry' reference.")
         end select
         
-    end function get_value
+    end function get_entity_value
+    !***************************************************************************************************
+
+
+
+    !>  Get integral based on the geometry   
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   3/7/2019
+    !!
+    !---------------------------------------------------------------------------------------------------
+    function get_global_value(self,mesh,int_name,geometry) result(integral)
+        class(functional_cache_t),              intent(inout)   :: self
+        type(mesh_t),                           intent(in)      :: mesh
+        character(*),                           intent(in)      :: int_name
+        character(*),                           intent(in)      :: geometry
+
+        type(AD_D)      :: integral
+
+        select case (geometry)
+            case("reference")
+                integral = self%ref_cache%get_global_value(mesh,int_name,self%dtype)
+            case("auxiliary")
+                integral = self%aux_cache%get_global_value(mesh,int_name,self%dtype)
+            case default
+                call chidg_signal(FATAL,"functional_cache_t%get_global_value: incorrect 'geometry' reference.")
+        end select
+        
+    end function get_global_value
     !***************************************************************************************************
 
 
@@ -183,10 +233,8 @@ contains
         select case (geometry)
             case("reference")
                 nentities_ = self%ref_cache%nentities
-
             case("auxiliary")
                 nentities_ = self%aux_cache%nentities
-
             case default
                 call chidg_signal(FATAL,"functional_cache_t%nentities: incorrect 'geometry' reference.")
         end select
@@ -195,7 +243,6 @@ contains
     !***************************************************************************************************
 
 
-    
     
     
     
@@ -212,11 +259,9 @@ contains
         ! Initialize spcific geometry cache
         select case (geometry)
             case("reference")
-                call self%ref_cache%comm(self%vector_model,self%dtype)
-
+                call self%ref_cache%comm(self%dtype)
             case("auxiliary")
-                call self%aux_cache%comm(self%vector_model,self%dtype)
-
+                call self%aux_cache%comm(self%dtype)
             case default
                 call chidg_signal(FATAL,"functional_cache_t%comm: incorrect 'geometry' reference.")
         end select
@@ -224,6 +269,28 @@ contains
 
     end subroutine comm
     !***************************************************************************************************
+
+
+
+
+
+    !>  Release memory.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/16/2020
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine release(self)
+        class(functional_cache_t),  intent(inout)   :: self
+
+        call self%derivative_vector_template%release()
+        call self%ref_cache%release()
+        call self%aux_cache%release()
+
+    end subroutine release
+    !***************************************************************************************************
+
+
 
 
 end module type_functional_cache

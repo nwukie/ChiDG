@@ -152,12 +152,10 @@ contains
         
         end do
 
-
         ! Run ChiDG Adjoint simulation
         call chidg%reporter('before')
         call chidg%run_adjoint(write_final=final_write)
         call chidg%reporter('after adjoint')
-
 
 
         ! Close ChiDG
@@ -166,7 +164,7 @@ contains
 
 
         ! Delete tmp files
-        call delete_file(tmp_flow_file)
+        if (IRANK == GLOBAL_MASTER) call delete_file(tmp_flow_file)
 
 
     end subroutine chidg_adjoint

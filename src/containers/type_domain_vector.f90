@@ -122,15 +122,15 @@ contains
     !!  @date   11/5/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine init_local(self,domain,vtype)
-        class(domain_vector_t), intent(inout)           :: self
-        type(domain_t),         intent(in)              :: domain
-        character(*),           intent(in), optional    :: vtype
+    subroutine init_local(self,domain,dof_type)
+        class(domain_vector_t), intent(inout)   :: self
+        type(domain_t),         intent(in)      :: domain
+        character(*),           intent(in)      :: dof_type
 
         integer(ik) :: nelem, ierr, ielem, nterms, nfields, ntime
         integer(ik) :: dparent_g, dparent_l, eparent_g, eparent_l
         logical     :: new_elements
-        character(:),   allocatable :: error_string, specialization
+        character(:),   allocatable :: error_string
 
 
         nelem = domain%nelem  ! Number of elements in the local block
@@ -153,24 +153,24 @@ contains
             if (ierr /= 0) call AllocationError
         end if
 
-        ! Detect vector storage specialization
-        if (present(vtype)) then
-            select case (trim(vtype))
-                case ('primal differentiation')
-                    specialization = 'solution'
-                case ('auxiliary differentiation')
-                    specialization = 'auxiliary'
-                case ('grid differentiation')
-                    specialization = 'grid'
-                case default
-                    error_string = "domain_vector%init_local: Invalid parameter for 'vtype' &
-                                    ('primal differentiation', 'auxiliary differentiation', &
-                                    'grid differentiation')"
-                    call chidg_signal_one(FATAL,error_string,trim(vtype))
-            end select
-        else
-            specialization = 'solution'
-        end if
+!        ! Detect vector storage specialization
+!        if (present(vtype)) then
+!            select case (trim(vtype))
+!                case ('primal differentiation')
+!                    specialization = 'solution'
+!                case ('auxiliary differentiation')
+!                    specialization = 'auxiliary'
+!                case ('grid differentiation')
+!                    specialization = 'grid'
+!                case default
+!                    error_string = "domain_vector%init_local: Invalid parameter for 'vtype' &
+!                                    ('primal differentiation', 'auxiliary differentiation', &
+!                                    'grid differentiation')"
+!                    call chidg_signal_one(FATAL,error_string,trim(vtype))
+!            end select
+!        else
+!            specialization = 'solution'
+!        end if
 
 
         ! Loop through elements and call initialization for densevectors
@@ -181,18 +181,18 @@ contains
             eparent_l = domain%elems(ielem)%ielement_l
             ntime     = domain%elems(ielem)%ntime
 
-            select case (trim(specialization))
-                case ('solution')
+            select case (trim(dof_type))
+                case ('primal')
                     nterms    = domain%elems(ielem)%nterms_s
                     nfields   = domain%elems(ielem)%nfields
+                case ('coordinate')
+                    nterms    = domain%elems(ielem)%basis_c%nnodes_r()
+                    nfields   = 3
                 case ('auxiliary')
                     nterms    = domain%elems(ielem)%nterms_s
                     nfields   = 1   ! assuming auxiliary problem has only 1 field
-                case ('grid')
-                    nterms    = domain%elems(ielem)%basis_c%nnodes_r()
-                    nfields   = 3
                 case default
-                    call chidg_signal(FATAL,"domain_vector%init_local: Invalid internal parameter. Should never be here.")
+                    call chidg_signal_one(FATAL,"domain_vector%init_local: Invalid internal parameter. Should never be here.",trim(dof_type))
             end select
 
 

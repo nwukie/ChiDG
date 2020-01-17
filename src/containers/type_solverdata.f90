@@ -160,20 +160,20 @@ contains
         self%lhs   = chidg_matrix(trim(backend))
 
         ! Initialize vectors
-        if (storage_flags%q)     call self%q%init(    mesh,mesh%ntime_)
-        if (storage_flags%dq)    call self%dq%init(   mesh,mesh%ntime_)
-        if (storage_flags%rhs)   call self%rhs%init(  mesh,mesh%ntime_)
-        if (storage_flags%q_in)  call self%q_in%init( mesh,mesh%ntime_)
-        if (storage_flags%q_out) call self%q_out%init(mesh,mesh%ntime_)
+        if (storage_flags%q)     call self%q%init(    mesh,mesh%ntime_, 'primal')
+        if (storage_flags%dq)    call self%dq%init(   mesh,mesh%ntime_, 'primal')
+        if (storage_flags%rhs)   call self%rhs%init(  mesh,mesh%ntime_, 'primal')
+        if (storage_flags%q_in)  call self%q_in%init( mesh,mesh%ntime_, 'primal')
+        if (storage_flags%q_out) call self%q_out%init(mesh,mesh%ntime_, 'primal')
 
         ! Initialize matrix and parallel recv data
-        if (storage_flags%lhs) call self%lhs%init(mesh,'full')
+        if (storage_flags%lhs) call self%lhs%init(mesh,storage_config='full',dof_type='primal')
         if (storage_flags%lhs) call self%lhs%init_recv(self%rhs)
 
         ! By default, create 5 auxiliary field vectors. Each initialized with 'empty' field string.
         do iaux = 1,5
             aux_ID = self%new_auxiliary_field()
-            call self%auxiliary_field(aux_ID)%init(mesh,mesh%ntime_)
+            call self%auxiliary_field(aux_ID)%init(mesh,mesh%ntime_,'auxiliary')
         end do
 
         ! Find maximum number of elements in any domain

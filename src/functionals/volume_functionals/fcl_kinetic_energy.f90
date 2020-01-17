@@ -62,13 +62,12 @@ contains
     subroutine init(self)
         class(kinetic_energy_t), intent(inout)   :: self
 
-
-        !
         ! Start defining the evaluator information
-        !
         call self%set_name("Kinetic Energy")
         call self%set_eval_type("Functional")
         call self%set_int_type("VOLUME INTEGRAL")
+
+        call self%add_integral("kinetic energy")
 
     end subroutine init
     !******************************************************************************************

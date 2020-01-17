@@ -92,15 +92,12 @@ module integration_adjointx_1D_LA_mod
     implicit none
 
 
-    type(mvector_t) :: case1_sens(2) ! nprocs
-    type(mvector_t) :: case2_sens(2) ! nprocs
-    type(mvector_t) :: case3_sens(2) ! nprocs
+    type(mvector_t) :: case1_sens(2,2) ! nprocs, nbackend
+    type(mvector_t) :: case2_sens(2,2) ! nprocs, nbackend
+    type(mvector_t) :: case3_sens(2,2) ! nprocs, nbackend
 
 
     public  :: adjointx_linear_advection_1D
-
-
-
 
 
 
@@ -166,7 +163,7 @@ module integration_adjointx_1D_LA_mod
         integer(ik)                 :: nblocks
         character(:),   allocatable :: gridtype     ! singleblock, doubleblock
         character(:),   allocatable :: gridfile 
-        !integer(ik)                 :: order
+        character(:),   allocatable :: backend
     contains
         procedure   :: toString
     end type case_grid
@@ -186,13 +183,11 @@ module integration_adjointx_1D_LA_mod
     !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: adjointx_linear_advection_1D
-
         integer(ik)                 :: nelem_xi
         integer(ik)                 :: nblocks
         character(:),   allocatable :: gridtype
         character(:),   allocatable :: gridfile
-        !integer(ik)                 :: order
-
+        character(:),   allocatable :: backend
     contains
         procedure   :: setUp
         procedure   :: tearDown
@@ -360,7 +355,7 @@ contains
         class(test_linear_advection_builder_t), intent(in)  :: self
         character(*),                           intent(in)  :: blueprint
 
-        type(equation_set_t)                :: linear_advection_eqn
+        type(equation_set_t)    :: linear_advection_eqn
         
         ! Set equationset name.
         call linear_advection_eqn%set_name("Test AdjointX 1D Linear Advection")
@@ -402,7 +397,7 @@ contains
         test%nblocks    = test_parameter%nblocks
         test%gridtype   = test_parameter%gridtype
         test%gridfile   = test_parameter%gridfile
-        !test%order      = test_parameter%order
+        test%backend    = test_parameter%backend
 
     end function newTest
     !******************************************************************************
@@ -419,28 +414,56 @@ contains
         integer(ik),        allocatable :: nblocks(:)
         type(string_t),     allocatable :: gridtype(:)
         type(string_t),     allocatable :: files(:)
-        !integer(ik),        allocatable :: orders(:)
-        integer(ik) :: icase
+        type(string_t),     allocatable :: backends(:)
+        integer(ik) :: icase, ncases, ifile, ibackend
 
-        nelem_xi = [4,4,2]
+        ! These go together
+        nelem_xi = [4, 4, 2]
+        nblocks  = [1, 2, 1]
+        gridtype = [ string_t("singleblock"), string_t("doubleblock"), string_t("singleblock") ]
+        files    = [ string_t("1D_linear_advection_D1_4x1x1.h5"), string_t("1D_linear_advection_D2_4x1x1.h5"), string_t("1D_linear_advection_D1_2x1x1.h5") ]
 
-        nblocks  = [1,2,1]
+        ! These go together
+        backends  = [string_t("native"), string_t("petsc") ]
+        !backends  = [string_t("native")]
+        !backends  = [string_t("petsc")]
 
-        gridtype = [ string_t("singleblock"), &
-                     string_t("doubleblock"), &
-                     string_t("singleblock") ]
 
-        files = [ string_t("1D_linear_advection_D1_4x1x1.h5"),         &
-                  string_t("1D_linear_advection_D2_4x1x1.h5"),         &
-                  string_t("1D_linear_advection_D1_2x1x1.h5") ]
+        ncases = size(nelem_xi)*size(backends)
+        if (allocated(params)) deallocate(params)
+        allocate(params(ncases))
 
-        allocate(params(size(files)))
-        do icase = 1,size(files)
-            params(icase)%nelem_xi  = nelem_xi(icase)
-            params(icase)%nblocks   = nblocks(icase)
-            params(icase)%gridtype  = gridtype(icase)%str
-            params(icase)%gridfile  = files(icase)%str
+        icase = 1
+        do ifile = 1,size(files)
+            do ibackend = 1,size(backends)
+
+                params(icase)%nelem_xi  = nelem_xi(ifile)
+                params(icase)%nblocks   = nblocks(ifile)
+                params(icase)%gridtype  = gridtype(ifile)%str
+                params(icase)%gridfile  = files(ifile)%str
+                params(icase)%backend   = backends(ibackend)%str
+                icase = icase + 1
+
+            end do
         end do
+
+
+!        nelem_xi = [4,4,2]
+!        nblocks  = [1,2,1]
+!        gridtype = [ string_t("singleblock"), &
+!                     string_t("doubleblock"), &
+!                     string_t("singleblock") ]
+!        files = [ string_t("1D_linear_advection_D1_4x1x1.h5"),         &
+!                  string_t("1D_linear_advection_D2_4x1x1.h5"),         &
+!                  string_t("1D_linear_advection_D1_2x1x1.h5") ]
+!
+!        allocate(params(size(files)))
+!        do icase = 1,size(files)
+!            params(icase)%nelem_xi  = nelem_xi(icase)
+!            params(icase)%nblocks   = nblocks(icase)
+!            params(icase)%gridtype  = gridtype(icase)%str
+!            params(icase)%gridfile  = files(icase)%str
+!        end do
 
     end function getParameters
     !****************************************************************************************
@@ -457,15 +480,11 @@ contains
 
         character(len=200) :: buffer
 
-        write(buffer,'( "(nelem_xi, gridtype)=","(", I2,",", A10,")" )') this%nelem_xi, this%gridtype
+        write(buffer,'( "(nelem_xi, gridtype, backend)=","(", I2,",", A10,",", A10,")" )') this%nelem_xi, trim(this%gridtype), trim(this%backend)
         string = trim(buffer)
 
     end function toString
     !****************************************************************************************
-
-
-
-
 
 
 
@@ -541,6 +560,7 @@ contains
             !------------------------------------------------------------------------------
             basis            = "legendre"
             gq_rule          = 3
+            backend          = trim(this%backend)
             time_integrator  = "steady"
             nonlinear_solver = "newton"
             linear_solver    = "fgmres"
@@ -660,8 +680,6 @@ contains
 
             end if
 
-
-
             ! Set ChiDG components
             call chidg%set('Solution Order',   integer_input=3)
             call chidg%set('Time Integrator',  algorithm=time_integrator)
@@ -753,7 +771,6 @@ contains
             ! Write out adjoint solution
             call chidg_adj%write_fields(this%gridfile,'adjoint')
 
-           
         !********************
         !
         !   ADJOINTX RUN
@@ -814,7 +831,6 @@ contains
             end do
             call chidg_adjx%data%sdata%adjoint%process_primal_solution(chidg_adjx%data%sdata%q_in,file_props%istep)
             
-            
             ! Read Adjoint Solution
             istep   = 1
             nfuncs  = 1
@@ -822,7 +838,6 @@ contains
             call chidg_adjx%read_fields(this%gridfile,'adjoint')
             call chidg_adjx%data%sdata%adjoint%process_adjoint_solution(istep)
             call chidg_adjx%data%reset_fields()
-
 
     end subroutine SetUp
     !*****************************************************************************************
@@ -867,7 +882,7 @@ contains
     subroutine run(self)
         class(adjointx_linear_advection_1D),  intent(inout)   :: self
 
-        integer(ik) :: grid_index, nprocs
+        integer(ik) :: grid_index, backend_index, nprocs
 
         ! Run ChiDG Adjointx simulation
         call chidg_adjx%run_adjointx(write_final=.false.)
@@ -876,23 +891,24 @@ contains
         call chidg_adjx%data%sdata%adjointx%gather_all(chidg_adjx%data%mesh)
 
         ! Store sensitivities
-        grid_index  = get_case(self%nelem_xi,self%nblocks)
-        nprocs      = NRANK
+        grid_index    = get_case(self%nelem_xi,self%nblocks)
+        backend_index = get_backend_index(self%backend)
+        nprocs = NRANK
         
         if (IRANK == GLOBAL_MASTER) then 
 
             select case(grid_index)
                 case(1)
-                    if (nprocs==1) call case1_sens(1)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
-                    if (nprocs==2) call case1_sens(2)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==1) call case1_sens(1,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==2) call case1_sens(2,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
                 case(2)
-                    if (nprocs==1) call case2_sens(1)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
-                    if (nprocs==1) call case2_sens(1)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,2)%get_nodes_sensitivities())
-                    if (nprocs==2) call case2_sens(2)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
-                    if (nprocs==2) call case2_sens(2)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,2)%get_nodes_sensitivities())
+                    if (nprocs==1) call case2_sens(1,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==1) call case2_sens(1,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,2)%get_nodes_sensitivities())
+                    if (nprocs==2) call case2_sens(2,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==2) call case2_sens(2,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,2)%get_nodes_sensitivities())
                 case(3)
-                    if (nprocs==1) call case3_sens(1)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
-                    if (nprocs==2) call case3_sens(2)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==1) call case3_sens(1,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==2) call case3_sens(2,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
             end select
 
         end if
@@ -918,86 +934,88 @@ contains
         real(rk),   allocatable :: node_sens(:,:)
         real(rk),   allocatable :: ref_xsens(:)
         real(rk)                :: tol
-        integer(ik)             :: iproc
+        integer(ik)             :: iproc, ibackend
 
         tol = 1.e-9_rk 
 
         ! Check serial and parallel solution
         do iproc = 1,2
+            do ibackend = 1,2
 
-            ! 1 block, 4 elements, linear mapping
+                ! 1 block, 4 elements, linear mapping
 
-                ! Dom 1
-                if (allocated(node_sens)) deallocate(node_sens)
-                node_sens = case1_sens(iproc)%at(1) 
-                
-                if (allocated(ref_xsens)) deallocate(ref_xsens)
-                ref_xsens = [-0.125_rk,0.0_rk,0.0_rk,0.0_rk,0.125_rk, &
-                             -0.125_rk,0.0_rk,0.0_rk,0.0_rk,0.125_rk, &
-                             -0.125_rk,0.0_rk,0.0_rk,0.0_rk,0.125_rk, &
-                             -0.125_rk,0.0_rk,0.0_rk,0.0_rk,0.125_rk ]
+                    ! Dom 1
+                    if (allocated(node_sens)) deallocate(node_sens)
+                    node_sens = case1_sens(iproc,ibackend)%at(1) 
+                    
+                    if (allocated(ref_xsens)) deallocate(ref_xsens)
+                    ref_xsens = [-0.125_rk,0.0_rk,0.0_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.0_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.0_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.0_rk,0.0_rk,0.125_rk ]
 
-                @assertEqual(ref_xsens,node_sens(:,1),tol)
+                    @assertEqual(ref_xsens,node_sens(:,1),tol)
 
-            ! 2 block, 4 elements, linear mapping
+                ! 2 block, 4 elements, linear mapping
 
-                ! Dom 1
-                if (allocated(node_sens)) deallocate(node_sens)
-                node_sens = case2_sens(iproc)%at(1) 
-                
-                if (allocated(ref_xsens)) deallocate(ref_xsens)
-                ref_xsens = [-0.125_rk,0.0_rk,0.125_rk, &
-                             -0.125_rk,0.0_rk,0.125_rk, &
-                             -0.125_rk,0.0_rk,0.125_rk, &
-                             -0.125_rk,0.0_rk,0.125_rk ]
+                    ! Dom 1
+                    if (allocated(node_sens)) deallocate(node_sens)
+                    node_sens = case2_sens(iproc,ibackend)%at(1) 
+                    
+                    if (allocated(ref_xsens)) deallocate(ref_xsens)
+                    ref_xsens = [-0.125_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.125_rk ]
 
-                @assertEqual(ref_xsens,node_sens(:,1),tol)
-                
-                ! Dom 2
-                if (allocated(node_sens)) deallocate(node_sens)
-                node_sens = case2_sens(iproc)%at(2) 
-                
-                if (allocated(ref_xsens)) deallocate(ref_xsens)
-                ref_xsens = [-0.125_rk,0.0_rk,0.125_rk, &
-                             -0.125_rk,0.0_rk,0.125_rk, &
-                             -0.125_rk,0.0_rk,0.125_rk, &
-                             -0.125_rk,0.0_rk,0.125_rk ]
+                    @assertEqual(ref_xsens,node_sens(:,1),tol)
+                    
+                    ! Dom 2
+                    if (allocated(node_sens)) deallocate(node_sens)
+                    node_sens = case2_sens(iproc,ibackend)%at(2) 
+                    
+                    if (allocated(ref_xsens)) deallocate(ref_xsens)
+                    ref_xsens = [-0.125_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.125_rk ]
 
-                @assertEqual(ref_xsens,node_sens(:,1),tol)
+                    @assertEqual(ref_xsens,node_sens(:,1),tol)
 
-            ! 1 block, 2 elements, quadratic mapping
+                ! 1 block, 2 elements, quadratic mapping
 
-                ! Dom 1
-                if (allocated(node_sens)) deallocate(node_sens)
-                node_sens = case3_sens(iproc)%at(1) 
-                
-                ! Allocate ref vector and set it to zeros
-                if (allocated(ref_xsens)) deallocate(ref_xsens)
-                allocate(ref_xsens(size(node_sens(:,1))))
-                ref_xsens = ZERO
+                    ! Dom 1
+                    if (allocated(node_sens)) deallocate(node_sens)
+                    node_sens = case3_sens(iproc,ibackend)%at(1) 
+                    
+                    ! Allocate ref vector and set it to zeros
+                    if (allocated(ref_xsens)) deallocate(ref_xsens)
+                    allocate(ref_xsens(size(node_sens(:,1))))
+                    ref_xsens = ZERO
 
-                ! Define non-zero entries
-                ref_xsens(1)  = -0.0138888888_rk
-                ref_xsens(5)  =  0.0138888888_rk
-                ref_xsens(6)  = -0.0555555555_rk
-                ref_xsens(10) =  0.0555555555_rk
-                ref_xsens(11) = -0.0138888888_rk
-                ref_xsens(15) =  0.0138888888_rk
-                ref_xsens(16) = -0.0555555555_rk
-                ref_xsens(20) =  0.0555555555_rk
-                ref_xsens(21) = -0.2222222222_rk
-                ref_xsens(25) =  0.2222222222_rk
-                ref_xsens(26) = -0.0555555555_rk
-                ref_xsens(30) =  0.0555555555_rk
-                ref_xsens(31) = -0.0138888888_rk
-                ref_xsens(35) =  0.0138888888_rk
-                ref_xsens(36) = -0.0555555555_rk
-                ref_xsens(40) =  0.0555555555_rk
-                ref_xsens(41) = -0.0138888888_rk
-                ref_xsens(45) =  0.0138888888_rk
+                    ! Define non-zero entries
+                    ref_xsens(1)  = -0.0138888888_rk
+                    ref_xsens(5)  =  0.0138888888_rk
+                    ref_xsens(6)  = -0.0555555555_rk
+                    ref_xsens(10) =  0.0555555555_rk
+                    ref_xsens(11) = -0.0138888888_rk
+                    ref_xsens(15) =  0.0138888888_rk
+                    ref_xsens(16) = -0.0555555555_rk
+                    ref_xsens(20) =  0.0555555555_rk
+                    ref_xsens(21) = -0.2222222222_rk
+                    ref_xsens(25) =  0.2222222222_rk
+                    ref_xsens(26) = -0.0555555555_rk
+                    ref_xsens(30) =  0.0555555555_rk
+                    ref_xsens(31) = -0.0138888888_rk
+                    ref_xsens(35) =  0.0138888888_rk
+                    ref_xsens(36) = -0.0555555555_rk
+                    ref_xsens(40) =  0.0555555555_rk
+                    ref_xsens(41) = -0.0138888888_rk
+                    ref_xsens(45) =  0.0138888888_rk
 
-                @assertEqual(ref_xsens,node_sens(:,1),tol)
+                    @assertEqual(ref_xsens,node_sens(:,1),tol)
 
+            end do !ibackend
         end do !iproc
 
     end subroutine test_xsensitivities
@@ -1023,18 +1041,19 @@ contains
         real(rk),   allocatable :: node_sens(:,:)
         real(rk),   allocatable :: ref_ysens(:)
         real(rk)                :: tol
-        integer(ik)             :: iproc
+        integer(ik)             :: iproc, ibackend
 
         tol = 1.e-9_rk 
 
         ! Check serial and parallel solution
         do iproc = 1,2
+            do ibackend = 1,2
 
             ! 1 block, 4 elements, linear mapping
 
                 ! Dom 1
                 if (allocated(node_sens)) deallocate(node_sens)
-                node_sens = case1_sens(iproc)%at(1) 
+                node_sens = case1_sens(iproc,ibackend)%at(1) 
                 
                 if (allocated(ref_ysens)) deallocate(ref_ysens)
                 ref_ysens = [-0.000325520833_rk,-0.00455729166_rk,-0.01627604166_rk,-0.03580729166_rk,-0.0263671875_rk, &
@@ -1048,7 +1067,7 @@ contains
 
                 ! Dom 1
                 if (allocated(node_sens)) deallocate(node_sens)
-                node_sens = case2_sens(iproc)%at(1) 
+                node_sens = case2_sens(iproc,ibackend)%at(1) 
                 
                 if (allocated(ref_ysens)) deallocate(ref_ysens)
                 ref_ysens = [-0.0003255208333_rk,-0.00455729166_rk,-0.005533854166_rk, &
@@ -1060,7 +1079,7 @@ contains
                 
                 ! Dom 2
                 if (allocated(node_sens)) deallocate(node_sens)
-                node_sens = case2_sens(iproc)%at(2) 
+                node_sens = case2_sens(iproc,ibackend)%at(2) 
                 
                 if (allocated(ref_ysens)) deallocate(ref_ysens)
                 ref_ysens = [-0.010742187500_rk,-0.03580729166_rk,-0.026367187499_rk, &
@@ -1074,7 +1093,7 @@ contains
 
                 ! Dom 1
                 if (allocated(node_sens)) deallocate(node_sens)
-                node_sens = case3_sens(iproc)%at(1) 
+                node_sens = case3_sens(iproc,ibackend)%at(1) 
                 
                 ! Allocate ref vector and set it to zeros
                 if (allocated(ref_ysens)) deallocate(ref_ysens)
@@ -1115,6 +1134,7 @@ contains
 
                 @assertEqual(ref_ysens,node_sens(:,2),tol)
 
+            end do !ibackend
         end do !iproc
 
     end subroutine test_ysensitivities
@@ -1141,18 +1161,19 @@ contains
         real(rk),   allocatable :: node_sens(:,:)
         real(rk),   allocatable :: ref_zsens(:)
         real(rk)                :: tol
-        integer(ik)             :: iproc
+        integer(ik)             :: iproc, ibackend
 
         tol = 1.e-9_rk 
 
         ! Check serial and parallel solution
         do iproc = 1,2
+            do ibackend = 1,2
 
             ! 1 block, 4 elements, linear mapping
 
                 ! Dom 1
                 if (allocated(node_sens)) deallocate(node_sens)
-                node_sens = case1_sens(iproc)%at(1) 
+                node_sens = case1_sens(iproc,ibackend)%at(1) 
                 
                 if (allocated(ref_zsens)) deallocate(ref_zsens)
                 ref_zsens = [-0.000325520833_rk,-0.00455729166_rk,-0.01627604166_rk,-0.03580729166_rk,-0.0263671875_rk, &
@@ -1166,7 +1187,7 @@ contains
 
                 ! Dom 1
                 if (allocated(node_sens)) deallocate(node_sens)
-                node_sens = case2_sens(iproc)%at(1) 
+                node_sens = case2_sens(iproc,ibackend)%at(1) 
                 
                 if (allocated(ref_zsens)) deallocate(ref_zsens)
                 ref_zsens = [-0.0003255208333_rk,-0.00455729166_rk,-0.005533854166_rk, &
@@ -1178,7 +1199,7 @@ contains
                 
                 ! Dom 2
                 if (allocated(node_sens)) deallocate(node_sens)
-                node_sens = case2_sens(iproc)%at(2) 
+                node_sens = case2_sens(iproc,ibackend)%at(2) 
                 
                 if (allocated(ref_zsens)) deallocate(ref_zsens)
                 ref_zsens = [-0.010742187500_rk,-0.03580729166_rk,-0.026367187499_rk, &
@@ -1192,7 +1213,7 @@ contains
 
                 ! Dom 1
                 if (allocated(node_sens)) deallocate(node_sens)
-                node_sens = case3_sens(iproc)%at(1) 
+                node_sens = case3_sens(iproc,ibackend)%at(1) 
                 
                 ! Allocate ref vector and set it to zeros
                 if (allocated(ref_zsens)) deallocate(ref_zsens)
@@ -1233,6 +1254,7 @@ contains
 
                 @assertEqual(ref_zsens,node_sens(:,3),tol)
     
+            end do !ibackend
         end do !iproc
 
     end subroutine test_zsensitivities
@@ -1259,6 +1281,25 @@ contains
     end function get_case
     !******************************************************************************
 
+
+    ! Utility for returning the index associated with a certain number of procs
+    !------------------------------------------------------------------------------
+    function get_backend_index(backend) result(ibackend)
+        character(*),   intent(in)  :: backend
+
+        integer(ik) :: ibackend
+
+        select case (trim(backend))
+            case('native')
+                ibackend = 1
+            case('petsc')
+                ibackend = 2
+            case default
+                call chidg_signal_one(FATAL,'Invalid backend.', trim(backend))
+        end select
+
+    end function get_backend_index
+    !******************************************************************************
 
 
 

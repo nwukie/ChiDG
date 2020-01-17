@@ -517,13 +517,14 @@ contains
         integer(ik) :: patch_ID, face_ID, elem_ID, patch_ID_coupled, face_ID_coupled,   &
                        idomain_g, idomain_l, ielement_g, ielement_l, iface,             &
                        bc_IRANK, bc_NRANK, ierr, iproc, nbc_elements,                   &
-                       ielem, nfields, nterms_s, nterms_c, dof_start, dof_local_start, ngq, ibc
+                       ielem, nfields, nterms_s, nterms_c, dof_start, dof_local_start,  &
+                       xdof_start, xdof_local_start, ngq, ibc
 
         integer(ik) :: idomain_g_coupled, idomain_l_coupled, ielement_g_coupled, ielement_l_coupled, &
                        iface_coupled, proc_coupled, send_size_a, send_size_b, send_size_c, send_size_d
 
         integer(ik) :: etype, nnodes, ntime, pelem_ID, interpolation_level,    &
-                       coordinate_system, element_location(5), element_data(9), spacedim, inode
+                       coordinate_system, element_location(5), element_data(10), spacedim, inode
 
         real(rk),       allocatable :: interp_coords_def(:,:)
         real(rk),       allocatable :: areas(:)
@@ -563,6 +564,8 @@ contains
                         coordinate_system = mesh%domain(idomain_l)%elems(ielement_l)%coordinate_system
                         dof_start         = mesh%domain(idomain_l)%elems(ielement_l)%dof_start
                         dof_local_start   = mesh%domain(idomain_l)%elems(ielement_l)%dof_local_start
+                        xdof_start        = mesh%domain(idomain_l)%elems(ielement_l)%xdof_start
+                        xdof_local_start  = mesh%domain(idomain_l)%elems(ielement_l)%xdof_local_start
                         total_area        = mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area
                         areas             = mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas
                         interp_coords_def = mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def
@@ -586,6 +589,8 @@ contains
                                                                                                              coordinate_system, &
                                                                                                              dof_start,         &
                                                                                                              dof_local_start,   &
+                                                                                                             xdof_start,        &
+                                                                                                             xdof_local_start,  &
                                                                                                              total_area,        &
                                                                                                              areas,             &
                                                                                                              interp_coords_def)
@@ -649,7 +654,7 @@ contains
                         send_size_d = size(mesh%domain(idomain_l)%elems(ielement_l)%node_coords_vel)
                 
                         call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%element_location,             5, mpi_integer4, iproc, bc_comm, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%element_data,                 9, mpi_integer4, iproc, bc_comm, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%element_data,                10, mpi_integer4, iproc, bc_comm, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%node_coords,        send_size_b, mpi_real8,    iproc, bc_comm, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%node_coords_def,    send_size_c, mpi_real8,    iproc, bc_comm, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%elems(ielement_l)%node_coords_vel,    send_size_d, mpi_real8,    iproc, bc_comm, ierr)
@@ -701,7 +706,7 @@ contains
                     ielement_g = element_location(3)
 
                     ! element_data = [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level]
-                    call mpi_bcast(element_data, 9, mpi_integer4, iproc, bc_comm, ierr)
+                    call mpi_bcast(element_data, 10, mpi_integer4, iproc, bc_comm, ierr)
                     etype               = element_data(1)
                     spacedim            = element_data(2)
                     coordinate_system   = element_data(3)
@@ -711,6 +716,7 @@ contains
                     ntime               = element_data(7)
                     interpolation_level = element_data(8)
                     dof_start           = element_data(9)
+                    xdof_start          = element_data(10)
                     nnodes = (etype+1)*(etype+1)*(etype+1)
 
                     
@@ -764,7 +770,7 @@ contains
                         call mesh%parallel_element(pelem_ID)%init_geom(nodes,connectivity,etype,element_location,trim(coord_system))
                     end if
 
-                    call mesh%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start,dof_local_start=NO_ID)
+                    call mesh%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime,dof_start,dof_local_start=NO_ID,xdof_start=xdof_start,xdof_local_start=NO_ID)
                     call mesh%parallel_element(pelem_ID)%set_displacements_velocities(nodes_disp,nodes_vel)
                     call mesh%parallel_element(pelem_ID)%update_interpolations_ale()
 
@@ -793,6 +799,8 @@ contains
                                                                                                                  nterms_c,              &
                                                                                                                  coordinate_system,     &
                                                                                                                  dof_start,             &
+                                                                                                                 NO_ID,                 &
+                                                                                                                 xdof_start,            &
                                                                                                                  NO_ID,                 &
                                                                                                                  total_area,            &
                                                                                                                  areas,                 &
@@ -867,6 +875,8 @@ contains
                                                                                             mesh%domain(idomain_l)%elems(ielement_l)%coordinate_system,         &
                                                                                             mesh%domain(idomain_l)%elems(ielement_l)%dof_start,                 &
                                                                                             mesh%domain(idomain_l)%elems(ielement_l)%dof_local_start,           &
+                                                                                            mesh%domain(idomain_l)%elems(ielement_l)%xdof_start,                &
+                                                                                            mesh%domain(idomain_l)%elems(ielement_l)%xdof_local_start,          &
                                                                                             mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area,          &
                                                                                             mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas,  &
                                                                                             mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def)

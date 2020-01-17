@@ -68,15 +68,13 @@ module type_integral_cache
          
     contains
         
-        procedure, private :: initialize
-        procedure, private :: set_entity_value
-        procedure, private :: get_entity_value
-        procedure, private :: set_global_value
-        procedure, private :: get_global_value
-        
-        generic,   public :: init       => initialize                         ! Initialize integral
-        generic,   public :: get_value  => get_entity_value, get_global_value ! Return the element or global AD_D type
-        generic,   public :: set_value  => set_entity_value, set_global_value ! Set element or global AD_D type
+        procedure, private  :: initialize
+        generic,   public   :: init => initialize                       ! Initialize integral
+        procedure           :: set_entity_value
+        procedure           :: get_entity_value
+        procedure           :: set_global_value
+        procedure           :: get_global_value
+        procedure           :: release
 
     end type integral_cache_t
     !***************************************************************************************************
@@ -96,9 +94,10 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine initialize(self,i_name)
+    subroutine initialize(self,i_name,derivative_vector_template)
         class(integral_cache_t),    intent(inout)   :: self
         character(*),               intent(in)      :: i_name
+        type(chidg_vector_t),       intent(in)      :: derivative_vector_template
          
         ! Set name
         self%name = i_name
@@ -106,9 +105,11 @@ contains
         ! Initialize real value of the integral
         self%integral_value = ZERO
         self%integral_deriv = chidg_vector(trim(backend))
+        self%integral_deriv = derivative_vector_template
+        call self%integral_deriv%assemble()
 
         ! Set initialized flag
-        self%derivatives_initialized = .false.
+        self%derivatives_initialized = .true.
 
     end subroutine initialize
     !***************************************************************************************************
@@ -126,11 +127,10 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine set_entity_value(self,mesh,integral,vec_model,fcn_info) 
+    subroutine set_entity_value(self,mesh,integral,fcn_info) 
         class(integral_cache_t),    intent(inout)   :: self
         type(mesh_t),               intent(in)      :: mesh
         type(AD_D),                 intent(in)      :: integral
-        type(chidg_vector_t),       intent(in)      :: vec_model 
         type(function_info_t),      intent(in)      :: fcn_info
          
         type(element_info_t)    :: elem_info
@@ -141,23 +141,12 @@ contains
         !   - dtype = dQ_DIFF or dX_DIFF or NO_DIFF
         !   - no need to store the chidg vector for NO_DIFF
         if (fcn_info%dtype /= NO_DIFF) then
-
-            ! Initialize chidg_vector of derivatives if not yet done
-            if ( .not. self%derivatives_initialized ) then
-                self%integral_deriv = vec_model
-                self%derivatives_initialized = .true.
-            end if
-
             elem_info = mesh%get_element_info(fcn_info%seed%idomain_l,fcn_info%seed%ielement_l)
             call self%integral_deriv%add_fields(integral%xp_ad_,elem_info)
-
         end if
-
 
     end subroutine set_entity_value
     !***************************************************************************************************
-
-
 
 
 
@@ -202,7 +191,6 @@ contains
         
         ! Assign derivatives, if NO_DIFF then self.derivatives_initialized == .false.
         if (self%derivatives_initialized) then
-            !integral%xp_ad_ = self%integral_deriv%dom(fcn_info%seed%idomain_l)%vecs(fcn_info%seed%ielement_l)%vec 
             integral%xp_ad_ = self%integral_deriv%get_fields(elem_info)
         end if
 
@@ -225,33 +213,23 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine set_global_value(self,mesh,integral,vec_model,dtype) 
+    subroutine set_global_value(self,mesh,integral,dtype) 
         class(integral_cache_t),    intent(inout)   :: self
         type(mesh_t),               intent(in)      :: mesh
         type(AD_D),                 intent(in)      :: integral
-        type(chidg_vector_t),       intent(in)      :: vec_model
         integer(ik),                intent(in)      :: dtype
         
         integer(ik)             :: istart, iend, idom, ielem
         type(element_info_t)    :: elem_info
 
-       
-        ! Initialize istart and iend indeces
-        istart = 0
-        iend   = 0
-        
         ! Set integral real value
         self%integral_value = integral%x_ad_
 
-         
         if (dtype /= NO_DIFF) then
-
-            ! Initialize chidg_vector of derivatives if not yet done
-            if ( .not. self%derivatives_initialized  ) then
-                self%integral_deriv = vec_model
-                self%derivatives_initialized = .true.
-            end if
         
+            ! Initialize istart and iend indeces
+            istart = 0
+            iend   = 0
         
             ! Loop thorugh domains and elements
             do idom = 1,mesh%ndomains()
@@ -271,28 +249,10 @@ contains
                     end if
 
                     call self%integral_deriv%set_fields(integral%xp_ad_(istart:iend),elem_info)
-
-!                    associate( int_derivs  => self%integral_deriv%dom(idom)%vecs(ielem) )
-!                        call chidg_signal(FATAL,"integral_cache%set_global_value: needs updated for petsc storage!")
-!
-!                        ! Find correspondent derivatives in the AD_D vector
-!                        istart = iend + 1
-!                        iend   = iend + int_derivs%nentries()
-!                        
-!                        ! Set derivatives, check vec size
-!                        if ( int_derivs%nentries() == size(integral%xp_ad_(istart:iend)) ) then
-!                            !int_derivs%vec = integral%xp_ad_(istart:iend)
-!                            int_derivs%vec = integral%xp_ad_(istart:iend)
-!                        else
-!                            call chidg_signal(FATAL,"type_integral_cache.f90: the size of the integral derivatives does not match the worker derivatives size. Implementation Error!")
-!                        end if
-!
-!                    end associate
                     
                 end do !ielem
             end do !idom 
 
-!            call self%integral_deriv%assemble()
         end if !NO_DIFF
                     
     end subroutine set_global_value
@@ -316,10 +276,9 @@ contains
     !!  @date   3/6/2019
     !!
     !---------------------------------------------------------------------------------------------------
-    function get_global_value(self,mesh,vec_model,dtype) result(integral)
+    function get_global_value(self,mesh,dtype) result(integral)
         class(integral_cache_t),    intent(inout)   :: self
         type(mesh_t),               intent(in)      :: mesh
-        type(chidg_vector_t),       intent(in)      :: vec_model
         integer(ik),                intent(in)      :: dtype
          
         type(element_info_t)    :: elem_info
@@ -331,15 +290,15 @@ contains
 
         ! Allocate result
         if (dtype /= NO_DIFF) then
-            ! if differentiation is neede, check if the derivatives have been already initialized
-            ! if not, initialize it.
-            ! Derivatives might not be initialized if the processor does not have any face/element
-            ! from the auxiliary/reference geometry, and it only knows the overall integral real value
-            ! from the communication process.
-            if (.not. self%derivatives_initialized) then
-                !self%integral_deriv = vec_model
-                call self%integral_deriv%assemble()
-            end if
+            !! if differentiation is needed, check if the derivatives have been already initialized
+            !! if not, initialize it.
+            !! Derivatives might not be initialized if the processor does not have any face/element
+            !! from the auxiliary/reference geometry, and it only knows the overall integral real value
+            !! from the communication process.
+            !if (.not. self%derivatives_initialized) then
+            !    !self%integral_deriv = vec_model
+            !    call self%integral_deriv%assemble()
+            !end if
             nderivs  = self%integral_deriv%nentries()
             integral = AD_D(nderivs)
         else
@@ -357,8 +316,6 @@ contains
             istart = 0
             iend   = 0
              
-            !do idom = 1,self%integral_deriv%ndomains()
-            !    do ielem = 1,self%integral_deriv%dom(idom)%nelements()
             do idom = 1,mesh%ndomains()
                 do ielem = 1,mesh%domain(idom)%nelements()
                     
@@ -374,31 +331,8 @@ contains
                         call chidg_signal_one(FATAL,"integral_cache%set_global_value: differentiation type not implemented.", dtype)
                     end if
 
-
-
-
-                    !istart = elem_info%dof_local_start
-                    !iend   = istart + elem_info%nfields*elem_info%nterms_s*elem_info%ntime - 1
-
                     integral%xp_ad_(istart:iend) = self%integral_deriv%get_fields(elem_info)
 
-
-!                    associate( int_derivs  => self%integral_deriv%dom(idom)%vecs(ielem) )
-!                        call chidg_signal(FATAL,"integral_cache%get_global_value: needs updated for petsc storage!")
-!
-!                        ! Find correspondent derivatives in the AD_D vector
-!                        istart = iend + 1
-!                        iend   = iend + int_derivs%nentries()
-!                        
-!                        ! Set derivatives, check vec size
-!                        if ( int_derivs%nentries() == size(integral%xp_ad_(istart:iend)) ) then
-!                            integral%xp_ad_(istart:iend) = int_derivs%vec 
-!                        else
-!                            call chidg_signal(FATAL,"type_integral_cache.f90: the size of the integral derivatives does not match the worker derivatives size. Implementation Error!")
-!                        end if
-!
-!                    end associate
-                    
                 end do !ielem
             end do !idom 
             
@@ -406,6 +340,23 @@ contains
 
 
     end function get_global_value
+    !***************************************************************************************************
+
+
+
+
+    !>  Release memory.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/16/2020
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine release(self)
+        class(integral_cache_t),    intent(inout)   :: self
+
+        call self%integral_deriv%release()
+
+    end subroutine release
     !***************************************************************************************************
 
 

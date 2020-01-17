@@ -168,7 +168,7 @@ contains
                        nfields_list, nterms_s_list, nterms_c_list, iproc_list, eqn_ID_list,       &
                        local_domain_g, parallel_domain_g, donor_domain_g, donor_index,          &
                        donor_ID, send_ID
-        integer(ik) :: receiver_indices(6), parallel_indices(12), size_modal_coords, size_nodes_to_modes
+        integer(ik) :: receiver_indices(6), parallel_indices(13), size_modal_coords, size_nodes_to_modes
 
 
         real(rk)                :: donor_metric(3,3), parallel_metric(3,3)
@@ -350,7 +350,7 @@ contains
                                 ! Receive parallel donor index from processor indicated
                                 !
                                 idonor_proc = donor_proc_indices%at(donor_index)
-                                call MPI_Recv(parallel_indices,12,MPI_INTEGER4, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                call MPI_Recv(parallel_indices,13,MPI_INTEGER4, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
                                 donor = element_info(idomain_g         = parallel_indices(1),  &
                                                      idomain_l         = parallel_indices(2),  &
@@ -366,10 +366,13 @@ contains
                                                      nterms_c          = parallel_indices(11), &
                                                      dof_start         = parallel_indices(12), &
                                                      dof_local_start   = NO_ID, &
+                                                     xdof_start        = parallel_indices(13), &
+                                                     xdof_local_start  = NO_ID, &
                                                      recv_comm         = NO_ID, &
                                                      recv_domain       = NO_ID, &
                                                      recv_element      = NO_ID, &
-                                                     recv_dof          = NO_ID)
+                                                     recv_dof          = NO_ID, &
+                                                     recv_xdof         = NO_ID)
 
 
                                 ! Define sizes of donor_nodes_to_modes and donoro_modal_coords
@@ -516,8 +519,9 @@ contains
                             parallel_indices(10) = donor%nterms_s
                             parallel_indices(11) = donor%nterms_c
                             parallel_indices(12) = donor%dof_start
+                            parallel_indices(13) = donor%xdof_start
 
-                            call MPI_Send(parallel_indices,12,MPI_INTEGER4,iproc,0,ChiDG_COMM,ierr)
+                            call MPI_Send(parallel_indices,13,MPI_INTEGER4,iproc,0,ChiDG_COMM,ierr)
                             call MPI_Send(donor_coord,3,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
 
 
@@ -909,11 +913,27 @@ contains
 
         ! Sanity check on donors and set donor_element location
         if (ndonors == 0) then
-            donor_element%idomain_g  = 0
-            donor_element%idomain_l  = 0
-            donor_element%ielement_g = 0
-            donor_element%ielement_l = 0
-            donor_element%iproc      = NO_PROC
+            donor_element = element_info(idomain_g         = 0,       &
+                                         idomain_l         = 0,       &
+                                         ielement_g        = 0,       &
+                                         ielement_l        = 0,       &
+                                         iproc             = NO_PROC, &
+                                         pelem_ID          = NO_ID,   &
+                                         coordinate_system = NO_ID,   &
+                                         eqn_ID            = NO_ID,   &
+                                         nfields           = 0,       &
+                                         ntime             = 0,       &
+                                         nterms_s          = 0,       &
+                                         nterms_c          = 0,       &
+                                         dof_start         = NO_ID,   &
+                                         dof_local_start   = NO_ID,   &
+                                         xdof_start        = NO_ID,   &
+                                         xdof_local_start  = NO_ID,   &
+                                         recv_comm         = NO_ID,   &
+                                         recv_domain       = NO_ID,   &
+                                         recv_element      = NO_ID,   &
+                                         recv_dof          = NO_ID,   &
+                                         recv_xdof         = NO_ID)
 
             donor_found = .false.
 
@@ -1140,10 +1160,13 @@ contains
                                          nterms_c          = 0,       &
                                          dof_start         = NO_ID,   &
                                          dof_local_start   = NO_ID,   &
+                                         xdof_start        = NO_ID,   &
+                                         xdof_local_start  = NO_ID,   &
                                          recv_comm         = NO_ID,   &
                                          recv_domain       = NO_ID,   &
                                          recv_element      = NO_ID,   &
-                                         recv_dof          = NO_ID)
+                                         recv_dof          = NO_ID,   &
+                                         recv_xdof         = NO_ID)
 
             donor_found = .false.
 
@@ -1164,10 +1187,13 @@ contains
                                          nterms_c          = mesh%parallel_element(pelem_ID)%nterms_c,          &
                                          dof_start         = mesh%parallel_element(pelem_ID)%dof_start,         &
                                          dof_local_start   = mesh%parallel_element(pelem_ID)%dof_local_start,   &
+                                         xdof_start        = mesh%parallel_element(pelem_ID)%xdof_start,        &
+                                         xdof_local_start  = mesh%parallel_element(pelem_ID)%xdof_local_start,  &
                                          recv_comm         = mesh%parallel_element(pelem_ID)%recv_comm,         &
                                          recv_domain       = mesh%parallel_element(pelem_ID)%recv_domain,       &
                                          recv_element      = mesh%parallel_element(pelem_ID)%recv_element,      &
-                                         recv_dof          = mesh%parallel_element(pelem_ID)%recv_dof)
+                                         recv_dof          = mesh%parallel_element(pelem_ID)%recv_dof,          &
+                                         recv_xdof         = mesh%parallel_element(pelem_ID)%recv_xdof)
 
 
             xi   = donors_xi%at(1)
@@ -1209,10 +1235,13 @@ contains
                                          nterms_c          = mesh%parallel_element(pelem_ID)%nterms_c,          &
                                          dof_start         = mesh%parallel_element(pelem_ID)%dof_start,         &
                                          dof_local_start   = mesh%parallel_element(pelem_ID)%dof_local_start,   &
+                                         xdof_start        = mesh%parallel_element(pelem_ID)%xdof_start,        &
+                                         xdof_local_start  = mesh%parallel_element(pelem_ID)%xdof_local_start,  &
                                          recv_comm         = mesh%parallel_element(pelem_ID)%recv_comm,         &
                                          recv_domain       = mesh%parallel_element(pelem_ID)%recv_domain,       &
                                          recv_element      = mesh%parallel_element(pelem_ID)%recv_element,      &
-                                         recv_dof          = mesh%parallel_element(pelem_ID)%recv_dof)
+                                         recv_dof          = mesh%parallel_element(pelem_ID)%recv_dof,          &
+                                         recv_xdof         = mesh%parallel_element(pelem_ID)%recv_xdof)
 
             ! Set donor coordinate and volume if present
             xi   = donors_xi%at(donor_index)

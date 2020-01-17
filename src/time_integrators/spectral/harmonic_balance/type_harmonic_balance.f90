@@ -202,6 +202,7 @@ contains
                                        IRANK,                &
                                        itime_inner,          &
                                        elem_info%dof_start,  &
+                                       elem_info%xdof_start, &
                                        NO_ID,                &
                                        NO_ID,                &
                                        NO_ID)

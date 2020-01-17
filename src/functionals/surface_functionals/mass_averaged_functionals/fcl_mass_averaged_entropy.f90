@@ -81,6 +81,13 @@ contains
         call self%set_eval_type("Functional")
         call self%set_int_type("FACE INTEGRAL")
 
+        call self%add_integral("temperature flux")
+        call self%add_integral("pressure flux")
+        call self%add_integral("mass flux")
+        call self%add_integral("MA total pressure")
+        call self%add_integral("MA total temperature")
+        call self%add_integral("MA entropy")
+
     end subroutine init
     !******************************************************************************************
 
@@ -159,10 +166,10 @@ contains
         
         
         ! Get primary fields
-        density     = worker%get_field('Density'   ,'value','face interior')
-        mom_1       = worker%get_field('Momentum-1','value','face interior')
-        mom_2       = worker%get_field('Momentum-2','value','face interior')
-        mom_3       = worker%get_field('Momentum-3','value','face interior')
+        density = worker%get_field('Density'   ,'value','face interior')
+        mom_1   = worker%get_field('Momentum-1','value','face interior')
+        mom_2   = worker%get_field('Momentum-2','value','face interior')
+        mom_3   = worker%get_field('Momentum-3','value','face interior')
 
         ! Account for cylindrical coordinates
         if (worker%coordinate_system() == 'Cylindrical') then
@@ -193,12 +200,12 @@ contains
         pressure_flux    = integrate_surface_mass_weighted(worker,tot_pressure)
         
         ! Call the averaging subroutine for computing pure mass flux through the face
-        mass_flux    = integrate_surface_mass_weighted(worker)
+        mass_flux = integrate_surface_mass_weighted(worker)
      
         ! Store in cache 
-        call cache%set_value(worker%mesh,temperature_flux,'temperature flux','auxiliary',worker%function_info) 
-        call cache%set_value(worker%mesh,pressure_flux,   'pressure flux',   'auxiliary',worker%function_info) 
-        call cache%set_value(worker%mesh,mass_flux,       'mass flux',       'auxiliary',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,temperature_flux,'temperature flux','auxiliary',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,pressure_flux,   'pressure flux',   'auxiliary',worker%function_info) 
+        call cache%set_entity_value(worker%mesh,mass_flux,       'mass flux',       'auxiliary',worker%function_info) 
     
     end subroutine compute_auxiliary
     !******************************************************************************************
@@ -239,12 +246,12 @@ contains
 
         type(AD_D)        :: temperature_flux, pressure_flux, mass_flux
         
-        temperature_flux = cache%get_value(worker%mesh,'temperature flux','auxiliary')
-        pressure_flux    = cache%get_value(worker%mesh,'pressure flux','auxiliary')
-        mass_flux        = cache%get_value(worker%mesh,'mass flux','auxiliary')
+        temperature_flux = cache%get_global_value(worker%mesh,'temperature flux','auxiliary')
+        pressure_flux    = cache%get_global_value(worker%mesh,'pressure flux','auxiliary')
+        mass_flux        = cache%get_global_value(worker%mesh,'mass flux','auxiliary')
 
-        call cache%set_value(worker%mesh,pressure_flux/mass_flux,   'MA total pressure',   'auxiliary')
-        call cache%set_value(worker%mesh,temperature_flux/mass_flux,'MA total temperature','auxiliary')
+        call cache%set_global_value(worker%mesh,pressure_flux/mass_flux,   'MA total pressure',   'auxiliary')
+        call cache%set_global_value(worker%mesh,temperature_flux/mass_flux,'MA total temperature','auxiliary')
 
     end subroutine finalize_auxiliary
     !*********************************************************************************************
@@ -327,9 +334,9 @@ contains
         mass_flux =  integrate_surface_mass_weighted(worker)
         
         ! Store in cache 
-        call cache%set_value(worker%mesh,pressure_flux,   'pressure flux',   'reference',worker%function_info)
-        call cache%set_value(worker%mesh,temperature_flux,'temperature flux','reference',worker%function_info)
-        call cache%set_value(worker%mesh,mass_flux,       'mass flux',       'reference',worker%function_info)
+        call cache%set_entity_value(worker%mesh,pressure_flux,   'pressure flux',   'reference',worker%function_info)
+        call cache%set_entity_value(worker%mesh,temperature_flux,'temperature flux','reference',worker%function_info)
+        call cache%set_entity_value(worker%mesh,mass_flux,       'mass flux',       'reference',worker%function_info)
 
     end subroutine compute_functional
     !******************************************************************************************
@@ -371,22 +378,22 @@ contains
                              ref_total_P, ref_total_T, ref_temperature_flux
         
         ! Compute mass-averaged total pressure and temperature on reference geometries
-        ref_pressure_flux    = cache%get_value(worker%mesh,'pressure flux',   'reference')
-        ref_temperature_flux = cache%get_value(worker%mesh,'temperature flux','reference')
-        ref_mass_flux        = cache%get_value(worker%mesh,'mass flux',       'reference')
+        ref_pressure_flux    = cache%get_global_value(worker%mesh,'pressure flux',   'reference')
+        ref_temperature_flux = cache%get_global_value(worker%mesh,'temperature flux','reference')
+        ref_mass_flux        = cache%get_global_value(worker%mesh,'mass flux',       'reference')
 
         ref_total_P = ref_pressure_flux/ref_mass_flux
         ref_total_T = ref_temperature_flux/ref_mass_flux
 
         ! Retrieve mass-averaged total pressure and temperature on auxiliary geoemtries
-        aux_total_P = cache%get_value(worker%mesh,'MA total pressure',   'auxiliary')
-        aux_total_T = cache%get_value(worker%mesh,'MA total temperature','auxiliary')
+        aux_total_P = cache%get_global_value(worker%mesh,'MA total pressure',   'auxiliary')
+        aux_total_T = cache%get_global_value(worker%mesh,'MA total temperature','auxiliary')
 
         ! Compute entropy production
         deltaS = ( cp * log(ref_total_T/aux_total_T) ) - ( Rgas * log(ref_total_P/aux_total_P) )
 
         ! Store entropy 
-        call cache%set_value(worker%mesh,deltaS,'MA entropy','reference')
+        call cache%set_global_value(worker%mesh,deltaS,'MA entropy','reference')
 
     end subroutine finalize_functional
     !*********************************************************************************************

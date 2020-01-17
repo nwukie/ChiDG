@@ -137,10 +137,13 @@ contains
                                            nterms_c          = 0,                                                                                                  &
                                            dof_start         = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(icoupled),         &
                                            dof_local_start   = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_local_start(icoupled),   &
+                                           xdof_start        = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%xdof_start(icoupled),        &
+                                           xdof_local_start  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%xdof_local_start(icoupled),  &
                                            recv_comm         = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(icoupled),         &
                                            recv_domain       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(icoupled),       &
                                            recv_element      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(icoupled),      &
-                                           recv_dof          = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_dof(icoupled))
+                                           recv_dof          = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_dof(icoupled),          &
+                                           recv_xdof         = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_xdof(icoupled))
 
             coupled_iface = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(icoupled)
 

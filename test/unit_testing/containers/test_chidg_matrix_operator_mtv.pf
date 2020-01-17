@@ -101,9 +101,9 @@ subroutine test_chidg_matrix_operator_mtv()
     !
     ! Initialize data containers
     !
-    call A%init(chidg%data%mesh,mtype='full')
-    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
-    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+    call A%init(chidg%data%mesh,storage_config='full',dof_type='primal')
+    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,'primal')
+    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,'primal')
 
 
 
@@ -311,9 +311,9 @@ subroutine test_chidg_matrix_operator_mtv_2()
     !
     ! Initialize data containers
     !
-    call A%init(chidg%data%mesh,mtype='full')
-    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
-    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+    call A%init(chidg%data%mesh,storage_config='full',dof_type='primal')
+    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,'primal')
+    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,'primal')
 
 
     !       _         lblks               chi_blks       -           x
@@ -589,10 +589,9 @@ subroutine test_chidg_matrix_operator_mtv_3()
     !
     ! Initialize data containers
     !
-    call A%init(chidg%data%mesh,mtype='dX')
-    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
-    !call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,specialization=dX_DIFF)
-    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,vtype='grid differentiation')
+    call A%init(chidg%data%mesh,storage_config='dX',dof_type='coordinate')
+    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,'primal')
+    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,'coordinate')
 
 
     !       _         lblks               chi_blks       -           x

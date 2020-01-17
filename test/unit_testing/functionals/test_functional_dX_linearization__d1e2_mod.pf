@@ -395,30 +395,20 @@ contains
         real(rk),           allocatable     :: dJdx(:), ref_deriv(:)
         class(function_t),  allocatable     :: fcn
 
-
         
         tol = 1.e-6_rk
         self%chidg%data%time_manager%istep = 1
 
-        !
         ! Test updated functionals dX linearization
-        !
         call update_functionals(self%chidg%data,differentiate=dX_DIFF)
 
-        !
         ! Allocate reference vectors
-        !
-        nnodes_r = self%chidg%data%mesh%domain(1)%elems(1)%nnodes_r
+        nnodes_r = self%chidg%data%mesh%domain(1)%elems(1)%nterms_c
 
-
-        !
         ! TEST
-        !
         do ielem = 1,self%chidg%data%sdata%adjointx%Jx(1)%dom(1)%nelements()
 
-            !
             ! Allocate ref_deriv
-            !
             if (ielem == 1) then
                 ref_deriv = [-ONE,ONE,-ONE,ONE,-ONE,ONE,-ONE,ONE]
                 ref_deriv = ref_deriv * 0.0625_rk
@@ -433,10 +423,6 @@ contains
             @assertEqual(ref_deriv,dJdx(1:nnodes_r),tol)
         
         end do
-
-
-
-
 
     end subroutine test_functional_cache__dx_lin
     !******************************************************************************************

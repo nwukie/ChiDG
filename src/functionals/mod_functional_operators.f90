@@ -217,7 +217,6 @@ contains
 
         real(rk),   allocatable, dimension(:)   :: weights
         type(AD_D), allocatable, dimension(:)   :: jinv
-        integer(ik)                             :: idomain_l, ielement_l
         type(AD_D)                              :: integral
 
         ! Retrieve weights and jinv
@@ -265,7 +264,6 @@ contains
         end do
 
         ave = temp_sum / counter
-
 
     end function average
     !*******************************************************************************

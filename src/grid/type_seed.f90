@@ -33,6 +33,7 @@ module type_seed
         integer(ik) :: iproc
         integer(ik) :: itime
         integer(ik) :: dof_start
+        integer(ik) :: xdof_start
 
         ! If seed is on another processor, these are its location in the recv 
         ! container on the current processor. Otherwise, not used.
@@ -63,7 +64,7 @@ contains
     !!  @date   12/6/2016
     !!
     !-------------------------------------------------------------------------------------
-    subroutine init(self,idomain_g,idomain_l,ielement_g,ielement_l,nfields,nterms_s,nnodes_r,iproc,itime,dof_start,recv_comm,recv_domain,recv_element)
+    subroutine init(self,idomain_g,idomain_l,ielement_g,ielement_l,nfields,nterms_s,nnodes_r,iproc,itime,dof_start,xdof_start,recv_comm,recv_domain,recv_element)
         class(seed_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: idomain_g
         integer(ik),    intent(in)      :: idomain_l
@@ -75,6 +76,7 @@ contains
         integer(ik),    intent(in)      :: iproc
         integer(ik),    intent(in)      :: itime
         integer(ik),    intent(in)      :: dof_start
+        integer(ik),    intent(in)      :: xdof_start
         integer(ik),    intent(in)      :: recv_comm
         integer(ik),    intent(in)      :: recv_domain
         integer(ik),    intent(in)      :: recv_element
@@ -89,6 +91,7 @@ contains
         self%iproc        = iproc
         self%itime        = itime
         self%dof_start    = dof_start
+        self%xdof_start   = xdof_start
 
         self%recv_comm    = recv_comm
         self%recv_domain  = recv_domain
@@ -120,6 +123,7 @@ contains
         self%iproc        = NO_PROC
         self%itime        = 0
         self%dof_start    = NO_ID
+        self%xdof_start   = NO_ID
 
         self%recv_comm    = 0
         self%recv_domain  = 0

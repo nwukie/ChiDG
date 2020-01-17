@@ -338,7 +338,7 @@ contains
 
 
         ! Initialize q_in. This is collective so we don't want it inside a serial read loop
-        call data%sdata%q_in%init(data%mesh,ntime)
+        call data%sdata%q_in%init(data%mesh,ntime,'primal')
         call data%sdata%q_in%set_ntime(ntime)
 
 
@@ -450,7 +450,7 @@ contains
 
         do ifunc = 1,nfunc
             data%sdata%adjoint%v_in(ifunc) = chidg_vector(trim(backend))
-            call data%sdata%adjoint%v_in(ifunc)%init(data%mesh,ntime)
+            call data%sdata%adjoint%v_in(ifunc)%init(data%mesh,ntime,'primal')
             call data%sdata%adjoint%v_in(ifunc)%set_ntime(ntime)
         end do
 
@@ -569,7 +569,7 @@ contains
         if (aux_ID == NO_ID) aux_ID = data%sdata%add_auxiliary_field(trim(store_as))
 
         ! Initialize auxiliary_field vector. This is collective so we don't want it inside a serial read loop
-        call data%sdata%auxiliary_field(aux_ID)%init(data%mesh,ntime)
+        call data%sdata%auxiliary_field(aux_ID)%init(data%mesh,ntime,'auxiliary')
         call data%sdata%auxiliary_field(aux_ID)%set_ntime(ntime)
 
 
@@ -774,20 +774,22 @@ contains
         character(:),   allocatable     :: field_name, domain_name, time_string
         integer(HID_T)                  :: fid, domain_id
         integer(HSIZE_T)                :: adim, nfreq, ntime
-        integer(ik)                     :: idom, ieqn, neqns, iwrite, &
+        integer(ik)                     :: idom, ifield, nfields, iwrite, &
                                            time, field_index, iproc, eqn_ID
         integer                         :: ierr, order_s
         logical                         :: file_exists
-        integer(ik)                     :: itime
+        integer(ik)                     :: itime, istep, ifunc
         real(rk),       allocatable     :: freq(:), time_lev(:)
-
 
         ! Check for file existence
         file_exists = check_file_exists_hdf(file_name)
 
         ! Make sure q is assembled so it doesn't trigger a collective operation
         ! inside of a sequential operation
-        call data%sdata%q%assemble()
+        istep = data%time_manager%istep
+        do ifunc = 1,size(data%sdata%adjoint%v,1)
+            call data%sdata%adjoint%v(ifunc,istep)%assemble()
+        end do
 
 
         ! Create new file if necessary
@@ -816,7 +818,6 @@ contains
 
         end if
         call MPI_Barrier(ChiDG_COMM,ierr)
-
 
 
         ! Each process, write its own portion of the solution
@@ -859,11 +860,11 @@ contains
                         ! Else, write each field in the file.
                         else
                             ! For each field: get the name, write to file
-                            neqns = data%eqnset(eqn_ID)%prop%nprimary_fields()
-                            do ieqn = 1,neqns
-                                field_name = trim(data%eqnset(eqn_ID)%prop%get_primary_field_name(ieqn))
+                            nfields = data%eqnset(eqn_ID)%prop%nprimary_fields()
+                            do ifield = 1,nfields
+                                field_name = trim(data%eqnset(eqn_ID)%prop%get_primary_field_name(ifield))
                                 call write_domain_adjoint_field_hdf(domain_id,data,field_name,itime)
-                            end do ! ieqn
+                            end do ! ifield
                         end if
 
                     end do ! itime
@@ -1322,6 +1323,7 @@ contains
         ndims       = 3
         ntime       = data%ntime()
 
+
         ! Assemble field buffer matrix that gets written to file
         allocate(var(nterms_s,1,1))
 
@@ -1329,8 +1331,9 @@ contains
         nfuncs = size(data%sdata%adjoint%v,1)
         istep  = data%time_manager%istep !current time step 
 
+
         do ifunc = 1,nfuncs
-        
+
             ! Define adjoint variable name 
             write(ifunc_string, "(I1)") ifunc
             wrt_field_name = 'adjoint_' //  trim(field_name) // '_' // ifunc_string
@@ -1961,7 +1964,7 @@ contains
 
             do ifcl = 1,nfunctions
                 
-                ! Read all the information relatie to the ifcl
+                ! Read all the information relative to the ifcl
                 ref_geom = get_functional_reference_geom_hdf(fid,names%data_(ifcl)%get())
                 aux_geom = get_functional_auxiliary_geom_hdf(fid,names%data_(ifcl)%get())
 

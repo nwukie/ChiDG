@@ -24,25 +24,18 @@ module type_chidg_adjoint
     !------------------------------------------------------------------------------------
     type,   public  :: chidg_adjoint_t
 
-
-        !
         ! PRIMARY ADJOINT VARIABLES
         ! Adjoitn variables of primary fields
-        !
-
         type(chidg_vector_t),   allocatable     :: v(:,:)           ! Primary adjoint variables (nfunc,nstep)
         type(chidg_vector_t),   allocatable     :: v_in(:)          ! Primary adjoint variables input from hdf(nfunc)
         type(chidg_vector_t),   allocatable     :: q_time(:)        ! primal solutions vectors (istep)
         type(chidg_vector_t),   allocatable     :: Jq(:)            ! Functional derivatives (nfunc)
 
-        !
         ! AUXILIARY ADJOINT VARIABLES
         ! Adjoint variables of auxiliary fields: wall_distance
-        !
         type(chidg_matrix_t),   allocatable     :: Rd(:)            ! Flow Jacobian distance field linearization (naux) 
         type(chidg_vector_t),   allocatable     :: vRd(:,:)         ! Dot product of primary adjoint variables
                                                                     ! and auxiliary Jacobian (naux,nfunc)
-        
         ! Storage for solver report info (matrix_time, niter)
         integer(ik),            allocatable     :: solver_iter(:,:) ! Linear solver iterations (ifunc,istep) 
         real(rk),               allocatable     :: solver_time(:,:) ! Linear solver time (ifunc,istep)
@@ -51,7 +44,6 @@ module type_chidg_adjoint
         ! Adjoint initialization completed
         logical         :: primary_adjoint_initialized = .false.
         logical         :: auxiliary_adjoint_initialized = .false.
-
 
     contains
 
@@ -158,7 +150,7 @@ contains
             do ifunc = 1,size(self%v,1)
                 do istep = 1,size(self%v,2)
                     self%v(ifunc,istep) = chidg_vector(trim(backend)) 
-                    call self%v(ifunc,istep)%init(mesh,ntime)
+                    call self%v(ifunc,istep)%init(mesh,ntime,'primal')
                 end do !istep
             end do !ifunc
         end if
@@ -166,14 +158,14 @@ contains
         if (sflags%q_time) then
             do istep = 1,size(self%q_time,1)
                 self%q_time(istep) = chidg_vector(trim(backend)) 
-                call self%q_time(istep)%init(mesh,ntime)
+                call self%q_time(istep)%init(mesh,ntime,'primal')
             end do !istep
         end if
 
         if (sflags%Jq) then
             do ifunc = 1,size(self%Jq,1)
                 self%Jq(ifunc) = chidg_vector(trim(backend)) 
-                call self%Jq(ifunc)%init(mesh,ntime)
+                call self%Jq(ifunc)%init(mesh,ntime,'primal')
             end do !ifunc
         end if
  
@@ -185,7 +177,7 @@ contains
                 do ifunc = 1,size(self%vRd,2)
                      !call self%vRd(iaux,ifunc)%init(mesh,ntime,specialization)
                     self%vRd(iaux,ifunc) = chidg_vector(trim(backend)) 
-                    call self%vRd(iaux,ifunc)%init(mesh,ntime,'auxiliary differentiation')
+                    call self%vRd(iaux,ifunc)%init(mesh,ntime,'auxiliary')
                 end do !istep
             end do !ifunc
         end if
@@ -193,7 +185,7 @@ contains
         if (sflags%Rd) then
             do iaux = 1,size(self%Rd)
                 self%Rd(iaux) = chidg_matrix(trim(backend)) 
-                call self%Rd(iaux)%init(mesh,mtype='dD')
+                call self%Rd(iaux)%init(mesh,storage_config='dD',dof_type='auxiliary')
                 call self%Rd(iaux)%init_recv(self%vRd(1,1))
                 if (sflags%Rd_trans) self%Rd(iaux)%transposed = .true.
             end do

@@ -149,7 +149,7 @@ contains
 
                 ! Initialize Lower-Diagonal matrix for processor-local data
                 self%LD = chidg_matrix(trim(backend))
-                call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
+                call self%LD%init(mesh=data%mesh, storage_config='LowerDiagonal',dof_type='primal')
 
                 ! Initialize the overlap data
                 call write_line('       RAS: initializing send pattern...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))

@@ -49,15 +49,11 @@ contains
         IO_DESTINATION = 'file'
 
         
-        !
         ! Initialize ChiDG environment
-        !
         call this%chidg%start_up('core')
 
 
-        !
         ! Generate points for 3x3x3 element mesh
-        !
         call create_mesh('333',nodes,connectivity)
         dnodes = nodes
         vnodes = nodes
@@ -65,9 +61,7 @@ contains
         vnodes = ZERO
 
 
-        !
         ! Add domain to ChiDG
-        !
         nelements_g = 27
 
 
@@ -80,10 +74,8 @@ contains
         call this%chidg%init('domains')
 
 
-        !
         ! Initialize domain_vector
-        !
-        call this%bvec%init(this%chidg%data%mesh%domain(1))
+        call this%bvec%init(this%chidg%data%mesh%domain(1),'primal')
     
     
     end subroutine setUp

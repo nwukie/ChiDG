@@ -113,6 +113,7 @@ contains
                                        ielement_g,  ielement_l, iface,  &
                                        nfields, nterms_s, dof_start,    &
                                        ntime, dof_local_start, nterms_c, &
+                                       xdof_start, xdof_local_start,     &
                                        coordinate_system
         real(rk)                    :: total_area
         real(rk),       allocatable :: areas(:)
@@ -130,6 +131,8 @@ contains
         coordinate_system = CARTESIAN
         dof_start         = 24
         dof_local_start   = 24
+        xdof_start         = 24
+        xdof_local_start   = 24
         total_area = 1._rk
         areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
         quad_pts   = [ point_t(0.1_rk,0.2_rk,0.3_rk), &
@@ -137,22 +140,14 @@ contains
                        point_t(0.1_rk,0.2_rk,0.3_rk), &
                        point_t(0.1_rk,0.2_rk,0.3_rk) ]
 
-        !
         ! THIS IS BEING TESTED
-        !
         call coupling%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,IRANK)
-        call coupling%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,nterms_c,coordinate_system,dof_start,dof_local_start,total_area,areas,quad_pts)
+        call coupling%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,nterms_c,coordinate_system,dof_start,dof_local_start,xdof_start,xdof_local_start,total_area,areas,quad_pts)
 
-
-        !
         ! Test one face
-        !
         @assertEqual(coupling%ncoupled_elements(), 1)
 
-
-        !
         ! Test components were set correctly
-        !
         @assertEqual(coupling%idomain_g(1),       idomain_g)
         @assertEqual(coupling%idomain_l(1),       idomain_l)
         @assertEqual(coupling%ielement_g(1),      ielement_g)
@@ -164,6 +159,8 @@ contains
         @assertEqual(coupling%proc(1),            IRANK)
         @assertEqual(coupling%dof_start(1),       dof_start)
         @assertEqual(coupling%dof_local_start(1), dof_local_start)
+        @assertEqual(coupling%xdof_start(1),       xdof_start)
+        @assertEqual(coupling%xdof_local_start(1), xdof_local_start)
 
         
     end subroutine test_bc_element_coupling__add_one
@@ -199,7 +196,8 @@ contains
                                        ielement_g,  ielement_l,         &
                                        iface, proc, nfields,            &
                                        nterms_s, nterms_c, dof_start,   &
-                                       ntime, dof_local_start, coordinate_system
+                                       ntime, dof_local_start, coordinate_system,   &
+                                       xdof_start, xdof_local_start
         real(rk)                    :: total_area
         real(rk),       allocatable :: areas(:)
         type(point_t),  allocatable :: quad_pts(:)
@@ -213,6 +211,8 @@ contains
         ntime           = 1
         dof_start       = 0
         dof_local_start = 0
+        xdof_start       = 0
+        xdof_local_start = 0
         nterms_s        = 8
         nterms_c        = 8
         coordinate_system = CARTESIAN
@@ -228,7 +228,7 @@ contains
         ! THIS IS BEING TESTED
         !
         call coupling%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
-        call coupling%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,nterms_c,coordinate_system,dof_start,dof_local_start,total_area,areas,quad_pts)
+        call coupling%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,nterms_c,coordinate_system,dof_start,dof_local_start,xdof_start,xdof_local_start,total_area,areas,quad_pts)
 
 
         idomain_g  = 3
@@ -239,6 +239,9 @@ contains
         nfields    = 1
         ntime      = 1
         dof_start  = 8
+        dof_local_start  = 8
+        xdof_start  = 8
+        xdof_local_start  = 8
         nterms_s   = 8
         nterms_c   = 8
         coordinate_system = CARTESIAN
@@ -254,7 +257,7 @@ contains
         ! THIS IS BEING TESTED
         !
         call coupling%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
-        call coupling%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,nterms_c,coordinate_system,dof_start,dof_local_start,total_area,areas,quad_pts)
+        call coupling%set_coupled_element_data(idomain_g,ielement_g,nfields,ntime,nterms_s,nterms_c,coordinate_system,dof_start,dof_local_start,xdof_start,xdof_local_start,total_area,areas,quad_pts)
 
 
 
@@ -278,6 +281,7 @@ contains
         @assertEqual(coupling%ntime(1),      1)
         @assertEqual(coupling%nterms_s(1),   8)
         @assertEqual(coupling%dof_start(1),  0)
+        @assertEqual(coupling%xdof_start(1), 0)
         @assertEqual(coupling%proc(1),       0)
         
         @assertEqual(coupling%idomain_g(2),  3)
@@ -289,6 +293,7 @@ contains
         @assertEqual(coupling%ntime(2),      1)
         @assertEqual(coupling%nterms_s(2),   8)
         @assertEqual(coupling%dof_start(2),  8)
+        @assertEqual(coupling%xdof_start(2), 8)
         @assertEqual(coupling%proc(2),       1)
 
 

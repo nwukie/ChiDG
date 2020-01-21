@@ -74,18 +74,15 @@ module integration_smoothbump_mod
     !-------------------------------------------------------------------------------
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
-
         integer(ik)                 :: nelem_xi
         integer(ik)                 :: nelem_eta
         integer(ik)                 :: order
         character(:),   allocatable :: gridfile
         character(:),   allocatable :: backend
-
     contains
         procedure   :: toString
     end type case_grid_order
     !*******************************************************************************
-
 
 
 
@@ -97,14 +94,11 @@ module integration_smoothbump_mod
     !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: smoothbump
-
         integer(ik)                 :: nelem_xi
         integer(ik)                 :: nelem_eta
         integer(ik)                 :: order
         character(:),   allocatable :: gridfile
         character(:),   allocatable :: backend
-!        type(mpi_comm)              :: ChiDG_COMM
-
     contains
         procedure   :: setUp
         procedure   :: tearDown
@@ -196,7 +190,6 @@ contains
 
 
 
-
     !>  Set up test routine.
     !!
     !!  This routine reads the grid file, sets up boundary conditions, initializes storage
@@ -262,7 +255,6 @@ contains
             call noptions%set('ptc',.true.)
             call noptions%set('search','Backtrack')
             !------------------------------------------------------------------------------
-
 
 
             ! Create mesh, only for P==0 since we don't want to destroy the lower-order

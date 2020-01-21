@@ -489,10 +489,8 @@ contains
         character(*),       intent(in)    :: key
         real(rk),           intent(in)    :: val
 
-
         ! Check if the current node is an allocated pair
         if ( allocated(list%key) ) then
-
             !check if the key matches what we are looking to set
             if ( list%key == key ) then
                 list%val = val
@@ -501,16 +499,13 @@ contains
                 if ( .not. associated(list%child) ) then
                     allocate(list%child)    ! Create node for new key/val pair
                 end if
-
                 ! Now that we have allocated an empty node we can set it's properties
                 call set_llreal(list%child,key,val)
             end if
-
         else
             ! So, the current node exists, but the key-value pair needs set
             list%key = key
             list%val = val
-
         end if
 
     end subroutine set_llreal
@@ -529,13 +524,11 @@ contains
         if (allocated(list%key) .and. (list%key == key)) then
             ! Return the associated value
             val = list%val
-
         ! The current node did not contain the key we were looking for.
         ! Check if there is another node to move to.
         else if (associated(list%child)) then
             !There was another node, so call get on that node
             call get_llreal(list%child,key,val)
-
         ! We searched the whole list and found no valid key.
         ! BAD!
         else
@@ -579,10 +572,8 @@ contains
         character(*),       intent(in)    :: key
         logical,            intent(in)    :: val
 
-
         ! Check if the current node is an allocated pair
         if ( allocated(list%key) ) then
-
             !check if the key matches what we are looking to set
             if ( list%key == key ) then
                 list%val = val
@@ -591,16 +582,13 @@ contains
                 if ( .not. associated(list%child) ) then
                     allocate(list%child)    ! Create node for new key/val pair
                 end if
-
                 ! Now that we have allocated an empty node we can set it's properties
                 call set_lllogical(list%child,key,val)
             end if
-
         else
             ! So, the current node exists, but the key-value pair needs set
             list%key = key
             list%val = val
-
         end if
 
     end subroutine set_lllogical
@@ -619,13 +607,11 @@ contains
         if (allocated(list%key) .and. (list%key == key)) then
             ! Return the associated value
             val = list%val
-
         ! The current node did not contain the key we were looking for.
         ! Check if there is another node to move to.
         else if (associated(list%child)) then
             !There was another node, so call get on that node
             call get_lllogical(list%child,key,val)
-
         else
             call chidg_signal_one(FATAL,"dict%get: key was not found",key)
         end if
@@ -648,11 +634,6 @@ contains
 
 
 
-
-
-
-
-
     !==============================================
     !
     !   character:character key:value
@@ -672,10 +653,8 @@ contains
         character(*),           intent(in)    :: key
         character(*),           intent(in)    :: val
 
-
         ! Check if the current node is an allocated pair
         if ( allocated(list%key) ) then
-
             !check if the key matches what we are looking to set
             if ( list%key == key ) then
                 list%val = val
@@ -684,16 +663,13 @@ contains
                 if ( .not. associated(list%child) ) then
                     allocate(list%child)    ! Create node for new key/val pair
                 end if
-
                 ! Now that we have allocated an empty node we can set it's properties
                 call set_llcharacter(list%child,key,val)
             end if
-
         else
             ! So, the current node exists, but the key-value pair needs set
             list%key = key
             list%val = val
-
         end if
 
     end subroutine set_llcharacter
@@ -775,31 +751,26 @@ contains
         keylen = len(key)
 
         ! Check if the current node is an allocated pair
-        if (allocated(list%key)) then
-            ! If it is, check if the key matches what we are looking to set
-            if (list%key /= key) then
-                ! The key does not match what we are looking for,
-                ! so check if there is another node
-                if (.not. associated(list%child)) then
-                    ! There was not another node, so we need to create one
-                    ! in order to set the value
-                    allocate(list%child)
+        if ( allocated(list%key) ) then
+            !check if the key matches what we are looking to set
+            if ( list%key == key ) then
+                list%val = val
+            else
+                ! The key does not match what we are looking for. Check for child node
+                if ( .not. associated(list%child) ) then
+                    allocate(list%child)    ! Create node for new key/val pair
                 end if
-
                 ! Now that we have allocated an empty node we can set it's properties
                 call set_llint(list%child,key,val)
-
             end if
         else
-        ! So, the current node exists, but the key-value pair hasn't bet allocated
-            if (.not. allocated(list%key)) then
-                allocate (character(len=keylen) :: list%key)
-            end if
+            ! So, the current node exists, but the key-value pair needs set
             list%key = key
             list%val = val
         end if
 
-    end subroutine
+    end subroutine set_llint
+    !************************************************************
     
 
 

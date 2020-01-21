@@ -362,12 +362,10 @@ contains
         type(string_t),     allocatable :: backend(:)
         integer(ik) :: icase, ncases, imesh, igrid, iorder, ibackend
 
-
         nelem_xi = [60, 120]
         orders   = [2, 3, 4]
         gridtype = [string_t("single"), string_t("overset")]
         backend  = [string_t("native"), string_t("petsc")  ]
-
 
         !Initialize the test case container with the parameter
         ncases = size(nelem_xi)*size(gridtype)*size(orders)*size(backend)
@@ -392,59 +390,6 @@ contains
             end do
         end do
 
-
-
-
-!        nelem_xi = [  60,  60,  60, &
-!                     120, 120, 120, &
-!                      60,  60,  60, &
-!                     120, 120, 120 ]
-!
-!
-!        files = [ string_t('1D_linear_advection_diffusion_60x1x1.h5'),  &
-!                  string_t('1D_linear_advection_diffusion_60x1x1.h5'),  &
-!                  string_t('1D_linear_advection_diffusion_60x1x1.h5'),  &
-!                  string_t('1D_linear_advection_diffusion_120x1x1.h5'), &
-!                  string_t('1D_linear_advection_diffusion_120x1x1.h5'), &
-!                  string_t('1D_linear_advection_diffusion_120x1x1.h5'), &
-!                  string_t('1D_linear_advection_diffusion_60x1x1_chimera.h5'), &
-!                  string_t('1D_linear_advection_diffusion_60x1x1_chimera.h5'), &
-!                  string_t('1D_linear_advection_diffusion_60x1x1_chimera.h5'), &
-!                  string_t('1D_linear_advection_diffusion_120x1x1_chimera.h5'), &
-!                  string_t('1D_linear_advection_diffusion_120x1x1_chimera.h5'), &
-!                  string_t('1D_linear_advection_diffusion_120x1x1_chimera.h5')  &
-!                  ]
-!
-!        gridtype = [ string_t("singleblock"), &
-!                     string_t("singleblock"), &
-!                     string_t("singleblock"), &
-!                     string_t("singleblock"), &
-!                     string_t("singleblock"), &
-!                     string_t("singleblock"), &
-!                     string_t("chimera"),     &
-!                     string_t("chimera"),     &
-!                     string_t("chimera"),     &
-!                     string_t("chimera"),     &
-!                     string_t("chimera"),     &
-!                     string_t("chimera")      &
-!                     ]
-!
-!
-!        orders = [ 2, 3, 4, &
-!                   2, 3, 4, &
-!                   2, 3, 4, &
-!                   2, 3, 4  ]
-!
-!
-!        !Initialize the test case container with the parameter
-!        allocate(params(size(files)))
-!        do icase = 1,size(files)
-!            params(icase)%nelem_xi = nelem_xi(icase)
-!            params(icase)%gridfile = files(icase)%str
-!            params(icase)%gridtype = gridtype(icase)%str
-!            params(icase)%order    = orders(icase)
-!        end do
-
     end function getParameters
     !*****************************************************************************************
 
@@ -459,7 +404,7 @@ contains
 
         character(len=200) :: buffer
 
-        write(buffer,'( "(nelem, gridtype, order, backend)=","(", I2,",", A6,",", I1,",", A5, ")" )') this%nelem_xi, this%gridtype, this%order, this%backend
+        write(buffer,'( "(nelem, gridtype, order, backend)=","(", I3,",", A6,",", I1,",", A5, ")" )') this%nelem_xi, this%gridtype, this%order, this%backend
         string = trim(buffer)
 
     end function toString
@@ -483,7 +428,7 @@ contains
         class(linear_advection_diffusion_1D),  intent(inout)   :: this
 
         class(bc_state_t),  allocatable :: bc_state
-        type(bc_state_group_t)                :: bc_state_groups(3)
+        type(bc_state_group_t)          :: bc_state_groups(3)
         type(string_t)                  :: group_names(2,6)
         class(function_t),  allocatable :: fcn
 
@@ -492,13 +437,13 @@ contains
         type(testing_1D_linear_adv_diff_model_t)            :: diffusion_coefficient_model
 
         ! Get MPI communicator information from pFUnit
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        chidg_COMM%mpi_val = this%getMpiCommunicator()
+        IRANK              = this%getProcessRank()
+        NRANK              = this%getNumProcessesRequested()
+        ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
         ! Initialize ChiDG environment
-        call chidg%start_up('mpi',chidg_COMM)
+        call chidg%start_up('mpi',ChiDG_COMM)
         call chidg%start_up('core')
 
 

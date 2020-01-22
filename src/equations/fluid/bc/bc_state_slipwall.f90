@@ -74,15 +74,13 @@ contains
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
             normal_momentum, wmom1_m, wmom2_m, wmom3_m, wmom1_bc, wmom2_bc, wmom3_bc,   &
-            wmom_mag_m, wmom_mag_bc, &
-            unorm_1, unorm_2, unorm_3, r
+            wmom_mag_m, wmom_mag_bc, r
 
+        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
+       
 
-
-        !
         ! Interpolate interior solution to quadrature nodes
-        !
         density_m = worker%get_field('Density'   , 'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
@@ -111,9 +109,8 @@ contains
         grad3_energy_m  = worker%get_field('Energy'    , 'grad3', 'face interior')
 
 
-        !
+
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
@@ -129,9 +126,7 @@ contains
         energy_bc  = energy_m
 
 
-        !
         ! Get unit normal vector
-        !
         unorm_1 = worker%unit_normal_ale(1)
         unorm_2 = worker%unit_normal_ale(2)
         unorm_3 = worker%unit_normal_ale(3)

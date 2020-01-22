@@ -24,18 +24,13 @@ module bc_state_outlet_constant_pressure
     type, public, extends(bc_state_t) :: outlet_constant_pressure_t
 
     contains
-
         procedure   :: init                 ! Set-up bc state with options/name etc.
         procedure   :: compute_bc_state     ! boundary condition function implementation
-
     end type outlet_constant_pressure_t
     !****************************************************************************************
 
 
-
-
 contains
-
 
 
     !>
@@ -47,23 +42,16 @@ contains
     subroutine init(self)
         class(outlet_constant_pressure_t),   intent(inout) :: self
         
-        !
         ! Set name, family
-        !
         call self%set_name("Outlet - Constant Pressure")
         call self%set_family("Outlet")
 
-
-        !
         ! Add functions
-        !
         call self%bcproperties%add('Static Pressure','Required')
         call self%set_fcn_option('Static Pressure', 'val', 100000._rk)
 
-
     end subroutine init
     !********************************************************************************
-
 
 
 
@@ -91,12 +79,10 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc, mom_norm, r, unorm1, unorm2, unorm3, p_input
+            u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc, p_input, r
             
-
         ! Get back pressure from function.
         p_input = self%bcproperties%compute('Static Pressure',worker%time(),worker%coords(),worker%function_info)
-
 
         ! Interpolate interior solution to face quadrature nodes
         density_m = worker%get_field('Density'    , 'value', 'face interior')
@@ -105,8 +91,6 @@ contains
         mom3_m    = worker%get_field('Momentum-3' , 'value', 'face interior')
         energy_m  = worker%get_field('Energy'     , 'value', 'face interior')
         T_m       = worker%get_field('Temperature', 'value', 'face interior')
-
-
 
         grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')
         grad2_density_m = worker%get_field('Density'   , 'grad2', 'face interior')

@@ -23,20 +23,10 @@ module euler_boundary_average_operator
     type, extends(operator_t), public :: euler_boundary_average_operator_t
 
     contains
-
         procedure   :: init
         procedure   :: compute
-
     end type euler_boundary_average_operator_t
     !********************************************************************************
-
-
-
-
-
-
-
-
 
 
 contains
@@ -52,19 +42,13 @@ contains
     subroutine init(self)
         class(euler_boundary_average_operator_t),   intent(inout) :: self
         
-        !
         ! Set operator name
-        !
         call self%set_name("Euler Boundary Average Flux")
 
-        !
         ! Set operator type
-        !
         call self%set_operator_type("Boundary Advective Flux")
 
-        !
         ! Set operator equations
-        !
         call self%add_primary_field("Density"   )
         call self%add_primary_field("Momentum-1")
         call self%add_primary_field("Momentum-2")
@@ -103,9 +87,7 @@ contains
             invdensity_m,   invdensity_p, r
 
 
-        !
         ! Interpolate solution to quadrature nodes
-        !
         density_m = worker%get_field('Density'   , 'value', 'face interior')
         density_p = worker%get_field('Density'   , 'value', 'face exterior')
 
@@ -122,10 +104,7 @@ contains
         energy_p  = worker%get_field('Energy'    , 'value', 'face exterior')
 
 
-
-        !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         if (worker%coordinate_system() == 'Cylindrical') then
             r = worker%coordinate('1','face interior') 
             mom2_m = mom2_m / r
@@ -133,9 +112,7 @@ contains
         end if
 
 
-        !
         ! Compute velocity
-        !
         invdensity_m = ONE/density_m
         invdensity_p = ONE/density_p
 
@@ -148,16 +125,12 @@ contains
         w_p = mom3_p*invdensity_p
 
 
-        !
         ! Compute pressure and total enthalpy
-        !
         p_m = worker%get_field('Pressure', 'value', 'face interior')
         p_p = worker%get_field('Pressure', 'value', 'face exterior')
 
-
         enthalpy_m = (energy_m + p_m)*invdensity_m
         enthalpy_p = (energy_p + p_p)*invdensity_p
-
 
 
         !================================

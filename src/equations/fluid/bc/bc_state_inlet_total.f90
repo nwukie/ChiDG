@@ -104,7 +104,7 @@ contains
             u_m,    v_m,    w_m,                                                            &
             u_bc,   v_bc,   w_bc,                                                           &
             T_bc,   vmag2_m, vmag, f, df, dT, T, vel, veln, rminus, asp_ext, asp_int, M,    &
-            PT, TT, n1, n2, n3, nmag, alpha, r, unorm_1, unorm_2, unorm_3
+            PT, TT, n1, n2, n3, nmag, alpha, r
 
         integer(ik) :: ierr
 

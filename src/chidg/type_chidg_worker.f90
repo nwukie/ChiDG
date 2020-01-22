@@ -1796,10 +1796,6 @@ contains
 
 
 
-
-
-
-
     !>  Return outward-facing unit normal vector on the undeformed face.
     !!
     !!  Magnitude of this vector is 1.

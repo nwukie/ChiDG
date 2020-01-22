@@ -392,8 +392,13 @@ contains
                         nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%nterms_s * ntime)
                     case ('coordinate')
                         nlocal_rows = nlocal_rows + ( 3 * mesh%domain(idom)%elems(ielem)%basis_c%nnodes_r() * ntime)
-                    case ('auxiliary')
-                        nlocal_rows = nlocal_rows + ( 1 * mesh%domain(idom)%elems(ielem)%nterms_s * ntime)
+                    !case ('auxiliary')
+                    !    nlocal_rows = nlocal_rows + ( 1 * mesh%domain(idom)%elems(ielem)%nterms_s * ntime)
+                    case ('auxiliary')  
+                        ! Allocate storage for nfields so the access pattern stays the same as primal, 
+                        ! but the convention we use elsewhere is that the auxiliary vector only contains
+                        ! one real field 
+                        nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%nterms_s * ntime)
                     case default
                         call chidg_signal_one(FATAL,"chidg_vector%petsc_init_vector: Invalid dof_type parameter.",trim(dof_type))
                 end select 
@@ -609,7 +614,7 @@ contains
         PetscInt, allocatable   :: indices(:)
 
         select case (trim(self%dof_type))
-            case('primal')
+            case('primal','auxiliary')
                 istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
                 indices = [(i, i=istart,(istart+element_info%nterms_s-1),1)]
             case('coordinate')
@@ -652,7 +657,7 @@ contains
         PetscInt, allocatable   :: indices(:)
 
         select case (trim(self%dof_type))
-            case('primal')
+            case('primal','auxiliary')
                 istart = element_info%dof_start
                 indices = [(i, i=istart,(istart + element_info%nfields*element_info%nterms_s*element_info%ntime - 1),1)]
             case('coordinate')
@@ -860,7 +865,7 @@ contains
 
             ! Compute start and end indices for accessing modes of a variable
             select case (trim(self%dof_type))
-                case('primal')
+                case('primal','auxiliary')
                     istart = element_info%dof_local_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
                     iend = istart + (element_info%nterms_s-1)
                 case('coordinate')
@@ -887,7 +892,7 @@ contains
 
             ! Compute start and end indices for accessing modes of a variable
             select case (trim(self%dof_type))
-                case('primal')
+                case('primal','auxiliary')
                     istart = element_info%recv_dof + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
                     iend = istart + (element_info%nterms_s-1)
                 case('coordinate') 

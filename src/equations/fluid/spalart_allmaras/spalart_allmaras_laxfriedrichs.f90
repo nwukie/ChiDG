@@ -78,15 +78,13 @@ contains
             invdensity_m, invdensity_p,                 &
             u_m, v_m, w_m, T_m, un_m, c_m, wavespeed_m, &
             u_p, v_p, w_p, T_p, un_p, c_p, wavespeed_p, &
-            dissipation, unorm_1, unorm_2, unorm_3, grid_vel_n, r
+            dissipation, grid_vel_n, r
 
         real(rk),   dimension(:,:), allocatable :: grid_vel
+        real(rk),   dimension(:),   allocatable :: unorm_1, unorm_2, unorm_3
 
 
-
-        !
         ! Interpolate solution to quadrature nodes
-        !
         density_m         = worker%get_field('Density',           'value', 'face interior')
         density_p         = worker%get_field('Density',           'value', 'face exterior')
 
@@ -103,9 +101,7 @@ contains
         density_nutilde_p = worker%get_field('Density * NuTilde', 'value', 'face exterior')
 
 
-        !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         if (worker%coordinate_system() == 'Cylindrical') then
             r = worker%coordinate('1','face interior') 
             mom2_m = mom2_m / r
@@ -113,9 +109,7 @@ contains
         end if
 
         
-        !
         ! Get fluid advection velocity
-        !
         invdensity_m = ONE/density_m
         u_m = mom1_m*invdensity_m
         v_m = mom2_m*invdensity_m
@@ -127,22 +121,18 @@ contains
         w_p = mom3_p*invdensity_p
         
 
-
-        !
         ! Get normal vector
-        !
         unorm_1 = worker%unit_normal_ale(1)
         unorm_2 = worker%unit_normal_ale(2)
         unorm_3 = worker%unit_normal_ale(3)
 
 
-
-        !
         ! Compute maximum wave speed
-        !
         grid_vel = worker%get_grid_velocity_face('face interior')
         un_m = u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3
         un_p = u_p*unorm_1 + v_p*unorm_2 + w_p*unorm_3
+
+        grid_vel_n = ZERO*density_m !init
         grid_vel_n = grid_vel(:,1)*unorm_1  +  grid_vel(:,2)*unorm_2  +  grid_vel(:,3)*unorm_3
 
 
@@ -155,18 +145,11 @@ contains
         wavespeed_p = abs(un_p) + c_p  + abs(grid_vel_n)
 
 
-        !
         ! Compute Lax-Friedrichs upwind flux
-        !
-        !dissipation = HALF*max(abs(wavespeed_m),abs(wavespeed_p))*(density_nutilde_m - density_nutilde_p)
         dissipation = -HALF*max(abs(wavespeed_m),abs(wavespeed_p))*(density_nutilde_p - density_nutilde_m)
 
-
-        !
         ! Integrate flux
-        !
         call worker%integrate_boundary_upwind('Density * NuTilde',dissipation)
-
 
     end subroutine compute
     !******************************************************************************************

@@ -86,14 +86,12 @@ contains
             density_nutilde_m, density_nutilde_bc,              &
             grad1_density_nutilde_m, grad2_density_nutilde_m, grad3_density_nutilde_m, mu_m, nu_m
 
-        type(AD_D), allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, nutilde_over_nu
+        type(AD_D), allocatable, dimension(:)   :: nutilde_over_nu
+        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3
         logical,    allocatable, dimension(:)   :: inflow, outflow
 
 
-
-        !
         ! Interpolate interior solution to quadrature nodes
-        !
         density_m = worker%get_field('Density',    'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
@@ -105,44 +103,32 @@ contains
         grad3_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad3', 'face interior')
 
 
-        !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / worker%coordinate('1','boundary')
         end if
 
 
-        !
         ! Get User incoming boundary condition viscosity ratio
-        !
         nutilde_over_nu = self%bcproperties%compute('Turbulent Viscosity Ratio', worker%time(), worker%coords() )
 
 
-        !
         ! Get unit normal vector
-        !
-        unorm_1 = worker%unit_normal(1)
-        unorm_2 = worker%unit_normal(2)
-        unorm_3 = worker%unit_normal(3)
+        unorm_1 = worker%unit_normal_ale(1)
+        unorm_2 = worker%unit_normal_ale(2)
+        unorm_3 = worker%unit_normal_ale(3)
 
 
-        !
         ! Determine which modes are inflow/outflow
-        !
         normal_momentum = mom1_m*unorm_1 + mom2_m*unorm_2 + mom3_m*unorm_3
 
         inflow  = ( normal_momentum <= RKTOL )
         outflow = ( normal_momentum >  RKTOL )
 
 
-
-
-        !
         ! Set boundary values for density * nutilde.
         !   1: Extrapolate all values (assuming outflow)
         !   2: Where inflow is detected, set from user specified parameter
-        !
         mu_m = worker%get_field('Laminar Viscosity', 'value', 'face interior')
         nu_m = mu_m/density_m
         density_nutilde_bc = density_nutilde_m
@@ -151,16 +137,10 @@ contains
         end where
 
 
-
-        !
         ! Store boundary condition state
-        !
         call worker%store_bc_state('Density * NuTilde', density_nutilde_bc,'value')
 
-
-        !
         ! Store boundary condition gradient - Zero Gradient
-        !
         grad1_density_nutilde_m = ZERO
         grad2_density_nutilde_m = ZERO
         grad3_density_nutilde_m = ZERO

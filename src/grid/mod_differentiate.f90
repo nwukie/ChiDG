@@ -182,7 +182,14 @@ contains
 
 
         ! Select cases
-        differentiate = ( (fcn_info%type        == fcn_info%dtype)           .and. &
+        ! NOTE: Nathan does not like this 'overloading' of 'type' and 'dtype'. Removed for now
+        !differentiate = ( (fcn_info%type        == fcn_info%dtype)           .and. &
+        !                  (elem_info%idomain_g  == fcn_info%seed%idomain_g)  .and. &
+        !                  (elem_info%ielement_g == fcn_info%seed%ielement_g) .and. &
+        !                  (itime                == fcn_info%seed%itime) ) 
+
+
+        differentiate = ( (fcn_info%dtype       == dQ_DIFF)                  .and. &
                           (elem_info%idomain_g  == fcn_info%seed%idomain_g)  .and. &
                           (elem_info%ielement_g == fcn_info%seed%ielement_g) .and. &
                           (itime                == fcn_info%seed%itime) ) 
@@ -235,7 +242,6 @@ contains
         logical                 :: differentiate_me, local_neighbor, remote_neighbor
 
 
-
         associate( idom_l  => elem_info%idomain_l,   &
                    ielem_l => elem_info%ielement_l  )
 
@@ -266,6 +272,7 @@ contains
 
         end if
 
+
         !
         ! If the face is a CHIMERA face, set source_info to zero.
         ! This is meant to handle the approximation on chimera faces
@@ -274,13 +281,13 @@ contains
         ! interior element. However, we want to avoid that the BR2_face
         ! is differentiated wrt to interior in this case.
         !
-        if ( (present(exception)) .and. (exception) ) then
-        
-            source_info%idomain_l  = 0 
-            source_info%idomain_g  = 0 
-            source_info%ielement_l = 0 
-            source_info%ielement_g = 0 
-        
+        if (present(exception)) then
+            if (exception)  then
+                source_info%idomain_l  = 0 
+                source_info%idomain_g  = 0 
+                source_info%ielement_l = 0 
+                source_info%ielement_g = 0 
+            end if
         end if
 
 
@@ -320,7 +327,6 @@ contains
         differentiate_me = ( (source_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
                              (source_info%ielement_g == fcn_info%seed%ielement_g) .and. &
                              (fcn_info%dtype         == dX_DIFF) )
-
 
         if (differentiate_me) then
             

@@ -11,7 +11,7 @@ module test_interpolate_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  ME, NEIGHBOR, IO_DESTINATION, VOLUME_ADVECTIVE_FLUX, NO_ID, CARTESIAN
+                                  ME, NEIGHBOR, IO_DESTINATION, VOLUME_ADVECTIVE_FLUX, NO_ID, CARTESIAN, dQ_DIFF
     use mod_function,       only: create_function
     use mod_interpolate,    only: interpolate_face_standard, interpolate_face_autodiff, &
                                   interpolate_element_standard, interpolate_element_autodiff
@@ -269,6 +269,8 @@ contains
             function_info%ifcn    = 1
             function_info%idepend = 1
             function_info%idiff   = 1
+            function_info%dtype   = dQ_DIFF
+
             call function_info%seed%init(idomain_g    = 1,     &
                                          idomain_l    = 1,     &
                                          ielement_g   = 15,    &
@@ -353,6 +355,7 @@ contains
             function_info%ifcn    = 1
             function_info%idepend = 1
             function_info%idiff   = 1
+            function_info%dtype   = dQ_DIFF
             call function_info%seed%init(idomain_g    = 1,     &
                                          idomain_l    = 1,     &
                                          ielement_g   = 15,    &
@@ -441,6 +444,7 @@ contains
             function_info%ifcn    = 1
             function_info%idepend = 1
             function_info%idiff   = 1
+            function_info%dtype   = dQ_DIFF
             call function_info%seed%init(idomain_g    = 1,     &
                                          idomain_l    = 1,     &
                                          ielement_g   = 14,    &
@@ -528,6 +532,7 @@ contains
             function_info%ifcn    = 1
             function_info%idepend = 1
             function_info%idiff   = 1
+            function_info%dtype   = dQ_DIFF
             call function_info%seed%init(idomain_g    = 1,     &
                                          idomain_l    = 1,     &
                                          ielement_g   = 14,    &
@@ -629,6 +634,7 @@ contains
             ! A seed element, this is a neighbor for this test - so all derivative 
             ! arrays should be seeded to zero.
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 15,    &
@@ -738,6 +744,7 @@ contains
             ! A seed element, this is a neihgbor for this test - so all derivative 
             ! arrays should be seeded to zero.
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 15,    &
@@ -847,6 +854,7 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 14,    &
@@ -959,6 +967,7 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 14,    &
@@ -1077,6 +1086,7 @@ contains
             ! A seed element, this is a neighbor for this test - so all derivative 
             ! arrays should be seeded to zero.
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 15,    &
@@ -1188,6 +1198,7 @@ contains
             ! A seed element, this is a neihgbor for this test - so all derivative 
             ! arrays should be seeded to zero.
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 15,    &
@@ -1297,6 +1308,7 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 13,    &
@@ -1407,6 +1419,7 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 13,    &

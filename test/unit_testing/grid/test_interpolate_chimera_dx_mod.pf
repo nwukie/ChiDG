@@ -921,12 +921,18 @@ contains
             !
             call self%chidg%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
 
-            
             !
             ! PROCEDURE BEING TESTED
             !
             u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,elem_info,fcn_info,iface,ifield,itime,'grad1', NEIGHBOR)
               
+            
+            ! Trigger update for donor element so it can be accessed below
+            elem_info%idomain_g = 2
+            elem_info%idomain_l = 2
+            elem_info%ielement_g = 1
+            elem_info%ielement_l = 1
+            call self%chidg%data%mesh%compute_derivatives_dx(elem_info,differentiate=dX_DIFF)
             
 
             !
@@ -942,7 +948,7 @@ contains
             !   by the 4th modal coefficient of the solution.
             !
             
-            do igq = 1,ndonor_nodes
+            do igq = 1,size(u_gq)
                 ! Nonzero expected derivatives
                 deriv_ref(1:nnodes_r)               = self%chidg%data%mesh%domain(2)%faces(1,1)%dgrad1_dx(igq,4,:,1) * 0.125_rk
                 deriv_ref(nnodes_r+1:2*nnodes_r)    = self%chidg%data%mesh%domain(2)%faces(1,1)%dgrad1_dx(igq,4,:,2) * 0.125_rk

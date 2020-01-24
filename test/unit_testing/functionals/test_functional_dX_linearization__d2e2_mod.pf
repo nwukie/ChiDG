@@ -418,10 +418,10 @@ contains
 
                 ! Allocate ref_deriv
                 if (idom ==1 .and. ielem == 1) then
-                    ref_deriv = [-ONE,ONE,-ONE,ONE,-ONE,ONE,-ONE,ONE]
+                    ref_deriv = [-ONE,ONE,ONE,-ONE,-ONE,ONE,ONE,-ONE]
                     ref_deriv = ref_deriv * 0.0625_rk
                 else if (idom == 2 .and. ielem == 1) then
-                    ref_deriv = [-ONE,ONE,-ONE,ONE,-ONE,ONE,-ONE,ONE]
+                    ref_deriv = [-ONE,ONE,ONE,-ONE,-ONE,ONE,ONE,-ONE]
                     ref_deriv = ref_deriv * 0.1875_rk
                 end if
 

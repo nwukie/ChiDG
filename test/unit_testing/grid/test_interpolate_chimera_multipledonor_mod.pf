@@ -11,7 +11,7 @@ module test_interpolate_chimera_multipledonor_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  NEIGHBOR, IO_DESTINATION, NO_ID, CARTESIAN
+                                  NEIGHBOR, IO_DESTINATION, NO_ID, CARTESIAN, dQ_DIFF
     use mod_chidg_mpi,      only: IRANK
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_face_standard
     use mod_test_utilities, only: create_mesh_file
@@ -154,6 +154,7 @@ contains
             ! A seed element, this is a neighbor for this test - so all derivative arrays 
             ! should be seeded to zero
             !
+            fcn_info%dtype = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 2,     &
@@ -266,6 +267,7 @@ contains
             ! A seed element, this is the current element. Since we are performing a 
             ! NEIGHBOR interpolation, derivatives should be zero.
             !
+            fcn_info%dtype = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 2,     &
@@ -374,6 +376,7 @@ contains
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
             ! all dervative arrays should be nonzero.
             !
+            fcn_info%dtype = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 2,     &
                                     idomain_l    = 2,     &
                                     ielement_g   = 1,     &
@@ -488,6 +491,7 @@ contains
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all 
             ! dervative arrays should be nonzero.
             !
+            fcn_info%dtype = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 2,     &
                                     idomain_l    = 2,     &
                                     ielement_g   = 1,     &

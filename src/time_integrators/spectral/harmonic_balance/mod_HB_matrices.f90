@@ -220,10 +220,8 @@ contains
         if (size(inv_E,1) == 0) call chidg_signal_two(FATAL, user_msg, size(inv_E,1), dev_msg)
         
         E = inv(inv_E)
-
         D = matmul(diff_inv_E,E)
 
-    
     end function calc_pseudo_spectral_operator
     !************************************************************************************
 

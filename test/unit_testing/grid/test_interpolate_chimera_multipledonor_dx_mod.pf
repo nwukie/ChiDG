@@ -635,7 +635,7 @@ contains
             ! does not depend on the physical coordinates of the support nodes.
             !
             deriv_ref = ZERO
-            do igq = 1,ndonor_nodes
+            do igq = 1,size(u_gq)
                 @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
             end do
 
@@ -647,7 +647,7 @@ contains
             ! does not depend on the physical coordinates of the support nodes.
             !
             idonor = 2
-            do igq = 1,ndonor_nodes
+            do igq = 1,size(u_gq)
                 @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
             end do
 
@@ -922,7 +922,7 @@ contains
             
             ! Test that the derivatives for each gq variable are zero, since we seeded 
             ! with a neighbor element.
-            do igq = 1,ngq
+            do igq = 1,size(u_gq)
                 @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
             end do
             

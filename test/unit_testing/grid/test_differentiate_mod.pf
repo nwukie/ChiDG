@@ -1014,14 +1014,14 @@ contains
             c = sqrt(THIRD) 
 
             test_coords_derivs_t = reshape((/     &
-            a+b*c+3*b+3._rk*c,a-b*c-b+c,a-b*c-b+c,a+b*c-b-c,a-b*c-b+c,a+b*c-b-c,a+b*c-b-c,a-b*c+3._rk*b-3._rk*c,        &
-            a-b*c-b+c,a+b*c+3._rk*b+3._rk*c,a+b*c-b-c,a-b*c-b+c,a+b*c-b-c,a-b*c-b+c,a-b*c+3._rk*b-3._rk*c,a+b*c-b-c,    &
-            a-b*c-b+c,a+b*c-b-c,a+b*c+3._rk*b+3._rk*c,a-b*c-b+c,a+b*c-b-c,a-b*c+3._rk*b-3._rk*c,a-b*c-b+c,a+b*c-b-c,    &
-            a+b*c-b-c,a-b*c-b+c,a-b*c-b+c,a+b*c+3._rk*b+3._rk*c,a-b*c+3._rk*b-3._rk*c,a+b*c-b-c,a+b*c-b-c,a-b*c-b+c,    & 
-            a-b*c-b+c,a+b*c-b-c,a+b*c-b-c,a-b*c+3*b-3._rk*c,a+b*c+3._rk*b+3._rk*c,a-b*c-b+c,a-b*c-b+c,a+b*c-b-c,        &
-            a+b*c-b-c,a-b*c-b+c,a-b*c+3._rk*b-3._rk*c,a+b*c-b-c,a-b*c-b+c,a+b*c+3._rk*b+3._rk*c,a+b*c-b-c,a-b*c-b+c,    &
-            a+b*c-b-c,a-b*c+3._rk*b-3._rk*c,a-b*c-b+c,a+b*c-b-c,a-b*c-b+c,a+b*c-b-c,a+b*c+3._rk*b+3._rk*c,a-b*c-b+c,    &
-            a-b*c+3._rk*b-3._rk*c,a+b*c-b-c,a+b*c-b-c,a-b*c-b+c,a+b*c-b-c,a-b*c-b+c,a-b*c-b+c,a+b*c+3._rk*b+3._rk*c     &
+            a+b*c+3*b+3._rk*c,     a-b*c-b+c,               a+b*c-b-c,             a-b*c-b+c,               a-b*c-b+c,              a+b*c-b-c,              a-b*c+3._rk*b-3._rk*c, a+b*c-b-c,               &
+            a-b*c-b+c,             a+b*c+3._rk*b+3._rk*c,   a-b*c-b+c,             a+b*c-b-c,               a+b*c-b-c,              a-b*c-b+c,              a+b*c-b-c,             a-b*c+3._rk*b-3._rk*c,   &
+            a-b*c-b+c,             a+b*c-b-c,               a-b*c-b+c,             a+b*c+3._rk*b+3._rk*c,   a+b*c-b-c,              a-b*c+3._rk*b-3._rk*c,  a+b*c-b-c,             a-b*c-b+c,               &
+            a+b*c-b-c,             a-b*c-b+c,               a+b*c+3._rk*b+3._rk*c, a-b*c-b+c,               a-b*c+3._rk*b-3._rk*c,  a+b*c-b-c,              a-b*c-b+c,             a+b*c-b-c,               & 
+            a-b*c-b+c,             a+b*c-b-c,               a-b*c+3*b-3._rk*c,     a+b*c-b-c,               a+b*c+3._rk*b+3._rk*c,  a-b*c-b+c,              a+b*c-b-c,             a-b*c-b+c,               &
+            a+b*c-b-c,             a-b*c-b+c,               a+b*c-b-c,             a-b*c+3._rk*b-3._rk*c,   a-b*c-b+c,              a+b*c+3._rk*b+3._rk*c,  a-b*c-b+c,             a+b*c-b-c,               &
+            a+b*c-b-c,             a-b*c+3._rk*b-3._rk*c,   a+b*c-b-c,             a-b*c-b+c,               a-b*c-b+c,              a+b*c-b-c,              a-b*c-b+c,             a+b*c+3._rk*b+3._rk*c,   &
+            a-b*c+3._rk*b-3._rk*c, a+b*c-b-c,               a-b*c-b+c,             a+b*c-b-c,               a+b*c-b-c,              a-b*c-b+c,              a+b*c+3._rk*b+3._rk*c, a-b*c-b+c                &
                                             /),(/8,8/))
 
             ! Divide by the determinant of val_e (left out from the matrix val_e inversion)
@@ -1130,8 +1130,6 @@ contains
 
 
 
-
-
             !
             ! Test3: dQ linearization wrt the current element => null derivatives
             !
@@ -1235,10 +1233,10 @@ contains
             c = sqrt(THIRD) 
 
             test_coords_derivs_t = reshape((/     &
-            0._rk,2._rk*a+2._rk*b+4._rk*c,0._rk,2._rk*a-2._rk*b,0._rk,2._rk*a-2._rk*b,0._rk,2._rk*a+2._rk*b-4._rk*c,    & 
-            0._rk,2._rk*a-2._rk*b,0._rk,2._rk*a+2._rk*b+4._rk*c,0._rk,2._rk*a+2._rk*b-4._rk*c,0._rk,2._rk*a-2._rk*b,    & 
-            0._rk,2._rk*a-2._rk*b,0._rk,2._rk*a+2._rk*b-4._rk*c,0._rk,2._rk*a+2._rk*b+4._rk*c,0._rk,2._rk*a-2._rk*b,    & 
-            0._rk,2._rk*a+2._rk*b-4._rk*c,0._rk,2._rk*a-2._rk*b,0._rk,2._rk*a-2._rk*b,0._rk,2._rk*a+2._rk*b+4._rk*c     &
+            0._rk,  2._rk*a+2._rk*b+4._rk*c,    2._rk*a-2._rk*b,         0._rk,     0._rk,  2._rk*a-2._rk*b,            2._rk*a+2._rk*b-4._rk*c, 0._rk,     & 
+            0._rk,  2._rk*a-2._rk*b,            2._rk*a+2._rk*b+4._rk*c, 0._rk,     0._rk,  2._rk*a+2._rk*b-4._rk*c,    2._rk*a-2._rk*b,         0._rk,     & 
+            0._rk,  2._rk*a-2._rk*b,            2._rk*a+2._rk*b-4._rk*c, 0._rk,     0._rk,  2._rk*a+2._rk*b+4._rk*c,    2._rk*a-2._rk*b,         0._rk,     & 
+            0._rk,  2._rk*a+2._rk*b-4._rk*c,    2._rk*a-2._rk*b,         0._rk,     0._rk,  2._rk*a-2._rk*b,            2._rk*a+2._rk*b+4._rk*c, 0._rk      &
                                             /),(/8,4/))
 
 
@@ -2658,7 +2656,6 @@ contains
             BR2_vol_i  = differentiate_br2(self%chidg_d1%data%mesh,elem_info,iface,function_info,source='element')
             BR2_face_i = differentiate_br2(self%chidg_d1%data%mesh,elem_info,iface,function_info,source='face interior')
             BR2_face_n = differentiate_br2(self%chidg_d1%data%mesh,elem_info,iface,function_info,source='face exterior')
-
 
 
             ! Test Real values

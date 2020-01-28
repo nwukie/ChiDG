@@ -102,6 +102,7 @@ module test_functional_dX_linearization__d2e2_mod
     use mod_functional,                 only: registered_functional
     use type_evaluator,                 only: evaluator_t
     use type_point_ad,                  only: point_ad_t
+    use type_element_info,              only: element_info_t
 
     use type_integral_cache,            only: integral_cache_t
     use type_functional_cache_handler,  only: functional_cache_handler_t
@@ -402,6 +403,7 @@ contains
         real(rk)                            :: tol
         real(rk),           allocatable     :: dJdx(:), ref_deriv(:)
         class(function_t),  allocatable     :: fcn
+        type(element_info_t)                :: elem_info
         
         tol = 1.e-6_rk
         self%chidg%data%time_manager%istep = 1
@@ -416,6 +418,8 @@ contains
         do idom = 1,self%chidg%data%mesh%ndomains()
             do ielem = 1,self%chidg%data%mesh%domain(idom)%nelements()
 
+                elem_info = self%chidg%data%mesh%get_element_info(idom,ielem)
+
                 ! Allocate ref_deriv
                 if (idom ==1 .and. ielem == 1) then
                     ref_deriv = [-ONE,ONE,ONE,-ONE,-ONE,ONE,ONE,-ONE]
@@ -425,7 +429,7 @@ contains
                     ref_deriv = ref_deriv * 0.1875_rk
                 end if
 
-                dJdx = self%chidg%data%sdata%adjointx%Jx(1)%dom(idom)%vecs(ielem)%vec
+                dJdx = self%chidg%data%sdata%adjointx%Jx(1)%get_field(elem_info,1,1)
 
                 ! TEST
                 @assertEqual(ref_deriv,dJdx(1:nnodes_r),tol)

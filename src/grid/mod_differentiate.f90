@@ -587,6 +587,99 @@ contains
 
 
 
+    !>  Return the face normal with derivatives
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/24/2020
+    !!
+    !!  Reconstructed after bug
+    !!
+    !--------------------------------------------------------------------------------
+    function differentiate_normal_ale(mesh,elem_info,fcn_info,iface,direction) result(norm_ale_gq)
+        type(mesh_t),           intent(in)  :: mesh
+        type(element_info_t),   intent(in)  :: elem_info
+        type(function_info_t),  intent(in)  :: fcn_info
+        integer(ik),            intent(in)  :: iface
+        integer(ik),            intent(in)  :: direction
+    
+        type(AD_D), allocatable, dimension(:)       :: norm_ale_gq
+        real(rk),   allocatable, dimension(:)       :: norm_ale_rk
+        real(rk),   allocatable, dimension(:,:,:,:) :: norm_ale_dx
+
+        type(element_info_t)    :: source_info
+        integer(ik)             :: nderiv, interp_nodes, nnodes_r,            &
+                                   d1_start, d1_end, d2_start, d2_end, d3_start, d3_end,& 
+                                   ierr, irow, icol, idir, inode, deriv_index 
+        logical                 :: diff_interior, differentiate, mismatch
+
+
+        associate( idom  => elem_info%idomain_l,   &
+                   ielem => elem_info%ielement_l )
+
+
+        ! Get real normal values, of the current face
+        norm_ale_rk = mesh%domain(idom)%faces(ielem,iface)%norm_def(:,direction)
+
+
+        ! Get number of derivatives and interpolation nodes to initialize the AD_D vector
+        nderiv        = get_nderiv(fcn_info)
+        interp_nodes  = size(norm_ale_rk)
+        nnodes_r      = fcn_info%seed%nnodes_r
+
+
+        ! Allocate resultant vector
+        allocate(norm_ale_gq(interp_nodes), stat=ierr)
+        if (ierr/=0) call AllocationError
+        do irow = 1,interp_nodes
+            norm_ale_gq(irow) = AD_D(nderiv)
+        end do
+        
+        ! Assign real value
+        norm_ale_gq = norm_ale_rk 
+        
+        differentiate = (fcn_info%dtype == dX_DIFF)
+        diff_interior = ( (elem_info%idomain_g  == fcn_info%seed%idomain_g) .and. &
+                          (elem_info%ielement_g == fcn_info%seed%ielement_g) )
+
+        if (differentiate .and. diff_interior) then
+            
+            ! Retrieve derivatives wrt to interior
+            norm_ale_dx = mesh%domain(idom)%faces(ielem,iface)%dnorm_ale_dx
+        
+            do inode = 1,interp_nodes
+
+                ! Define indeces to start and end the vector allocation
+                ! Remember the order: x-derivatives, y-derivatives and z-derivatives
+                d1_start = 1
+                d1_end   = nnodes_r
+                d2_start = nnodes_r +1
+                d2_end   = 2*nnodes_r
+                d3_start = 2*nnodes_r + 1
+                d3_end   = 3*nnodes_r
+
+                ! Check if the number of reference grid nodes is correct
+                mismatch = (size(norm_ale_dx(inode,direction,:,1)) /= nnodes_r .or. &
+                            size(norm_ale_dx(inode,direction,:,2)) /= nnodes_r .or. &
+                            size(norm_ale_dx(inode,direction,:,3)) /= nnodes_r      )
+
+                if (mismatch) then 
+                    call chidg_signal(FATAL,"differentiate_normal: mismatch between dnorm_dx reference nodes and element grid nodes.")
+                end if
+
+                ! Store each directional derivaties in the correct order.
+                norm_ale_gq(inode)%xp_ad_(d1_start:d1_end) = norm_ale_dx(inode,direction,:,1)
+                norm_ale_gq(inode)%xp_ad_(d2_start:d2_end) = norm_ale_dx(inode,direction,:,2)
+                norm_ale_gq(inode)%xp_ad_(d3_start:d3_end) = norm_ale_dx(inode,direction,:,3)
+            
+            end do
+       
+        end if
+
+        end associate
+
+    end function differentiate_normal_ale
+    !********************************************************************************
+
 
 
 
@@ -631,6 +724,48 @@ contains
     end function differentiate_unit_normal
     !********************************************************************************
 
+
+
+
+    !>  Return the face ALE unit normals with derivatives
+    !!
+    !!  Note: this procedure is not explicitly tested because it relies on differentiate_normal
+    !!        and DNAD procedures that are tested.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   1/27/2020
+    !!
+    !--------------------------------------------------------------------------------
+    function differentiate_unit_normal_ale(mesh,elem_info,fcn_info,iface,direction) result(unorm_ale_gq)
+        type(mesh_t),           intent(in)  :: mesh
+        type(element_info_t),   intent(in)  :: elem_info
+        type(function_info_t),  intent(in)  :: fcn_info
+        integer(ik),            intent(in)  :: iface
+        integer(ik),            intent(in)  :: direction
+
+        type(AD_D), dimension(:), allocatable :: unorm_ale_gq
+
+        type(AD_D), dimension(:), allocatable :: norm1_ale_gq, norm2_ale_gq, norm3_ale_gq, norm_mag
+
+        norm1_ale_gq = differentiate_normal_ale(mesh,elem_info,fcn_info,iface,1)
+        norm2_ale_gq = differentiate_normal_ale(mesh,elem_info,fcn_info,iface,2)
+        norm3_ale_gq = differentiate_normal_ale(mesh,elem_info,fcn_info,iface,3)
+        
+        norm_mag = sqrt(norm1_ale_gq**TWO + norm2_ale_gq**TWO + norm3_ale_gq**TWO)
+
+        select case (direction)
+            case(1)
+                unorm_ale_gq = norm1_ale_gq/norm_mag
+            case(2)
+                unorm_ale_gq = norm2_ale_gq/norm_mag
+            case(3)
+                unorm_ale_gq = norm3_ale_gq/norm_mag
+            case default
+                call chidg_signal_one(FATAL,"differentiate_unit_normal_ale: Invalid direction for selecting coordinate.",direction)
+        end select
+
+    end function differentiate_unit_normal_ale
+    !********************************************************************************
 
 
 

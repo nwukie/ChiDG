@@ -1091,32 +1091,19 @@ contains
         character(:),               allocatable :: coordinate_system, user_msg
 
         real(rk),   dimension(:),   allocatable ::                  &
-            !dd1_dxidxi,   dd1_detadeta,   dd1_dzetadzeta,           &
-            !dd2_dxidxi,   dd2_detadeta,   dd2_dzetadzeta,           &
-            !dd3_dxidxi,   dd3_detadeta,   dd3_dzetadzeta,           &
-            !dd1_dxideta,  dd1_dxidzeta,   dd1_detadzeta,            &
-            !dd2_dxideta,  dd2_dxidzeta,   dd2_detadzeta,            &
-            !dd3_dxideta,  dd3_dxidzeta,   dd3_detadzeta,            &
             ale_g_ddxi,   ale_g_ddeta,    ale_g_ddzeta,             &
-!            jinv_grad1, jinv_grad2, jinv_grad3,   &
-!            jinv_def_grad1,   jinv_def_grad2,   jinv_def_grad3,     &
             fvals, temp, scaling_row2, weights
 
         real(rk),   dimension(:,:), allocatable ::  &
             val,                                    &
             ddxi,    ddeta,    ddzeta,              &
-!            dxidxi,  detadeta, dzetadzeta,          &
-!            dxideta, dxidzeta, detadzeta,           &
             D_matrix
 
         real(rk), dimension(:,:,:), allocatable ::  &
             jacobian_ale, jacobian(:,:,:)
 
 
-
-        !
         ! Retrieve interpolators
-        !
         nnodes  = self%basis_c%nnodes_elem()
         weights = self%basis_c%weights_element()
 
@@ -1124,16 +1111,6 @@ contains
         ddxi    = self%basis_c%interpolator_element('ddxi')
         ddeta   = self%basis_c%interpolator_element('ddeta')
         ddzeta  = self%basis_c%interpolator_element('ddzeta')
-
-!        dxidxi     = self%basis_c%interpolator_element('dxidxi')
-!        detadeta   = self%basis_c%interpolator_element('detadeta')
-!        dzetadzeta = self%basis_c%interpolator_element('dzetadzeta')
-!
-!        dxideta    = self%basis_c%interpolator_element('dxideta')
-!        dxidzeta   = self%basis_c%interpolator_element('dxidzeta')
-!        detadzeta  = self%basis_c%interpolator_element('detadzeta')
-
-
 
         ! First derivatives
         allocate(jacobian_ale(3,3,nnodes), stat=ierr)
@@ -1151,9 +1128,7 @@ contains
         jacobian_ale(3,3,:) = matmul(ddzeta, self%coords_def%getvar(3,itime = 1))
 
 
-        !
         ! Add coordinate system scaling to jacobian matrix
-        !
         allocate(scaling_row2(nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -1168,62 +1143,43 @@ contains
         end select
 
 
-
-        !
         ! Apply coorindate system scaling
-        !
         jacobian_ale(2,1,:) = jacobian_ale(2,1,:)*scaling_row2
         jacobian_ale(2,2,:) = jacobian_ale(2,2,:)*scaling_row2
         jacobian_ale(2,3,:) = jacobian_ale(2,3,:)*scaling_row2
 
 
-
-
-        !
         ! Compute inverse cell mapping jacobian
-        !
         do inode = 1,nnodes
             self%jinv_def(inode) = det_3x3(jacobian_ale(:,:,inode))
         end do
 
 
-
-        !
         ! Check for negative jacobians
-        !
         user_msg = "element%interpolate_metrics_ale: Negative element jacobians. &
                     Check element quality and origntation."
         if (any(self%jinv_def < ZERO)) call chidg_signal(FATAL,user_msg)
 
 
-        !
         ! Compute element volume
-        !
         self%vol_ale = abs(sum(self%jinv_def * weights))
 
 
-        !
         ! Compute element deformation gradient: dX/dx
         !   dX/dx = [dxi/dx][dX/dxi]
-        !
         do inode = 1,nnodes
             D_matrix = matmul(jacobian_ale(:,:,inode),self%metric(:,:,inode))
             self%ale_Dinv(:,:,inode) = inv_3x3(D_matrix)
-
             ! Invert jacobian_ale for use later in routine
             jacobian_ale(:,:,inode) = inv_3x3(jacobian_ale(:,:,inode))
         end do
 
 
-        !
         ! Compute volume scaling: deformed/undeformed
-        !
         self%ale_g = self%jinv_def/self%jinv
 
 
-        !
         ! Project ale_g to solution basis
-        !
         val = self%basis_s%interpolator_element('Value')
         fvals = self%ale_g * weights * self%jinv
         temp = matmul(transpose(val),fvals)
@@ -1231,7 +1187,6 @@ contains
 
         ! Reset ale_g as interpolation of modal representation
         self%ale_g = matmul(val, self%ale_g_modes)
-
 
         ! Solution basis since ale_g_modes is in solution basis.
         ddxi    = self%basis_s%interpolator_element('ddxi')
@@ -1253,9 +1208,6 @@ contains
         self%ale_g_grad3 = self%metric(1,3,:) * ale_g_ddxi  + &
                            self%metric(2,3,:) * ale_g_ddeta + &
                            self%metric(3,3,:) * ale_g_ddzeta
-
-
-
 
 
 
@@ -1466,10 +1418,10 @@ contains
     subroutine interpolate_metrics_dx(self)
         class(element_t),    intent(inout)   :: self
 
-        integer(ik)                 :: inode, nnodes, ierr, nnodes_r, idiff_n, icoord
+        integer(ik)                 :: inode, nnodes, ierr, nnodes_r, idiff_n, icoord, i, j
         character(:),   allocatable :: coordinate_system, user_msg
 
-        real(rk),   dimension(:),           allocatable :: scaling_row2, weights
+        real(rk),   dimension(:),           allocatable :: scaling_row2, weights, temp
         real(rk),   dimension(:,:),         allocatable :: val, ddxi, ddeta, ddzeta, dmodes
         real(rk),   dimension(:,:,:),       allocatable :: jacobian
         real(rk),   dimension(:,:,:,:,:),   allocatable :: djacobian_dx
@@ -1639,11 +1591,11 @@ contains
         do idiff_n = 1,nnodes_r
             do icoord = 1,3
                 do inode = 1,nnodes
-                    self%dmetric_dx(:,:,inode,idiff_n,icoord) = &
-                    dinv_3x3(jacobian(:,:,inode),djacobian_dx(:,:,inode,idiff_n,icoord))
+                    self%dmetric_dx(:,:,inode,idiff_n,icoord) = dinv_3x3(jacobian(:,:,inode),djacobian_dx(:,:,inode,idiff_n,icoord))
                 end do
             end do !icoord
         end do !idiff_n
+
 
         ! TODO for ALE:
         !   a) compute self%dvol_ale_dx

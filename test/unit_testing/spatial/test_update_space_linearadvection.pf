@@ -62,9 +62,7 @@ subroutine test_update_space_linearadvection()
     call chidgB%start_up('core')
 
 
-    !
     ! Set accuracy of the solution expansion
-    !
     call chidgA%set('Solution Order', integer_input=2)
     call chidgB%set('Solution Order', integer_input=2)
 
@@ -75,19 +73,14 @@ subroutine test_update_space_linearadvection()
     call create_mesh_file("D2 E8 M1 : Abutting : Matching", chidgBfile)
 
 
-    !
     ! Read grid. These grids are the same geometry. The first has only one block. 
     ! The second has two blocks. Here, we wish to initialize both and then compare 
     ! the initialized data between the two. They should be the same.
-    !
     call chidgA%read_mesh(chidgAfile,'primal storage')
     call chidgB%read_mesh(chidgBfile,'primal storage')
 
 
-
-    !
     ! Initialize solution
-    !
     call create_function(gaussian,'gaussian')
 
     call chidgA%data%sdata%q%project(chidgA%data%mesh,gaussian,1)
@@ -95,10 +88,7 @@ subroutine test_update_space_linearadvection()
 
 
 
-
-    !
     ! Compare initial solution
-    !
     @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(1)%vec,  chidgB%data%sdata%q%dom(1)%vecs(1)%vec )
     @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(2)%vec,  chidgB%data%sdata%q%dom(1)%vecs(2)%vec )
     @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(3)%vec,  chidgB%data%sdata%q%dom(2)%vecs(1)%vec )
@@ -120,10 +110,7 @@ subroutine test_update_space_linearadvection()
 
 
 
-
-    !
     ! Compare interpolation matrices between standard interior and the chimera faces
-    !
     ChiID = chidgB%data%mesh%domain(2)%faces(1,XI_MIN)%ChiID
     @assertEqual(chidgA%data%mesh%domain(1)%faces(2,XI_MAX)%basis_s%interpolator_face('Value',XI_MAX), chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%value, tol)
 
@@ -137,20 +124,12 @@ subroutine test_update_space_linearadvection()
     @assertEqual(chidgA%data%mesh%domain(1)%faces(7,XI_MIN)%basis_s%interpolator_face('Value',XI_MIN), chidgB%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%value, tol)
 
 
-    !
     ! Call update_space
-    !
-    !print*, "ChiDG - A: Updating Space"
     call update_space(chidgA%data,differentiate=dQ_DIFF)
-
-    !print*, "ChiDG - B: Updating Space"
     call update_space(chidgB%data,differentiate=dQ_DIFF)
 
 
-
-    !
     ! Compare geometry
-    !
     @assertEqual(chidgA%data%mesh%domain(1)%elems(1)%coords%vec, chidgB%data%mesh%domain(1)%elems(1)%coords%vec )
     @assertEqual(chidgA%data%mesh%domain(1)%elems(2)%coords%vec, chidgB%data%mesh%domain(1)%elems(2)%coords%vec )
     @assertEqual(chidgA%data%mesh%domain(1)%elems(3)%coords%vec, chidgB%data%mesh%domain(2)%elems(1)%coords%vec )
@@ -162,10 +141,7 @@ subroutine test_update_space_linearadvection()
 
 
 
-
-    !
     ! Compare residual vector entries
-    !
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(1)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(1)%vec, tol )
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(2)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(2)%vec, tol )
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(3)%vec,  chidgB%data%sdata%rhs%dom(2)%vecs(1)%vec, tol )
@@ -184,19 +160,14 @@ subroutine test_update_space_linearadvection()
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(16)%vec, chidgB%data%sdata%rhs%dom(2)%vecs(8)%vec, tol )
 
 
-
-    !
     ! Compare jacobian matrix entries
-    !
     ! Comparing the Single-Domain 16 element block jacobians to the 
     ! Two-Domain, 8-element block Chimera jacobians
     itime  = 1
 
 
 
-    !
     ! Domain 1 Chimera Blocks
-    !
 
     ! ielement_g = 2
     idomA  = 1
@@ -358,37 +329,12 @@ subroutine test_update_space_linearadvection()
 
 
 
-
-
-
-    !
     ! Compare matrix vector product
-    !
     chidgA%data%sdata%rhs = chidg_mv(chidgA%data%sdata%lhs , chidgA%data%sdata%q)
     chidgB%data%sdata%rhs = chidg_mv(chidgB%data%sdata%lhs , chidgB%data%sdata%q)
 
 
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(1)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(1)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(2)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(2)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(3)%vec,  chidgB%data%sdata%rhs%dom(2)%vecs(1)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(4)%vec,  chidgB%data%sdata%rhs%dom(2)%vecs(2)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(5)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(3)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(6)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(4)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(7)%vec,  chidgB%data%sdata%rhs%dom(2)%vecs(3)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(8)%vec,  chidgB%data%sdata%rhs%dom(2)%vecs(4)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(9)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(5)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(10)%vec, chidgB%data%sdata%rhs%dom(1)%vecs(6)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(11)%vec, chidgB%data%sdata%rhs%dom(2)%vecs(5)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(12)%vec, chidgB%data%sdata%rhs%dom(2)%vecs(6)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(13)%vec, chidgB%data%sdata%rhs%dom(1)%vecs(7)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(14)%vec, chidgB%data%sdata%rhs%dom(1)%vecs(8)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(15)%vec, chidgB%data%sdata%rhs%dom(2)%vecs(7)%vec
-!print*, chidgA%data%sdata%rhs%dom(1)%vecs(16)%vec, chidgB%data%sdata%rhs%dom(2)%vecs(8)%vec
-
-
-    !
     ! Test
-    !
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(1)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(1)%vec,tol)
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(2)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(2)%vec,tol)
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(3)%vec,  chidgB%data%sdata%rhs%dom(2)%vecs(1)%vec,tol)
@@ -409,15 +355,9 @@ subroutine test_update_space_linearadvection()
 
 
 
-
-
-    !
     ! Close ChiDG interface
-    !
     call chidgA%shut_down('core')
     call chidgB%shut_down('core')
-
-
 
 
     call delete_file(chidgAfile)
@@ -545,10 +485,7 @@ subroutine test_update_space_dx_linearadvection()
 
 
 
-
-    !
     ! Compare interpolation matrices between standard interior and the chimera faces
-    !
     ChiID = chidgB%data%mesh%domain(2)%faces(1,XI_MIN)%ChiID
     @assertEqual(chidgA%data%mesh%domain(1)%faces(2,XI_MAX)%basis_s%interpolator_face('Value',XI_MAX), chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%value, tol)
 
@@ -563,9 +500,7 @@ subroutine test_update_space_dx_linearadvection()
 
 
 
-    !
     ! Compare dgrad1_dx interpolation matrices between standard interior and the chimera faces
-    !
     ChiID = chidgB%data%mesh%domain(2)%faces(1,XI_MIN)%ChiID
     @assertEqual(chidgA%data%mesh%domain(1)%faces(2,XI_MAX)%dgrad1_dx, chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%dgrad1_dx, tol)
 
@@ -580,9 +515,7 @@ subroutine test_update_space_dx_linearadvection()
 
 
 
-    !
     ! Compare dgrad2_dx interpolation matrices between standard interior and the chimera faces
-    !
     ChiID = chidgB%data%mesh%domain(2)%faces(1,XI_MIN)%ChiID
     @assertEqual(chidgA%data%mesh%domain(1)%faces(2,XI_MAX)%dgrad2_dx, chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%dgrad2_dx, tol)
 
@@ -597,9 +530,7 @@ subroutine test_update_space_dx_linearadvection()
 
 
 
-    !
     ! Compare dgrad3_dx interpolation matrices between standard interior and the chimera faces
-    !
     ChiID = chidgB%data%mesh%domain(2)%faces(1,XI_MIN)%ChiID
     @assertEqual(chidgA%data%mesh%domain(1)%faces(2,XI_MAX)%dgrad3_dx, chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%dgrad3_dx, tol)
 
@@ -614,9 +545,7 @@ subroutine test_update_space_dx_linearadvection()
 
 
 
-    !
     ! Call update_space
-    !
     call write_line("ChiDG - A: Updating Space")
     call update_space(chidgA%data,differentiate=dX_DIFF)
 
@@ -626,10 +555,7 @@ subroutine test_update_space_dx_linearadvection()
 
 
 
-
-    !
     ! Compare geometry
-    !
     @assertEqual(chidgA%data%mesh%domain(1)%elems(1)%coords%vec, chidgB%data%mesh%domain(1)%elems(1)%coords%vec )
     @assertEqual(chidgA%data%mesh%domain(1)%elems(2)%coords%vec, chidgB%data%mesh%domain(1)%elems(2)%coords%vec )
     @assertEqual(chidgA%data%mesh%domain(1)%elems(3)%coords%vec, chidgB%data%mesh%domain(2)%elems(1)%coords%vec )
@@ -642,18 +568,14 @@ subroutine test_update_space_dx_linearadvection()
 
 
 
-    !
     ! Compare jacobian matrix entries
-    !
     ! Comparing the Single-Domain 16 element block jacobians to the 
     ! Two-Domain, 8-element block Chimera jacobians
     itime  = 1
 
 
 
-    !
     ! Domain 1 Chimera Blocks
-    !
 
     ! ielement_g = 2
     idomA  = 1
@@ -715,9 +637,7 @@ subroutine test_update_space_dx_linearadvection()
 
 
 
-    !
     ! ielement_g = 10
-    !
     idomA  = 1
     ielemA = 10
     idomB  = 1
@@ -748,9 +668,7 @@ subroutine test_update_space_dx_linearadvection()
     
 
 
-    !
     ! ielement_g = 14
-    !
     idomA  = 1
     ielemA = 14
     idomB  = 1
@@ -782,9 +700,7 @@ subroutine test_update_space_dx_linearadvection()
     
 
 
-    !
     ! ielement_g = 4
-    !
     idomA  = 1
     ielemA = 4
     idomB  = 2

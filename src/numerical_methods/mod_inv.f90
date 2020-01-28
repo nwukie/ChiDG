@@ -70,9 +70,6 @@ contains
 
         real(rk)    :: Ainv(3,3), Ainv_n(3,3), Atemp(3,3), det, dAinv(3,3)
 
-        ! Find determinatn of A
-        !det = det_3x3(A)
-
         ! Find inverse of A
         Ainv = inv_3x3(A)
 

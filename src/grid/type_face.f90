@@ -136,6 +136,7 @@ module type_face
         real(rk),   allocatable :: jinv_def(:)              ! Volume scaling: Deformed/Reference
         real(rk),   allocatable :: metric(:,:,:)            ! Face metric terms  : undeformed face
         real(rk),   allocatable :: norm(:,:)                ! Face normal vector : scaled by differential area : undeformed face
+        real(rk),   allocatable :: norm_def(:,:)            ! Face normal vector : scaled by differential area : deformed face
         real(rk),   allocatable :: unorm(:,:)               ! Face normal vector : unit length : undeformed face
         real(rk),   allocatable :: unorm_def(:,:)           ! Face normal vector : unit length : deformed face
 
@@ -185,6 +186,9 @@ module type_face
         real(rk),       allocatable :: dbr2_v_dx(:,:,:,:)       ! Derivative of br2_vol matrix
         real(rk),       allocatable :: dbr2_f_dx(:,:,:,:)       ! Derivative of br2_face matrix
         
+        real(rk),       allocatable :: dmetric_ale_dx(:,:,:,:,:)    ! Derivatives of inverted jacobian matrix for each quadrature node wrt to each element node (mat_i,mat_j,quad_pt,diff_node,ncoords)
+        real(rk),       allocatable :: djinv_ale_dx(:,:,:)          ! Derivative of differential volume ratio wrt element's node coordinates. (quad_pt,diff_nodes,ncoords) 
+        real(rk),       allocatable :: dnorm_ale_dx(:,:,:,:)        ! Derivatives of face normal vector : scaled by differential area : undeformed face (quad_pt,dir,diff_node,ncoords)
 
 
         ! Solution/Coordinate basis objects
@@ -228,7 +232,9 @@ module type_face
         procedure, public   :: release_interpolations_dx
         procedure, public   :: release_neighbor_interpolations_dx
         procedure, private  :: interpolate_metrics_dx
+        procedure, private  :: interpolate_metrics_ale_dx
         procedure, private  :: interpolate_normals_dx 
+        procedure, private  :: interpolate_normals_ale_dx 
         procedure, private  :: interpolate_gradients_dx 
         procedure, private  :: interpolate_br2_dx
         procedure, private  :: interpolate_neighbor_gradients_dx 
@@ -364,6 +370,7 @@ contains
                        self%interp_coords,          &
                        self%metric,                 &
                        self%norm,                   &
+                       self%norm_def,               &
                        self%unorm,                  &
                        self%unorm_def,              &
                        self%interp_coords_def,      &
@@ -395,6 +402,7 @@ contains
                  self%interp_coords(nnodes,3),          &
                  self%metric(3,3,nnodes),               &
                  self%norm(nnodes,3),                   &
+                 self%norm_def(nnodes,3),               &
                  self%unorm(nnodes,3),                  &
                  self%unorm_def(nnodes,3),              &
                  self%interp_coords_def(nnodes,3),      &
@@ -520,9 +528,7 @@ contains
         jacobian(3,3,:) = matmul(ddzeta, self%coords%getvar(3,itime = 1))
 
 
-        !
         ! Add coordinate system scaling to jacobian matrix
-        !
         allocate(scaling_row2(nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -537,40 +543,28 @@ contains
         end select
 
 
-        !
         ! Apply coorindate system scaling
-        !
         jacobian(2,1,:) = jacobian(2,1,:)*scaling_row2
         jacobian(2,2,:) = jacobian(2,2,:)*scaling_row2
         jacobian(2,3,:) = jacobian(2,3,:)*scaling_row2
 
 
-
-        !
         ! Compute inverse cell mapping jacobian
-        !
         do inode = 1,nnodes
             self%jinv(inode) = det_3x3(jacobian(:,:,inode))
         end do
 
 
-        !
         ! Check for negative jacobians
-        !
         user_msg = "face%interpolate_metrics: Negative element &
                     volume detected. Check element quality and orientation."
         if (any(self%jinv < ZERO)) call chidg_signal_three(FATAL,user_msg,self%idomain_g,self%iparent_g,self%iface)
 
 
-
-        !
         ! Invert jacobian matrix at each interpolation node
-        !
         do inode = 1,nnodes
             self%metric(:,:,inode) = inv_3x3(jacobian(:,:,inode))
         end do
-
-
 
     end subroutine interpolate_metrics
     !******************************************************************************************
@@ -606,30 +600,19 @@ contains
         weights = self%basis_c%weights_face(self%iface)
 
 
-        !
         ! Compute normal vectors for each face
-        !
         select case (self%iface)
             case (XI_MIN, XI_MAX)
-                !self%norm(:,XI_DIR)   = self%jinv(:)*self%metric(1,1,:)
-                !self%norm(:,ETA_DIR)  = self%jinv(:)*self%metric(1,2,:)
-                !self%norm(:,ZETA_DIR) = self%jinv(:)*self%metric(1,3,:)
                 do inode = 1,size(self%jinv)
                     self%norm(inode,:) = matmul(transpose(self%metric(:,:,inode)), [self%jinv(inode), ZERO, ZERO])
                 end do
 
             case (ETA_MIN, ETA_MAX)
-                !self%norm(:,XI_DIR)   = self%jinv(:)*self%metric(2,1,:)
-                !self%norm(:,ETA_DIR)  = self%jinv(:)*self%metric(2,2,:)
-                !self%norm(:,ZETA_DIR) = self%jinv(:)*self%metric(2,3,:)
                 do inode = 1,size(self%jinv)
                     self%norm(inode,:) = matmul(transpose(self%metric(:,:,inode)), [ZERO, self%jinv(inode), ZERO])
                 end do
 
             case (ZETA_MIN, ZETA_MAX)
-                !self%norm(:,XI_DIR)   = self%jinv(:)*self%metric(3,1,:)
-                !self%norm(:,ETA_DIR)  = self%jinv(:)*self%metric(3,2,:)
-                !self%norm(:,ZETA_DIR) = self%jinv(:)*self%metric(3,3,:)
                 do inode = 1,size(self%jinv)
                     self%norm(inode,:) = matmul(transpose(self%metric(:,:,inode)), [ZERO, ZERO, self%jinv(inode)])
                 end do
@@ -639,41 +622,28 @@ contains
                 call chidg_signal(FATAL,user_msg)
         end select
 
-        
-        !
         ! Reverse normal vectors for faces XI_MIN,ETA_MIN,ZETA_MIN
-        !
         if (self%iface == XI_MIN .or. self%iface == ETA_MIN .or. self%iface == ZETA_MIN) then
             self%norm(:,XI_DIR)   = -self%norm(:,XI_DIR)
             self%norm(:,ETA_DIR)  = -self%norm(:,ETA_DIR)
             self%norm(:,ZETA_DIR) = -self%norm(:,ZETA_DIR)
         end if
 
-
-
-        !
         ! Compute unit normals
-        !
         norm_mag = self%norm(:,1) ! Allocate to avoid DEBUG error
         norm_mag = sqrt(self%norm(:,XI_DIR)**TWO + self%norm(:,ETA_DIR)**TWO + self%norm(:,ZETA_DIR)**TWO)
         self%unorm(:,XI_DIR)   = self%norm(:,XI_DIR  )/norm_mag
         self%unorm(:,ETA_DIR)  = self%norm(:,ETA_DIR )/norm_mag
         self%unorm(:,ZETA_DIR) = self%norm(:,ZETA_DIR)/norm_mag
 
-
-        !
         ! The 'norm' component is really a normal vector scaled by the FACE inverse jacobian.
         ! This is really a differential area scaling. We can compute the area 
         ! scaling(jinv for the face, different than jinv for the element),
         ! by taking the magnitude of the 'norm' vector.
-        !
         self%differential_areas = norm_mag
 
-        !
         ! Compute the total face area by integrating the differential areas over the face
-        !
         self%total_area = sum(abs(self%differential_areas * weights))
-
 
     end subroutine interpolate_normals
     !******************************************************************************************
@@ -712,7 +682,6 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!
     !!  @author Mayank Sharma + Matteo Ugolotti  
     !!  @date   11/5/2016
     !!
@@ -725,40 +694,30 @@ contains
 
         real(rk)                                :: metric_ale(3,3)
         real(rk),   dimension(:),   allocatable ::  norm_mag 
-        real(rk),   dimension(:,:), allocatable ::  norm
-
 
         nnodes  = self%basis_c%nnodes_face()
-
-        !
-        ! Compute normal vectors for each face
-        !
-        allocate(norm(nnodes,3), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
         do inode = 1,nnodes
 
             ! Compute metric_ale: 
             !   dxi/dx = [Dinv]*[dxi/dX]
             !   dxi/dx = [dX/dx]*[dxi/dX]
-            !metric_ale = matmul(self%ale_Dinv(:,:,inode),self%metric(:,:,inode))
             metric_ale = matmul(self%metric(:,:,inode),self%ale_Dinv(:,:,inode))
 
             select case (self%iface)
                 case (XI_MIN, XI_MAX)
-                    norm(inode,XI_DIR)   = self%jinv_def(inode)*metric_ale(1,1)
-                    norm(inode,ETA_DIR)  = self%jinv_def(inode)*metric_ale(1,2)
-                    norm(inode,ZETA_DIR) = self%jinv_def(inode)*metric_ale(1,3)
+                    self%norm_def(inode,XI_DIR)   = self%jinv_def(inode)*metric_ale(1,1)
+                    self%norm_def(inode,ETA_DIR)  = self%jinv_def(inode)*metric_ale(1,2)
+                    self%norm_def(inode,ZETA_DIR) = self%jinv_def(inode)*metric_ale(1,3)
 
                 case (ETA_MIN, ETA_MAX)
-                    norm(inode,XI_DIR)   = self%jinv_def(inode)*metric_ale(2,1)
-                    norm(inode,ETA_DIR)  = self%jinv_def(inode)*metric_ale(2,2)
-                    norm(inode,ZETA_DIR) = self%jinv_def(inode)*metric_ale(2,3)
+                    self%norm_def(inode,XI_DIR)   = self%jinv_def(inode)*metric_ale(2,1)
+                    self%norm_def(inode,ETA_DIR)  = self%jinv_def(inode)*metric_ale(2,2)
+                    self%norm_def(inode,ZETA_DIR) = self%jinv_def(inode)*metric_ale(2,3)
 
                 case (ZETA_MIN, ZETA_MAX)
-                    norm(inode,XI_DIR)   = self%jinv_def(inode)*metric_ale(3,1)
-                    norm(inode,ETA_DIR)  = self%jinv_def(inode)*metric_ale(3,2)
-                    norm(inode,ZETA_DIR) = self%jinv_def(inode)*metric_ale(3,3)
+                    self%norm_def(inode,XI_DIR)   = self%jinv_def(inode)*metric_ale(3,1)
+                    self%norm_def(inode,ETA_DIR)  = self%jinv_def(inode)*metric_ale(3,2)
+                    self%norm_def(inode,ZETA_DIR) = self%jinv_def(inode)*metric_ale(3,3)
 
                 case default
                     user_msg = "face%interpolate_normals_ale: Invalid face index in face initialization."
@@ -767,36 +726,24 @@ contains
 
         end do
 
-        
-        !
         ! Reverse normal vectors for faces XI_MIN,ETA_MIN,ZETA_MIN
-        !
         if (self%iface == XI_MIN   .or. &
             self%iface == ETA_MIN  .or. &
             self%iface == ZETA_MIN) then
-            norm(:,XI_DIR)   = -norm(:,XI_DIR)
-            norm(:,ETA_DIR)  = -norm(:,ETA_DIR)
-            norm(:,ZETA_DIR) = -norm(:,ZETA_DIR)
+            self%norm_def(:,XI_DIR)   = -self%norm_def(:,XI_DIR)
+            self%norm_def(:,ETA_DIR)  = -self%norm_def(:,ETA_DIR)
+            self%norm_def(:,ZETA_DIR) = -self%norm_def(:,ZETA_DIR)
         end if
 
-
-
-        !
         ! Compute vector magnitude, which is the differential area
-        !
-        norm_mag = self%norm(:,1) ! Allocate to avoid DEBUG error
-        norm_mag = sqrt(norm(:,XI_DIR)**TWO + norm(:,ETA_DIR)**TWO + norm(:,ZETA_DIR)**TWO)
-        self%unorm_def(:,XI_DIR)   = norm(:,XI_DIR  )/norm_mag
-        self%unorm_def(:,ETA_DIR)  = norm(:,ETA_DIR )/norm_mag
-        self%unorm_def(:,ZETA_DIR) = norm(:,ZETA_DIR)/norm_mag
+        norm_mag = self%norm_def(:,1) ! Allocate to avoid DEBUG error
+        norm_mag = sqrt(self%norm_def(:,XI_DIR)**TWO + self%norm_def(:,ETA_DIR)**TWO + self%norm_def(:,ZETA_DIR)**TWO)
+        self%unorm_def(:,XI_DIR)   = self%norm_def(:,XI_DIR  )/norm_mag
+        self%unorm_def(:,ETA_DIR)  = self%norm_def(:,ETA_DIR )/norm_mag
+        self%unorm_def(:,ZETA_DIR) = self%norm_def(:,ZETA_DIR)/norm_mag
 
-
-
-        !
         ! Compute da/dA
-        !
         self%ale_area_ratio = norm_mag/self%differential_areas
-
 
     end subroutine interpolate_normals_ale
     !******************************************************************************************
@@ -875,35 +822,24 @@ contains
 
         iface = self%iface
 
-        !
         ! compute real coordinates associated with quadrature points
-        !
         val = self%basis_c%interpolator_face('Value',iface)
         c1 = matmul(val,self%coords%getvar(1,itime = 1))
         c2 = matmul(val,self%coords%getvar(2,itime = 1))
         c3 = matmul(val,self%coords%getvar(3,itime = 1))
 
-        
-        !
         ! For each quadrature node, store real coordinates
-        !
         do inode = 1,self%basis_s%nnodes_face()
             self%interp_coords(inode,1:3) = [c1(inode), c2(inode), c3(inode)]
         end do !inode
 
-
-        !
         ! Update face centroid, here we just take as an arithmetic average.
-        !
         self%centroid(1) = sum(self%interp_coords(:,1))/size(self%interp_coords(:,1))
         self%centroid(2) = sum(self%interp_coords(:,2))/size(self%interp_coords(:,2))
         self%centroid(3) = sum(self%interp_coords(:,3))/size(self%interp_coords(:,3))
 
     end subroutine interpolate_coords
     !******************************************************************************************
-
-
-
 
 
 
@@ -926,14 +862,12 @@ contains
         call self%interpolate_metrics_ale()
         call self%interpolate_normals_ale()
 
-
     end subroutine update_interpolations_ale
     !**************************************************************************************
 
 
 
     !>
-    !!
     !!
     !!  @author Eric Wolf (AFRL)
     !!  @date   7/5/2017
@@ -950,39 +884,28 @@ contains
         nnodes = self%basis_s%nnodes_face()
         val    = self%basis_c%interpolator_face('Value',self%iface)
 
-        !
         ! compute cartesian coordinates associated with quadrature points
-        !
         x = matmul(val,self%ale_coords%getvar(1,itime = 1))
         y = matmul(val,self%ale_coords%getvar(2,itime = 1))
         z = matmul(val,self%ale_coords%getvar(3,itime = 1))
 
-        !
         ! Initialize each point with cartesian coordinates
-        !
         do inode = 1,nnodes
             self%interp_coords_def(inode,1:3) = [x(inode), y(inode), z(inode)]
         end do
 
-
         ! Grid velocity
-
         ! compute cartesian coordinates associated with quadrature points
-        !
         vg1 = matmul(val,self%ale_vel_coords%getvar(1,itime = 1))
         vg2 = matmul(val,self%ale_vel_coords%getvar(2,itime = 1))
         vg3 = matmul(val,self%ale_vel_coords%getvar(3,itime = 1))
 
-
-        !
         ! Initialize each point with cartesian coordinates
-        !
         do inode = 1,nnodes
             self%interp_coords_vel(inode,1) = vg1(inode)
             self%interp_coords_vel(inode,2) = vg2(inode)
             self%interp_coords_vel(inode,3) = vg3(inode)
         end do 
-
 
     end subroutine interpolate_coords_ale
     !****************************************************************************************
@@ -1003,14 +926,6 @@ contains
         character(:),   allocatable :: coordinate_system, user_msg
 
         real(rk),   dimension(:),   allocatable ::                  &
-!            dd1_dxidxi,   dd1_detadeta,   dd1_dzetadzeta,           &
-!            dd2_dxidxi,   dd2_detadeta,   dd2_dzetadzeta,           &
-!            dd3_dxidxi,   dd3_detadeta,   dd3_dzetadzeta,           &
-!            dd1_dxideta,  dd1_dxidzeta,   dd1_detadzeta,            &
-!            dd2_dxideta,  dd2_dxidzeta,   dd2_detadzeta,            &
-!            dd3_dxideta,  dd3_dxidzeta,   dd3_detadzeta,            &
-!            jinv_grad1, jinv_grad2, jinv_grad3,   &
-!            jinv_def_grad1,   jinv_def_grad2,   jinv_def_grad3,     &
             ale_g_ddxi, ale_g_ddeta, ale_g_ddzeta, scaling_row2
 
         real(rk),   dimension(:,:), allocatable ::  &
@@ -1296,7 +1211,7 @@ contains
         nnodes_e = self%basis_s%nnodes_elem()
 
         ! (Re)Allocate storage for face data structures.
-        if (allocated(self%djinv_dx))                       &
+        if (allocated(self%djinv_dx))                   &
             deallocate(self%djinv_dx,                   &
                        self%dmetric_dx,                 &
                        self%dnorm_dx,                   &
@@ -1304,25 +1219,33 @@ contains
                        self%dgrad2_dx,                  &
                        self%dgrad3_dx,                  &
                        self%dbr2_v_dx,                  &
-                       self%dbr2_f_dx                   &
+                       self%dbr2_f_dx,                  &
+                       self%djinv_ale_dx,               &
+                       self%dmetric_ale_dx,             &
+                       self%dnorm_ale_dx                &
                        ) 
 
 
-        allocate(self%djinv_dx(nnodes_f,nnodes_r,3),                  &
-                 self%dmetric_dx(3,3,nnodes_f,nnodes_r,3),            &
-                 self%dnorm_dx(nnodes_f,3,nnodes_r,3),                &
-                 self%dgrad1_dx(nnodes_f,self%nterms_s,nnodes_r,3),   &
-                 self%dgrad2_dx(nnodes_f,self%nterms_s,nnodes_r,3),   &
-                 self%dgrad3_dx(nnodes_f,self%nterms_s,nnodes_r,3),   &
-                 self%dbr2_v_dx(nnodes_e,nnodes_f,nnodes_r,3),        &
-                 self%dbr2_f_dx(nnodes_f,nnodes_f,nnodes_r,3),        &
+        allocate(self%djinv_dx(nnodes_f,nnodes_r,3),                &
+                 self%dmetric_dx(3,3,nnodes_f,nnodes_r,3),          &
+                 self%dnorm_dx(nnodes_f,3,nnodes_r,3),              &
+                 self%djinv_ale_dx(nnodes_f,nnodes_r,3),            &
+                 self%dmetric_ale_dx(3,3,nnodes_f,nnodes_r,3),      &
+                 self%dnorm_ale_dx(nnodes_f,3,nnodes_r,3),          &
+                 self%dgrad1_dx(nnodes_f,self%nterms_s,nnodes_r,3), &
+                 self%dgrad2_dx(nnodes_f,self%nterms_s,nnodes_r,3), &
+                 self%dgrad3_dx(nnodes_f,self%nterms_s,nnodes_r,3), &
+                 self%dbr2_v_dx(nnodes_e,nnodes_f,nnodes_r,3),      &
+                 self%dbr2_f_dx(nnodes_f,nnodes_f,nnodes_r,3),      &
                  stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
         ! Compute differential operators and matrices
         call self%interpolate_metrics_dx()
+        call self%interpolate_metrics_ale_dx()
         call self%interpolate_normals_dx()
+        call self%interpolate_normals_ale_dx()
         call self%interpolate_gradients_dx()
         call self%interpolate_br2_dx(elem)
 
@@ -1423,17 +1346,19 @@ contains
 
 
         ! Deallocate storage for face data structures.
-        if (allocated(self%djinv_dx))                   &
-            deallocate(self%djinv_dx,                   &
-                       self%dmetric_dx,                 &
-                       self%dnorm_dx,                   &
-                       self%dgrad1_dx,                  &
-                       self%dgrad2_dx,                  &
-                       self%dgrad3_dx,                  &
-                       self%dbr2_v_dx,                  &
-                       self%dbr2_f_dx                   &
+        if (allocated(self%djinv_dx))           &
+            deallocate(self%djinv_dx,           &
+                       self%dmetric_dx,         &
+                       self%dnorm_dx,           &
+                       self%dgrad1_dx,          &
+                       self%dgrad2_dx,          &
+                       self%dgrad3_dx,          &
+                       self%dbr2_v_dx,          &
+                       self%dbr2_f_dx,          &
+                       self%djinv_ale_dx,       &
+                       self%dmetric_ale_dx,     &
+                       self%dnorm_ale_dx        &
                        ) 
-
 
     end subroutine release_interpolations_dx
     !**************************************************************************************
@@ -1528,11 +1453,9 @@ contains
 
         do idiff_n = 1,nnodes_r
             do icoord = 1,3
-                
                 djacobian_dx(icoord,1,:,idiff_n,icoord) = matmul(ddxi,   dmodes(:,idiff_n))
                 djacobian_dx(icoord,2,:,idiff_n,icoord) = matmul(ddeta,  dmodes(:,idiff_n))
                 djacobian_dx(icoord,3,:,idiff_n,icoord) = matmul(ddzeta, dmodes(:,idiff_n))
-                
             end do
         end do
         
@@ -1577,8 +1500,7 @@ contains
         do idiff_n = 1,nnodes_r
             do icoord = 1,3
                 do inode = 1,nnodes
-                    self%djinv_dx(inode,idiff_n,icoord) = &
-                    ddet_3x3(jacobian(:,:,inode),djacobian_dx(:,:,inode,idiff_n,icoord))
+                    self%djinv_dx(inode,idiff_n,icoord) = ddet_3x3(jacobian(:,:,inode),djacobian_dx(:,:,inode,idiff_n,icoord))
                 end do
             end do !icoord
         end do !idiff_n
@@ -1590,8 +1512,7 @@ contains
         do idiff_n = 1,nnodes_r
             do icoord = 1,3
                 do inode = 1,nnodes
-                    self%dmetric_dx(:,:,inode,idiff_n,icoord) = &
-                    dinv_3x3(jacobian(:,:,inode),djacobian_dx(:,:,inode,idiff_n,icoord))
+                    self%dmetric_dx(:,:,inode,idiff_n,icoord) = dinv_3x3(jacobian(:,:,inode),djacobian_dx(:,:,inode,idiff_n,icoord))
                 end do
             end do !icoord
         end do !idiff_n
@@ -1599,6 +1520,137 @@ contains
 
     end subroutine interpolate_metrics_dx
     !******************************************************************************************
+
+
+
+
+
+
+    !> Compute element metric and jacobian terms differentiated wrt grid nodes 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/24/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine interpolate_metrics_ale_dx(self)
+        class(face_t),  intent(inout)   :: self
+
+        integer(ik)                 :: inode, nnodes, nnodes_r, ierr, idiff_n, icoord
+        character(:),   allocatable :: coordinate_system, user_msg
+
+        real(rk),   dimension(:),           allocatable :: scaling_row2
+        real(rk),   dimension(:,:),         allocatable :: val, ddxi, ddeta, ddzeta, dmodes
+        real(rk),   dimension(:,:,:),       allocatable :: jacobian_ale
+        real(rk),   dimension(:,:,:,:,:),   allocatable :: djacobian_ale_dx
+
+        nnodes   = self%basis_c%nnodes_face()
+        nnodes_r = self%basis_c%nnodes_r()
+        val      = self%basis_c%interpolator_face('Value', self%iface)
+        ddxi     = self%basis_c%interpolator_face('ddxi',  self%iface)
+        ddeta    = self%basis_c%interpolator_face('ddeta', self%iface)
+        ddzeta   = self%basis_c%interpolator_face('ddzeta',self%iface)
+
+
+        ! Get nodes_to_modes matrix
+        dmodes = self%basis_c%nodes_to_modes
+
+
+        ! Compute element jacobian matrix at interpolation nodes
+        allocate(jacobian_ale(3,3,nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        jacobian_ale(1,1,:) = matmul(ddxi,   self%ale_coords%getvar(1,itime = 1))
+        jacobian_ale(1,2,:) = matmul(ddeta,  self%ale_coords%getvar(1,itime = 1))
+        jacobian_ale(1,3,:) = matmul(ddzeta, self%ale_coords%getvar(1,itime = 1))
+
+        jacobian_ale(2,1,:) = matmul(ddxi,   self%ale_coords%getvar(2,itime = 1))
+        jacobian_ale(2,2,:) = matmul(ddeta,  self%ale_coords%getvar(2,itime = 1))
+        jacobian_ale(2,3,:) = matmul(ddzeta, self%ale_coords%getvar(2,itime = 1))
+
+        jacobian_ale(3,1,:) = matmul(ddxi,   self%ale_coords%getvar(3,itime = 1))
+        jacobian_ale(3,2,:) = matmul(ddeta,  self%ale_coords%getvar(3,itime = 1))
+        jacobian_ale(3,3,:) = matmul(ddzeta, self%ale_coords%getvar(3,itime = 1))
+
+
+        ! Compute coordinate derivatives of jacobian matrix wrt grid ndoes 
+        ! at interpolation nodes
+        allocate(djacobian_ale_dx(3,3,nnodes,nnodes_r,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        
+        ! Initialize djacobian_dx with zeros
+        djacobian_ale_dx = ZERO
+
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                djacobian_ale_dx(icoord,1,:,idiff_n,icoord) = matmul(ddxi,   dmodes(:,idiff_n))
+                djacobian_ale_dx(icoord,2,:,idiff_n,icoord) = matmul(ddeta,  dmodes(:,idiff_n))
+                djacobian_ale_dx(icoord,3,:,idiff_n,icoord) = matmul(ddzeta, dmodes(:,idiff_n))
+            end do
+        end do
+        
+        
+        ! Add coordinate system scaling to jacobian matrix
+        allocate(scaling_row2(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        select case (self%coordinate_system)
+            case (CARTESIAN)
+                scaling_row2 = ONE
+            case (CYLINDRICAL)
+                scaling_row2 = self%interp_coords_def(:,1)
+            case default
+                user_msg = "face%interpolate_metrics_ale_dx: Invalid coordinate system."
+                call chidg_signal(FATAL,user_msg)
+        end select
+
+
+        ! Apply transformation to second row of dJacobian/d1
+        if (self%coordinate_system == CYLINDRICAL) then                                                          
+            do idiff_n = 1,nnodes_r                                                                              
+                djacobian_ale_dx(2,1,:,idiff_n,1) = matmul(val,dmodes(:,idiff_n)) * jacobian_ale(2,1,:)                  
+                djacobian_ale_dx(2,2,:,idiff_n,1) = matmul(val,dmodes(:,idiff_n)) * jacobian_ale(2,2,:)                  
+                djacobian_ale_dx(2,3,:,idiff_n,1) = matmul(val,dmodes(:,idiff_n)) * jacobian_ale(2,3,:)                  
+            end do                                                                                               
+        end if 
+
+
+        ! Apply coorindate system scaling
+        jacobian_ale(2,1,:) = jacobian_ale(2,1,:)*scaling_row2
+        jacobian_ale(2,2,:) = jacobian_ale(2,2,:)*scaling_row2
+        jacobian_ale(2,3,:) = jacobian_ale(2,3,:)*scaling_row2
+        do idiff_n = 1,nnodes_r
+            djacobian_ale_dx(2,1,:,idiff_n,2) = djacobian_ale_dx(2,1,:,idiff_n,2)*scaling_row2
+            djacobian_ale_dx(2,2,:,idiff_n,2) = djacobian_ale_dx(2,2,:,idiff_n,2)*scaling_row2
+            djacobian_ale_dx(2,3,:,idiff_n,2) = djacobian_ale_dx(2,3,:,idiff_n,2)*scaling_row2
+        end do
+
+
+        ! Compute inverse cell mapping jacobian
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                do inode = 1,nnodes
+                    self%djinv_ale_dx(inode,idiff_n,icoord) = ddet_3x3(jacobian_ale(:,:,inode),djacobian_ale_dx(:,:,inode,idiff_n,icoord))
+                end do
+            end do !icoord
+        end do !idiff_n
+
+
+        ! No need to check for negative jacobians derivatives
+        
+        ! Invert jacobian matrix at each interpolation node
+        do idiff_n = 1,nnodes_r
+            do icoord = 1,3
+                do inode = 1,nnodes
+                    self%dmetric_ale_dx(:,:,inode,idiff_n,icoord) = dinv_3x3(jacobian_ale(:,:,inode),djacobian_ale_dx(:,:,inode,idiff_n,icoord))
+                end do
+            end do !icoord
+        end do !idiff_n
+
+
+    end subroutine interpolate_metrics_ale_dx
+    !******************************************************************************************
+
+
 
 
 
@@ -1634,45 +1686,36 @@ contains
                 select case (self%iface)
                     case (XI_MIN, XI_MAX)
 
-                        self%dnorm_dx(:,XI_DIR,  idiff_n,icoord) =               &
-                            self%djinv_dx(:,idiff_n,icoord)*self%metric(1,1,:) + &
-                            self%jinv(:)*self%dmetric_dx(1,1,:,idiff_n,icoord) 
+                        self%dnorm_dx(:,XI_DIR,  idiff_n,icoord) = self%djinv_dx(:,idiff_n,icoord)*self%metric(1,1,:) + &
+                                                                   self%jinv(:)*self%dmetric_dx(1,1,:,idiff_n,icoord) 
 
-                        self%dnorm_dx(:,ETA_DIR, idiff_n,icoord) =               &
-                            self%djinv_dx(:,idiff_n,icoord)*self%metric(1,2,:) + &
-                            self%jinv(:)*self%dmetric_dx(1,2,:,idiff_n,icoord)
+                        self%dnorm_dx(:,ETA_DIR, idiff_n,icoord) = self%djinv_dx(:,idiff_n,icoord)*self%metric(1,2,:) + &
+                                                                   self%jinv(:)*self%dmetric_dx(1,2,:,idiff_n,icoord)
 
-                        self%dnorm_dx(:,ZETA_DIR,idiff_n,icoord) =               &
-                            self%djinv_dx(:,idiff_n,icoord)*self%metric(1,3,:) + &
-                            self%jinv(:)*self%dmetric_dx(1,3,:,idiff_n,icoord)
+                        self%dnorm_dx(:,ZETA_DIR,idiff_n,icoord) = self%djinv_dx(:,idiff_n,icoord)*self%metric(1,3,:) + &
+                                                                   self%jinv(:)*self%dmetric_dx(1,3,:,idiff_n,icoord)
 
                     case (ETA_MIN, ETA_MAX)
 
-                        self%dnorm_dx(:,XI_DIR,  idiff_n,icoord) =               &
-                            self%djinv_dx(:,idiff_n,icoord)*self%metric(2,1,:) + &
-                            self%jinv(:)*self%dmetric_dx(2,1,:,idiff_n,icoord) 
+                        self%dnorm_dx(:,XI_DIR,  idiff_n,icoord) = self%djinv_dx(:,idiff_n,icoord)*self%metric(2,1,:) + &
+                                                                   self%jinv(:)*self%dmetric_dx(2,1,:,idiff_n,icoord) 
 
-                        self%dnorm_dx(:,ETA_DIR, idiff_n,icoord) =               &
-                            self%djinv_dx(:,idiff_n,icoord)*self%metric(2,2,:) + &
-                            self%jinv(:)*self%dmetric_dx(2,2,:,idiff_n,icoord)
+                        self%dnorm_dx(:,ETA_DIR, idiff_n,icoord) = self%djinv_dx(:,idiff_n,icoord)*self%metric(2,2,:) + &
+                                                                   self%jinv(:)*self%dmetric_dx(2,2,:,idiff_n,icoord)
 
-                        self%dnorm_dx(:,ZETA_DIR,idiff_n,icoord) =               &
-                            self%djinv_dx(:,idiff_n,icoord)*self%metric(2,3,:) + &
-                            self%jinv(:)*self%dmetric_dx(2,3,:,idiff_n,icoord)
+                        self%dnorm_dx(:,ZETA_DIR,idiff_n,icoord) = self%djinv_dx(:,idiff_n,icoord)*self%metric(2,3,:) + &
+                                                                   self%jinv(:)*self%dmetric_dx(2,3,:,idiff_n,icoord)
                         
                     case (ZETA_MIN, ZETA_MAX)
                         
-                        self%dnorm_dx(:,XI_DIR,  idiff_n,icoord) =               &
-                            self%djinv_dx(:,idiff_n,icoord)*self%metric(3,1,:) + &
-                            self%jinv(:)*self%dmetric_dx(3,1,:,idiff_n,icoord) 
+                        self%dnorm_dx(:,XI_DIR,  idiff_n,icoord) = self%djinv_dx(:,idiff_n,icoord)*self%metric(3,1,:) + &
+                                                                   self%jinv(:)*self%dmetric_dx(3,1,:,idiff_n,icoord) 
 
-                        self%dnorm_dx(:,ETA_DIR, idiff_n,icoord) =               &
-                            self%djinv_dx(:,idiff_n,icoord)*self%metric(3,2,:) + &
-                            self%jinv(:)*self%dmetric_dx(3,2,:,idiff_n,icoord)
+                        self%dnorm_dx(:,ETA_DIR, idiff_n,icoord) = self%djinv_dx(:,idiff_n,icoord)*self%metric(3,2,:) + &
+                                                                   self%jinv(:)*self%dmetric_dx(3,2,:,idiff_n,icoord)
 
-                        self%dnorm_dx(:,ZETA_DIR,idiff_n,icoord) =               &
-                            self%djinv_dx(:,idiff_n,icoord)*self%metric(3,3,:) + &
-                            self%jinv(:)*self%dmetric_dx(3,3,:,idiff_n,icoord)
+                        self%dnorm_dx(:,ZETA_DIR,idiff_n,icoord) = self%djinv_dx(:,idiff_n,icoord)*self%metric(3,3,:) + &
+                                                                   self%jinv(:)*self%dmetric_dx(3,3,:,idiff_n,icoord)
                         
                     case default
                         user_msg = "face%interpolate_normals_dx: Invalid face index in face initialization."
@@ -1712,6 +1755,83 @@ contains
 
 
     end subroutine interpolate_normals_dx
+    !******************************************************************************************
+
+
+
+
+
+    !>  Compute the derivatives of normal vector components at face quadrature nodes wrt 
+    !!  grid nodes
+    !!
+    !!  NOTE: be sure to differentiate between normals self%norm and unit-normals self%unorm
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/24/2018
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine interpolate_normals_ale_dx(self)
+        class(face_t),  intent(inout)   :: self
+
+        integer(ik)                                 :: inode, nnodes, ierr, nnodes_r, &
+                                                       idiff_n, icoord
+        character(:),   allocatable                 :: coordinate_system, user_msg
+        real(rk),       allocatable, dimension(:)   :: norm_mag, weights
+        real(rk),       allocatable, dimension(:,:) :: metric_ale
+
+
+        nnodes    = self%basis_c%nnodes_face()
+        nnodes_r  = self%basis_c%nnodes_r()
+        weights   = self%basis_c%weights_face(self%iface)
+
+
+        ! Compute derivatives of normal vectors for each face
+        do inode = 1,nnodes
+
+            metric_ale = matmul(self%metric(:,:,inode),self%ale_Dinv(:,:,inode))
+
+            do idiff_n = 1,nnodes_r
+                do icoord = 1,3
+                    select case (self%iface)
+                        case (XI_MIN, XI_MAX)
+
+                            self%dnorm_ale_dx(inode,XI_DIR,  idiff_n,icoord) = self%djinv_ale_dx(inode,idiff_n,icoord)*metric_ale(1,1) + self%jinv_def(inode)*self%dmetric_ale_dx(1,1,inode,idiff_n,icoord) 
+                            self%dnorm_ale_dx(inode,ETA_DIR, idiff_n,icoord) = self%djinv_ale_dx(inode,idiff_n,icoord)*metric_ale(1,2) + self%jinv_def(inode)*self%dmetric_ale_dx(1,2,inode,idiff_n,icoord)
+                            self%dnorm_ale_dx(inode,ZETA_DIR,idiff_n,icoord) = self%djinv_ale_dx(inode,idiff_n,icoord)*metric_ale(1,3) + self%jinv_def(inode)*self%dmetric_ale_dx(1,3,inode,idiff_n,icoord)
+
+                        case (ETA_MIN, ETA_MAX)
+
+                            self%dnorm_ale_dx(inode,XI_DIR,  idiff_n,icoord) = self%djinv_ale_dx(inode,idiff_n,icoord)*metric_ale(2,1) + self%jinv_def(inode)*self%dmetric_ale_dx(2,1,inode,idiff_n,icoord) 
+                            self%dnorm_ale_dx(inode,ETA_DIR, idiff_n,icoord) = self%djinv_ale_dx(inode,idiff_n,icoord)*metric_ale(2,2) + self%jinv_def(inode)*self%dmetric_ale_dx(2,2,inode,idiff_n,icoord)
+                            self%dnorm_ale_dx(inode,ZETA_DIR,idiff_n,icoord) = self%djinv_ale_dx(inode,idiff_n,icoord)*metric_ale(2,3) + self%jinv_def(inode)*self%dmetric_ale_dx(2,3,inode,idiff_n,icoord)
+                            
+                        case (ZETA_MIN, ZETA_MAX)
+                            
+                            self%dnorm_ale_dx(inode,XI_DIR,  idiff_n,icoord) = self%djinv_ale_dx(inode,idiff_n,icoord)*metric_ale(3,1) + self%jinv_def(inode)*self%dmetric_ale_dx(3,1,inode,idiff_n,icoord) 
+                            self%dnorm_ale_dx(inode,ETA_DIR, idiff_n,icoord) = self%djinv_ale_dx(inode,idiff_n,icoord)*metric_ale(3,2) + self%jinv_def(inode)*self%dmetric_ale_dx(3,2,inode,idiff_n,icoord)
+                            self%dnorm_ale_dx(inode,ZETA_DIR,idiff_n,icoord) = self%djinv_ale_dx(inode,idiff_n,icoord)*metric_ale(3,3) + self%jinv_def(inode)*self%dmetric_ale_dx(3,3,inode,idiff_n,icoord)
+                            
+                        case default
+                            user_msg = "face%interpolate_normals_dx: Invalid face index in face initialization."
+                            call chidg_signal(FATAL,user_msg)
+                    end select
+                end do
+            end do
+        end do !inode
+        
+
+        ! Reverse normal vectors for faces XI_MIN,ETA_MIN,ZETA_MIN
+        if (self%iface == XI_MIN .or. self%iface == ETA_MIN .or. self%iface == ZETA_MIN) then
+            do idiff_n = 1,nnodes_r
+                do icoord = 1,3
+                    self%dnorm_ale_dx(:,XI_DIR  ,idiff_n,icoord) = -self%dnorm_ale_dx(:,XI_DIR  ,idiff_n,icoord)
+                    self%dnorm_ale_dx(:,ETA_DIR ,idiff_n,icoord) = -self%dnorm_ale_dx(:,ETA_DIR ,idiff_n,icoord)
+                    self%dnorm_ale_dx(:,ZETA_DIR,idiff_n,icoord) = -self%dnorm_ale_dx(:,ZETA_DIR,idiff_n,icoord)
+                end do
+            end do
+        end if
+
+    end subroutine interpolate_normals_ale_dx
     !******************************************************************************************
 
 

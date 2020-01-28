@@ -100,16 +100,14 @@ contains
             w_bc_tang, entropy_bc, c_bc, c_m, p_m, T_m, u_m, v_m, w_m,                  &
             r,       &
             rho_input, p_input, u_input,        &
-            v_input, w_input, T_input, c_input
+            v_input, w_input, T_input, c_input, &
+            unorm_1, unorm_2, unorm_3
 
-        real(rk), allocatable, dimension(:) :: unorm_1, unorm_2, unorm_3
 
         logical, allocatable, dimension(:)  ::  &
             inflow, outflow
 
-        !
         ! Get boundary condition input parameters
-        !
         rho_input = self%bcproperties%compute('Density',    worker%time(), worker%coords(), worker%function_info)
         p_input   = self%bcproperties%compute('Pressure',   worker%time(), worker%coords(), worker%function_info)
         u_input   = self%bcproperties%compute('Velocity-1', worker%time(), worker%coords(), worker%function_info)
@@ -120,9 +118,7 @@ contains
         c_input   = sqrt(gam*Rgas*T_input)
 
 
-        !
         ! Interpolate interior solution to quadrature nodes
-        !
         density_m = worker%get_field('Density'   , 'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
@@ -130,18 +126,14 @@ contains
         energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
 
 
-        !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
         end if
 
 
-        !
         ! Get Pressure, Temperature from interior
-        !
         p_m = worker%get_field('Pressure',    'value', 'face interior')
         T_m = worker%get_field('Temperature', 'value', 'face interior')
         c_m = sqrt(gam*Rgas*T_m)
@@ -168,7 +160,6 @@ contains
         grad3_energy_m  = worker%get_field('Energy'    , 'grad3', 'face interior')
 
 
-
         ! Initialize arrays
         density_bc = density_m
         mom1_bc    = mom1_m
@@ -186,46 +177,33 @@ contains
         entropy_bc = density_m
 
 
-        !
         ! Get unit normal vector
-        !
         unorm_1 = worker%unit_normal_ale(1)
         unorm_2 = worker%unit_normal_ale(2)
         unorm_3 = worker%unit_normal_ale(3)
 
 
-        !
         ! Dot momentum with normal vector
-        !
         normal_momentum = mom1_m*unorm_1 + mom2_m*unorm_2 + mom3_m*unorm_3
 
 
-        !
         ! Determine which nodes are inflow/outflow
-        !
         inflow  = ( normal_momentum <= RKTOL )
         outflow = ( normal_momentum >  RKTOL )
 
 
-        !
         ! Compute internal velocities
-        !
         u_m = mom1_m/density_m
         v_m = mom2_m/density_m
         w_m = mom3_m/density_m
 
 
-
-        !
         ! Compute Riemann invariants
-        !
         R_inf          = (u_input*unorm_1 + v_input*unorm_2 + w_input*unorm_3) - TWO*c_input/(gam - ONE)
         R_extrapolated = (u_m*unorm_1     + v_m*unorm_2     + w_m*unorm_3    ) + TWO*c_m/(gam - ONE)
 
 
-        !
         ! Compute boundary velocities
-        !
         c_bc = ((gam - ONE)/FOUR)*(R_extrapolated - R_inf)
 
         u_bc_norm = HALF*(R_extrapolated + R_inf)*unorm_1
@@ -233,10 +211,7 @@ contains
         w_bc_norm = HALF*(R_extrapolated + R_inf)*unorm_3
 
 
-
-        !
         ! Compute tangential velocities
-        !
         where (inflow)
 
             u_bc_tang = u_input - (u_input*unorm_1 + v_input*unorm_2 + w_input*unorm_3)*unorm_1
@@ -256,10 +231,7 @@ contains
         end where
 
 
-
-        !
         ! Compute boundary state
-        !
         density_bc  = (c_bc*c_bc/(entropy_bc*gam))**(ONE/(gam-ONE))
         mom1_bc = (u_bc_norm + u_bc_tang)*density_bc
         mom2_bc = (v_bc_norm + v_bc_tang)*density_bc
@@ -269,20 +241,13 @@ contains
         energy_bc = (p_bc/(gam - ONE)) + HALF*(mom1_bc*mom1_bc + mom2_bc*mom2_bc + mom3_bc*mom3_bc)/density_bc
 
 
-
-
-        !
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
-        !
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
 
 
-
-        !
         ! Store boundary condition state
-        !
         call worker%store_bc_state('Density'   , density_bc, 'value')
         call worker%store_bc_state('Momentum-1', mom1_bc,    'value')
         call worker%store_bc_state('Momentum-2', mom2_bc,    'value')

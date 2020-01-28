@@ -1,0 +1,16 @@
+Jinv interpolation node 1 
+2.378430811417238111e-01
+Jinv interpolation node 2 
+3.512055414063623981e-01
+Jinv interpolation node 3 
+2.378430811417238111e-01
+Jinv interpolation node 4 
+3.512055414063623981e-01
+Jinv interpolation node 5 
+2.378430811417238111e-01
+Jinv interpolation node 6 
+3.512055414063623981e-01
+Jinv interpolation node 7 
+2.378430811417238111e-01
+Jinv interpolation node 8 
+3.512055414063623981e-01

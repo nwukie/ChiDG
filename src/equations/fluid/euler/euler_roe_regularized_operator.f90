@@ -117,11 +117,11 @@ contains
             vmag_p, vmag_m,                                         &
             delr,   delp,   delvmag, delu, delv, delw,              &
             lamda1, lamda2, lamda3,                                 &
-            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, upwind, ctilpre, r
-
-        real(rk), allocatable, dimension(:) ::              &
+            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, upwind, ctilpre, r, &
             unorm_1_ale,    unorm_2_ale,    unorm_3_ale,    &
-            ale_area_ratio, grid_vel_n
+            grid_vel_n
+
+        real(rk), allocatable, dimension(:) :: ale_area_ratio
 
         real(rk), allocatable, dimension(:,:) :: grid_vel
 

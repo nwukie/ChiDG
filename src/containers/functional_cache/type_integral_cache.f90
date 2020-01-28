@@ -290,15 +290,6 @@ contains
 
         ! Allocate result
         if (dtype /= NO_DIFF) then
-            !! if differentiation is needed, check if the derivatives have been already initialized
-            !! if not, initialize it.
-            !! Derivatives might not be initialized if the processor does not have any face/element
-            !! from the auxiliary/reference geometry, and it only knows the overall integral real value
-            !! from the communication process.
-            !if (.not. self%derivatives_initialized) then
-            !    !self%integral_deriv = vec_model
-            !    call self%integral_deriv%assemble()
-            !end if
             nderivs  = self%integral_deriv%nentries()
             integral = AD_D(nderivs)
         else

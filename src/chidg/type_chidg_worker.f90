@@ -39,7 +39,7 @@ module type_chidg_worker
     use mod_interpolate,        only: interpolate_element_autodiff, interpolate_general_autodiff
     use mod_polynomial,         only: polynomial_val
     use mod_differentiate,      only: differentiate_jinv, differentiate_normal, differentiate_br2, &
-                                      differentiate_coordinate, differentiate_unit_normal
+                                      differentiate_coordinate, differentiate_unit_normal, differentiate_unit_normal_ale
     use mod_integrate,          only: integrate_boundary_scalar_flux, &
                                       integrate_volume_vector_flux,   &
                                       integrate_volume_scalar_source, &
@@ -1836,13 +1836,15 @@ contains
     !!  TODO: Transform to AD
     !!
     !---------------------------------------------------------------------------------------
-    function unit_normal_ale(self,direction) result(unorm_gq)
+    function unit_normal_ale(self,direction) result(unorm_ale_gq)
         class(chidg_worker_t),  intent(in)  :: self
         integer(ik),            intent(in)  :: direction
 
-        real(rk), dimension(:), allocatable :: unorm_gq
+        type(AD_D), dimension(:), allocatable :: unorm_ale_gq
 
-        unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm_def(:,direction)
+        !call chidg_signal(FATAL,"chidg_worker%unit_normal_ale: not yet implemented.")
+        !unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm_def(:,direction)
+        unorm_ale_gq = differentiate_unit_normal_ale(self%mesh,self%element_info,self%function_info,self%iface,direction)
 
     end function unit_normal_ale
     !***************************************************************************************

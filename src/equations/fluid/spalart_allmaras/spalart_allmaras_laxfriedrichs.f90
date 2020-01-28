@@ -78,10 +78,10 @@ contains
             invdensity_m, invdensity_p,                 &
             u_m, v_m, w_m, T_m, un_m, c_m, wavespeed_m, &
             u_p, v_p, w_p, T_p, un_p, c_p, wavespeed_p, &
-            dissipation, grid_vel_n, r
+            dissipation, grid_vel_n, r,                 &
+            unorm_1, unorm_2, unorm_3
 
         real(rk),   dimension(:,:), allocatable :: grid_vel
-        real(rk),   dimension(:),   allocatable :: unorm_1, unorm_2, unorm_3
 
 
         ! Interpolate solution to quadrature nodes

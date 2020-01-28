@@ -99,11 +99,7 @@ contains
             vmag_p, vmag_m,                                         &
             delr,   delp,   delvmag, delu, delv, delw,              &
             lamda1, lamda2, lamda3,                                 &
-            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, upwind, r
-!            norm_1,         norm_2,         norm_3,         &
-!            unorm_1,        unorm_2,        unorm_3
-
-        real(rk), allocatable, dimension(:) ::              &
+            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, upwind, r,    &
             unorm_1_ale,    unorm_2_ale,    unorm_3_ale,    &
             grid_vel_n
 

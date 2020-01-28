@@ -180,12 +180,11 @@ contains
     subroutine init1(self)
         class(test_surface_functional1_t),    intent(inout)   :: self
 
-        !
         ! Start defining the evaluator information
-        !
         call self%set_name("Test Surface Energy 1")
         call self%set_eval_type("Functional")
         call self%set_int_type("FACE INTEGRAL")
+        call self%add_integral("functional 1")
 
     end subroutine init1
     !****************************************************************************************
@@ -209,7 +208,6 @@ contains
 
         res = cache%ref_cache%get_real('functional 1')
 
-
     end function store_value1
     !****************************************************************************************
 
@@ -230,7 +228,6 @@ contains
         type(chidg_vector_t)        :: res
 
         res = cache%ref_cache%get_deriv('functional 1')
-
 
     end function store_deriv1
     !****************************************************************************************
@@ -254,12 +251,16 @@ contains
     subroutine init2(self)
         class(test_surface_functional2_t),    intent(inout)   :: self
 
-        !
         ! Start defining the evaluator information
-        !
         call self%set_name("Test Surface Energy 2")
         call self%set_eval_type("Functional")
         call self%set_int_type("FACE INTEGRAL")
+        call self%add_integral("functional 2")
+        call self%add_integral("u_aux1")
+        call self%add_integral("u_aux2")
+        call self%add_integral("u_ref1")
+        call self%add_integral("u_ref2")
+
 
     end subroutine init2
     !****************************************************************************************
@@ -332,7 +333,6 @@ contains
 
         res = cache%ref_cache%get_real('functional 2')
 
-
     end function store_value2
     !****************************************************************************************
 
@@ -353,7 +353,6 @@ contains
         type(chidg_vector_t)        :: res
 
         res = cache%ref_cache%get_deriv('functional 2')
-
 
     end function store_deriv2
     !****************************************************************************************
@@ -637,15 +636,11 @@ contains
         ifunc    = 1
         ref_geom = "reference"
 
-        !
         ! THIS BEING TESTED: Test both functional_cache and functional_cache_handeler initialization
         !__________________
         call fcl_cache_handler%init(self%chidg_v_none%data,fcl_cache,ifunc,ref_geom,NO_DIFF)
 
-        
-            !
             ! TEST functional_cache_handler
-            !
             @assertTrue(associated(fcl_cache_handler%cache))
             @assertTrue(associated(fcl_cache_handler%data))
             @assertEqual('reference',fcl_cache_handler%geom)
@@ -653,40 +648,28 @@ contains
             @assertEqual(NO_DIFF,    fcl_cache_handler%dtype)
             @assertEqual(ifunc,      fcl_cache_handler%ifunc)
 
-            !
             ! TEST functional_cache initialization
-            !
-            !@assertTrue(associated(fcl_cache%mesh))
             @assertEqual(NO_DIFF,fcl_cache%dtype)
 
             
-            
-            !
             ! TEST: number of reference geometry entities (in this case all the element belonging to the domain)
-            !
             @assertEqual(27,fcl_cache%ref_cache%nentities)
             @assertEqual(27,fcl_cache%ref_cache%idomain_g%size())
             @assertEqual(27,fcl_cache%ref_cache%idomain_l%size())
             @assertEqual(27,fcl_cache%ref_cache%ielement_g%size())
             @assertEqual(27,fcl_cache%ref_cache%ielement_l%size())
 
-            !
             ! TEST: number of auxiliary geometry entities (in this case 0, sinse we have initialized for the
             !       reference geometry.
-            !
             @assertEqual(0,fcl_cache%aux_cache%nentities)
             @assertEqual(0,fcl_cache%aux_cache%idomain_g%size())
             @assertEqual(0,fcl_cache%aux_cache%idomain_l%size())
             @assertEqual(0,fcl_cache%aux_cache%ielement_g%size())
             @assertEqual(0,fcl_cache%aux_cache%ielement_l%size())
 
-       
-       
-       
         
        
         
-        !
         ! Add integral_cache for each element manually
         !   NOTE1: remember we have: nvars = 1, nterms_s = 8
         !   NOTE2: here, we are using a built-in functional, we need to be consistent with
@@ -706,70 +689,43 @@ contains
         end do
 
         
-      
-            !
             ! TEST: check number of integrals stored
-            !
             @assertEqual(1,fcl_cache%ref_cache%nintegrals)
             @assertEqual(0,fcl_cache%aux_cache%nintegrals)
       
-            !
             ! TEST: geometry_cache%get_ID
-            !
             @assertEqual(1,fcl_cache%ref_cache%get_id(int_name))
             @assertEqual(0,fcl_cache%aux_cache%get_id(int_name))
       
-            !
             ! TEST: real value of the integral 
-            !
             @assertEqual(378.0,fcl_cache%ref_cache%integral_cache(1)%integral_value)
        
-            !
-            ! TEST: derivatives shold not be initialized since we are not differentiating
-            !
-            @assertFalse(fcl_cache%ref_cache%integral_cache(1)%derivatives_initialized)
+            ! TEST: derivatives are always initialized at the moment.
+            @assertTrue(fcl_cache%ref_cache%integral_cache(1)%derivatives_initialized)
         
         
-        
-        !
         ! Parallel communication is not tested here. It is tested in xforce_mod.pf for instance
         !_______________
         
         
-        !
         ! Finalize nothing to finalize (this will be tested in chidg_f2_dx))
         !_______________
         
          
-        !
         ! THIS BEING TESTED: Store dQ derivatives and real value of the functional
         !_______________
         call fcl_cache_handler%store()
 
-
-            !
             ! TEST: storage of real value of the functional
-            !
             @assertEqual(378.0,self%chidg_v_none%data%sdata%functional%func(1)%at(1))
 
 
-
-        !
         ! THIS BEING TESTED: functional_cache_handler%destructor
-        !
         call fcl_cache_handler%destructor()
         
-            !
             ! TEST: pointers should be deassocaited
-            !
             @assertFalse(associated(fcl_cache_handler%cache))
             @assertFalse(associated(fcl_cache_handler%data))
-
-            !
-            ! TEST: functional_cache%mesh pointer should be deassociated
-            !
-            !@assertFalse(associated(fcl_cache%mesh))
-
 
 
     end subroutine test_functional_cache__vol_none
@@ -803,15 +759,11 @@ contains
         ifunc    = 1
         ref_geom = "reference"
 
-        !
         ! THIS BEING TESTED: Test both functional_cache and functional_cache_handeler initialization
         !__________________
         call fcl_cache_handler%init(self%chidg_v_dq%data,fcl_cache,ifunc,ref_geom,dQ_DIFF)
 
-        
-            !
             ! TEST functional_cache_handler
-            !
             @assertTrue(associated(fcl_cache_handler%cache))
             @assertTrue(associated(fcl_cache_handler%data))
             @assertEqual('reference',fcl_cache_handler%geom)
@@ -819,27 +771,19 @@ contains
             @assertEqual(dQ_DIFF,    fcl_cache_handler%dtype)
             @assertEqual(ifunc,      fcl_cache_handler%ifunc)
 
-            !
             ! TEST functional_cache initialization
-            !
-            !@assertTrue(associated(fcl_cache%mesh))
             @assertEqual(dQ_DIFF,fcl_cache%dtype)
 
             
-            
-            !
             ! TEST: number of reference geometry entities (in this case all the element belonging to the domain)
-            !
             @assertEqual(27,fcl_cache%ref_cache%nentities)
             @assertEqual(27,fcl_cache%ref_cache%idomain_g%size())
             @assertEqual(27,fcl_cache%ref_cache%idomain_l%size())
             @assertEqual(27,fcl_cache%ref_cache%ielement_g%size())
             @assertEqual(27,fcl_cache%ref_cache%ielement_l%size())
 
-            !
             ! TEST: number of auxiliary geometry entities (in this case 0, sinse we have initialized for the
             !       reference geometry.
-            !
             @assertEqual(0,fcl_cache%aux_cache%nentities)
             @assertEqual(0,fcl_cache%aux_cache%idomain_g%size())
             @assertEqual(0,fcl_cache%aux_cache%idomain_l%size())
@@ -848,11 +792,7 @@ contains
 
        
        
-       
         
-       
-        
-        !
         ! Add integral_cache for each element manually
         !   NOTE1: remember we have: nvars = 1, nterms_s = 8
         !   NOTE2: here, we are using a built-in functional, we need to be consistent with
@@ -874,33 +814,21 @@ contains
             call fcl_cache%set_entity_value(self%chidg_v_dq%data%mesh,int_value,int_name,'reference',fcn_info)
         end do
 
-        
-      
-            !
             ! TEST: check number of integrals stored
-            !
             @assertEqual(1,fcl_cache%ref_cache%nintegrals)
             @assertEqual(0,fcl_cache%aux_cache%nintegrals)
       
-            !
             ! TEST: geometry_cache%get_ID
-            !
             @assertEqual(1,fcl_cache%ref_cache%get_id(int_name))
             @assertEqual(0,fcl_cache%aux_cache%get_id(int_name))
       
-            !
             ! TEST: real value of the integral 
-            !
             @assertEqual(378.0,fcl_cache%ref_cache%integral_cache(1)%integral_value)
        
-            !
             ! TEST integral derivatives are initialized
-            !
             @assertTrue(fcl_cache%ref_cache%integral_cache(1)%derivatives_initialized)
         
-            !
             ! TEST: derivatives value of the integral 
-            !
             do ielem = 1,fcl_cache%ref_cache%nentities
                 ref_deriv = real(ielem,rk)
                 @assertEqual(ref_deriv,fcl_cache%ref_cache%integral_cache(1)%integral_deriv%dom(1)%vecs(ielem)%vec)
@@ -908,52 +836,34 @@ contains
        
         
         
-        !
         ! Parallel communication is not tested here. It is tested in xforce_mod.pf for instance
         !_______________
         
         
-        !
         ! Finalize nothing to finalize (this will be tested in chidg_f2_dx))
         !_______________
         
          
-        !
         ! THIS BEING TESTED: Store dQ derivatives and real value of the functional
         !_______________
         call fcl_cache_handler%store()
 
-
-            !
             ! TEST: storage of real value of the functional
-            !
             @assertEqual(378.0,self%chidg_v_dq%data%sdata%functional%func(1)%at(1))
 
 
-            !
             ! TEST: dQ derivatives stored in Jq
-            !
             do ielem = 1,fcl_cache%ref_cache%nentities
                 ref_diff = real(ielem,rk)
                 @assertEqual(ref_diff,self%chidg_v_dq%data%sdata%adjoint%Jq(1)%dom(1)%vecs(ielem)%vec)
             end do
 
-
-        !
         ! THIS BEING TESTED: functional_cache_handler%destructor
-        !
         call fcl_cache_handler%destructor()
         
-            !
             ! TEST: pointers should be deassocaited
-            !
             @assertFalse(associated(fcl_cache_handler%cache))
             @assertFalse(associated(fcl_cache_handler%data))
-
-            !
-            ! TEST: functional_cache%mesh pointer should be deassociated
-            !
-            !@assertFalse(associated(fcl_cache%mesh))
 
 
 
@@ -1635,110 +1545,71 @@ contains
 
         
       
-            !
             ! TEST: check number of integrals stored
-            !
             @assertEqual(0,fcl_cache%ref_cache%nintegrals)
-            @assertEqual(1,fcl_cache%aux_cache%nintegrals)
+            @assertEqual(5,fcl_cache%aux_cache%nintegrals)
       
-            !
             ! TEST: geometry_cache%get_ID
-            !
             @assertEqual(0,fcl_cache%ref_cache%get_id(int_name))
-            @assertEqual(1,fcl_cache%aux_cache%get_id(int_name))
+            @assertEqual(3,fcl_cache%aux_cache%get_id(int_name))
       
-            !
             ! TEST: real value of the integral 
-            !
-            @assertEqual(45.0,fcl_cache%aux_cache%integral_cache(1)%integral_value)
+            @assertEqual(45.0,fcl_cache%aux_cache%integral_cache(3)%integral_value)
        
-            !
             ! TEST integral derivatives are initialized
-            !
             @assertTrue(fcl_cache%aux_cache%integral_cache(1)%derivatives_initialized)
         
-            !
             ! TEST: derivatives value of the integral 
-            !
             do ielem = 1,fcl_cache%aux_cache%nentities
                 ref_deriv = real(ielem,rk)
                 element   = fcl_cache%aux_cache%ielement_l%at(ielem)
-                @assertEqual(ref_deriv,fcl_cache%aux_cache%integral_cache(1)%integral_deriv%dom(1)%vecs(element)%vec)
+                @assertEqual(ref_deriv,fcl_cache%aux_cache%integral_cache(3)%integral_deriv%dom(1)%vecs(element)%vec)
             end do
        
         
-        
-        !
         ! Parallel communication is not tested here. It is tested in xforce_mod.pf for instance
         !_______________
         
         
-        !
         ! Finalize nothing to finalize 
         !_______________
         call self%chidg_f2_dx%data%functional_group%fcl_entities(ifunc)%func%finalize_auxiliary(chidg_worker,fcl_cache)
            
-            
-            !
             ! TEST: the integrals now should be 2: u_aux2 and u_aux1 
-            ! 
             @assertEqual(0,fcl_cache%ref_cache%nintegrals)
-            @assertEqual(2,fcl_cache%aux_cache%nintegrals)
+            @assertEqual(5,fcl_cache%aux_cache%nintegrals)
             
-            !
             ! TEST: real value of the integral 
-            !
-            @assertEqual(47.0,fcl_cache%aux_cache%integral_cache(1)%integral_value)
             @assertEqual(44.0,fcl_cache%aux_cache%integral_cache(2)%integral_value)
+            @assertEqual(47.0,fcl_cache%aux_cache%integral_cache(3)%integral_value)
        
-            !
             ! TEST integral derivatives are initialized
-            !
-            @assertTrue(fcl_cache%aux_cache%integral_cache(1)%derivatives_initialized)
             @assertTrue(fcl_cache%aux_cache%integral_cache(2)%derivatives_initialized)
+            @assertTrue(fcl_cache%aux_cache%integral_cache(3)%derivatives_initialized)
         
-            !
             ! TEST: derivatives value of the integral 
-            !
             do ielem = 1,fcl_cache%ref_cache%nentities
                 ref_deriv = real(ielem,rk) 
                 element   = fcl_cache%aux_cache%ielement_l%at(ielem)
-                @assertEqual(ref_deriv,fcl_cache%aux_cache%integral_cache(1)%integral_deriv%dom(1)%vecs(element)%vec)
                 @assertEqual(ref_deriv,fcl_cache%aux_cache%integral_cache(2)%integral_deriv%dom(1)%vecs(element)%vec)
+                @assertEqual(ref_deriv,fcl_cache%aux_cache%integral_cache(3)%integral_deriv%dom(1)%vecs(element)%vec)
             end do
         
          
-        !
         ! THIS BEING TESTED: Store dX derivatives and real value of the functional
         !_______________
         call fcl_cache_handler%store()
 
-            !
             ! TEST: nothing to test here 
-            !
             
 
-        !
         ! THIS BEING TESTED: functional_cache_handler%destructor
-        !
         call fcl_cache_handler%destructor()
         
-            !
             ! TEST: pointers should be deassocaited
-            !
             @assertFalse(associated(fcl_cache_handler%cache))
             @assertFalse(associated(fcl_cache_handler%data))
 
-            !
-            ! TEST: functional_cache%mesh pointer should be deassociated
-            !
-            !@assertFalse(associated(fcl_cache%mesh))
-
-
-        
-        
-        
-        
         
         !---------------------------------------------------------
         ! COMPUTE INTEGRALS ON THE REFERENCE GEOMETRY
@@ -1755,9 +1626,7 @@ contains
         call fcl_cache_handler%init(self%chidg_f2_dx%data,fcl_cache,ifunc,ref_geom,dX_DIFF)
 
         
-            !
             ! TEST functional_cache_handler
-            !
             @assertTrue(associated(fcl_cache_handler%cache))
             @assertTrue(associated(fcl_cache_handler%data))
             @assertEqual('reference',fcl_cache_handler%geom)
@@ -1765,26 +1634,17 @@ contains
             @assertEqual(dX_DIFF,    fcl_cache_handler%dtype)
             @assertEqual(ifunc,      fcl_cache_handler%ifunc)
 
-            !
             ! TEST functional_cache initialization
-            !
-            !@assertTrue(associated(fcl_cache%mesh))
             @assertEqual(dX_DIFF,fcl_cache%dtype)
 
-            
-            
-            !
             ! TEST: number of reference geometry entities (in this case all the element belonging to the domain)
-            !
             @assertEqual(9,fcl_cache%ref_cache%nentities)
             @assertEqual(9,fcl_cache%ref_cache%idomain_g%size())
             @assertEqual(9,fcl_cache%ref_cache%idomain_l%size())
             @assertEqual(9,fcl_cache%ref_cache%ielement_g%size())
             @assertEqual(9,fcl_cache%ref_cache%ielement_l%size())
 
-            !
             ! TEST: number of auxiliary geometry entities (in this case all the faces on the auxiliary geometry) 
-            !
             @assertEqual(9,fcl_cache%aux_cache%nentities)
             @assertEqual(9,fcl_cache%aux_cache%idomain_g%size())
             @assertEqual(9,fcl_cache%aux_cache%idomain_l%size())
@@ -1794,10 +1654,6 @@ contains
        
        
        
-        
-       
-        
-        !
         ! Add integral_cache for each element manually
         !   NOTE1: remember we have: nvars = 1, nterms_s = 8
         !   NOTE2: here, we are using a built-in functional, we need to be consistent with
@@ -1823,94 +1679,70 @@ contains
         end do
 
         
-            !
             ! TEST: check number of integrals stored
-            !
-            @assertEqual(1,fcl_cache%ref_cache%nintegrals)
-            @assertEqual(2,fcl_cache%aux_cache%nintegrals)
+            @assertEqual(5,fcl_cache%ref_cache%nintegrals)
+            @assertEqual(5,fcl_cache%aux_cache%nintegrals)
       
-            !
             ! TEST: geometry_cache%get_ID
-            !
-            @assertEqual(1,fcl_cache%ref_cache%get_id(int_name))
-            @assertEqual(0,fcl_cache%aux_cache%get_id(int_name))
+            @assertEqual(4,fcl_cache%ref_cache%get_id(int_name))
+            @assertEqual(4,fcl_cache%aux_cache%get_id(int_name))
       
-            !
             ! TEST: real value of the integral 
-            !
-            @assertEqual(468.0,fcl_cache%ref_cache%integral_cache(1)%integral_value)
+            @assertEqual(468.0,fcl_cache%ref_cache%integral_cache(4)%integral_value)
        
-            !
             ! TEST integral derivatives are initialized
-            !
-            @assertTrue(fcl_cache%ref_cache%integral_cache(1)%derivatives_initialized)
+            @assertTrue(fcl_cache%ref_cache%integral_cache(4)%derivatives_initialized)
         
-            !
             ! TEST: derivatives value of the integral 
-            !
             do ielem = 1,fcl_cache%ref_cache%nentities
                 ref_deriv = real(ielem+3,rk)
                 element   = fcl_cache%ref_cache%ielement_l%at(ielem)
-                @assertEqual(ref_deriv,fcl_cache%ref_cache%integral_cache(1)%integral_deriv%dom(1)%vecs(element)%vec)
+                @assertEqual(ref_deriv,fcl_cache%ref_cache%integral_cache(4)%integral_deriv%dom(1)%vecs(element)%vec)
             end do
        
         
-        
-        !
         ! Parallel communication is not tested here. It is tested in xforce_mod.pf for instance
         !_______________
         
         
-        !
         ! Finalize 
         !_______________
         call self%chidg_f2_dx%data%functional_group%fcl_entities(ifunc)%func%finalize_functional(chidg_worker,fcl_cache)
            
             
-            !
             ! TEST: the integrals now should be 2: 'u_ref1' and 'functional 2'
-            ! 
-            @assertEqual(2,fcl_cache%ref_cache%nintegrals)
-            @assertEqual(2,fcl_cache%aux_cache%nintegrals)
+            @assertEqual(5,fcl_cache%ref_cache%nintegrals)
+            @assertEqual(5,fcl_cache%aux_cache%nintegrals)
             
-            !
             ! TEST: real value of the integral 
-            !
-            @assertEqual(468.0, fcl_cache%ref_cache%integral_cache(1)%integral_value)
-            @assertEqual(515.0,fcl_cache%ref_cache%integral_cache(2)%integral_value)
+            @assertEqual(515.0,fcl_cache%ref_cache%integral_cache(1)%integral_value)
+            @assertEqual(468.0, fcl_cache%ref_cache%integral_cache(4)%integral_value)
        
-            !
             ! TEST integral derivatives are initialized
-            !
             @assertTrue(fcl_cache%ref_cache%integral_cache(1)%derivatives_initialized)
-            @assertTrue(fcl_cache%ref_cache%integral_cache(2)%derivatives_initialized)
+            @assertTrue(fcl_cache%ref_cache%integral_cache(4)%derivatives_initialized)
         
-            !
             ! TEST: derivatives value of the integral 
-            !
             ! Derivatives coming from regerence geometry
             do ielem = 1,fcl_cache%ref_cache%nentities
                 ref_deriv = real(ielem+3,rk) 
                 element   = fcl_cache%ref_cache%ielement_l%at(ielem)
                 @assertEqual(ref_deriv,fcl_cache%ref_cache%integral_cache(1)%integral_deriv%dom(1)%vecs(element)%vec)
-                @assertEqual(ref_deriv,fcl_cache%ref_cache%integral_cache(2)%integral_deriv%dom(1)%vecs(element)%vec)
+                @assertEqual(ref_deriv,fcl_cache%ref_cache%integral_cache(4)%integral_deriv%dom(1)%vecs(element)%vec)
             end do
             ! Derivatives coming from auxiliary geometry
             do ielem = 1,fcl_cache%aux_cache%nentities
                 ref_deriv = real(ielem,rk) 
                 element   = fcl_cache%aux_cache%ielement_l%at(ielem)
-                @assertEqual(0._rk,fcl_cache%ref_cache%integral_cache(1)%integral_deriv%dom(1)%vecs(element)%vec)
-                @assertEqual(ref_deriv,fcl_cache%ref_cache%integral_cache(2)%integral_deriv%dom(1)%vecs(element)%vec)
+                @assertEqual(ref_deriv,fcl_cache%ref_cache%integral_cache(1)%integral_deriv%dom(1)%vecs(element)%vec)
+                @assertEqual(0._rk,fcl_cache%ref_cache%integral_cache(4)%integral_deriv%dom(1)%vecs(element)%vec)
             end do
          
-        !
         ! THIS BEING TESTED: Store dX derivatives and real value of the functional
         !_______________
         call fcl_cache_handler%store()
 
-            !
             ! TEST: dX derivatives stored in Jx
-            !
             do ielem = 1,fcl_cache%ref_cache%nentities
                 ref_diff = real(ielem+3,rk)
                 element   = fcl_cache%ref_cache%ielement_l%at(ielem)
@@ -1922,24 +1754,12 @@ contains
                 @assertEqual(ref_diff,self%chidg_f2_dx%data%sdata%adjointx%Jx(1)%dom(1)%vecs(element)%vec)
             end do
 
-
-        !
         ! THIS BEING TESTED: functional_cache_handler%destructor
-        !
         call fcl_cache_handler%destructor()
         
-            !
             ! TEST: pointers should be deassocaited
-            !
             @assertFalse(associated(fcl_cache_handler%cache))
             @assertFalse(associated(fcl_cache_handler%data))
-
-            !
-            ! TEST: functional_cache%mesh pointer should be deassociated
-            !
-            !@assertFalse(associated(fcl_cache%mesh))
-
-
 
     end subroutine test_functional_cache__surf_dx_aux
     !******************************************************************************************

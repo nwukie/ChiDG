@@ -43,16 +43,12 @@ contains
     subroutine init(self)
         class(spalart_allmaras_farfield_t),   intent(inout) :: self
         
-        !
         ! Set operator name
-        !
         call self%set_name('Spalart Allmaras Farfield')
         call self%set_family('Farfield')
 
 
-        !
         ! Add turbulent inlet parameter and default value.
-        !
         call self%bcproperties%add('Turbulent Viscosity Ratio', 'Required')
         call self%set_fcn_option('Turbulent Viscosity Ratio', 'val', 3._rk)
 
@@ -84,10 +80,10 @@ contains
         type(AD_D), allocatable, dimension(:)   :: &
             density_m, mom1_m, mom2_m, mom3_m, normal_momentum, &
             density_nutilde_m, density_nutilde_bc,              &
-            grad1_density_nutilde_m, grad2_density_nutilde_m, grad3_density_nutilde_m, mu_m, nu_m
+            grad1_density_nutilde_m, grad2_density_nutilde_m, grad3_density_nutilde_m, mu_m, nu_m,  &
+            unorm_1, unorm_2, unorm_3
 
         type(AD_D), allocatable, dimension(:)   :: nutilde_over_nu
-        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3
         logical,    allocatable, dimension(:)   :: inflow, outflow
 
 

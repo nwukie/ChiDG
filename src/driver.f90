@@ -28,6 +28,7 @@ program driver
     use mod_chidg_adjointx,     only: chidg_adjointx
     use mod_chidg_adjointbc,    only: chidg_adjointbc
     use mod_chidg_clone,        only: chidg_clone
+    use mod_chidg_dot,          only: chidg_dot_fd, chidg_dot_cd, chidg_dot
     use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec
     use mod_chidg_post_hdf2vtk, only: chidg_post_hdf2vtk
     use mod_tutorials,          only: tutorial_driver
@@ -38,7 +39,10 @@ program driver
     type(chidg_t)                               :: chidg
     integer                                     :: narg, ierr, ifield
     integer(ik)                                 :: nfields, nfields_global
-    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern, tutorial, patch_group
+    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, &
+                                                   pattern, tutorial, patch_group, adjoint_pattern, primal_pattern, fd_delta, &
+                                                   mesh_sensitivities, original_grid, perturbed_grid, pos_perturbed_grid,     &
+                                                   neg_perturbed_grid, func_sensitivities
     character(len=10)                           :: time_string
     character(:),                   allocatable :: command, tmp_file
     class(function_t),              allocatable :: fcn
@@ -63,6 +67,10 @@ program driver
         trim(chidg_action) == 'adjointx'   .or. &
         trim(chidg_action) == 'adjointbc'  .or. &
         trim(chidg_action) == 'inputs'     .or. &
+        trim(chidg_action) == 'tutorial'   .or. &
+        trim(chidg_action) == 'dot'        .or. &
+        trim(chidg_action) == 'dot-fd'      .or. &
+        trim(chidg_action) == 'dot-cd'      .or. &
         trim(chidg_action) == 'tutorial'   .or. &
         trim(chidg_action) == '-v'         .or. & 
         trim(chidg_action) == '-h') run_chidg_action = .true.
@@ -531,6 +539,79 @@ program driver
             !*****************************************************************************
 
 
+            !>  ChiDG:adjointx src/actions/dot
+            !!
+            !!  This action works actually with plot3d files (.x)
+            !!
+            !!  Computes the overall objecive function sensitivities wrt to a mesh parameter
+            !!  using a .q (function file) for mesh sensitivites. 
+            !!
+            !!  Command-Line MODE 1: Single-file
+            !!  --------------------------------
+            !!  chidg dot functional_sensitivities.q  mesh_sensitivities.q
+            !!                                       
+            !!
+            !-----------------------------------------------------------------------------
+            case ('dot')
+                if (narg /=3) call chidg_signal(FATAL,"The 'dot' action expects: chidg dot func_sensitivities.q mesh_sensitivities.q")
+                call get_command_argument(2,func_sensitivities)
+                call get_command_argument(3,mesh_sensitivities)
+                call chidg_dot(trim(func_sensitivities),trim(mesh_sensitivities))
+            !*****************************************************************************
+
+
+
+            !>  ChiDG:adjointx src/actions/dot
+            !!
+            !!  This action works actually with plot3d files (.x)
+            !!
+            !!  Computes the overall objecive function sensitivities wrt to a mesh parameter
+            !!  using the forward finite difference dX/dY (Y being the parameter). 
+            !!
+            !!  Command-Line MODE 1: Single-file
+            !!  --------------------------------
+            !!  chidg dot original.x perturbed.x mesh_sensitivities.q FD_delta
+            !!
+            !!  FD_delta is a real number (for instance 10e-05) used for computing
+            !!  dX/dY by Forward Difference
+            !!                                       
+            !!
+            !-----------------------------------------------------------------------------
+            case ('dot-fd')
+                if (narg /=5) call chidg_signal(FATAL,"The 'dotfd' action expects: chidg dotfd original.x perturbed.x mesh_sens.q FD_delta")
+                call get_command_argument(2,original_grid)
+                call get_command_argument(3,perturbed_grid)
+                call get_command_argument(4,func_sensitivities)
+                call get_command_argument(5,fd_delta)
+                call chidg_dot_fd(trim(original_grid),trim(perturbed_grid),trim(func_sensitivities),fd_delta)
+            !*****************************************************************************
+
+
+
+            !>  ChiDG:adjointx src/actions/dot
+            !!
+            !!  This action works actually with plot3d files (.x)
+            !!
+            !!  Computes the overall objecive function sensitivities wrt to a mesh parameter
+            !!  using the central finite difference dX/dY (Y being the parameter). 
+            !!
+            !!  Command-Line MODE 1: Single-file
+            !!  --------------------------------
+            !!  chidg dot neg_perturbed.x pos_perturbed.x mesh_sensitivities.q CD_delta
+            !!
+            !!  CD_delta is a real number (for instance 10e-05) used for computing
+            !!  dX/dY by Central Difference ( that is h in (H_{i+1}-H_{i-1})/2h )
+            !!                                       
+            !!
+            !-----------------------------------------------------------------------------
+            case ('dot-cd')
+                if (narg /=5) call chidg_signal(FATAL,"The 'dotcd' action expects: chidg dotcd neg_perturbed.x pos_perturbed.x mesh_sens.q CD_delta")
+                call get_command_argument(2,neg_perturbed_grid)
+                call get_command_argument(3,pos_perturbed_grid)
+                call get_command_argument(4,func_sensitivities)
+                call get_command_argument(5,fd_delta)
+                call chidg_dot_cd(trim(neg_perturbed_grid),trim(pos_perturbed_grid),trim(func_sensitivities),fd_delta)
+            !*****************************************************************************
 
 
 

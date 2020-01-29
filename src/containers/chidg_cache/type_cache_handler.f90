@@ -619,12 +619,12 @@ contains
             
             ! Interpolate modes to nodes on undeformed element
             ! NOTE: we always need to compute the graduent for interior faces for boundary conditions.
-                call self%timer_interpolate%start()
+            call self%timer_interpolate%start()
             value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'value',ME)
             grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad1',ME)
             grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad2',ME)
             grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,worker%iface,ifield,worker%itime,'grad3',ME)
-                call self%timer_interpolate%stop()
+            call self%timer_interpolate%stop()
 
 
             ! Get ALE transformation data

@@ -6,6 +6,7 @@ add_subdirectory(clone)
 add_subdirectory(adjoint)
 add_subdirectory(adjointx)
 add_subdirectory(adjointbc)
+add_subdirectory(dot)
 #add_subdirectory(interpolate)
 
 

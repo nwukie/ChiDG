@@ -1296,7 +1296,7 @@ contains
         do pelem_ID = 1,self%nparallel_elements()
 
             select case (trim(dof_type))
-                case('primal') 
+                case('primal','auxiliary') 
                     dof_start  = self%parallel_element(pelem_ID)%dof_start
                     nfields    = self%parallel_element(pelem_ID)%nfields
                     ndof_field = self%parallel_element(pelem_ID)%nterms_s

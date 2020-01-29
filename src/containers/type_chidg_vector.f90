@@ -439,7 +439,8 @@ contains
 
         ! Get parallel communication indices
         !if (trim(dof_type) == 'primal' .or. trim(dof_type) == 'coordinate') then
-        if (trim(dof_type) == 'primal') then
+        if (trim(dof_type) == 'primal' .or. &
+            trim(dof_type) == 'auxiliary') then
             parallel_dof_indices = mesh%get_parallel_dofs(dof_type)
         else
             ! Parallel communication for auxiliary fields not yet implemented. Dummy connection here.

@@ -120,7 +120,7 @@ contains
             usr_msg = "The number of primal solutions does not match the number of time steps &
                        defined in the namelist. Please, make sure all the files are located in &
                        the current folder or that the time_steps input in the namelist is correct."
-            call chidg_signal(FATAL,trim(usr_msg))
+            call chidg_signal_two(FATAL,trim(usr_msg),flow_files%size(),time_steps)
         end if
 
 

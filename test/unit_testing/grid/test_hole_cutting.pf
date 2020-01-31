@@ -1012,14 +1012,47 @@ subroutine test_hole_cutting_overlapping_interior_grids()
     call tioga_reduce_fringes()
 
 
-    ! Check that all nodes outside the inner-resolved-block are valid
+    ! Check that all background nodes outside the inner resolved-block region are valid
     tol = 1.e-16_rk
     do inode = 1,nnodes1
         x = xyz1(3*inode-2)
         y = xyz1(3*inode-1)
         r = sqrt(x*x + y*y)
 
-        if ( ((x > TWO) .or. (x < -TWO)) .and. ((y > TWO) .or. (y < -TWO)) ) then
+        if ( ((x > ONE) .or. (x < -ONE)) .and. ((y > ONE) .or. (y < -ONE)) ) then
+            passing = (iblank1(inode) == 1) 
+            if (.not. passing) print*, x,y,r, iblank1(inode)
+            call assertTrue(passing)
+        end if
+
+    end do
+
+    ! Check that all background nodes inside the inner-resolved-block are blanked 
+    ! (except the first layer, which occurs around the 0.61224 square.
+    tol = 1.e-16_rk
+    do inode = 1,nnodes1
+        x = xyz1(3*inode-2)
+        y = xyz1(3*inode-1)
+        r = sqrt(x*x + y*y)
+
+        if ( ((x < 0.6122449) .and. (x > -0.6122449)) .and. ((y < 0.6122449) .and. (y > -0.6122449)) ) then
+            passing = (iblank1(inode) == 0) 
+            if (.not. passing) print*, x,y,r, iblank1(inode)
+            call assertTrue(passing)
+        end if
+
+    end do
+
+    ! Check that the first 'strip' of background nodes inside the first strip of 'active' fine-grid nodes are
+    ! active. That is, because we would like to classify fringe nodes as blanked, we need to make sure that
+    ! where is actually overlap that exists for the nodes formally-marked to be active (iblank == 1).
+    tol = 1.e-16_rk
+    do inode = 1,nnodes1
+        x = xyz1(3*inode-2)
+        y = xyz1(3*inode-1)
+        r = sqrt(x*x + y*y)
+
+        if ( ((x < -0.85714286+1.e-6) .and. (x > -0.85714286-1.e-6)) .and. ((y < 0.85714286) .and. (y > -0.85714286)) ) then
             passing = (iblank1(inode) == 1) 
             if (.not. passing) print*, x,y,r, iblank1(inode)
             call assertTrue(passing)

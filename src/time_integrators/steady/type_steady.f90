@@ -167,6 +167,7 @@ contains
         
         integer(ik)                 :: istep, ifunc
         character(:),   allocatable :: func_name
+        type(chidg_vector_t)        :: adjoint_rhs
 
         ! istep = 1 for steady
         istep = data%time_manager%istep
@@ -196,8 +197,11 @@ contains
                 func_name = data%functional_group%fcl_entities(ifunc)%func%get_name()
                 call write_line('-  Computing primary adjoint variables for',func_name, 'functional...',io_proc=GLOBAL_MASTER)
 
+                ! Relocate Jq to right-hand side of adjoint linear system
+                adjoint_rhs = -Jq(ifunc)
+
                 ! Compute adjoint variables for ifunc and store linear solver info
-                call linear_solver%solve(lhs,adj(ifunc,istep),Jq(ifunc),preconditioner)
+                call linear_solver%solve(lhs,adj(ifunc,istep),adjoint_rhs,preconditioner)
 
                 call adjoint%store_solver_info(ifunc,istep,linear_solver%niter,             &
                                                            linear_solver%timer%elapsed(),   &

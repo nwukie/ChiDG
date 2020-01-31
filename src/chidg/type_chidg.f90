@@ -1987,6 +1987,7 @@ contains
                         write(filename, "(A,F0.6,A3)") trim(prefix)//'_', self%data%time_manager%t, '.h5'
                     end if
                     call self%write_mesh(trim(filename))
+                    call self%write_fields(trim(filename),'primary')
                     call self%write_fields(trim(filename),'adjoint')
                 end if
             
@@ -1999,7 +2000,7 @@ contains
                     call update_space(self%data,differentiate=dD_DIFF)
 
                     do ifunc = 1,self%data%sdata%functional%nfunc()
-                        adjoint%vRd(1,ifunc) = adjoint%vRd(1,ifunc) - chidg_mv(adjoint%Rd(1),adjoint%v(ifunc,istep),adjoint%vRd(1,ifunc))
+                        adjoint%vRd(1,ifunc) = adjoint%vRd(1,ifunc) + chidg_mv(adjoint%Rd(1),adjoint%v(ifunc,istep),adjoint%vRd(1,ifunc))
                     end do
                     
                     call write_line('Done computing RHS of auxiliary adjoint equations.', io_proc=GLOBAL_MASTER)
@@ -2117,7 +2118,7 @@ contains
                     vRx(ifunc) = chidg_mv(Rx,v(ifunc,istep),vRx(ifunc))
             
                     ! Add to Jx the contribution from vRx
-                    Jx(ifunc) = Jx(ifunc) - vRx(ifunc)
+                    Jx(ifunc) = Jx(ifunc) + vRx(ifunc)
 
                     ! Add contribution of istep to overall unsteady sensitivities
                     Jx_unsteady(ifunc) = Jx_unsteady(ifunc) + Jx(ifunc)
@@ -2131,7 +2132,7 @@ contains
             if (self%data%sdata%compute_auxiliary) then 
                 call write_line('Adding contribution from auxiliary adjoint sensitivities...', io_proc=GLOBAL_MASTER)
                 do ifunc = 1,self%data%sdata%functional%nfunc()
-                    Jx_unsteady(ifunc) = Jx_unsteady(ifunc) - wAx(ifunc)
+                    Jx_unsteady(ifunc) = Jx_unsteady(ifunc) + wAx(ifunc)
                 end do
             end if
 
@@ -2243,13 +2244,13 @@ contains
                     vRa(ifunc) = dot_comm(Ra,v(ifunc,istep),ChiDG_COMM)
             
                     ! Add contribution of istep to overall unsteady sensitivities
-                    Ja_unsteady(ifunc) = Ja_unsteady(ifunc) - vRa(ifunc)
+                    Ja_unsteady(ifunc) = Ja_unsteady(ifunc) + vRa(ifunc)
                 end do !ifunc
             end do !istep
 
             ! Add contribution from auxiliary problem (this will be zero if no auxiliary problem exists) 
             do ifunc = 1,size(wAa)
-                Ja_unsteady(ifunc) = Ja_unsteady(ifunc) - wAa(ifunc)
+                Ja_unsteady(ifunc) = Ja_unsteady(ifunc) + wAa(ifunc)
             end do
 
         end associate

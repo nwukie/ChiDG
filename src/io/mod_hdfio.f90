@@ -1567,7 +1567,6 @@ contains
             ! TODO: should probably turn this into a loop over bcs instead of faces.
             do ipatch = 1,npatches
 
-
                 ! Open face boundary condition group
                 patch_id = open_patch_hdf(dom_id,patches(ipatch))
 

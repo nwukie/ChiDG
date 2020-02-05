@@ -76,8 +76,11 @@ contains
 
 
         ! Read grid/solution modes and time integrator options from HDF5
-        !call chidg%read_mesh(grid_file, 'primal storage', interpolation='Uniform', level=OUTPUT_RES)
-        call chidg%read_mesh(grid_file, 'adjoint storage', interpolation='Uniform', level=OUTPUT_RES)
+        if (file_props%contains_adjoint_fields) then
+            call chidg%read_mesh(grid_file, 'adjoint storage', interpolation='Uniform', level=OUTPUT_RES)
+        else
+            call chidg%read_mesh(grid_file, 'primal storage', interpolation='Uniform', level=OUTPUT_RES)
+        end if
 
 
         call chidg%data%set_fields_post(file_props%contains_primary_fields,file_props%contains_adjoint_fields,file_props%nfunctionals)

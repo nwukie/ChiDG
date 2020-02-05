@@ -227,7 +227,6 @@ contains
         
         integer(ik)                 :: ierr
         character(:),   allocatable :: user_msg
-        
 
         ! Give Error if no functional is registered
         user_msg = "solverdata%init_adjoint: no functionals registered. Adjoint computation not doable."

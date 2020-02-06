@@ -1822,7 +1822,7 @@ contains
                                        ntime, pelem_ID, interpolation_level,        &
                                        idomain_g, ielement_g, coordinate_system,    & 
                                        recv_size_a, recv_size_b, recv_size_c,       &
-                                       neighbor_location(7), element_location(5),   &
+                                       neighbor_location(9), element_location(5),   &
                                        element_data(10), spacedim, inode, dof_start, &
                                        ineighbor_domain_g, ineighbor_element_g,     &
                                        recv_dof, recv_xdof, ChiID, idonor, idonor_domain_g,    &

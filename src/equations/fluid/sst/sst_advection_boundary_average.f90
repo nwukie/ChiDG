@@ -81,9 +81,7 @@ contains
             u_m, v_m, w_m,                          &
             u_p, v_p, w_p,                          &
             flux_1_m, flux_2_m, flux_3_m,           &
-            flux_1_p, flux_2_p, flux_3_p
-
-        real(rk),   allocatable,    dimension(:)    :: r
+            flux_1_p, flux_2_p, flux_3_p, r
 
 
         !

@@ -35,37 +35,25 @@ subroutine test_operator_domain_dot()
     call chidg%start_up('core')
 
 
-    !
     ! Set accuracy for the solution expansion
-    !
     call chidg%set('Solution Order', integer_input=2)
 
 
-    !
     ! Create grid file
-    !
     file_name = 'file.h5'
     call create_mesh_file('D1 NxNxN', file_name, equation_sets=[string_t('Scalar Advection')], &
                                       nelem_xi=3, nelem_eta=1, nelem_zeta=1)
 
-
-    !
     ! Read grid file
-    !
     call chidg%read_mesh(file_name)
 
 
-
-    !
     ! Initialize data containers
-    !
-    call a%init(chidg%data%mesh%domain(1))
-    call b%init(chidg%data%mesh%domain(1))
+    call a%init(chidg%data%mesh%domain(1),'primal')
+    call b%init(chidg%data%mesh%domain(1),'primal')
 
 
-    !
     ! Initialize domain_vector data (a)
-    !
     vec_a1 = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
     vec_a2 = [TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ONE]
     vec_a3 = [THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ONE, TWO]
@@ -75,9 +63,7 @@ subroutine test_operator_domain_dot()
     a%vecs(3)%vec = vec_a3
 
 
-    !
     ! Initialize domain_vector data (b)
-    !
     vec_b1 = [THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ONE, TWO]
     vec_b2 = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
     vec_b3 = [TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ONE]
@@ -87,36 +73,20 @@ subroutine test_operator_domain_dot()
     b%vecs(3)%vec = vec_b3
 
 
-
-    !
     ! Compute reference dot product
-    !    
     dot_ref = dot_product(vec_a1,vec_b1) + dot_product(vec_a2,vec_b2) + dot_product(vec_a3,vec_b3)
 
-
-    !
     ! Compute dot product implementation. THIS IS BEING TESTED
-    !
     dot_test = domain_dot(a,b)
-
-
 
     @assertEqual(dot_ref,dot_test,tol)
 
 
 
-
-
-
-
-    !
     ! Close ChiDG interface
-    !
     call chidg%shut_down('core')
 
-    !
     ! Clean up
-    !
     call delete_file(file_name)
 
 end subroutine test_operator_domain_dot

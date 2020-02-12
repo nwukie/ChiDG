@@ -38,12 +38,15 @@ module type_chidg_worker
     use mod_inv,                only: inv
     use mod_interpolate,        only: interpolate_element_autodiff, interpolate_general_autodiff
     use mod_polynomial,         only: polynomial_val
+    use mod_differentiate,      only: differentiate_jinv, differentiate_normal, differentiate_br2, &
+                                      differentiate_coordinate, differentiate_unit_normal, differentiate_unit_normal_ale
     use mod_integrate,          only: integrate_boundary_scalar_flux, &
                                       integrate_volume_vector_flux,   &
                                       integrate_volume_scalar_source, &
                                       store_volume_integrals
 
     use type_point,             only: point_t
+    use type_point_ad,          only: point_ad_t
     use type_mesh,              only: mesh_t
     use type_solverdata,        only: solverdata_t
     use type_time_manager,      only: time_manager_t
@@ -95,8 +98,8 @@ module type_chidg_worker
         procedure   :: face_info            ! Return a face_info type
 
         ! Worker get/set data
-        procedure   :: interpolate_field
-        procedure   :: interpolate_field_general
+        procedure   :: interpolate_field            ! TODO: check consistency with dX differentiation
+        procedure   :: interpolate_field_general    ! TODO: check consistency with dX differentiation
         procedure   :: get_field
         procedure   :: check_field_exists
         procedure   :: store_bc_state
@@ -142,8 +145,8 @@ module type_chidg_worker
         procedure   :: quadrature_weights
         procedure   :: inverse_jacobian
         procedure   :: face_area
-        procedure   :: volume
-        procedure   :: centroid
+!        procedure   :: volume
+!        procedure   :: centroid
         procedure   :: coordinate_system
         procedure   :: face_type
         procedure   :: time
@@ -787,9 +790,7 @@ contains
         type(AD_D),     allocatable :: var_gq(:), tmp_gq(:)
         character(:),   allocatable :: cache_component, cache_type, lift_source, lift_nodes, user_msg, interp_source
         integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface_loop, iface_use, iface_select, i
-        real(rk)                    :: stabilization, face_area, centroid_m(3), centroid_p(3), centroid_distance(3),    &
-                                       volume_m, volume_p, centroid_normal_distance, average_normals(3)
-        real(rk),       allocatable :: unit_normal_1(:), unit_normal_2(:), unit_normal_3(:)
+        real(rk)                    :: stabilization
         logical                     :: lift
 
 
@@ -809,45 +810,6 @@ contains
         !
         iface_use = self%iface
         if (present(iface)) iface_use = iface
-
-
-!        !
-!        ! Compute adaptive face lift stabilization: NOTE not verified or determined to be stable.
-!        !
-!        face_area = self%face_area()
-!        volume_m   = self%volume('interior')
-!        volume_p   = self%volume('exterior')
-!        centroid_m = self%centroid('interior')
-!        centroid_p = self%centroid('exterior')
-!        centroid_distance = abs(centroid_p - centroid_m)
-!        unit_normal_1 = self%unit_normal(1)
-!        unit_normal_2 = self%unit_normal(2)
-!        unit_normal_3 = self%unit_normal(3)
-!
-!        ! Compute average face normal
-!        average_normals(1) = abs(sum(unit_normal_1)/size(unit_normal_1))
-!        average_normals(2) = abs(sum(unit_normal_2)/size(unit_normal_2))
-!        average_normals(3) = abs(sum(unit_normal_3)/size(unit_normal_3))
-!
-!        ! Project centroid distance onto face normal vector
-!        centroid_normal_distance = abs(centroid_distance(1)*average_normals(1) + centroid_distance(2)*average_normals(2) + centroid_distance(3)*average_normals(3))
-!        print*, 'centroid m: ', centroid_m
-!        print*, 'centroid p: ', centroid_p
-!        print*, 'normal: ', average_normals
-!        print*, 'centroid normal: ', centroid_normal_distance
-!
-!        ! Compute adaptive face stabilization
-!        face_lift_stab = (FOUR/(face_area*centroid_normal_distance))*(volume_m * volume_p)/(volume_m + volume_p)
-!
-!        print*, 'pre comp: ', face_area, volume_m, volume_p, centroid_distance
-!        if (self%face_type() == BOUNDARY .and. (trim(interp_source) == 'face interior' .or. trim(interp_source) == 'face exterior')) print*, 'face stab: ', face_lift_stab, self%iface, trim(interp_source)
-!        print*, 'face stab: ', face_lift_stab, self%iface, trim(interp_source)
-!
-!        if (face_lift_stab > 4.5) print*, 'face_lift_stab: ', face_lift_stab
-!        if (face_lift_stab < 1.0) print*, 'face_lift_stab: ', face_lift_stab
-!
-!        if (face_lift_stab < 1.0_rk) face_lift_stab = 1.0_rk
-
 
 
         !
@@ -896,16 +858,6 @@ contains
                             Try 'face interior', 'face exterior', 'boundary', or 'element'"
                 call chidg_signal_three(FATAL,user_msg,trim(field),trim(interp_type),trim(interp_source))
         end select
-
-
-
-
-
-
-
-
-
-
 
 
         !
@@ -1516,9 +1468,9 @@ contains
         type(AD_D),             intent(inout)   :: flux_3_p(:)
 
         integer(ik)                             :: ifield, idomain_l, ielement_l, eqn_ID
-        type(AD_D), allocatable, dimension(:)   :: q_m, q_p, flux_1, flux_2, flux_3, integrand
+        type(AD_D), allocatable, dimension(:)   :: q_m, q_p, flux_1, flux_2, flux_3, integrand, &
+                                                   norm_1, norm_2, norm_3
         type(AD_D), allocatable, dimension(:,:) :: flux_ref_m, flux_ref_p
-        real(rk),   allocatable, dimension(:)   :: norm_1, norm_2, norm_3
 
 
 
@@ -1586,11 +1538,9 @@ contains
         type(AD_D),             intent(inout)   :: upwind(:)
 
         integer(ik)                                 :: ifield, idomain_l, ielement_l, eqn_ID
-        real(rk),   allocatable,    dimension(:)    :: norm_1, norm_2, norm_3, darea
+        type(AD_D), allocatable,    dimension(:)    :: norm_1, norm_2, norm_3, darea
 
-        !
         ! Compute differential areas by computing magnitude of scaled normal vector
-        !
         norm_1  = self%normal(1)
         norm_2  = self%normal(2)
         norm_3  = self%normal(3)
@@ -1598,15 +1548,11 @@ contains
         darea = sqrt(norm_1**TWO+norm_2**TWO+norm_3**TWO)
 
 
-        !
         ! Multiply by differential area
-        !
         upwind = darea*upwind
 
 
-        !
         ! Integrate
-        !
         idomain_l  = self%element_info%idomain_l
         ielement_l = self%element_info%ielement_l
         eqn_ID     = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
@@ -1635,14 +1581,10 @@ contains
         type(AD_D),             intent(inout)   :: flux_3(:)
 
         integer(ik)                             :: ifield, idomain_l, ielement_l, eqn_ID
-        real(rk),   allocatable, dimension(:)   :: norm_1, norm_2, norm_3
-        type(AD_D), allocatable, dimension(:)   :: integrand, q_bc
+        type(AD_D), allocatable, dimension(:)   :: integrand, q_bc, norm_1, norm_2, norm_3
         type(AD_D), allocatable, dimension(:,:) :: flux
 
-
-        !
         ! Compute ALE transformation
-        !
         select case(trim(flux_type))
             case('Advection')
                 q_bc = self%get_primary_field_face(primary_field,'value','face interior')
@@ -1655,19 +1597,14 @@ contains
         end select
 
 
-        !
         ! Dot flux with normal vector
-        !
         norm_1 = self%normal(1)
         norm_2 = self%normal(2)
         norm_3 = self%normal(3)
         integrand = flux(:,1)*norm_1 + flux(:,2)*norm_2 + flux(:,3)*norm_3
 
 
-
-        !
         ! Integrate
-        !
         idomain_l = self%element_info%idomain_l
         ielement_l = self%element_info%ielement_l
         eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
@@ -1677,8 +1614,6 @@ contains
 
     end subroutine integrate_boundary_condition
     !****************************************************************************************
-
-
 
 
 
@@ -1714,9 +1649,7 @@ contains
         ifield     = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
 
-        !
         ! Compute ALE transformation
-        !
         select case(trim(flux_type))
             case('Advection')
                 q = self%get_primary_field_element(primary_field,'value')
@@ -1727,11 +1660,8 @@ contains
                 call chidg_signal_one(FATAL,"worker%integrate_volume_flux: Invalid value for incoming flux_type.",trim(flux_type))
         end select
 
-        !
         ! Integrate: int[ grad(psi) (dot) F_ale ]
-        !
         call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,flux(:,1),flux(:,2),flux(:,3))
-
 
     end subroutine integrate_volume_flux
     !***************************************************************************************
@@ -1805,13 +1735,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   12/4/2017
     !!
+    !!  TODO: differentiate!!!
+    !!
     !--------------------------------------------------------------------------------------
     function project_from_nodes(self,nodes) result(modes)
         class(chidg_worker_t),  intent(in)  :: self
         type(AD_D),             intent(in)  :: nodes(:)
 
         type(AD_D), allocatable :: temp(:), modes(:)
-!        real(rk),   allocatable :: interpolator(:,:)
 
         associate ( idomain_l  => self%element_info%idomain_l, &
                     ielement_l => self%element_info%ielement_l )
@@ -1821,22 +1752,14 @@ contains
             temp = nodes * element%basis_s%weights_element() * element%jinv
 
             ! Inner product: <psi, f>
-            !temp = matmul(transpose(element%basis_s%interpolator_element('Value')),nodes)
             temp = matmul(transpose(element%basis_s%interpolator_element('Value')),temp)
             modes = temp
-            
-            ! Inner project: <psi, f>/<psi, psi>
-!            modes = matmul(element%invmass,temp) 
-
-!            interpolator = element%basis_s%interpolator_element('Value')
-!            modes = matmul(inv(interpolator(1:size(interpolator,2),:)), nodes)
 
             end associate
         end associate
 
     end function project_from_nodes
     !**************************************************************************************
-
 
 
 
@@ -1852,23 +1775,24 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
     !!
+    !!  The norm_gq vector is of AD_D type. The norm might contain derivatives different than
+    !!  zero if we are differentiating wrt to dX and the element seed is the actuall current
+    !!  element
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/3/2018
+    !!
     !---------------------------------------------------------------------------------------
     function normal(self,direction) result(norm_gq)
         class(chidg_worker_t),  intent(in)  :: self
         integer(ik),            intent(in)  :: direction
 
-        real(rk), dimension(:), allocatable :: norm_gq
+        type(AD_D), dimension(:), allocatable :: norm_gq
 
-        norm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%norm(:,direction)
+        norm_gq = differentiate_normal(self%mesh,self%element_info,self%function_info,self%iface,direction)
 
     end function normal
     !***************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -1879,22 +1803,28 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
     !!
+    !!  The unorm_gq vector is of AD_D type. The unorm might contain derivatives different than
+    !!  zero if we are differentiating wrt to dX and the element seed is the actuall current
+    !!  element
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/3/2018
+    !!
     !---------------------------------------------------------------------------------------
-    function unit_normal(self,direction,iface_override) result(unorm_gq)
-        class(chidg_worker_t),  intent(in)              :: self
-        integer(ik),            intent(in)              :: direction
-        integer(ik),            intent(in), optional    :: iface_override
+    function unit_normal(self,direction) result(unorm_gq)
+        class(chidg_worker_t),              intent(in)  :: self
+        integer(ik),                        intent(in)  :: direction
 
-        real(rk), dimension(:), allocatable :: unorm_gq
+        type(AD_D), dimension(:), allocatable :: unorm_gq
 
-        if (present(iface_override)) then
-            unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,iface_override)%unorm(:,direction)
-        else
-            unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm(:,direction)
-        end if
+        unorm_gq = differentiate_unit_normal(self%mesh,self%element_info,self%function_info,self%iface,direction)
 
     end function unit_normal
     !***************************************************************************************
+
+
+
+
 
 
 
@@ -1903,17 +1833,22 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
     !!
+    !!  TODO: Transform to AD
+    !!
     !---------------------------------------------------------------------------------------
-    function unit_normal_ale(self,direction) result(unorm_gq)
+    function unit_normal_ale(self,direction) result(unorm_ale_gq)
         class(chidg_worker_t),  intent(in)  :: self
         integer(ik),            intent(in)  :: direction
 
-        real(rk), dimension(:), allocatable :: unorm_gq
+        type(AD_D), dimension(:), allocatable :: unorm_ale_gq
 
-        unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm_def(:,direction)
+        !call chidg_signal(FATAL,"chidg_worker%unit_normal_ale: not yet implemented.")
+        !unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm_def(:,direction)
+        unorm_ale_gq = differentiate_unit_normal_ale(self%mesh,self%element_info,self%function_info,self%iface,direction)
 
     end function unit_normal_ale
     !***************************************************************************************
+
 
 
 
@@ -1924,15 +1859,35 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
     !!
+    !!  The coordinates are returned in AD_D type with derivatives. Derivatives will be zero
+    !!  for dQ differentiation 
     !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/22/2016
     !!
     !---------------------------------------------------------------------------------------
     function coords(self) result(coords_)
         class(chidg_worker_t),  intent(in)  :: self
 
-        type(point_t), allocatable, dimension(:) :: coords_(:)
+        type(point_ad_t), allocatable :: coords_(:)
 
-        coords_ = point_t(self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def)
+        type(AD_D), allocatable :: gq1(:), gq2(:), gq3(:)
+        type(AD_D), allocatable :: gq(:,:)
+        integer(ik)             :: ierr
+
+        gq1 = self%coordinate('1',user_source='boundary') 
+        gq2 = self%coordinate('2',user_source='boundary') 
+        gq3 = self%coordinate('3',user_source='boundary') 
+
+        allocate(gq(size(gq1),3), stat=ierr)
+        if (ierr/=0) call AllocationError
+
+        gq(:,1) = gq1
+        gq(:,2) = gq2
+        gq(:,3) = gq3
+        
+           
+        coords_ = point_ad_t(gq)
 
     end function coords
     !***************************************************************************************
@@ -1941,6 +1896,37 @@ contains
 
 
 
+    !>  Interface for returning coordinates.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   02/16/2017
+    !!
+    !!  Changed result from rk to AD_D for grid-node sensitivities
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/31/2018
+    !!
+    !--------------------------------------------------------------------------------------
+    function coordinate(self,string,user_source) result(coords)
+        class(chidg_worker_t),  intent(in)              :: self
+        character(*),           intent(in)              :: string
+        character(*),           intent(in), optional    :: user_source
+
+        type(AD_D),     allocatable, dimension(:)   :: coords
+        character(:),   allocatable                 :: source 
+
+        ! Select source
+        if ( present(user_source) ) then
+            source = user_source
+        else
+            source = self%interpolation_source
+        end if
+        
+        ! Get and differentiate coordinates
+        coords = differentiate_coordinate(self%mesh,self%element_info,self%function_info,self%iface,string,source)
+
+    end function coordinate
+    !**************************************************************************************
 
 
 
@@ -1949,25 +1935,15 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
     !!
-    !!
-    !!
     !--------------------------------------------------------------------------------------
     function x(self,source) result(x_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: source
 
-        real(rk), dimension(:), allocatable :: x_gq
+        type(AD_D), dimension(:), allocatable :: x_gq
 
-        if (source == 'boundary') then
-            x_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,1)
-        else if (source == 'volume') then
-            x_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,1)
-        else
-            call chidg_signal(FATAL,"chidg_worker%x(source): Invalid value for 'source'. Options are 'boundary', 'volume'")
-        end if
-
-
-
+        x_gq = self%coordinate('1',source)
+        
     end function x
     !**************************************************************************************
 
@@ -1985,18 +1961,9 @@ contains
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: source
 
-        real(rk), dimension(:), allocatable :: y_gq
+        type(AD_D), dimension(:), allocatable :: y_gq
 
-
-        if (source == 'boundary') then
-            y_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,2)
-        else if (source == 'volume') then
-            y_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,2)
-        else
-            call chidg_signal(FATAL,"chidg_worker%y(source): Invalid value for 'source'. Options are 'boundary', 'volume'")
-        end if
-
-
+        y_gq = self%coordinate('2',source)
 
     end function y
     !**************************************************************************************
@@ -2015,16 +1982,9 @@ contains
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: source
 
-        real(rk), dimension(:), allocatable :: z_gq
+        type(AD_D), dimension(:), allocatable :: z_gq
 
-        if (source == 'boundary') then
-            z_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,3)
-        else if (source == 'volume') then
-            z_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,3)
-        else
-            call chidg_signal(FATAL,"chidg_worker%z(source): Invalid value for 'source'. Options are 'boundary', 'volume'")
-        end if
-
+        z_gq = self%coordinate('3',source)
 
     end function z
     !**************************************************************************************
@@ -2036,81 +1996,83 @@ contains
 
 
 
-    !>  Interface for returning coordinates.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   02/16/2017
-    !!
-    !!
-    !--------------------------------------------------------------------------------------
-    function coordinate(self,string,user_source) result(coords)
-        class(chidg_worker_t),  intent(in)              :: self
-        character(*),           intent(in)              :: string
-        character(*),           intent(in), optional    :: user_source
 
 
-        character(:),   allocatable                 :: user_msg, source
-        real(rk),       allocatable, dimension(:)   :: gq_1, gq_2, gq_3, coords
-
-
-        !
-        ! Select source
-        !
-        if ( present(user_source) ) then
-            source = user_source
-        else
-            source = self%interpolation_source
-        end if
-
-
-        !
-        ! Get coordinates
-        !
-        if ( (source == 'boundary') .or. (source == 'face interior') .or. (source == 'face exterior') ) then
-            gq_1 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,1)
-            gq_2 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,2)
-            gq_3 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,3)
-        else if ( (source == 'volume') .or. (source == 'element') ) then
-            gq_1 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,1)
-            gq_2 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,2)
-            gq_3 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,3)
-        else
-            user_msg = "chidg_worker%coordinate: Invalid source for returning coordinate. Options are 'boundary' and 'volume'."
-            call chidg_signal_one(FATAL,user_msg,source)
-        end if
-
-
-
-
-        !
-        ! Define coordinate to return.
-        !
-        select case (string)
-            case ('1')
-                coords = gq_1
-            case ('2')
-                coords = gq_2
-            case ('3')
-                coords = gq_3
-
-            
-!            case ('x')
+!    !>  Interface for returning coordinates.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   02/16/2017
+!    !!
+!    !!
+!    !--------------------------------------------------------------------------------------
+!    function coordinate(self,string,user_source) result(coords)
+!        class(chidg_worker_t),  intent(in)              :: self
+!        character(*),           intent(in)              :: string
+!        character(*),           intent(in), optional    :: user_source
 !
-!            case ('y')
 !
-!            case ('r')
+!        character(:),   allocatable                 :: user_msg, source
+!        real(rk),       allocatable, dimension(:)   :: gq_1, gq_2, gq_3, coords
 !
-!            case ('theta')
 !
-!            case ('z')
+!        !
+!        ! Select source
+!        !
+!        if ( present(user_source) ) then
+!            source = user_source
+!        else
+!            source = self%interpolation_source
+!        end if
 !
-            case default
-                call chidg_signal_one(FATAL,"chidg_worker%coordinate: Invalid string for selecting coordinate.",string)
-        end select
-
-
-    end function coordinate
-    !**************************************************************************************
+!
+!        !
+!        ! Get coordinates
+!        !
+!        if ( (source == 'boundary') .or. (source == 'face interior') .or. (source == 'face exterior') ) then
+!            gq_1 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,1)
+!            gq_2 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,2)
+!            gq_3 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,3)
+!        else if ( (source == 'volume') .or. (source == 'element') ) then
+!            gq_1 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,1)
+!            gq_2 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,2)
+!            gq_3 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,3)
+!        else
+!            user_msg = "chidg_worker%coordinate: Invalid source for returning coordinate. Options are 'boundary' and 'volume'."
+!            call chidg_signal_one(FATAL,user_msg,source)
+!        end if
+!
+!
+!
+!
+!        !
+!        ! Define coordinate to return.
+!        !
+!        select case (string)
+!            case ('1')
+!                coords = gq_1
+!            case ('2')
+!                coords = gq_2
+!            case ('3')
+!                coords = gq_3
+!
+!            
+!!            case ('x')
+!!
+!!            case ('y')
+!!
+!!            case ('r')
+!!
+!!            case ('theta')
+!!
+!!            case ('z')
+!!
+!            case default
+!                call chidg_signal_one(FATAL,"chidg_worker%coordinate: Invalid string for selecting coordinate.",string)
+!        end select
+!
+!
+!    end function coordinate
+!    !**************************************************************************************
 
 
 
@@ -2236,55 +2198,34 @@ contains
         integer(ik) :: ineighbor_domain_l, ineighbor_element_l, nterms_s, order
         logical     :: proc_local, chimera_face
 
-
         if (source == 'interior') then
-
             nterms_s = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%nterms_s
-
 
         else if (source == 'exterior') then
 
-            !
             ! If Chimera face, use interior element order. APPROXIMATION
-            !
             chimera_face = (self%face_type() == CHIMERA)
             if (chimera_face) then
-
                 nterms_s = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%nterms_s
 
-            !
             ! If conforming face, check for processor status of neighbor.
-            !
             else
-
                 proc_local = (self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_proc  ==  IRANK)
                 if (proc_local) then
-
                     ineighbor_domain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_domain_l
                     ineighbor_element_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_element_l
                     nterms_s = self%mesh%domain(ineighbor_domain_l)%elems(ineighbor_element_l)%nterms_s
-
                 else
-
                     nterms_s = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_nterms_s
-
                 end if
-
             end if
-
 
         else
             call chidg_signal(FATAL,"chidg_worker%solution_order(source): Invalid value for 'source'. Options are 'interior', 'exterior'")
         end if
 
-
-
-
-        !
         ! Compute polynomial order from number of terms in the expansion. 
-        !
         ! ASSUMES TENSOR PRODUCT BASIS
-        !
         order = nint( real(nterms_s,rk)**(THIRD) - ONE)
 
     end function solution_order
@@ -2293,7 +2234,7 @@ contains
 
 
 
-
+! NEEDS DIFFERENTIATED
 
     !>
     !!
@@ -2359,160 +2300,68 @@ contains
 
 
 
-
-
-
-
-
     !>  Return the inverse jacobian mapping for integration.
     !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   01/31/2017
     !!
+    !!  Return the inverse jacobian mapping with derivatives
     !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/31/2018
     !!
     !--------------------------------------------------------------------------------------
     function inverse_jacobian(self,source) result(jinv)
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: source
 
-        real(rk),   allocatable,    dimension(:)    :: jinv
+        type(AD_D), allocatable, dimension(:)   :: jinv
 
-        if (source == 'face') then
-            jinv = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%jinv
-        else if (source == 'element') then
-            jinv = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%jinv
-        else
-            call chidg_signal(FATAL,"chidg_worker%inverse_jacobian(source): Invalid value for 'source'. Options are 'face', 'element'")
-        end if
 
+        associate( mesh      => self%mesh,                   &
+                   elem_info => self%element_info,           &
+                   iface     => self%iface,                  &
+                   fcn_info  => self%function_info )
+                
+            ! Get value of jinv at interpolation nodes
+            jinv = differentiate_jinv(mesh,elem_info,iface,fcn_info,source)        
+        
+        end associate
 
     end function inverse_jacobian
     !**************************************************************************************
 
 
-    !>  Return the volume of the interior/exterior element.
-    !!
-    !!  NOTE: this returns the volume of the reference physical element, not the deformed
-    !!  ALE volume.
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   06/30/2019
+
+
+
+    !>  Return the br2 matrix
     !!
     !!
-    !--------------------------------------------------------------------------------------
-    function volume(self,source) result(volume_)
-        class(chidg_worker_t),  intent(in)  :: self
-        character(*),           intent(in)  :: source
-
-        integer(ik) :: idomain_l, ielement_l, pelem_ID
-        real(rk)    :: volume_
-
-        if (trim(source) == 'interior') then
-            volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
-
-        else if (trim(source) == 'exterior') then
-
-            ! Interior face, find neighbor and account for local or parallel storage
-            if (self%face_type() == INTERIOR) then
-                idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
-                ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
-                pelem_ID   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_pelem_ID
-                if (pelem_ID == NO_ID) then
-                    volume_ = self%mesh%domain(idomain_l)%elems(ielement_l)%vol
-                else
-                    volume_ = self%mesh%parallel_element(pelem_ID)%vol
-                end if
-
-            ! Boundary face, assume ficticious exterior element of equal volume
-            else if (self%face_type() == BOUNDARY) then
-                volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
-
-            ! Overset face, assume ficticious exterior element of equal volume
-            else if (self%face_type() == CHIMERA) then
-                volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
-
-            end if
-
-
-
-        else
-            call chidg_signal(FATAL,"chidg_worker%volume: invalid source parameter. Valid inputs are ['interior', 'exterior']")
-        end if
-
-    end function volume
-    !**************************************************************************************
-
-
-
-
-
-
-
-
-    !>  Return the centroid of the interior/exterior element.
-    !!
-    !!  NOTE: this returns the centroid of the reference physical element, not the deformed
-    !!  ALE centroid.
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   06/30/2019
+    !!  @author Matteo Ugolotti
+    !!  @date   1/31/2019
     !!
     !--------------------------------------------------------------------------------------
-    function centroid(self,source) result(centroid_)
+    function br2(self,source,exception) result(br2_matrix)
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: source
+        logical, optional,      intent(in)  :: exception
 
-        integer(ik) :: idomain_l, ielement_l, pelem_ID
-        real(rk)    :: centroid_(3), face_centroid(3), interior_centroid(3), delta(3)
-
-        if (trim(source) == 'interior') then
-             centroid_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
-
-        else if (trim(source) == 'exterior') then
-
-            ! Interior face, find neighbor and account for local or parallel storage
-            if (self%face_type() == INTERIOR) then
-                idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
-                ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
-                pelem_ID   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_pelem_ID
-                if (pelem_ID == NO_ID) then
-                    centroid_ = self%mesh%domain(idomain_l)%elems(ielement_l)%centroid
-                else
-                    centroid_ = self%mesh%parallel_element(pelem_ID)%centroid
-                end if
-
-            ! Boundary face, assume ficticious exterior element and assume centroid at equal 
-            ! distance to face opposite interior element
-            else if (self%face_type() == BOUNDARY) then
-                face_centroid = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%centroid
-                interior_centroid = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
-                delta = face_centroid - interior_centroid
-                centroid_ = interior_centroid + TWO*delta
-
-            ! Overset face, assume ficticious exterior element and assume centroid at equal 
-            ! distance to face opposite interior element
-            else if (self%face_type() == CHIMERA) then
-                face_centroid = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%centroid
-                interior_centroid = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
-                delta = face_centroid - interior_centroid
-                centroid_ = interior_centroid + TWO*delta
-
-            end if
+        type(AD_D), allocatable, dimension(:,:)   :: br2_matrix
 
 
+        associate( mesh      => self%mesh,                   &
+                   elem_info => self%element_info,           &
+                   iface     => self%iface,                  &
+                   fcn_info  => self%function_info )
+                
+            br2_matrix = differentiate_br2(mesh,elem_info,iface,fcn_info,source,exception) 
+        
+        end associate
 
-        else
-            call chidg_signal(FATAL,"chidg_worker%centroid: invalid source parameter. Valid inputs are ['interior', 'exterior']")
-        end if
-
-    end function centroid 
+    end function br2
     !**************************************************************************************
-
-
-
-
 
 
 
@@ -2523,17 +2372,182 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   01/31/2017
     !!
+    !!  Return the face area with derivatives
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/31/2018
     !!
     !--------------------------------------------------------------------------------------
     function face_area(self) result(area)
         class(chidg_worker_t),  intent(in)  :: self
 
-        real(rk)    :: area
+        type(AD_D)    :: area
+        
+        type(AD_D), allocatable, dimension(:)   :: norm_1, norm_2, norm_3, norm_mag
+        real(rk),   allocatable, dimension(:)   :: weights
 
-        area = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%total_area
+        norm_1 = self%normal(1)
+        norm_2 = self%normal(2)
+        norm_3 = self%normal(3)
+
+        norm_mag = sqrt(norm_1**TWO + norm_2**TWO + norm_3**TWO)
+        weights = self%quadrature_weights('face')
+        
+        area = sum(abs(norm_mag * weights)) 
 
     end function face_area
     !**************************************************************************************
+
+
+
+
+
+
+
+
+! NEEDS DIFFERENTIATED!!!
+!    !>  Return the volume of the interior/exterior element.
+!    !!
+!    !!  NOTE: this returns the volume of the reference physical element, not the deformed
+!    !!  ALE volume.
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   06/30/2019
+!    !!
+!    !!
+!    !--------------------------------------------------------------------------------------
+!    function volume(self,source) result(volume_)
+!        class(chidg_worker_t),  intent(in)  :: self
+!        character(*),           intent(in)  :: source
+!
+!        integer(ik) :: idomain_l, ielement_l, pelem_ID
+!        real(rk)    :: volume_
+!
+!        if (trim(source) == 'interior') then
+!            volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
+!
+!        else if (trim(source) == 'exterior') then
+!
+!            ! Interior face, find neighbor and account for local or parallel storage
+!            if (self%face_type() == INTERIOR) then
+!                idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
+!                ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
+!                pelem_ID   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_pelem_ID
+!                if (pelem_ID == NO_ID) then
+!                    volume_ = self%mesh%domain(idomain_l)%elems(ielement_l)%vol
+!                else
+!                    volume_ = self%mesh%parallel_element(pelem_ID)%vol
+!                end if
+!
+!            ! Boundary face, assume ficticious exterior element of equal volume
+!            else if (self%face_type() == BOUNDARY) then
+!                volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
+!
+!            ! Overset face, assume ficticious exterior element of equal volume
+!            else if (self%face_type() == CHIMERA) then
+!                volume_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%vol
+!
+!            end if
+!
+!
+!
+!        else
+!            call chidg_signal(FATAL,"chidg_worker%volume: invalid source parameter. Valid inputs are ['interior', 'exterior']")
+!        end if
+!
+!    end function volume
+!    !**************************************************************************************
+!
+!
+!
+!
+!
+!
+! NEEDS DIFFERENTIATED!!
+!
+!    !>  Return the centroid of the interior/exterior element.
+!    !!
+!    !!  NOTE: this returns the centroid of the reference physical element, not the deformed
+!    !!  ALE centroid.
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   06/30/2019
+!    !!
+!    !--------------------------------------------------------------------------------------
+!    function centroid(self,source) result(centroid_)
+!        class(chidg_worker_t),  intent(in)  :: self
+!        character(*),           intent(in)  :: source
+!
+!        integer(ik) :: idomain_l, ielement_l, pelem_ID
+!        real(rk)    :: centroid_(3), face_centroid(3), interior_centroid(3), delta(3)
+!
+!        if (trim(source) == 'interior') then
+!             centroid_ = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
+!
+!        else if (trim(source) == 'exterior') then
+!
+!            ! Interior face, find neighbor and account for local or parallel storage
+!            if (self%face_type() == INTERIOR) then
+!                idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
+!                ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
+!                pelem_ID   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_pelem_ID
+!                if (pelem_ID == NO_ID) then
+!                    centroid_ = self%mesh%domain(idomain_l)%elems(ielement_l)%centroid
+!                else
+!                    centroid_ = self%mesh%parallel_element(pelem_ID)%centroid
+!                end if
+!
+!            ! Boundary face, assume ficticious exterior element and assume centroid at equal 
+!            ! distance to face opposite interior element
+!            else if (self%face_type() == BOUNDARY) then
+!                face_centroid = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%centroid
+!                interior_centroid = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
+!                delta = face_centroid - interior_centroid
+!                centroid_ = interior_centroid + TWO*delta
+!
+!            ! Overset face, assume ficticious exterior element and assume centroid at equal 
+!            ! distance to face opposite interior element
+!            else if (self%face_type() == CHIMERA) then
+!                face_centroid = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%centroid
+!                interior_centroid = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%centroid
+!                delta = face_centroid - interior_centroid
+!                centroid_ = interior_centroid + TWO*delta
+!
+!            end if
+!
+!
+!
+!        else
+!            call chidg_signal(FATAL,"chidg_worker%centroid: invalid source parameter. Valid inputs are ['interior', 'exterior']")
+!        end if
+!
+!    end function centroid 
+!    !**************************************************************************************
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!    !>  Return the area of the current face.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   01/31/2017
+!    !!
+!    !!
+!    !--------------------------------------------------------------------------------------
+!    function face_area(self) result(area)
+!        class(chidg_worker_t),  intent(in)  :: self
+!
+!        real(rk)    :: area
+!
+!        area = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%total_area
+!
+!    end function face_area
+!    !**************************************************************************************
 
 
 
@@ -2775,75 +2789,6 @@ contains
 
 
 
-
-
-
-
-!    !>
-!    !!
-!    !!  @author Eric M. Wolf
-!    !!  @date 1/9/2017
-!    !!
-!    !----------------------------------------------------------------------------------------------------
-!    function get_grid_velocity_face(self,field,interp_source) result(grid_vel_comp_gq)
-!        class(chidg_worker_t),  intent(in)  :: self
-!        character(*),           intent(in)  :: field
-!        character(*),           intent(in)  :: interp_source
-!
-!
-!        real(rk),   dimension(:),   allocatable :: grid_vel_comp_gq
-!        real(rk),   dimension(:,:), allocatable :: grid_vel_gq
-!        integer(ik)                             :: idomain_l, ielement_l, iface
-!        logical                                 :: parallel_neighbor
-!
-!        ! Presumably, the node velocity
-!        if ((interp_source == 'face interior') .or. (interp_source == 'boundary')) then
-!            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%interp_coords_vel
-!
-!        else if (interp_source == 'face exterior') then
-!
-!            if (self%face_type() == INTERIOR) then
-!                parallel_neighbor = (self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_proc /= IRANK) 
-!                if (parallel_neighbor) then
-!                    grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%neighbor_interp_coords_vel
-!                else
-!                    idomain_l   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
-!                    ielement_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
-!                    iface       = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_face
-!                    grid_vel_gq = self%mesh%domain(idomain_l)%faces(ielement_l, iface)%interp_coords_vel
-!                end if
-!
-!
-!            else if (self%face_type() == CHIMERA) then
-!                ! For Chimera faces, we actually just want to use the interior face velocity
-!                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%interp_coords_vel
-!
-!            else if (self%face_type() == BOUNDARY) then
-!                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%interp_coords_vel
-!            end if
-!        else
-!                call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face: Invalid value for 'interp_source'.")
-!        end if
-!
-!        if (field == 'u_grid') then
-!            grid_vel_comp_gq = grid_vel_gq(:,1)
-!        else if (field == 'v_grid') then
-!            grid_vel_comp_gq = grid_vel_gq(:,2)
-!        else if (field == 'w_grid') then
-!            grid_vel_comp_gq = grid_vel_gq(:,3)
-!        else
-!            call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face: Invalid value for 'field'.")
-!        end if
-!
-!    end function get_grid_velocity_face
-!    !****************************************************************************************************
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Eric M. Wolf
@@ -2878,12 +2823,6 @@ contains
 
     end function get_grid_velocity_face
     !****************************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -2942,7 +2881,7 @@ contains
                     idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
                     ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
                     iface      = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_face
-                    ale_Dinv = self%mesh%domain(idomain_l)%faces(ielement_l, iface)%ale_Dinv
+                    ale_Dinv   = self%mesh%domain(idomain_l)%faces(ielement_l, iface)%ale_Dinv
                 end if
 
             else if (self%face_type() == CHIMERA) then
@@ -3461,12 +3400,13 @@ contains
         logical                                     :: chimera_face
 
 
-        chimera_face = (self%face_type() == CHIMERA)
-        if (chimera_face) then
-            source = 'face interior'
-        else
-            source = interp_source
-        end if
+!        chimera_face = (self%face_type() == CHIMERA)
+!        if (chimera_face) then
+!            source = 'face interior'
+!        else
+!            source = interp_source
+!        end if
+        source = interp_source
 
 
         grid_vel = self%get_grid_velocity_face(source)
@@ -3545,12 +3485,13 @@ contains
         character(:),   allocatable :: source
         logical                     :: chimera_face
 
-        chimera_face = (self%face_type() == CHIMERA)
-        if (chimera_face) then
-            source = 'face interior'
-        else
-            source = interp_source
-        end if
+!        chimera_face = (self%face_type() == CHIMERA)
+!        if (chimera_face) then
+!            source = 'face interior'
+!        else
+!            source = interp_source
+!        end if
+        source = interp_source
 
         ale_g    = self%get_det_jacobian_grid_face('value', source)
         ale_Dinv = self%get_inv_jacobian_grid_face(source)
@@ -3579,11 +3520,11 @@ contains
     function get_pressure_jump_indicator(self) result(val_gq)
         class(chidg_worker_t),      intent(inout)  :: self
 
-        type(AD_D), allocatable :: val_gq(:)
+        type(AD_D), allocatable :: val_gq(:), jinv(:)
         type(AD_D), allocatable :: nodal_ones(:), pressure_p(:), pressure_m(:), jump(:), avg(:)
         type(AD_D)              :: face_val
 
-        real(rk),   allocatable :: jinv(:), weight(:)
+        real(rk),   allocatable :: weight(:)
 
         integer(ik)     :: iface, order, iface_old
         real(rk)        :: phi_min, phi_max

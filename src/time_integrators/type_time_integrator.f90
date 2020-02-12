@@ -1,6 +1,8 @@
 module type_time_integrator
+#include <messenger.h>
     use messenger,              only: write_line
     use mod_kinds,              only: rk,ik
+    use type_preconditioner,    only: preconditioner_t
     use type_linear_solver,     only: linear_solver_t
     use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_dict,              only: dict_t
@@ -22,14 +24,6 @@ module type_time_integrator
     type, abstract, public  :: time_integrator_t
 
         character(:),   allocatable :: name_
-
-
-        ! OPTIONS
-!        real(rk)        :: cfl0     = 1.0_rk        !< Initial CFL number
-!        real(rk)        :: tol      = 1.e-13_rk     !< Convergence tolerance
-!        real(rk)        :: dt       = 0.001_rk      !< Time-step increment                 !
-!        integer(ik)     :: nsteps   = 100           !< Number of time steps to compute     ! included in time_manager_t
-!        integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps     !
 
         class(system_assembler_t),  allocatable :: system
 
@@ -53,6 +47,9 @@ module type_time_integrator
         procedure   :: set_name
         procedure   :: get_name
 
+        ! Adjoint infrastructure
+        procedure   :: compute_functionals
+        procedure   :: compute_adjoint
 
         ! Must define this procedure in any extended type
         procedure(step_interface),   deferred   :: step                 ! define the time integrator stepping procedure
@@ -141,6 +138,19 @@ module type_time_integrator
         end subroutine
     end interface
 
+!    ! Interface for modifying data for post processing
+!    abstract interface
+!        subroutine adj_interface(self,data,linear_solver,preconditioner)
+!            use type_chidg_data,        only: chidg_data_t
+!            use type_linear_solver,     only: linear_solver_t
+!            use type_preconditioner,    only: preconditioner_t
+!            import time_integrator_t
+!            class(time_integrator_t),               intent(inout)   :: self
+!            type(chidg_data_t),                     intent(inout)   :: data
+!            class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
+!            class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
+!        end subroutine
+!    end interface
 
 
 contains
@@ -230,11 +240,6 @@ contains
 
 
 
-
-
-
-
-
     !> Default blank initialization-specialization routine.
     !! This can be overwritten with specific instructions for a conrete
     !! time_integrator.
@@ -255,10 +260,42 @@ contains
 
 
 
+    !>  Computation of functionals
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   6/17/2017
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine compute_functionals(self,data)
+        class(time_integrator_t),               intent(inout)   :: self
+        type(chidg_data_t),                     intent(inout)   :: data
+        
+
+
+
+    end subroutine compute_functionals
+    !******************************************************************************************
 
 
 
 
+    !>  Compute adjoint.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   6/17/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine compute_adjoint(self,data,linear_solver,preconditioner)
+        class(time_integrator_t),               intent(inout)   :: self
+        type(chidg_data_t),                     intent(inout)   :: data
+        class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
+        class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
+        
+        call chidg_signal_one(FATAL,"compute_adjoint: adjoint method is not yet implemented for this time integrator ",data%time_manager%get_name())
+
+    end subroutine compute_adjoint
+    !******************************************************************************************
 
 
 

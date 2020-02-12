@@ -7,11 +7,10 @@ module mod_gridgen_blocks
     use mod_plot3d_utilities,   only: get_block_points_plot3d, &
                                       get_block_elements_plot3d, &
                                       get_block_boundary_faces_plot3d
-
     use type_bc_state_group,    only: bc_state_group_t
     use type_bc_state,          only: bc_state_t
     use type_bc_state_wrapper,  only: bc_state_wrapper_t
-
+    use type_functional_group,  only: functional_group_t
     use mod_hdf_utilities
     use hdf5
     implicit none
@@ -68,68 +67,63 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__singleblock(filename,equation_sets,group_names,bc_state_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx,x_max_in,x_min_in,y_max_in,y_min_in,z_max_in,z_min_in)
-        character(*),               intent(in)              :: filename
-        type(string_t),             intent(in), optional    :: equation_sets(:)
-        type(string_t),             intent(in), optional    :: group_names(:,:)
-        type(bc_state_group_t),     intent(in), optional    :: bc_state_groups(:)
-        integer(ik),                intent(in)              :: nelem_xi
-        integer(ik),                intent(in)              :: nelem_eta
-        integer(ik),                intent(in)              :: nelem_zeta
-        integer(ik),                intent(in), optional    :: clusterx
-        real(rk),                   intent(in), optional    :: x_max_in
-        real(rk),                   intent(in), optional    :: x_min_in
-        real(rk),                   intent(in), optional    :: y_max_in
-        real(rk),                   intent(in), optional    :: y_min_in
-        real(rk),                   intent(in), optional    :: z_max_in
-        real(rk),                   intent(in), optional    :: z_min_in
+    subroutine create_mesh_file__singleblock(filename,equation_sets,group_names,bc_state_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx,x_max_in,x_min_in,y_max_in,y_min_in,z_max_in,z_min_in,functional)
+        character(*),               intent(in)                  :: filename
+        type(string_t),             intent(in),     optional    :: equation_sets(:)
+        type(string_t),             intent(in),     optional    :: group_names(:,:)
+        type(bc_state_group_t),     intent(in),     optional    :: bc_state_groups(:)
+        integer(ik),                intent(in)                  :: nelem_xi
+        integer(ik),                intent(in)                  :: nelem_eta
+        integer(ik),                intent(in)                  :: nelem_zeta
+        integer(ik),                intent(in),     optional    :: clusterx
+        real(rk),                   intent(in),     optional    :: x_max_in
+        real(rk),                   intent(in),     optional    :: x_min_in
+        real(rk),                   intent(in),     optional    :: y_max_in
+        real(rk),                   intent(in),     optional    :: y_min_in
+        real(rk),                   intent(in),     optional    :: z_max_in
+        real(rk),                   intent(in),     optional    :: z_min_in
+        type(functional_group_t),   intent(inout),  optional    :: functional 
 
         character(:),                   allocatable :: user_msg
         class(bc_state_t),              allocatable :: bc_state
         character(len=10)                           :: patch_names(6)
         integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id
-        integer(ik)                                 :: mapping, bcface, ierr, igroup, istate
+        integer(ik)                                 :: mapping, bcface, ierr, igroup, istate, ifunc, nfuncs
         real(rk),                       allocatable :: nodes(:,:)
         integer(ik),                    allocatable :: elements(:,:) 
         integer(ik),                    allocatable :: faces(:,:)
         real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords
         character(len=8)                            :: bc_face_strings(6)
         character(:),   allocatable                 :: bc_face_string
+        character(:),   allocatable                 :: fcl_name, fcl_ref_geom, fcl_aux_geom
+        integer(ik)                                 :: npoints(3)
 
 
         ! Create/initialize file
         call initialize_file_hdf(filename)
         file_id = open_file_hdf(filename)
-        
-
 
         ! Generate coordinates for first block
         call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx,x_max_in,x_min_in,y_max_in,y_min_in,z_max_in,z_min_in)
 
-
-
-        !
         ! Get nodes/elements
-        !
         mapping = 1
         nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
         elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping,idomain=1)
 
+        ! Get number of points in each direction of the block
+        npoints(1) = size(xcoords,1)
+        npoints(2) = size(xcoords,2)
+        npoints(3) = size(xcoords,3)
 
-
-        !
         ! Add domains
-        !
         if ( present(equation_sets) ) then
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get())
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian',equation_sets(1)%get())
         else
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Scalar Advection')
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian','Scalar Advection')
         end if
 
-
-        !
         ! Set boundary conditions patch connectivities
-        !
         dom_id = open_domain_hdf(file_id,'01')
 
         bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
@@ -200,6 +194,204 @@ contains
 
         end do
 
+        ! Close domain
+        call close_domain_hdf(dom_id)
+
+        ! Set 'Contains Grid'
+        call set_contains_grid_hdf(file_id,'True')
+
+
+
+        !
+        ! Set functionals
+        !
+        if (present(functional)) then
+            
+            nfuncs = functional%n_functionals()
+
+            do ifunc = 1,nfuncs
+
+                fcl_name = functional%fcl_entities(ifunc)%func%get_name()
+                fcl_ref_geom = functional%fcl_entities(ifunc)%func%get_ref_geom()
+                fcl_aux_geom = functional%fcl_entities(ifunc)%func%get_aux_geom()
+                
+                ! Create functional group if does not exist
+                call create_functional_group_hdf(file_id)
+                ! Create functional if not already added
+                call create_functional_hdf(file_id,fcl_name)
+                ! Set reference geometry
+                call set_functional_reference_geom_hdf(file_id,fcl_name,fcl_ref_geom)
+                ! Set auxiliary geometry
+                call set_functional_auxiliary_geom_hdf(file_id,fcl_name,fcl_aux_geom)
+
+            end do
+
+        end if
+
+
+        ! Close file
+        call close_file_hdf(file_id)
+        call close_hdf()
+
+    end subroutine create_mesh_file__singleblock
+    !*************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Write a ChiDG-formatted grid file consisting of:
+    !!
+    !!      - one block domain, D1
+    !!      - Quadratic element mapping, M2
+    !!      - boundary conditions initialized to Scalar Extrapolate.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine create_mesh_file__singleblock_M2(filename,equation_sets,group_names,bc_state_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx,x_max_in,x_min_in,functional)
+        character(*),               intent(in)                  :: filename
+        type(string_t),             intent(in),     optional    :: equation_sets(:)
+        type(string_t),             intent(in),     optional    :: group_names(:,:)
+        type(bc_state_group_t),     intent(in),     optional    :: bc_state_groups(:)
+        integer(ik),                intent(in)                  :: nelem_xi
+        integer(ik),                intent(in)                  :: nelem_eta
+        integer(ik),                intent(in)                  :: nelem_zeta
+        integer(ik),                intent(in),     optional    :: clusterx
+        real(rk),                   intent(in),     optional    :: x_max_in
+        real(rk),                   intent(in),     optional    :: x_min_in
+        type(functional_group_t),   intent(inout),  optional    :: functional 
+
+        character(:),                   allocatable :: user_msg
+        class(bc_state_t),              allocatable :: bc_state
+        character(len=10)                           :: patch_names(6)
+        integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id
+        integer(ik)                                 :: mapping, bcface, ierr, igroup, istate, &
+                                                       ifunc, nfuncs
+        real(rk),                       allocatable :: nodes(:,:)
+        integer(ik),                    allocatable :: elements(:,:) 
+        integer(ik),                    allocatable :: faces(:,:)
+        real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords
+        character(len=8)                            :: bc_face_strings(6)
+        character(:),   allocatable                 :: bc_face_string
+        character(:),   allocatable                 :: fcl_name, fcl_ref_geom, fcl_aux_geom
+        integer(ik)                                 :: npoints(3)
+
+
+        ! Create/initialize file
+        call initialize_file_hdf(filename)
+        file_id = open_file_hdf(filename)
+        
+
+
+        ! Generate coordinates for first block
+        call meshgen_NxNxN_quadratic(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx,x_max_in,x_min_in)
+
+
+
+        !
+        ! Get nodes/elements
+        !
+        mapping = 2
+        nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
+        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping,idomain=1)
+
+        !
+        ! Get number of points in each direction of the block
+        !
+        npoints(1) = size(xcoords,1)
+        npoints(2) = size(xcoords,2)
+        npoints(3) = size(xcoords,3)
+
+
+        !
+        ! Add domains
+        !
+        if ( present(equation_sets) ) then
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian',equation_sets(1)%get())
+        else
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian','Scalar Advection')
+        end if
+
+
+        !
+        ! Set boundary conditions patch connectivities
+        !
+        dom_id = open_domain_hdf(file_id,'01')
+
+        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
+        do bcface = 1,size(patch_names)
+            
+            ! Get face node indices for boundary 'bcface'
+            faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping,bcface)
+
+
+            ! Set bc patch face indices
+            bc_face_string  = trim(bc_face_strings(bcface))
+            patch_id = create_patch_hdf(dom_id,bc_face_string)
+            call set_patch_hdf(patch_id,faces)
+            call close_patch_hdf(patch_id)
+
+        end do !bcface
+
+
+        !
+        ! Create bc_state, 'Scalar Extrapolate'
+        !
+        call create_bc('Scalar Extrapolate', bc_state)
+
+
+        !
+        ! Add bc_group's
+        !
+        if (present(bc_state_groups)) then
+            do igroup = 1,size(bc_state_groups)
+                call create_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
+
+                bcgroup_id = open_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
+
+                do istate = 1,bc_state_groups(igroup)%nbc_states()
+                    call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state(istate)%state)
+                end do
+                call close_bc_state_group_hdf(bcgroup_id)
+            end do
+        else
+            call create_bc_state_group_hdf(file_id,'Default')
+
+            bcgroup_id = open_bc_state_group_hdf(file_id,'Default')
+            call add_bc_state_hdf(bcgroup_id,bc_state)
+            call close_bc_state_group_hdf(bcgroup_id)
+
+        end if
+
+
+        !
+        ! Set boundary condition groups for each patch
+        !
+        patch_names = ['XI_MIN  ','XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
+        do bcface = 1,size(patch_names)
+
+            patch_id = open_patch_hdf(dom_id,trim(patch_names(bcface)))
+
+
+            ! Set bc_group
+            if (present(group_names)) then
+                call set_patch_group_hdf(patch_id,group_names(1,bcface)%get())
+            else
+                call set_patch_group_hdf(patch_id,'Default')
+            end if
+
+
+            call close_patch_hdf(patch_id)
+
+        end do
+
 
 
         ! Set 'Contains Grid'
@@ -207,10 +399,39 @@ contains
 
         ! Close file
         call close_domain_hdf(dom_id)
+
+
+        !
+        ! Set functionals
+        !
+        if (present(functional)) then
+            
+            nfuncs = functional%n_functionals()
+
+            do ifunc = 1,nfuncs
+
+                fcl_name = functional%fcl_entities(ifunc)%func%get_name()
+                fcl_ref_geom = functional%fcl_entities(ifunc)%func%get_ref_geom()
+                fcl_aux_geom = functional%fcl_entities(ifunc)%func%get_aux_geom()
+                
+                ! Create functional group if does not exist
+                call create_functional_group_hdf(file_id)
+                ! Create functional if not already added
+                call create_functional_hdf(file_id,fcl_name)
+                ! Set reference geometry
+                call set_functional_reference_geom_hdf(file_id,fcl_name,fcl_ref_geom)
+                ! Set auxiliary geometry
+                call set_functional_auxiliary_geom_hdf(file_id,fcl_name,fcl_aux_geom)
+
+            end do
+
+        end if
+
+
         call close_file_hdf(file_id)
         call close_hdf()
 
-    end subroutine create_mesh_file__singleblock
+    end subroutine create_mesh_file__singleblock_M2
     !*************************************************************************************
 
 
@@ -232,21 +453,22 @@ contains
     !-------------------------------------------------------------------------------------
     subroutine create_mesh_file__multiblock(filename,equation_sets,group_names,bc_state_groups,     &
                                                           nelem_xi,  nelem_eta,  nelem_zeta,  &
-                                                          xmax,ymax,zmax,clusterx)
-        character(*),           intent(in)              :: filename
-        type(string_t),         intent(in), optional    :: equation_sets(:)
-        type(string_t),         intent(in), optional    :: group_names(:,:)
-        type(bc_state_group_t), intent(in), optional    :: bc_state_groups(:)
-        integer(ik),            intent(in)              :: nelem_xi,  nelem_eta,  nelem_zeta
-        real(rk),               intent(in), optional    :: xmax, ymax, zmax
-        integer(ik),            intent(in), optional    :: clusterx
+                                                          xmax,ymax,zmax,clusterx,functional)
+        character(*),               intent(in)                  :: filename
+        type(string_t),             intent(in),     optional    :: equation_sets(:)
+        type(string_t),             intent(in),     optional    :: group_names(:,:)
+        type(bc_state_group_t),     intent(in),     optional    :: bc_state_groups(:)
+        integer(ik),                intent(in)                  :: nelem_xi,  nelem_eta,  nelem_zeta
+        real(rk),                   intent(in),     optional    :: xmax, ymax, zmax
+        integer(ik),                intent(in),     optional    :: clusterx
+        type(functional_group_t),   intent(inout),  optional    :: functional 
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(6)
         integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface1_id, bcface2_id, &
                                                            bcgroup_id, patch1_id, patch2_id
         integer(ik)                                     :: mapping, bcface, ierr, igroup, istate, &
-                                                           nxi_max, neta_max, nzeta_max,xi_mid
+                                                           nxi_max, neta_max, nzeta_max,xi_mid,ifunc,nfuncs
         real(rk),       allocatable                     :: nodes1(:,:), nodes2(:,:)
         integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
         integer(ik),    allocatable                     :: faces1(:,:), faces2(:,:)
@@ -257,26 +479,19 @@ contains
                                                            zmax_current
         character(len=8)                                :: bc_face_strings(6)
         character(:),   allocatable                     :: bc_face_string
+        character(:),   allocatable                     :: fcl_name, fcl_ref_geom, fcl_aux_geom
+        integer(ik)                                     :: npoints_1(3), npoints_2(3)
 
-        !
         ! Create/initialize file
-        !
         call initialize_file_hdf(filename)
         file_id = open_file_hdf(filename)
         
-
-        !
         ! Generate coordinates
-        !
         call meshgen_NxNxN_linear(nelem_xi, nelem_eta, nelem_zeta, xcoords1,ycoords1,zcoords1,clusterx)
 
-
-
-        !
         ! Split the block:
         !   - Take the second half of the block, store to block 2
         !   - Take the first half of the block, reset to block 1
-        !
         nxi_max   = size(xcoords1,1)
         neta_max  = size(xcoords1,2)
         nzeta_max = size(xcoords1,3)
@@ -350,14 +565,26 @@ contains
 
 
         !
+        ! Get number of points in each direction for each block
+        !
+        npoints_1(1) = size(xcoords1,1)
+        npoints_1(2) = size(xcoords1,2)
+        npoints_1(3) = size(xcoords1,3)
+        npoints_2(1) = size(xcoords2,1)
+        npoints_2(2) = size(xcoords2,2)
+        npoints_2(3) = size(xcoords2,3)
+
+
+
+        !
         ! Add domains
         !
         if ( present(equation_sets) ) then
-            call add_domain_hdf(file_id,'01',nodes1,elements1,'Cartesian',equation_sets(1)%get())
-            call add_domain_hdf(file_id,'02',nodes2,elements2,'Cartesian',equation_sets(2)%get())
+            call add_domain_hdf(file_id,'01',npoints_1,nodes1,elements1,'Cartesian',equation_sets(1)%get())
+            call add_domain_hdf(file_id,'02',npoints_2,nodes2,elements2,'Cartesian',equation_sets(2)%get())
         else
-            call add_domain_hdf(file_id,'01',nodes1,elements1,'Cartesian','Scalar Advection')
-            call add_domain_hdf(file_id,'02',nodes2,elements2,'Cartesian','Scalar Advection')
+            call add_domain_hdf(file_id,'01',npoints_1,nodes1,elements1,'Cartesian','Scalar Advection')
+            call add_domain_hdf(file_id,'02',npoints_2,nodes2,elements2,'Cartesian','Scalar Advection')
         end if
 
 
@@ -451,9 +678,35 @@ contains
         ! Set 'Contains Grid'
         call set_contains_grid_hdf(file_id,'True')
 
-        ! Close file
+        ! Close domain
         call close_domain_hdf(dom1_id)
         call close_domain_hdf(dom2_id)
+
+
+        ! Set functionals
+        if (present(functional)) then
+            
+            nfuncs = functional%n_functionals()
+
+            do ifunc = 1,nfuncs
+
+                fcl_name = functional%fcl_entities(ifunc)%func%get_name()
+                fcl_ref_geom = functional%fcl_entities(ifunc)%func%get_ref_geom()
+                fcl_aux_geom = functional%fcl_entities(ifunc)%func%get_aux_geom()
+                
+                ! Create functional group if does not exist
+                call create_functional_group_hdf(file_id)
+                ! Create functional if not already added
+                call create_functional_hdf(file_id,fcl_name)
+                ! Set reference geometry
+                call set_functional_reference_geom_hdf(file_id,fcl_name,fcl_ref_geom)
+                ! Set auxiliary geometry
+                call set_functional_auxiliary_geom_hdf(file_id,fcl_name,fcl_aux_geom)
+
+            end do
+        end if
+
+        ! Close file
         call close_file_hdf(file_id)
         call close_hdf()
 
@@ -541,6 +794,7 @@ contains
         real(rk)                                        :: xmax,ymax, xmax_current, ymax_current, zmax_current
         character(len=8)                                :: bc_face_strings(6)
         character(:),   allocatable                     :: bc_face_string
+        integer(ik)                                     :: npoints_1(3), npoints_2(3)
 
         ! Create/initialize file
         call initialize_file_hdf(filename)
@@ -615,14 +869,25 @@ contains
 
 
         !
+        ! Get number of points in each direction for each block
+        !
+        npoints_1(1) = size(xcoords1,1)
+        npoints_1(2) = size(xcoords1,2)
+        npoints_1(3) = size(xcoords1,3)
+        npoints_2(1) = size(xcoords2,1)
+        npoints_2(2) = size(xcoords2,2)
+        npoints_2(3) = size(xcoords2,3)
+
+
+        !
         ! Add domains
         !
         if ( present(equation_sets) ) then
-            call add_domain_hdf(file_id,'01',nodes1,elements1,'Cartesian',equation_sets(1)%get())
-            call add_domain_hdf(file_id,'02',nodes2,elements2,'Cartesian',equation_sets(2)%get())
+            call add_domain_hdf(file_id,'01',npoints_1,nodes1,elements1,'Cartesian',equation_sets(1)%get())
+            call add_domain_hdf(file_id,'02',npoints_2,nodes2,elements2,'Cartesian',equation_sets(2)%get())
         else
-            call add_domain_hdf(file_id,'01',nodes1,elements1,'Cartesian','Scalar Advection')
-            call add_domain_hdf(file_id,'02',nodes2,elements2,'Cartesian','Scalar Advection')
+            call add_domain_hdf(file_id,'01',npoints_1,nodes1,elements1,'Cartesian','Scalar Advection')
+            call add_domain_hdf(file_id,'02',npoints_2,nodes2,elements2,'Cartesian','Scalar Advection')
         end if
 
 
@@ -831,6 +1096,96 @@ contains
 
 
 
+
+    !>  Generate a set of points defining a:
+    !!      - nelem_xi by nelem_eta by nelem_zeta element, single-block, mesh
+    !!      - Quadratic element
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine meshgen_NxNxN_quadratic(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx,x_max_in,x_min_in)
+        integer(ik),    intent(in)                  :: nelem_xi
+        integer(ik),    intent(in)                  :: nelem_eta
+        integer(ik),    intent(in)                  :: nelem_zeta
+        real(rk),       intent(inout),  allocatable :: xcoords(:,:,:)
+        real(rk),       intent(inout),  allocatable :: ycoords(:,:,:)
+        real(rk),       intent(inout),  allocatable :: zcoords(:,:,:)
+        integer(ik),    intent(in),     optional    :: clusterx
+        real(rk),       intent(in),     optional    :: x_max_in
+        real(rk),       intent(in),     optional    :: x_min_in
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ierr, &
+                       npts_xi, npts_eta, npts_zeta
+        real(rk)    :: x,y,z, x_max, x_min
+
+
+        npts_xi   = nelem_xi*2   + 1
+        npts_eta  = nelem_eta*2  + 1
+        npts_zeta = nelem_zeta*2 + 1
+
+
+        allocate(xcoords(npts_xi,npts_eta,npts_zeta), ycoords(npts_xi,npts_eta,npts_zeta), &
+                 zcoords(npts_xi,npts_eta,npts_zeta), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        ! Set max/min X-Coordinate
+        if (present(x_max_in)) then
+            x_max = x_max_in
+        else
+            x_max = ONE
+        end if
+
+        if (present(x_min_in)) then
+            x_min = x_min_in
+        else
+            x_min = ZERO
+        end if
+
+
+        ! Generate points
+        do ipt_zeta = 1,npts_zeta
+            do ipt_eta = 1,npts_eta
+                do ipt_xi = 1,npts_xi
+
+                    if (present(clusterx)) then
+                        if ( clusterx == -1 ) then
+                            !x = ONE - tanh( (PI/TWO)*(ONE - real(ipt_xi-1,rk)/real(npts_xi-1,rk) ) )/tanh(PI/TWO)
+                            x = x_max - (x_max-x_min)*tanh( (PI/TWO)*(ONE - real(ipt_xi-1,rk)/real(npts_xi-1,rk) ) )/tanh(PI/TWO)
+                        else if ( clusterx == 1 ) then
+                            call chidg_signal(FATAL,"meshgen_NxNxN_quadratic: 'clusterx'=1 not yet implemented.")
+                        else
+                            call chidg_signal(FATAL,"meshgen_NxNxN_quadratic: Invalid value for 'clusterx'. -1,1.")
+                        end if
+                    else
+                        !x = real(ipt_xi-1,rk)/real(npts_xi-1,rk)
+                        x = x_min + (x_max - x_min)*real(ipt_xi-1,rk)/real(npts_xi-1,rk)
+                    end if
+
+                    if (ipt_xi == npts_xi) then
+                        !x = ONE
+                        x = x_max
+                    end if
+
+                    y = real(ipt_eta-1,rk)/real(npts_eta-1,rk)
+                    z = real(ipt_zeta-1,rk)/real(npts_zeta-1,rk)
+
+                    xcoords(ipt_xi,ipt_eta,ipt_zeta) = x
+                    ycoords(ipt_xi,ipt_eta,ipt_zeta) = y
+                    zcoords(ipt_xi,ipt_eta,ipt_zeta) = z
+
+                end do
+            end do
+        end do
+
+
+    end subroutine meshgen_NxNxN_quadratic
+    !**************************************************************************************
 
 
 

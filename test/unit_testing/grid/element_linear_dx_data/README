@@ -1,0 +1,1 @@
+These folders contain python scripts used to compute the analytical reference data for differentiated mesh quantities that are tested in the test_element_linearA_dx type tests.

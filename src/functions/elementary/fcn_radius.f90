@@ -2,6 +2,8 @@ module fcn_radius
     use mod_kinds,      only: rk,ik
     use type_function,  only: function_t
     use type_point,     only: point_t
+    use type_point_ad,  only: point_ad_t
+    use DNAD_D
     implicit none
     private
 
@@ -59,6 +61,10 @@ contains
 
 
 
+
+
+
+
     !>
     !!
     !!  @author Nathan A. Wukie
@@ -67,11 +73,11 @@ contains
     !!
     !---------------------------------------------------------------------------------
     impure elemental function compute(self,time,coord) result(val)
-        class(radius_f),    intent(inout)   :: self
-        real(rk),           intent(in)      :: time
-        type(point_t),      intent(in)      :: coord
+        class(radius_f),    intent(inout)  :: self
+        real(rk),           intent(in)     :: time
+        type(point_ad_t),   intent(in)     :: coord
 
-        real(rk) :: val
+        type(AD_D)                      :: val
 
         ! r = sqrt(x*x + y*y + z*z)
         val = sqrt(coord%c1_*coord%c1_ + coord%c2_*coord%c2_  + coord%c3_*coord%c3_)

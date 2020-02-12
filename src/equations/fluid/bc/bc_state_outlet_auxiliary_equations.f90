@@ -47,12 +47,9 @@ contains
     subroutine init(self)
         class(outlet_auxiliary_equations_t),   intent(inout) :: self
         
-        !
         ! Set name, family
-        !
         call self%set_name("Outlet - Auxiliary Equations")
         call self%set_family("Outlet")
-
 
     end subroutine init
     !********************************************************************************
@@ -84,14 +81,10 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            vel1_bc,   vel2_bc,    vel3_bc,  p_bc
+            vel1_bc,   vel2_bc,    vel3_bc,  p_bc, r
             
-        real(rk),   allocatable, dimension(:) :: r
 
-
-        !
         ! Get back pressure from function.
-        !
         density_bc = worker%get_field('Density_TEMP',    'value', 'face interior')
         vel1_bc    = worker%get_field('Velocity-1_TEMP', 'value', 'face interior')
         p_bc       = worker%get_field('Pressure_TEMP',   'value', 'face interior')

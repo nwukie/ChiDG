@@ -19,13 +19,10 @@ module bc_state_spalart_allmaras_wall
     type, public, extends(bc_state_t) :: spalart_allmaras_wall_t
 
     contains
-
         procedure   :: init
         procedure   :: compute_bc_state
-
     end type spalart_allmaras_wall_t
     !*******************************************************************************************
-
 
 
 
@@ -42,9 +39,7 @@ contains
     subroutine init(self)
         class(spalart_allmaras_wall_t),   intent(inout) :: self
         
-        !
         ! Set operator name
-        !
         call self%set_name('Spalart Allmaras Wall')
         call self%set_family('Wall')
 
@@ -53,16 +48,10 @@ contains
 
 
 
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie
     !!  @date   12/9/2016
-    !!
-    !!
     !!
     !----------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
@@ -71,43 +60,27 @@ contains
         class(properties_t),            intent(inout)   :: prop
         type(mpi_comm),                 intent(in)      :: bc_COMM
 
-
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   :: &
             density_nutilde_m, grad1_density_nutilde_m, grad2_density_nutilde_m, grad3_density_nutilde_m
 
-
-        !
         ! Interpolate interior solution to quadrature nodes
-        !
         density_nutilde_m       = worker%get_field('Density * NuTilde', 'value', 'face interior')
         grad1_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad1', 'face interior')
         grad2_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad2', 'face interior')
         grad3_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad3', 'face interior')
 
-
-
-        !
         ! Store boundary condition state - Dirichlet Zero
-        !
         density_nutilde_m = ZERO
         call worker%store_bc_state('Density * NuTilde', density_nutilde_m, 'value')
 
-
-        !
         ! Store boundary condition gradient - Extrapolate
-        !
         call worker%store_bc_state('Density * NuTilde', grad1_density_nutilde_m, 'grad1')
         call worker%store_bc_state('Density * NuTilde', grad2_density_nutilde_m, 'grad2')
         call worker%store_bc_state('Density * NuTilde', grad3_density_nutilde_m, 'grad3')
                                                 
     end subroutine compute_bc_state
     !*****************************************************************************************
-
-
-
-
-
 
 
 

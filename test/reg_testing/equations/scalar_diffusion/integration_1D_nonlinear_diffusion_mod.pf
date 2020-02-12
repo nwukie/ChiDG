@@ -173,8 +173,6 @@ module integration_1D_nonlinear_diffusion_mod
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: nonlinear_diffusion_1D
 
-        type(chidg_t)               :: chidg
-
         integer(ik)                 :: nelem_xi
         integer(ik)                 :: order
         character(:),   allocatable :: gridtype
@@ -187,6 +185,7 @@ module integration_1D_nonlinear_diffusion_mod
     end type nonlinear_diffusion_1D
     !*******************************************************************************
 
+    type(chidg_t)               :: chidg
 
 contains
 
@@ -476,8 +475,8 @@ contains
 
         ! Initialize ChiDG environment
         IO_DESTINATION   = 'file'
-        call this%chidg%start_up('mpi',ChiDG_COMM)
-        call this%chidg%start_up('core')
+        call chidg%start_up('mpi',ChiDG_COMM)
+        call chidg%start_up('core')
 
 
         !------------------------------------------------------------------------------
@@ -604,14 +603,14 @@ contains
 
 
         ! Set ChiDG components
-        call this%chidg%set('Solution Order',   integer_input=this%order)
-        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+        call chidg%set('Solution Order',   integer_input=this%order)
+        call chidg%set('Time Integrator',  algorithm=time_integrator)
+        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call chidg%set('Preconditioner',   algorithm=preconditioner)
 
         ! Read grid
-        call this%chidg%read_mesh(this%gridfile)
+        call chidg%read_mesh(this%gridfile)
 
 
         ! Initialize solution. 
@@ -621,7 +620,7 @@ contains
         ! from 0 to 3.5 on x=[0,1]
         call create_function(fcn,'polynomial')
         call fcn%set_option('f',3.5_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
 
 
 
@@ -639,8 +638,8 @@ contains
         class(nonlinear_diffusion_1D),  intent(inout)   :: this
 
         ! Close ChiDG
-        call this%chidg%shut_down('core')
-        call this%chidg%shut_down('mpi')
+        call chidg%shut_down('core')
+        call chidg%shut_down('mpi')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -676,10 +675,10 @@ contains
         backend_index = get_backend_index(this%backend)
 
         ! Run ChiDG simulation
-        call this%chidg%run(write_initial=.false., write_final=.false.)
+        call chidg%run(write_initial=.false., write_final=.false.)
 
         ! Compute error
-        computed_error = compute_1D_nonlinear_diffusion_error(this%chidg%data,ChiDG_COMM)
+        computed_error = compute_1D_nonlinear_diffusion_error(chidg%data,ChiDG_COMM)
 
         ! Store the computed error for the current case
         if (this%gridtype == 'single') then

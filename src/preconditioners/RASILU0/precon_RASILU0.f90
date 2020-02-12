@@ -149,7 +149,7 @@ contains
 
                 ! Initialize Lower-Diagonal matrix for processor-local data
                 self%LD = chidg_matrix(trim(backend))
-                call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
+                call self%LD%init(mesh=data%mesh, storage_config='LowerDiagonal',dof_type='primal')
 
                 ! Initialize the overlap data
                 call write_line('       RAS: initializing send pattern...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
@@ -237,11 +237,11 @@ contains
 
             ! Procedure for setting subdomain ILU solver fill levels
             call PCASMGetSubKSP(self%pc, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ksp, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCGetSubKSP.')
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCGetSubKSP.')
             call KSPGetPC(ksp(1), sub_pc, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling KSPGetPC.')
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling KSPGetPC.')
             call PCFactorSetLevels(sub_pc, self%ilu_levels, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%init: error calling PCFactorSetLevels.')
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%update: error calling PCFactorSetLevels.')
 
 
 
@@ -250,6 +250,8 @@ contains
 
         else
         !******  ChiDG native implementation    ******!
+
+            if (A%transposed) call chidg_signal(FATAL,"RASILU0%update: transpose not implemented for 'native' containers.")
 
             call write_line('   RAS: Computing ILU0 factorization', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
@@ -477,14 +479,19 @@ contains
         if (self%petsc_initialized) then
         !******  petsc  implementation  ******!
 
-            call PCApply(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
-            if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%apply: error calling PCApply.')
+            if (A%transposed) then
+                call PCApplyTranspose(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
+            else
+                call PCApply(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
+            end if
+            if (perr /= 0) call chidg_signal(FATAL,'precon_rasilu0%apply: error calling PCApply.')
             z%petsc_needs_assembled = .true.
 
 
         else
         !******  chidg implementation  ******!
 
+            if (A%transposed) call chidg_signal(FATAL,'precon_rasilu0%apply: not implemented for transposed matrices.')
 
             ! Exchange boundary vector data
             call z%comm_send()

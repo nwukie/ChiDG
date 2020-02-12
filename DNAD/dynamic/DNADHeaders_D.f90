@@ -246,6 +246,7 @@
         MODULE PROCEDURE MATMUL_DV_D     ! matrix multiplies of a dual matrix with a dual vector
         MODULE PROCEDURE MATMUL_VD_D     ! matrix multiplies of a dual vector with a dual matrix
         MODULE PROCEDURE MATMUL_MV_RD_D  ! matrix-vector :: real-dual
+        MODULE PROCEDURE MATMUL_MV_DR_D  ! matrix-vector :: dual-real
    END INTERFACE
    
 

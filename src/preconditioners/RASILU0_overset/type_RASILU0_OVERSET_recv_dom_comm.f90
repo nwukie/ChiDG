@@ -1,7 +1,7 @@
 module type_RASILU0_OVERSET_recv_dom_comm
 #include <messenger.h>
     use mod_kinds,                          only: rk, ik
-    use mod_constants,                      only: DIAG
+    use mod_constants,                      only: DIAG, dQ_DIFF
     use mod_chidg_mpi,                      only: ChiDG_COMM, IRANK
 
     use type_RASILU0_OVERSET_recv_dom_comm_elem,    only: RASILU0_OVERSET_recv_dom_comm_elem_t
@@ -142,7 +142,7 @@ contains
 
                 ! Initialize densematrix
                 if ( (nterms == 0) .or. (nfields == 0) ) call chidg_signal(FATAL, "nrows/ncols == 0")
-                call self%elem(ielem_recv)%blks(iblk)%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
+                call self%elem(ielem_recv)%blks(iblk)%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime,0,dQ_DIFF)
 
                
                 ! Detect diagonal block

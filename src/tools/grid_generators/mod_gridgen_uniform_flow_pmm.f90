@@ -69,6 +69,7 @@ contains
 
         character(len=8)                            :: bc_face_strings(6)
         character(:),   allocatable                 :: bc_face_string
+        integer(ik)                                 :: npoints(3)
 
         class(prescribed_mesh_motion_function_t), allocatable   :: pmmf
 
@@ -91,15 +92,21 @@ contains
         nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
         elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,order=4,idomain=1)
 
+        !
+        ! Get number of points in each direction
+        !
+        npoints(1) = size(xcoords,1)
+        npoints(2) = size(xcoords,2)
+        npoints(3) = size(xcoords,3)
 
 
         !
         ! Add domains
         !
         if (present(equation_sets)) then
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get())
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian',equation_sets(1)%get())
         else
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Euler ALE')
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian','Euler ALE')
         end if
 
 

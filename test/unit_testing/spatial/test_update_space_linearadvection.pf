@@ -30,7 +30,7 @@ subroutine test_update_space_linearadvection()
 
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, &
-                                  IO_DESTINATION
+                                  IO_DESTINATION, dQ_DIFF
 
     use type_chidg,         only: chidg_t
     use type_function,      only: function_t
@@ -59,12 +59,10 @@ subroutine test_update_space_linearadvection()
 
     ! Initialize ChiDG
     call chidgA%start_up('core')
-    !call chidgB%start_up('core')
+    call chidgB%start_up('core')
 
 
-    !
     ! Set accuracy of the solution expansion
-    !
     call chidgA%set('Solution Order', integer_input=2)
     call chidgB%set('Solution Order', integer_input=2)
 
@@ -75,19 +73,14 @@ subroutine test_update_space_linearadvection()
     call create_mesh_file("D2 E8 M1 : Abutting : Matching", chidgBfile)
 
 
-    !
     ! Read grid. These grids are the same geometry. The first has only one block. 
     ! The second has two blocks. Here, we wish to initialize both and then compare 
     ! the initialized data between the two. They should be the same.
-    !
-    call chidgA%read_mesh(chidgAfile)
-    call chidgB%read_mesh(chidgBfile)
+    call chidgA%read_mesh(chidgAfile,'primal storage')
+    call chidgB%read_mesh(chidgBfile,'primal storage')
 
 
-
-    !
     ! Initialize solution
-    !
     call create_function(gaussian,'gaussian')
 
     call chidgA%data%sdata%q%project(chidgA%data%mesh,gaussian,1)
@@ -95,10 +88,7 @@ subroutine test_update_space_linearadvection()
 
 
 
-
-    !
     ! Compare initial solution
-    !
     @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(1)%vec,  chidgB%data%sdata%q%dom(1)%vecs(1)%vec )
     @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(2)%vec,  chidgB%data%sdata%q%dom(1)%vecs(2)%vec )
     @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(3)%vec,  chidgB%data%sdata%q%dom(2)%vecs(1)%vec )
@@ -120,10 +110,7 @@ subroutine test_update_space_linearadvection()
 
 
 
-
-    !
     ! Compare interpolation matrices between standard interior and the chimera faces
-    !
     ChiID = chidgB%data%mesh%domain(2)%faces(1,XI_MIN)%ChiID
     @assertEqual(chidgA%data%mesh%domain(1)%faces(2,XI_MAX)%basis_s%interpolator_face('Value',XI_MAX), chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%value, tol)
 
@@ -137,22 +124,12 @@ subroutine test_update_space_linearadvection()
     @assertEqual(chidgA%data%mesh%domain(1)%faces(7,XI_MIN)%basis_s%interpolator_face('Value',XI_MIN), chidgB%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%value, tol)
 
 
-    !
     ! Call update_space
-    !
-    call write_line("ChiDG - A: Updating Space")
-    call update_space(chidgA%data,differentiate=.true.)
-
-    call write_line("ChiDG - B: Updating Space")
-    call update_space(chidgB%data,differentiate=.true.)
+    call update_space(chidgA%data,differentiate=dQ_DIFF)
+    call update_space(chidgB%data,differentiate=dQ_DIFF)
 
 
-
-
-
-    !
     ! Compare geometry
-    !
     @assertEqual(chidgA%data%mesh%domain(1)%elems(1)%coords%vec, chidgB%data%mesh%domain(1)%elems(1)%coords%vec )
     @assertEqual(chidgA%data%mesh%domain(1)%elems(2)%coords%vec, chidgB%data%mesh%domain(1)%elems(2)%coords%vec )
     @assertEqual(chidgA%data%mesh%domain(1)%elems(3)%coords%vec, chidgB%data%mesh%domain(2)%elems(1)%coords%vec )
@@ -164,13 +141,7 @@ subroutine test_update_space_linearadvection()
 
 
 
-
-
-
-
-    !
     ! Compare residual vector entries
-    !
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(1)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(1)%vec, tol )
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(2)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(2)%vec, tol )
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(3)%vec,  chidgB%data%sdata%rhs%dom(2)%vecs(1)%vec, tol )
@@ -189,19 +160,14 @@ subroutine test_update_space_linearadvection()
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(16)%vec, chidgB%data%sdata%rhs%dom(2)%vecs(8)%vec, tol )
 
 
-
-    !
     ! Compare jacobian matrix entries
-    !
     ! Comparing the Single-Domain 16 element block jacobians to the 
     ! Two-Domain, 8-element block Chimera jacobians
     itime  = 1
 
 
 
-    !
     ! Domain 1 Chimera Blocks
-    !
 
     ! ielement_g = 2
     idomA  = 1
@@ -228,6 +194,36 @@ subroutine test_update_space_linearadvection()
     imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,10,itime)
     imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,6,itime)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+
+
+    ! ielement_g = 3
+    idomA  = 1
+    ielemA = 3
+    idomB  = 2
+    ielemB = 1
+
+    ! XI_MIN
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(   ielemA,itime)%loc(1,2,itime)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%loc(1,2,itime)
+    @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%data_(imatB)%mat, tol)
+
+    ! XI_MAX
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,4,itime)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(2,2,itime)
+    @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+    ! ETA_MAX
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,7,itime)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(2,3,itime)
+    @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+    ! ZETA_MAX
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,11,itime)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(2,5,itime)
+    @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
 
 
 
@@ -330,51 +326,15 @@ subroutine test_update_space_linearadvection()
     
 
 
-!    !
-!    ! Domain 2 Chimera Blocks
-!    !
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chi_blks(1,1)%mat)
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(2)%lblks(1,XI_MAX)%mat)
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,ETA_MAX)%mat,  chidgB%data%sdata%lhs%dom(2)%lblks(1,ETA_MAX)%mat)
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,ZETA_MAX)%mat, chidgB%data%sdata%lhs%dom(2)%lblks(1,ZETA_MAX)%mat)
-!
-!
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chi_blks(3,1)%mat)
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(2)%lblks(3,XI_MAX)%mat)
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,ETA_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%lblks(3,ETA_MIN)%mat)
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,ZETA_MAX)%mat, chidgB%data%sdata%lhs%dom(2)%lblks(3,ZETA_MAX)%mat)
-!
-!
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chi_blks(5,1)%mat)
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(2)%lblks(5,XI_MAX)%mat)
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,ETA_MAX)%mat,  chidgB%data%sdata%lhs%dom(2)%lblks(5,ETA_MAX)%mat)
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,ZETA_MIN)%mat, chidgB%data%sdata%lhs%dom(2)%lblks(5,ZETA_MIN)%mat)
-!
-!
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chi_blks(7,1)%mat)
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(2)%lblks(7,XI_MAX)%mat)
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,ETA_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%lblks(7,ETA_MIN)%mat)
-!    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,ZETA_MIN)%mat, chidgB%data%sdata%lhs%dom(2)%lblks(7,ZETA_MIN)%mat)
 
 
 
-
-
-
-
-
-    !
     ! Compare matrix vector product
-    !
     chidgA%data%sdata%rhs = chidg_mv(chidgA%data%sdata%lhs , chidgA%data%sdata%q)
     chidgB%data%sdata%rhs = chidg_mv(chidgB%data%sdata%lhs , chidgB%data%sdata%q)
 
 
-
-
-    !
     ! Test
-    !
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(1)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(1)%vec,tol)
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(2)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(2)%vec,tol)
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(3)%vec,  chidgB%data%sdata%rhs%dom(2)%vecs(1)%vec,tol)
@@ -395,15 +355,9 @@ subroutine test_update_space_linearadvection()
 
 
 
-
-
-    !
     ! Close ChiDG interface
-    !
     call chidgA%shut_down('core')
     call chidgB%shut_down('core')
-
-
 
 
     call delete_file(chidgAfile)
@@ -412,3 +366,517 @@ subroutine test_update_space_linearadvection()
 
 
 end subroutine test_update_space_linearadvection
+
+
+
+
+
+
+!>
+!!
+!!  @author Matteo Ugolotti
+!!  @date   11/9/2018
+!!
+!!
+!**************************************************************************************
+@Test
+subroutine test_update_space_dx_linearadvection()
+#include <messenger.h>
+    use pfunit_mod
+
+    use mod_kinds,                      only: rk, ik
+    use mod_constants,                  only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, &
+                                              IO_DESTINATION, dX_DIFF
+
+    use type_chidg,                     only: chidg_t
+    use type_function,                  only: function_t
+
+    use mod_function,                   only: create_function
+    use mod_test_utilities,             only: create_mesh_file
+    use mod_test_functional_utilities,  only: meshfile_add_functional
+    use mod_file_utilities,             only: delete_file
+    use mod_spatial,                    only: update_space
+
+    use operator_chidg_mv,              only: chidg_mv
+    implicit none
+
+
+    type(chidg_t)                   :: chidgA, chidgB
+    character(:),       allocatable :: chidgAfile, chidgBfile
+    class(function_t),  allocatable :: gaussian
+    integer(ik)                     :: ChiID, idomA, idomB, ielemA, ielemB, itime, &
+                                       imatA, imatB, igq, ielem, idom
+    real(rk)                        :: tol, sensA, sensB
+
+
+
+    tol             = 1.e-15_rk
+    IO_DESTINATION  = 'file'
+
+    ! Initialize ChiDG
+    call chidgA%start_up('core')
+    call chidgB%start_up('core')
+
+
+    ! Set accuracy of the solution expansion
+    call chidgA%set('Solution Order', integer_input=2)
+    call chidgB%set('Solution Order', integer_input=2)
+
+
+    chidgAfile = 'D1E16M1.h5'
+    chidgBfile = 'D2E8M1.h5'
+    call create_mesh_file("D1 NxNxN", chidgAfile, nelem_xi=4, nelem_eta=2, nelem_zeta=2)
+    call create_mesh_file("D2 E8 M1 : Abutting : Matching", chidgBfile)
+
+    ! Add dummy functional for initialize AdjointX storage
+    call meshfile_add_functional(chidgAfile,"Test 1D integral","01"   )
+    call meshfile_add_functional(chidgBfile,"Test 1D integral","01,02")
+
+    ! Read grid. These grids are the same geometry. The first has only one block. 
+    ! The second has two blocks. Here, we wish to initialize both and then compare 
+    ! the initialized data between the two. They should be the same.
+    call chidgA%read_mesh(chidgAfile,'adjointx storage')
+    call chidgB%read_mesh(chidgBfile,'adjointx storage')
+
+
+    ! chidgA: intialize all differential operators for each element
+    do ielem = 1,chidgA%data%mesh%domain(1)%nelem
+        call chidgA%data%mesh%domain(1)%compute_interpolations_dx(ielem)
+    end do
+
+    
+    ! chidgB: intialize all differential operators for each element
+    do idom = 1,chidgB%data%mesh%ndomains()
+        do ielem = 1,chidgB%data%mesh%domain(idom)%nelem
+            call chidgB%data%mesh%domain(idom)%compute_interpolations_dx(ielem)
+        end do
+    end do
+
+
+    ! Initialize solution
+    call create_function(gaussian,'gaussian')
+
+    call chidgA%data%sdata%q%project(chidgA%data%mesh,gaussian,1)
+    call chidgB%data%sdata%q%project(chidgB%data%mesh,gaussian,1)
+
+
+    ! Since here we will test matmul(v,Rx), we copy the q solution to v
+    chidgA%data%sdata%adjoint%v = chidgA%data%sdata%q
+    chidgB%data%sdata%adjoint%v = chidgB%data%sdata%q
+
+
+    ! Compare initial solution
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(1)%vec,  chidgB%data%sdata%q%dom(1)%vecs(1)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(2)%vec,  chidgB%data%sdata%q%dom(1)%vecs(2)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(3)%vec,  chidgB%data%sdata%q%dom(2)%vecs(1)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(4)%vec,  chidgB%data%sdata%q%dom(2)%vecs(2)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(5)%vec,  chidgB%data%sdata%q%dom(1)%vecs(3)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(6)%vec,  chidgB%data%sdata%q%dom(1)%vecs(4)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(7)%vec,  chidgB%data%sdata%q%dom(2)%vecs(3)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(8)%vec,  chidgB%data%sdata%q%dom(2)%vecs(4)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(9)%vec,  chidgB%data%sdata%q%dom(1)%vecs(5)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(10)%vec, chidgB%data%sdata%q%dom(1)%vecs(6)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(11)%vec, chidgB%data%sdata%q%dom(2)%vecs(5)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(12)%vec, chidgB%data%sdata%q%dom(2)%vecs(6)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(13)%vec, chidgB%data%sdata%q%dom(1)%vecs(7)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(14)%vec, chidgB%data%sdata%q%dom(1)%vecs(8)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(15)%vec, chidgB%data%sdata%q%dom(2)%vecs(7)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%vecs(16)%vec, chidgB%data%sdata%q%dom(2)%vecs(8)%vec )
+
+
+
+    ! Compare interpolation matrices between standard interior and the chimera faces
+    ChiID = chidgB%data%mesh%domain(2)%faces(1,XI_MIN)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(2,XI_MAX)%basis_s%interpolator_face('Value',XI_MAX), chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%value, tol)
+
+    ChiID = chidgB%data%mesh%domain(2)%faces(3,XI_MIN)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(6,XI_MAX)%basis_s%interpolator_face('Value',XI_MAX), chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%value, tol)
+
+    ChiID = chidgB%data%mesh%domain(1)%faces(2,XI_MAX)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(3,XI_MIN)%basis_s%interpolator_face('Value',XI_MIN), chidgB%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%value, tol)
+
+    ChiID = chidgB%data%mesh%domain(1)%faces(4,XI_MAX)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(7,XI_MIN)%basis_s%interpolator_face('Value',XI_MIN), chidgB%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%value, tol)
+
+
+
+    ! Compare dgrad1_dx interpolation matrices between standard interior and the chimera faces
+    ChiID = chidgB%data%mesh%domain(2)%faces(1,XI_MIN)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(2,XI_MAX)%dgrad1_dx, chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%dgrad1_dx, tol)
+
+    ChiID = chidgB%data%mesh%domain(2)%faces(3,XI_MIN)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(6,XI_MAX)%dgrad1_dx, chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%dgrad1_dx, tol)
+
+    ChiID = chidgB%data%mesh%domain(1)%faces(2,XI_MAX)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(3,XI_MIN)%dgrad1_dx, chidgB%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%dgrad1_dx, tol)
+
+    ChiID = chidgB%data%mesh%domain(1)%faces(4,XI_MAX)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(7,XI_MIN)%dgrad1_dx, chidgB%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%dgrad1_dx, tol)
+
+
+
+    ! Compare dgrad2_dx interpolation matrices between standard interior and the chimera faces
+    ChiID = chidgB%data%mesh%domain(2)%faces(1,XI_MIN)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(2,XI_MAX)%dgrad2_dx, chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%dgrad2_dx, tol)
+
+    ChiID = chidgB%data%mesh%domain(2)%faces(3,XI_MIN)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(6,XI_MAX)%dgrad2_dx, chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%dgrad2_dx, tol)
+
+    ChiID = chidgB%data%mesh%domain(1)%faces(2,XI_MAX)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(3,XI_MIN)%dgrad2_dx, chidgB%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%dgrad2_dx, tol)
+
+    ChiID = chidgB%data%mesh%domain(1)%faces(4,XI_MAX)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(7,XI_MIN)%dgrad2_dx, chidgB%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%dgrad2_dx, tol)
+
+
+
+    ! Compare dgrad3_dx interpolation matrices between standard interior and the chimera faces
+    ChiID = chidgB%data%mesh%domain(2)%faces(1,XI_MIN)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(2,XI_MAX)%dgrad3_dx, chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%dgrad3_dx, tol)
+
+    ChiID = chidgB%data%mesh%domain(2)%faces(3,XI_MIN)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(6,XI_MAX)%dgrad3_dx, chidgB%data%mesh%domain(2)%chimera%recv(ChiID)%donor(1)%dgrad3_dx, tol)
+
+    ChiID = chidgB%data%mesh%domain(1)%faces(2,XI_MAX)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(3,XI_MIN)%dgrad3_dx, chidgB%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%dgrad3_dx, tol)
+
+    ChiID = chidgB%data%mesh%domain(1)%faces(4,XI_MAX)%ChiID
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(7,XI_MIN)%dgrad3_dx, chidgB%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%dgrad3_dx, tol)
+
+
+
+    ! Call update_space
+    call write_line("ChiDG - A: Updating Space")
+    call update_space(chidgA%data,differentiate=dX_DIFF)
+
+    call write_line("ChiDG - B: Updating Space")
+    call update_space(chidgB%data,differentiate=dX_DIFF)
+
+
+
+
+    ! Compare geometry
+    @assertEqual(chidgA%data%mesh%domain(1)%elems(1)%coords%vec, chidgB%data%mesh%domain(1)%elems(1)%coords%vec )
+    @assertEqual(chidgA%data%mesh%domain(1)%elems(2)%coords%vec, chidgB%data%mesh%domain(1)%elems(2)%coords%vec )
+    @assertEqual(chidgA%data%mesh%domain(1)%elems(3)%coords%vec, chidgB%data%mesh%domain(2)%elems(1)%coords%vec )
+    @assertEqual(chidgA%data%mesh%domain(1)%elems(4)%coords%vec, chidgB%data%mesh%domain(2)%elems(2)%coords%vec )
+    @assertEqual(chidgA%data%mesh%domain(1)%elems(5)%coords%vec, chidgB%data%mesh%domain(1)%elems(3)%coords%vec )
+    @assertEqual(chidgA%data%mesh%domain(1)%elems(6)%coords%vec, chidgB%data%mesh%domain(1)%elems(4)%coords%vec )
+    @assertEqual(chidgA%data%mesh%domain(1)%elems(7)%coords%vec, chidgB%data%mesh%domain(2)%elems(3)%coords%vec )
+    @assertEqual(chidgA%data%mesh%domain(1)%elems(8)%coords%vec, chidgB%data%mesh%domain(2)%elems(4)%coords%vec )
+
+
+
+
+    ! Compare jacobian matrix entries
+    ! Comparing the Single-Domain 16 element block jacobians to the 
+    ! Two-Domain, 8-element block Chimera jacobians
+    itime  = 1
+
+
+
+    ! Domain 1 Chimera Blocks
+
+    ! ielement_g = 2
+    idomA  = 1
+    ielemA = 2
+    idomB  = 1
+    ielemB = 2
+
+    ! XI_MIN
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,1,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(1,1,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+    ! XI_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,3,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%chi_blks(ielemB,itime)%loc(2,1,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%chi_blks(ielemB,itime)%data_(imatB)%mat, tol)
+
+    ! ETA_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,6,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(1,4,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+    ! ZETA_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,10,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(1,6,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+
+    ! ielement_g = 6
+    idomA  = 1
+    ielemA = 6
+    idomB  = 1
+    ielemB = 4
+
+
+    ! XI_MIN
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,5,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(1,3,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+    ! XI_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,7,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%chi_blks(ielemB,itime)%loc(2,3,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%chi_blks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+    ! ETA_MIN
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,2,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(1,2,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+    ! ZETA_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,14,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(1,8,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+
+
+    ! ielement_g = 10
+    idomA  = 1
+    ielemA = 10
+    idomB  = 1
+    ielemB = 6
+
+
+    ! XI_MIN
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,9,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(1,5,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+    ! XI_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,11,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%chi_blks(ielemB,itime)%loc(2,5,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%chi_blks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+    ! ETA_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,14,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(1,8,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+    ! ZETA_MIN
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,2,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(1,2,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+    
+
+
+    ! ielement_g = 14
+    idomA  = 1
+    ielemA = 14
+    idomB  = 1
+    ielemB = 8
+
+
+    ! XI_MIN
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,13,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(1,7,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+    ! XI_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,15,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%chi_blks(ielemB,itime)%loc(2,7,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%chi_blks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+    ! ETA_MIN
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,10,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(1,6,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+    ! ZETA_MIN
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,6,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(1,4,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+    
+
+
+    ! ielement_g = 4
+    idomA  = 1
+    ielemA = 4
+    idomB  = 2
+    ielemB = 2
+
+
+    ! XI_MIN
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,3,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(2,1,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+    ! ETA_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,8,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(2,4,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+    ! ZETA_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,12,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(2,6,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+    
+
+
+    !
+    ! ielement_g = 3
+    !
+    idomA  = 1
+    ielemA = 3
+    idomB  = 2
+    ielemB = 1
+
+
+    ! XI_MIN
+    ! This test would be legit and valid if the boundary flux on element idomA  = 1 / ielemA = 3 was computed from the element itself and
+    ! not as a flipped flux from element idomA  = 1 / ielemA = 2. However, the derivatives are correct and, eventually the sensitivities are correct as well.
+    !imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,2)
+    !imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%chi_blks(ielemB,itime)%loc(1,2)
+    !@assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%chi_blks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+
+    ! XI_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,4,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(2,2,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+    ! ETA_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,7,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(2,3,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+    ! ZETA_MAX
+    imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,11,itime)
+    imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(2,5,itime)
+    @assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+
+
+    ! DIAG
+    ! This test would be legit and valid if the boundary flux on element idomA  = 1 / ielemA = 3 was computed from the element itself and
+    ! not as a flipped flux from element idomA  = 1 / ielemA = 2. However, the derivatives are correct and, eventually the sensitivities are correct as well.
+    !imatA = chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%loc(1,3)
+    !imatB = chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%loc(2,1)
+    !@assertEqual(chidgA%data%sdata%adjointx%Rx%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%adjointx%Rx%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat, tol)
+    
+
+
+
+
+    !
+    ! The matrix vector product of case A and B will be different becuase of how the boundary fluxes are treated. 
+    ! However, the final sensitivities should match. Therefore, test the sensitivities at each node at y=0 and z=0.
+    !
+    chidgA%data%sdata%adjointx%vRx(1) = chidg_mv(chidgA%data%sdata%adjointx%Rx , chidgA%data%sdata%adjoint%v(1,1), chidgA%data%sdata%adjointx%vRx(1))
+    chidgB%data%sdata%adjointx%vRx(1) = chidg_mv(chidgB%data%sdata%adjointx%Rx , chidgB%data%sdata%adjoint%v(1,1), chidgB%data%sdata%adjointx%vRx(1))
+
+
+    !   Nodes' ID
+    !
+    !   o-----o-----o-----o-----o
+    !   |     |     |     |     |
+    !   o-----o-----o-----o-----o
+    !   |     |     |     |     |
+    !   o-----o-----o-----o-----o
+    !   1     2     3     4     5
+    !   
+
+
+    !
+    ! Test Node 1: x, y and z sensitivities
+    !
+    @assertEqual(chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(1)%vec(1) ,  chidgB%data%sdata%adjointx%vRx(1)%dom(1)%vecs(1)%vec(1), tol)
+    @assertEqual(chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(1)%vec(9) ,  chidgB%data%sdata%adjointx%vRx(1)%dom(1)%vecs(1)%vec(9), tol)
+    @assertEqual(chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(1)%vec(17),  chidgB%data%sdata%adjointx%vRx(1)%dom(1)%vecs(1)%vec(17),tol)
+    
+    !
+    ! Test Node 2: x, y and z sensitivities
+    !
+    sensA = chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(1)%vec(2) + chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(2)%vec(1) 
+    sensB = chidgB%data%sdata%adjointx%vRx(1)%dom(1)%vecs(1)%vec(2) + chidgB%data%sdata%adjointx%vRx(1)%dom(1)%vecs(2)%vec(1)
+    @assertEqual(sensA,sensB,tol)
+    sensA = chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(1)%vec(10) + chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(2)%vec(9) 
+    sensB = chidgB%data%sdata%adjointx%vRx(1)%dom(1)%vecs(1)%vec(10) + chidgB%data%sdata%adjointx%vRx(1)%dom(1)%vecs(2)%vec(9)
+    @assertEqual(sensA,sensB,tol)
+    sensA = chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(1)%vec(18) + chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(2)%vec(17) 
+    sensB = chidgB%data%sdata%adjointx%vRx(1)%dom(1)%vecs(1)%vec(18) + chidgB%data%sdata%adjointx%vRx(1)%dom(1)%vecs(2)%vec(17)
+    @assertEqual(sensA,sensB,tol)
+    
+    !
+    ! Test Node 3: x, y and z sensitivities
+    !
+    sensA = chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(2)%vec(2) + chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(3)%vec(1) 
+    sensB = chidgB%data%sdata%adjointx%vRx(1)%dom(1)%vecs(2)%vec(2) + chidgB%data%sdata%adjointx%vRx(1)%dom(2)%vecs(1)%vec(1)
+    @assertEqual(sensA,sensB,tol)
+    sensA = chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(2)%vec(10) + chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(3)%vec(9) 
+    sensB = chidgB%data%sdata%adjointx%vRx(1)%dom(1)%vecs(2)%vec(10) + chidgB%data%sdata%adjointx%vRx(1)%dom(2)%vecs(1)%vec(9)
+    @assertEqual(sensA,sensB,tol)
+    sensA = chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(2)%vec(18) + chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(3)%vec(17) 
+    sensB = chidgB%data%sdata%adjointx%vRx(1)%dom(1)%vecs(2)%vec(18) + chidgB%data%sdata%adjointx%vRx(1)%dom(2)%vecs(1)%vec(17)
+    @assertEqual(sensA,sensB,tol)
+    
+    !
+    ! Test Node 4: x, y and z sensitivities
+    !
+    sensA = chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(3)%vec(2) + chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(4)%vec(1) 
+    sensB = chidgB%data%sdata%adjointx%vRx(1)%dom(2)%vecs(1)%vec(2) + chidgB%data%sdata%adjointx%vRx(1)%dom(2)%vecs(2)%vec(1)
+    @assertEqual(sensA,sensB,tol)
+    sensA = chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(3)%vec(10) + chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(4)%vec(9) 
+    sensB = chidgB%data%sdata%adjointx%vRx(1)%dom(2)%vecs(1)%vec(10) + chidgB%data%sdata%adjointx%vRx(1)%dom(2)%vecs(2)%vec(9)
+    @assertEqual(sensA,sensB,tol)
+    sensA = chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(3)%vec(18) + chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(4)%vec(17) 
+    sensB = chidgB%data%sdata%adjointx%vRx(1)%dom(2)%vecs(1)%vec(18) + chidgB%data%sdata%adjointx%vRx(1)%dom(2)%vecs(2)%vec(17)
+    @assertEqual(sensA,sensB,tol)
+    
+    
+    !
+    ! Test Node 5: x, y and z sensitivities
+    !
+    @assertEqual(chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(4)%vec(2) ,  chidgB%data%sdata%adjointx%vRx(1)%dom(2)%vecs(2)%vec(2), tol)
+    @assertEqual(chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(4)%vec(10),  chidgB%data%sdata%adjointx%vRx(1)%dom(2)%vecs(2)%vec(10),tol)
+    @assertEqual(chidgA%data%sdata%adjointx%vRx(1)%dom(1)%vecs(4)%vec(18),  chidgB%data%sdata%adjointx%vRx(1)%dom(2)%vecs(2)%vec(18),tol)
+    
+    
+    !
+    ! Close ChiDG interface
+    !
+    call chidgA%shut_down('core')
+    call chidgB%shut_down('core')
+
+
+
+    call delete_file(chidgAfile)
+    call delete_file(chidgBfile)
+
+
+
+end subroutine test_update_space_dx_linearadvection
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

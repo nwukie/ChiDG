@@ -96,14 +96,11 @@ contains
             grad1_w,       grad2_w,       grad3_w,          &
             du_ddensity,   dv_ddensity,   dw_ddensity,      &
             du_dmom1,      dv_dmom2,      dw_dmom3,         &
-            invdensity
-
-        real(rk),   allocatable,    dimension(:) :: r
+            invdensity, r
 
 
-        !
+
         ! Interpolate solution to quadrature nodes
-        !
         density = worker%get_field('Density',    'value')
         mom1    = worker%get_field('Momentum-1', 'value')
         mom2    = worker%get_field('Momentum-2', 'value')

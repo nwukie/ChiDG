@@ -9,7 +9,7 @@
 module mod_force
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, TWO, NO_ID
+    use mod_constants,          only: ZERO, TWO, NO_ID, NO_DIFF
     use mod_chidg_mpi,          only: ChiDG_COMM
     use type_chidg_data,        only: chidg_data_t
     use type_element_info,      only: element_info_t
@@ -17,6 +17,7 @@ module mod_force
     use type_chidg_cache,       only: chidg_cache_t
     use type_cache_handler,     only: cache_handler_t
     use mpi_f08,                only: MPI_AllReduce, MPI_REAL8, MPI_SUM
+    use ieee_arithmetic,        only: ieee_is_nan
     use DNAD_D
     implicit none
 
@@ -46,15 +47,14 @@ contains
     !!  @result[out]    force           Integrated force vector: force = [f1, f2, f3]
     !!
     !-----------------------------------------------------------------------------------
-    subroutine report_forces(data,patch_group,force,work)
+    subroutine report_forces(data,patch_group,force,power)
         type(chidg_data_t), intent(inout)               :: data
         character(*),       intent(in)                  :: patch_group
         real(rk),           intent(inout),  optional    :: force(3)
-        real(rk),           intent(inout),  optional    :: work
+        real(rk),           intent(inout),  optional    :: power
     
         integer(ik)                 :: group_ID, patch_ID, face_ID, &
-                                       idomain_g,  idomain_l,        &
-                                       ielement_g, ielement_l, iface, ierr
+                                       idomain_l, ielement_l, iface, ierr
 
         type(chidg_worker_t)        :: worker
         type(chidg_cache_t)         :: cache
@@ -63,12 +63,10 @@ contains
 
 
         real(rk)                                ::  &
-            force_local(3), work_local
+            force_local(3), power_local
 
 
         real(rk),   allocatable, dimension(:)   ::  &
-            norm_1,      norm_2,      norm_3,       &
-            norm_1_phys, norm_2_phys, norm_3_phys,  &
             weights, det_jacobian_grid
 
         real(rk),   allocatable                 ::  &
@@ -80,7 +78,9 @@ contains
             tau_21,     tau_22,     tau_23,         &
             tau_31,     tau_32,     tau_33,         &
             stress_x,   stress_y,   stress_z,       &
-            pressure
+            pressure,                               &
+            norm_1,      norm_2,      norm_3,       &
+            norm_1_phys, norm_2_phys, norm_3_phys
 
 
         call write_line('Computing Force...', io_proc=GLOBAL_MASTER)
@@ -99,23 +99,19 @@ contains
 
         ! Loop over domains/elements/faces for "patch_group" 
         force_local = ZERO
-        work_local  = ZERO
+        power_local = ZERO
 
         if (group_ID /= NO_ID) then
             do patch_ID = 1,data%mesh%bc_patch_group(group_ID)%npatches()
                 do face_ID = 1,data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
-                    idomain_g  = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
                     idomain_l  = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
-                    ielement_g = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
                     ielement_l = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
                     iface      = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
 
 
                     ! Initialize element location object
                     elem_info = data%mesh%get_element_info(idomain_l,ielement_l)
-
-
                     call worker%set_element(elem_info)
                     worker%itime = 1
 
@@ -123,7 +119,7 @@ contains
                     ! Update the element cache and all models so they are available
                     call cache_handler%update(worker,data%eqnset,data%bc_state_group, components    = 'all',   &
                                                                                       face          = NO_ID,   &
-                                                                                      differentiate = .false., &
+                                                                                      differentiate = NO_DIFF, &
                                                                                       lift          = .true.)
 
 
@@ -197,6 +193,7 @@ contains
                     !stress_y = norm_1_phys*tau_12 + norm_2_phys*tau_22 + norm_3_phys*tau_32
                     !stress_z = norm_1_phys*tau_13 + norm_2_phys*tau_23 + norm_3_phys*tau_33
 
+
                     stress_x = tau_11*norm_1_phys + tau_12*norm_2_phys + tau_13*norm_3_phys
                     stress_y = tau_21*norm_1_phys + tau_22*norm_2_phys + tau_23*norm_3_phys
                     stress_z = tau_31*norm_1_phys + tau_32*norm_2_phys + tau_33*norm_3_phys
@@ -211,10 +208,10 @@ contains
                         force_local(3) = force_local(3) + sum( stress_z(:)%x_ad_ * weights)
                     end if
 
-                    if (present(work)) then
-                        work_local = work_local + sum( (stress_x(:)%x_ad_ * grid_velocity(:,1) * weights) + &
-                                                       (stress_y(:)%x_ad_ * grid_velocity(:,2) * weights) + &
-                                                       (stress_z(:)%x_ad_ * grid_velocity(:,3) * weights) )
+                    if (present(power)) then
+                        power_local = power_local + sum( (stress_x(:)%x_ad_ * grid_velocity(:,1) * weights) + &
+                                                         (stress_y(:)%x_ad_ * grid_velocity(:,2) * weights) + &
+                                                         (stress_z(:)%x_ad_ * grid_velocity(:,3) * weights) )
                     end if
 
                 end do !iface
@@ -224,7 +221,7 @@ contains
 
         ! Reduce result across processors
         if (present(force)) call MPI_AllReduce(force_local,force,3,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
-        if (present(work))  call MPI_AllReduce(work_local, work, 1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+        if (present(power)) call MPI_AllReduce(power_local,power,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 
 
     end subroutine report_forces

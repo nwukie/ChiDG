@@ -172,23 +172,27 @@ contains
             iface_coupled      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(     icoupled)
             dof_start_coupled  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start( icoupled)
 
-            coupled_element = element_info(idomain_g       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(icoupled),        &
-                                           idomain_l       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(icoupled),        &
-                                           ielement_g      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icoupled),       &
-                                           ielement_l      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled),       &
-                                           iproc           = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(icoupled),             &
-                                           pelem_ID        = NO_ID,                                                                                             &
-                                           eqn_ID          = NO_ID,                                                                                             &
-                                           nfields         = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nfields(icoupled),          &
-                                           ntime           = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ntime(icoupled),            &
-                                           nterms_s        = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(icoupled),         &
-                                           nterms_c        = 0,                                                                                                 &
-                                           dof_start       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(icoupled),        &
-                                           dof_local_start = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_local_start(icoupled),  &
-                                           recv_comm       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(icoupled),        &
-                                           recv_domain     = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(icoupled),      &
-                                           recv_element    = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(icoupled),     &
-                                           recv_dof        = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_dof(icoupled))
+            coupled_element = element_info(idomain_g         = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(icoupled),          &
+                                           idomain_l         = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(icoupled),          &
+                                           ielement_g        = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icoupled),         &
+                                           ielement_l        = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled),         &
+                                           iproc             = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(icoupled),               &
+                                           pelem_ID          = NO_ID,                                                                                               &
+                                           coordinate_system = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%coordinate_system(icoupled),  &
+                                           eqn_ID            = NO_ID,                                                                                               &
+                                           nfields           = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nfields(icoupled),            &
+                                           ntime             = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ntime(icoupled),              &
+                                           nterms_s          = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%nterms_s(icoupled),           &
+                                           nterms_c          = 0,                                                                                                   &
+                                           dof_start         = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_start(icoupled),          &
+                                           dof_local_start   = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%dof_local_start(icoupled),    &
+                                           xdof_start        = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%xdof_start(icoupled),         &
+                                           xdof_local_start  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%xdof_local_start(icoupled),   &
+                                           recv_comm         = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_comm(icoupled),          &
+                                           recv_domain       = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_domain(icoupled),        &
+                                           recv_element      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_element(icoupled),       &
+                                           recv_dof          = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_dof(icoupled),           &
+                                           recv_xdof         = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%recv_xdof(icoupled))
 
 
             coupled_iface = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(icoupled)
@@ -332,7 +336,7 @@ contains
         type(AD_D)  :: p_avg, v1_avg, v2_avg, v3_avg, vn_avg, density_avg, M_avg, c_avg, c4_1d,    &
                        ddensity_avg, dvn_avg, dp_avg
 
-        real(rk),       allocatable, dimension(:)   ::  p_user, r
+        type(AD_D),     allocatable, dimension(:)   ::  p_user, r
         integer :: i
 
         ! Get back pressure from function.

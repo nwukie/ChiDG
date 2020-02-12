@@ -11,6 +11,7 @@ module bc_giles_HB_base
     use mod_chimera,            only: find_gq_donor, find_gq_donor_parallel, multi_donor_rule_t
 
     use type_point,             only: point_t
+    use type_point_ad,          only: point_ad_t
     use type_mesh,              only: mesh_t
     use type_bc_state,          only: bc_state_t
     use type_bc_patch,          only: bc_patch_t
@@ -417,19 +418,21 @@ contains
         integer(ik) :: nradius, ntheta, iradius, imode, itime, ntime, ierr, m
         real(rk)    :: shift_r, shift_i, shift_sign
         logical     :: negate_dft
+        type(AD_D), allocatable :: spatial_periodicity_ad(:)
         real(rk),   allocatable :: spatial_periodicity(:)
+        
 
         ! Define Fourier space discretization to determine
         ! number of theta-samples being taken
         nradius = size(density_Ft_real,1)
         ntheta = size(density_Ft_real,2)
         ntime   = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%ntime
-        !spatial_periodicity = self%bcproperties%compute('Spatial Periodicity', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
         if (side=='A') then
-            spatial_periodicity = self%bcproperties%compute('Pitch A', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+            spatial_periodicity_ad = self%bcproperties%compute('Pitch A', time=ZERO,coord=[point_ad_t([ZERO,ZERO,ZERO])])
         else if (side=='B') then
-            spatial_periodicity = self%bcproperties%compute('Pitch B', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+            spatial_periodicity_ad = self%bcproperties%compute('Pitch B', time=ZERO,coord=[point_ad_t([ZERO,ZERO,ZERO])])
         end if
+        spatial_periodicity = spatial_periodicity_ad(:)%x_ad_
         
         ! Allocate storage in result
         allocate(density_Fts_real( nradius,ntheta,ntime), density_Fts_imag( nradius,ntheta,ntime),  &
@@ -569,9 +572,9 @@ contains
         type(AD_D), allocatable,    intent(inout)   :: pressure_check_real(:,:)
         type(AD_D), allocatable,    intent(inout)   :: pressure_check_imag(:,:)
 
-        type(point_t),  allocatable, dimension(:)   :: coords
-        real(rk),       allocatable, dimension(:)   :: pitch
-        real(rk)                                    :: theta_offset
+        type(point_ad_t),   allocatable, dimension(:)   :: coords
+        type(AD_D),         allocatable, dimension(:)   :: pitch
+        real(rk)                                        :: theta_offset
         integer(ik) :: igq, itime
         logical :: negate_dft
 
@@ -610,7 +613,8 @@ contains
                 end if
 
 
-                theta_offset = coords(igq)%c2_ - self%theta_ref
+                !theta_offset = coords(igq)%c2_ - self%theta_ref
+                theta_offset = coords(igq)%c2_%x_ad_ - self%theta_ref
                 ! **** WARNING: probably want ipdft_eval here ****
                 call idft_eval(density_hat_real(igq,:,itime),       &
                                density_hat_imag(igq,:,itime),       &
@@ -695,8 +699,8 @@ contains
         type(AD_D), allocatable,    intent(inout)   :: vel3(:)
         type(AD_D), allocatable,    intent(inout)   :: pressure(:)
 
-        type(AD_D),     allocatable, dimension(:)   :: expect_zero, density_tmp, vel1_tmp, vel2_tmp, vel3_tmp, pressure_tmp
-        integer(ik) :: igq
+        type(AD_D),     allocatable, dimension(:)   :: expect_zero, time_eval, density_tmp, vel1_tmp, vel2_tmp, vel3_tmp, pressure_tmp
+        integer(ik)                                 :: igq
 
         ! Allocate storage for boundary state
         expect_zero = [AD_D(1)]
@@ -705,6 +709,11 @@ contains
         vel2     = ZERO*density_check_real(:,1)
         vel3     = ZERO*density_check_real(:,1)
         pressure = ZERO*density_check_real(:,1)
+
+        ! Initialize time value
+        time_eval = [density_check_real(1,1)]
+        time_eval(1) = real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)
+
 
         ! Inverse DFT of temporal Fourier modes to give primitive variables
         ! at quarature nodes for the current time instance.
@@ -717,35 +726,40 @@ contains
             ! **** WARNING: probably want ipdft_eval here ****
             call idft_eval(density_check_real(igq,:),                                       &
                            density_check_imag(igq,:),                                       &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           time_eval,                                                       &
                            density_tmp,                                                     &
                            expect_zero,symmetric=.true.)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(vel1_check_real(igq,:),                                          &
                            vel1_check_imag(igq,:),                                          &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           time_eval,                                                       &
                            vel1_tmp,                                                        &
                            expect_zero,symmetric=.true.)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(vel2_check_real(igq,:),                                          &
                            vel2_check_imag(igq,:),                                          &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           time_eval,                                                       &
                            vel2_tmp,                                                        &
                            expect_zero,symmetric=.true.)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(vel3_check_real(igq,:),                                          &
                            vel3_check_imag(igq,:),                                          &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           time_eval,                                                       &
                            vel3_tmp,                                                        &
                            expect_zero,symmetric=.true.)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
 
             call idft_eval(pressure_check_real(igq,:),                                      &
                            pressure_check_imag(igq,:),                                      &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           time_eval,                                                       &
                            pressure_tmp,                                                    &
                            expect_zero,symmetric=.true.)
             if (abs(expect_zero(1)) > 0.0000001) print*, 'WARNING: inverse transform returning complex values.'
@@ -812,7 +826,7 @@ contains
         type(AD_D), allocatable,    intent(inout)   :: pressure_hat_real_gq(:,:,:)
         type(AD_D), allocatable,    intent(inout)   :: pressure_hat_imag_gq(:,:,:)
         
-        type(point_t),  allocatable, dimension(:)   :: coords
+        type(point_ad_t),  allocatable, dimension(:)   :: coords
         integer(ik) :: igq, itheta, itime, ierr
 
 
@@ -844,16 +858,26 @@ contains
         do igq = 1,size(coords)
             do itheta = 1,size(density_hat_real,2)
                 do itime = 1,size(density_hat_real,3)
-                    density_hat_real_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_hat_real(:,itheta,itime), coords(igq)%c1_)
-                    density_hat_imag_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_hat_imag(:,itheta,itime), coords(igq)%c1_)
-                    vel1_hat_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_hat_real(:,itheta,itime),    coords(igq)%c1_)
-                    vel1_hat_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_hat_imag(:,itheta,itime),    coords(igq)%c1_)
-                    vel2_hat_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_hat_real(:,itheta,itime),    coords(igq)%c1_)
-                    vel2_hat_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_hat_imag(:,itheta,itime),    coords(igq)%c1_)
-                    vel3_hat_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_hat_real(:,itheta,itime),    coords(igq)%c1_)
-                    vel3_hat_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_hat_imag(:,itheta,itime),    coords(igq)%c1_)
-                    pressure_hat_real_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_hat_real(:,itheta,itime),coords(igq)%c1_)
-                    pressure_hat_imag_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_hat_imag(:,itheta,itime),coords(igq)%c1_)
+                    !density_hat_real_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_hat_real(:,itheta,itime), coords(igq)%c1_)
+                    !density_hat_imag_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_hat_imag(:,itheta,itime), coords(igq)%c1_)
+                    !vel1_hat_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_hat_real(:,itheta,itime),    coords(igq)%c1_)
+                    !vel1_hat_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_hat_imag(:,itheta,itime),    coords(igq)%c1_)
+                    !vel2_hat_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_hat_real(:,itheta,itime),    coords(igq)%c1_)
+                    !vel2_hat_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_hat_imag(:,itheta,itime),    coords(igq)%c1_)
+                    !vel3_hat_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_hat_real(:,itheta,itime),    coords(igq)%c1_)
+                    !vel3_hat_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_hat_imag(:,itheta,itime),    coords(igq)%c1_)
+                    !pressure_hat_real_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_hat_real(:,itheta,itime),coords(igq)%c1_)
+                    !pressure_hat_imag_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_hat_imag(:,itheta,itime),coords(igq)%c1_)
+                    density_hat_real_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_hat_real(:,itheta,itime), coords(igq)%c1_%x_ad_)
+                    density_hat_imag_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_hat_imag(:,itheta,itime), coords(igq)%c1_%x_ad_)
+                    vel1_hat_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_hat_real(:,itheta,itime),    coords(igq)%c1_%x_ad_)
+                    vel1_hat_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_hat_imag(:,itheta,itime),    coords(igq)%c1_%x_ad_)
+                    vel2_hat_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_hat_real(:,itheta,itime),    coords(igq)%c1_%x_ad_)
+                    vel2_hat_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_hat_imag(:,itheta,itime),    coords(igq)%c1_%x_ad_)
+                    vel3_hat_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_hat_real(:,itheta,itime),    coords(igq)%c1_%x_ad_)
+                    vel3_hat_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_hat_imag(:,itheta,itime),    coords(igq)%c1_%x_ad_)
+                    pressure_hat_real_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_hat_real(:,itheta,itime),coords(igq)%c1_%x_ad_)
+                    pressure_hat_imag_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_hat_imag(:,itheta,itime),coords(igq)%c1_%x_ad_)
                 end do !itime
             end do !itheta
         end do !igq
@@ -923,10 +947,9 @@ contains
 
         type(AD_D)  :: k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, &
                        density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar, &
-                       c_real, c_imag, denom, Tinv_real(5,5), Tinv_imag(5,5), beta
+                       c_real, c_imag, denom, Tinv_real(5,5), Tinv_imag(5,5), beta, kz
 
-        real(rk),       allocatable, dimension(:)   :: unorm3
-        real(rk)                                    :: theta_offset, omega, kz, lm
+        real(rk)                                    :: theta_offset, omega, lm
         integer(ik)                                 :: iradius, igq, ierr, itheta, ntheta, itime, ntime, nr
         logical                                     :: space_time_average
 
@@ -1174,10 +1197,9 @@ contains
 
         type(AD_D)  :: k1, k2, k3, k4_real, k4_imag, k5_real, k5_imag, &
                        density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, &
-                       c_bar,  denom, c_real, c_imag, T_real(5,5), T_imag(5,5), beta
+                       c_bar,  denom, c_real, c_imag, T_real(5,5), T_imag(5,5), beta, kz
         
-        real(rk),       allocatable, dimension(:)   :: unorm3
-        real(rk)                                    :: theta_offset, omega, kz, lm
+        real(rk)                                    :: theta_offset, omega, lm
         integer(ik)                                 :: iradius, igq, ierr, itheta, ntheta, itime, ntime, nr
         logical                                     :: space_time_average
 
@@ -1404,7 +1426,7 @@ contains
         type(AD_D),             intent(in)      :: vel2_bar
         type(AD_D),             intent(in)      :: vel3_bar
         type(AD_D),             intent(in)      :: c_bar
-        real(rk),               intent(inout)   :: kz
+        type(AD_D),             intent(inout)   :: kz
         type(AD_D),             intent(inout)   :: k1
         type(AD_D),             intent(inout)   :: k2
         type(AD_D),             intent(inout)   :: k3
@@ -1413,7 +1435,7 @@ contains
         type(AD_D),             intent(inout)   :: k5_real
         type(AD_D),             intent(inout)   :: k5_imag
 
-        real(rk),   allocatable, dimension(:)   :: pitch, unorm3
+        type(AD_D), allocatable, dimension(:)   :: pitch, unorm3
         type(AD_D)  :: pyra, ktmp_real, ktmp_imag, vg4, vg5
 
         complex(rk) :: omega_c, pyra_c, k4_c, k5_c
@@ -2054,8 +2076,9 @@ contains
 
         integer(ik)                 :: nmodes, ncoeff, nradius, ntheta, idomain_l, ielement_l, iface, &
                                        iradius, itheta, ierr, noverset, pelem_ID, patch_ID, face_ID
-        real(rk)                    :: dtheta, dtheta_n, midpoint(3), try_offset(3), node(3), z, donor_avg_z
-        real(rk),       allocatable :: pitch(:), donor_z(:)
+        real(rk)                    :: dtheta, dtheta_n, try_offset(3), node(3), z, donor_avg_z
+        type(AD_D),     allocatable :: pitch(:)
+        real(rk),       allocatable :: donor_z(:)
         character(:),   allocatable :: user_msg
         logical                     :: donor_found, found_face_on_side
 
@@ -2083,19 +2106,19 @@ contains
         
         ! Initialize theta discretization parameters
         if (side == 'A') then
-            pitch  = self%bcproperties%compute('Pitch A',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+            pitch  = self%bcproperties%compute('Pitch A',time=ZERO,coord=[point_ad_t([ZERO,ZERO,ZERO])])
             theta_ref = self%theta_ref_a
             z = self%z_ref_a
             allocate(multi_donor_rule,source=donor_rule_A,stat=ierr)
             if (ierr /= 0) call AllocationError
         else if (side == 'B') then
-            pitch  = self%bcproperties%compute('Pitch B',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+            pitch  = self%bcproperties%compute('Pitch B',time=ZERO,coord=[point_ad_t([ZERO,ZERO,ZERO])])
             theta_ref = self%theta_ref_b
             z = self%z_ref_b
             allocate(multi_donor_rule,source=donor_rule_B,stat=ierr)
             if (ierr /= 0) call AllocationError
         end if
-        dtheta = pitch(1)
+        dtheta = pitch(1)%x_ad_
         dtheta_n = dtheta/ntheta
 
 
@@ -2108,7 +2131,7 @@ contains
 
 
         ! Donor search offset, if needed
-        try_offset = [ZERO, -pitch(1), ZERO]
+        try_offset = [ZERO, -pitch(1)%x_ad_, ZERO]
 
         ! For each radial station, initialized donor for each node in theta grid
         do iradius = 1,size(self%r)
@@ -2161,7 +2184,7 @@ contains
 
                     if (donor_found) then
                         noverset=noverset+1
-                        thetas(iradius,itheta) = thetas(iradius,itheta) - pitch(1)
+                        thetas(iradius,itheta) = thetas(iradius,itheta) - pitch(1)%x_ad_
                     end if
 
                 end if
@@ -2211,7 +2234,7 @@ contains
 
                     if (donor_found) then
                         noverset=noverset+1
-                        thetas(iradius,itheta) = thetas(iradius,itheta) - pitch(1)
+                        thetas(iradius,itheta) = thetas(iradius,itheta) - pitch(1)%x_ad_
                     end if
                 end if 
 
@@ -2322,7 +2345,7 @@ contains
         class(giles_HB_base_t), intent(in)  :: self
         type(chidg_worker_t),   intent(in)  :: worker
 
-        real(rk), allocatable, dimension(:) :: unorm3
+        type(AD_D), allocatable, dimension(:) :: unorm3
         character(1)    :: side
 
         unorm3 = worker%unit_normal(3)

@@ -52,15 +52,11 @@ contains
         
         IO_DESTINATION = 'file'
         
-        !
         ! Initialize ChiDG environment
-        !
         call this%chidg%start_up('core')
 
 
-        !
         ! Read 2x2x1 element grid
-        !
         call create_mesh('221',nodes,connectivity)
         dnodes = nodes
         vnodes = nodes
@@ -79,17 +75,13 @@ contains
         call this%chidg%init('domains')
 
 
-        !
         ! Initialize domain_vectors
-        !
-        call this%bv_a%init(this%chidg%data%mesh%domain(1))
-        call this%bv_b%init(this%chidg%data%mesh%domain(1))
-        call this%bv_res%init(this%chidg%data%mesh%domain(1))
+        call this%bv_a%init(this%chidg%data%mesh%domain(1),'primal')
+        call this%bv_b%init(this%chidg%data%mesh%domain(1),'primal')
+        call this%bv_res%init(this%chidg%data%mesh%domain(1),'primal')
 
 
-        !
         ! Initialize domain_vector data for operators
-        !
         this%bv_a%vecs(1)%vec = ONE
         this%bv_a%vecs(2)%vec = TWO
         this%bv_a%vecs(3)%vec = THREE

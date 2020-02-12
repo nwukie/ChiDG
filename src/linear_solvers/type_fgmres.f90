@@ -517,9 +517,9 @@ contains
 
         real(rk) :: err
 
-        err = self%error(A,x,b)
+        self%residual_norm = self%error(A,x,b)
         call self%timer%stop()
-        call write_line('   Linear Solver Error: ',         err,                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
+        call write_line('   Linear Solver Error: ',         self%residual_norm,   delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
         call write_line('   Linear Solver compute time: ',  self%timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
         call write_line('   Linear Solver Iterations: ',    self%niter,           delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity+self%silence<4))
 

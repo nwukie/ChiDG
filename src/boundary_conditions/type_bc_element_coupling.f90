@@ -37,8 +37,12 @@ module type_bc_element_coupling
         procedure   :: nfields
         procedure   :: ntime
         procedure   :: nterms_s
+        procedure   :: nnodes_r
+        procedure   :: coordinate_system
         procedure   :: dof_start
         procedure   :: dof_local_start
+        procedure   :: xdof_start
+        procedure   :: xdof_local_start
 
         procedure   :: proc
 
@@ -46,6 +50,7 @@ module type_bc_element_coupling
         procedure   :: recv_domain
         procedure   :: recv_element
         procedure   :: recv_dof
+        procedure   :: recv_xdof
 
     end type bc_element_coupling_t
     !********************************************************************
@@ -77,10 +82,8 @@ contains
         integer(ik) :: ielem_coupled, idomain_g_coupled, ielement_g_coupled, elem_ID
 
 
-        !
         ! Check if element has already been added to coupling list
         ! for the specified face
-        !
         already_added = .false.
         do ielem_coupled = 1,self%ncoupled_elements()
 
@@ -94,23 +97,15 @@ contains
         end do
 
 
-
-
-        !
         ! If not already added, create new coupling 
         ! instance, set coupling indices.
-        !
         if (.not. already_added) then
-
             elem_ID = self%new_coupled_element()
             call self%data(elem_ID)%set_coupling(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
-
         end if
-
 
     end subroutine add_coupled_element
     !*********************************************************************
-
 
 
 
@@ -121,7 +116,6 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   4/12/2017
     !!
-    !!
     !----------------------------------------------------------------------
     function new_coupled_element(self) result(elem_ID)
         class(bc_element_coupling_t),   intent(inout)   :: self
@@ -129,34 +123,20 @@ contains
         type(element_coupling_data_t),  allocatable :: temp_data(:)
         integer(ik)                                 :: elem_ID, ierr
 
-        
-        !
         ! Resize array storage
-        !
         allocate(temp_data(self%ncoupled_elements() + 1), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
-        !
         ! Copy preciously initialized instances to new array. 
-        !
         if (self%ncoupled_elements() > 0) then
             temp_data(1:size(self%data)) = self%data(1:size(self%data))
         end if
 
-
-
-        !
         ! Move resized temp allocation back to bc_element_coupling%data.
-        !
         call move_alloc(temp_data,self%data)
 
-
-        !
         ! Set coupling identifier of newly allocated instance to be returned.
-        !
         elem_ID = self%ncoupled_elements()
-
 
     end function new_coupled_element
     !**********************************************************************
@@ -174,7 +154,7 @@ contains
     !!
     !!
     !----------------------------------------------------------------------
-    subroutine set_coupled_element_recv(self,idomain_g,ielement_g,recv_comm,recv_domain,recv_element,recv_dof)
+    subroutine set_coupled_element_recv(self,idomain_g,ielement_g,recv_comm,recv_domain,recv_element,recv_dof,recv_xdof)
         class(bc_element_coupling_t),   intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g
         integer(ik),                    intent(in)      :: ielement_g
@@ -182,15 +162,14 @@ contains
         integer(ik),                    intent(in)      :: recv_domain
         integer(ik),                    intent(in)      :: recv_element
         integer(ik),                    intent(in)      :: recv_dof
+        integer(ik),                    intent(in)      :: recv_xdof
 
         integer(ik) :: elem_ID
 
-        !
         ! Get location of coupled element
-        !
         elem_ID = self%find_coupled_element(idomain_g,ielement_g)
 
-        call self%data(elem_ID)%set_recv(recv_comm,recv_domain,recv_element,recv_dof)
+        call self%data(elem_ID)%set_recv(recv_comm,recv_domain,recv_element,recv_dof,recv_xdof)
 
     end subroutine set_coupled_element_recv
     !**********************************************************************
@@ -199,47 +178,38 @@ contains
 
 
 
-
-
-
     !>  Set auxiliary data for coupled element.
-    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/18/2017
     !!
-    !!
     !----------------------------------------------------------------------
-    subroutine set_coupled_element_data(self,idomain_g,ielement_g,nfields,ntime,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
+    subroutine set_coupled_element_data(self,idomain_g,ielement_g,nfields,ntime,nterms_s,nnodes_r,coordinate_system,dof_start,dof_local_start,xdof_start,xdof_local_start,total_area,areas,quad_pts)
         class(bc_element_coupling_t),   intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g
         integer(ik),                    intent(in)      :: ielement_g
         integer(ik),                    intent(in)      :: nfields
         integer(ik),                    intent(in)      :: ntime
         integer(ik),                    intent(in)      :: nterms_s
+        integer(ik),                    intent(in)      :: nnodes_r
+        integer(ik),                    intent(in)      :: coordinate_system
         integer(ik),                    intent(in)      :: dof_start
         integer(ik),                    intent(in)      :: dof_local_start
+        integer(ik),                    intent(in)      :: xdof_start
+        integer(ik),                    intent(in)      :: xdof_local_start
         real(rk),                       intent(in)      :: total_area
         real(rk),                       intent(in)      :: areas(:)
         type(point_t),                  intent(in)      :: quad_pts(:)
 
         integer(ik)                 :: elem_ID
 
-        !
         ! Get location of coupled element
-        !
         elem_ID = self%find_coupled_element(idomain_g,ielement_g)
 
-        call self%data(elem_ID)%set_data(nfields,ntime,nterms_s,dof_start,dof_local_start,total_area,areas,quad_pts)
+        call self%data(elem_ID)%set_data(nfields,ntime,nterms_s,nnodes_r,coordinate_system,dof_start,dof_local_start,xdof_start,xdof_local_start,total_area,areas,quad_pts)
 
     end subroutine set_coupled_element_data
     !**********************************************************************
-
-
-
-
-
-
 
 
 
@@ -249,7 +219,6 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/12/2017
-    !!
     !!
     !----------------------------------------------------------------------
     function ncoupled_elements(self) result(n)
@@ -265,8 +234,6 @@ contains
 
     end function ncoupled_elements
     !**********************************************************************
-
-
 
 
 
@@ -288,8 +255,6 @@ contains
 
     end function idomain_g
     !************************************************************************
-
-
 
 
 
@@ -439,6 +404,45 @@ contains
 
 
 
+    !>  Return the number of reference nodes on the coupled element.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/17/2017
+    !!
+    !-----------------------------------------------------------------------
+    function nnodes_r(self,elem_ID) result(nnodes_r_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: nnodes_r_ 
+
+        nnodes_r_ = self%data(elem_ID)%nnodes_r
+
+    end function nnodes_r
+    !************************************************************************
+
+
+
+
+    !>  Return the integer identifier of the coordinate system.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/03/2019
+    !!
+    !-----------------------------------------------------------------------
+    function coordinate_system(self,elem_ID) result(coordinate_system_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: coordinate_system_
+
+        coordinate_system_ = self%data(elem_ID)%coordinate_system
+
+    end function coordinate_system
+    !************************************************************************
+
+
+
 
     !>  Return the starting DOF index in the ChiDG-global index.
     !!
@@ -477,6 +481,45 @@ contains
     end function dof_local_start
     !************************************************************************
 
+
+
+
+    !>  Return the starting coordinate DOF index in the ChiDG-global index.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/27/2019
+    !!
+    !-----------------------------------------------------------------------
+    function xdof_start(self,elem_ID) result(xdof_start_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: xdof_start_
+
+        xdof_start_ = self%data(elem_ID)%xdof_start
+
+    end function xdof_start
+    !************************************************************************
+
+
+
+
+    !>  Return the starting coordinate DOF index in the proc-localindex.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/27/2019
+    !!
+    !-----------------------------------------------------------------------
+    function xdof_local_start(self,elem_ID) result(xdof_local_start_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: xdof_local_start_
+
+        xdof_local_start_ = self%data(elem_ID)%xdof_local_start
+
+    end function xdof_local_start
+    !************************************************************************
 
 
 
@@ -586,6 +629,27 @@ contains
     end function recv_dof
     !************************************************************************
 
+
+
+
+    !>  Return the identifier recv_xdof for the coupled element.
+    !!
+    !!  NOTE: recv_xdof is for PETSC storage containers.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/16/2020
+    !!
+    !-----------------------------------------------------------------------
+    function recv_xdof(self,elem_ID) result(recv_xdof_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: recv_xdof_
+
+        recv_xdof_ = self%data(elem_ID)%recv_xdof
+
+    end function recv_xdof
+    !************************************************************************
 
 
 

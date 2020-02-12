@@ -2,15 +2,13 @@ module mod_grid
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO, ZERO, TWO_DIM, THREE_DIM, NFACES, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NO_PROC
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NO_PROC, NO_DIFF
     use mod_polynomial,     only: polynomial_val
     use type_densematrix,   only: densematrix_t
     use mod_inv
     implicit none
 
-    !
     ! coordinate mapping matrices
-    !
     integer(ik),         parameter      :: NORDER = 4
     type(densematrix_t), save,  target  :: ELEM_MAP_2D(NORDER)  !< array of matrices
     type(densematrix_t), save,  target  :: ELEM_MAP_3D(NORDER)  !< array of matrices
@@ -35,7 +33,6 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!
     !----------------------------------------------------------------------------------------------------
     subroutine initialize_grid()
 
@@ -55,9 +52,6 @@ contains
 
 
 
-
-
-
     !>  Compute matrix to convert element discrete coordinates to modal coordinates. Initializes the
     !!  array of denseblock matrices in ELEM_MAP.
     !!
@@ -66,7 +60,6 @@ contains
     !!
     !!  TODO: TEST
     !!  TODO: Generalize better for spatial dimension
-    !!
     !!
     !---------------------------------------------------------------------------------------------------
     subroutine compute_element_mappings(spacedim)
@@ -79,34 +72,25 @@ contains
         integer(ik)                 :: ierr, iorder, iterm, inode, ipt
         integer(ik)                 :: ixi,  ieta, izeta
 
-        !
         ! Mapping order
         ! [linear, quadratic, cubic, quartic]
-        !
         npts_1d = [2,3,4,5,6,7,8]           ! Number of points defining an edge
         npts_2d = npts_1d*npts_1d           ! Number of points defining an element in 2D
         npts_3d = npts_1d*npts_1d*npts_1d   ! Number of points defining an element in 3D
 
 
-        !
         ! Loop through and compute mapping for different element types
-        !
         do iorder = 1,NORDER
 
-            !
             ! Initialize mapping for reference element.
-            !
             if ( spacedim == THREE_DIM ) then
-                call ELEM_MAP_3D(iorder)%init(npts_3d(iorder),1,0,0,0,0,NO_PROC,0)
+                call ELEM_MAP_3D(iorder)%init(npts_3d(iorder),1,0,0,0,0,NO_PROC,0,0,NO_DIFF)
             else if ( spacedim == TWO_DIM ) then
-                call ELEM_MAP_2D(iorder)%init(npts_2d(iorder),1,0,0,0,0,NO_PROC,0)
+                call ELEM_MAP_2D(iorder)%init(npts_2d(iorder),1,0,0,0,0,NO_PROC,0,0,NO_DIFF)
             end if
 
 
-
-            !
             ! Allocate storage for nodes and coordinates.
-            !
             if ( spacedim == THREE_DIM ) then
                 allocate(nodes(npts_3d(iorder)),  &
                          xi(npts_1d(iorder)),     &
@@ -124,9 +108,7 @@ contains
             end if
 
 
-            !
             ! Compute 1d point coordinates in each direction
-            !
             do ipt = 1,npts_1d(iorder)
                 xi(ipt)   = -ONE + (real(ipt,rk)-ONE)*(TWO/(real(npts_1d(iorder),rk)-ONE))
                 eta(ipt)  = -ONE + (real(ipt,rk)-ONE)*(TWO/(real(npts_1d(iorder),rk)-ONE))
@@ -134,9 +116,7 @@ contains
             end do
 
 
-            !
             ! Set up reference mesh nodes in each direction
-            !
             inode = 1
             if ( spacedim == THREE_DIM ) then
 
@@ -164,13 +144,10 @@ contains
             end if
 
 
-            !
             ! Compute the values of each mapping term at each mesh point
-            !
             if ( spacedim == THREE_DIM ) then
                 do iterm = 1,npts_3d(iorder)
                     do inode = 1,npts_3d(iorder)
-                        !ELEM_MAP_3D(iorder)%mat(inode,iterm) = polynomial_val(3,npts_3d(iorder),iterm,nodes(inode))
                         ELEM_MAP_3D(iorder)%mat(inode,iterm) = polynomial_val(3,npts_3d(iorder),iterm,[nodes(inode)%c1_, nodes(inode)%c2_, nodes(inode)%c3_])
                     end do
                 end do
@@ -178,7 +155,6 @@ contains
             else if ( spacedim == TWO_DIM ) then
                 do iterm = 1,npts_2d(iorder)
                     do inode = 1,npts_2d(iorder)
-                        !ELEM_MAP_2D(iorder)%mat(inode,iterm) = polynomial_val(2,npts_2d(iorder),iterm,nodes(inode))
                         ELEM_MAP_2D(iorder)%mat(inode,iterm) = polynomial_val(2,npts_2d(iorder),iterm,[nodes(inode)%c1_, nodes(inode)%c2_, nodes(inode)%c3_])
                     end do
                 end do
@@ -186,10 +162,8 @@ contains
             end if 
 
             
-            !
             ! Invert matrix so that it can multiply a vector of
             ! element points to compute the mode amplitudes of the x,y mappings
-            !
             if ( spacedim == THREE_DIM ) then
                 ELEM_MAP_3D(iorder)%mat = inv(ELEM_MAP_3D(iorder)%mat)
             else if ( spacedim == TWO_DIM ) then
@@ -197,9 +171,7 @@ contains
             end if
 
 
-            !
             ! Dellocate variables for next iteration in loop
-            !
             deallocate(nodes, xi, eta, zeta)
 
         end do
@@ -211,18 +183,10 @@ contains
 
 
 
-
-
-
-
-
-
     !>  Return a matrix to compute the coordinate expansion.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/11/2016
-    !!
-    !!
     !!
     !----------------------------------------------------------------------------------------------------------
     function get_element_mapping(spacedim,iorder) result(matrix)
@@ -255,79 +219,6 @@ contains
 
 
 
-!    !> Compute the indices of the nodes that are the face corners
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   5/23/2016
-!    !!
-!    !!
-!    !!
-!    !----------------------------------------------------------------------------------------------------------
-!    subroutine compute_face_corner_indices()
-!        integer(ik) :: iface, icorner, imap, base_corners(4)
-!        integer(ik) :: corner_one, corner_two, corner_three, corner_four, corner_five, corner_six, corner_seven, corner_eight
-!
-!
-!        do iface = 1,NFACES
-!            do imap = 1,NMAP
-!
-!                corner_one   = 1
-!                corner_two   = corner_one + imap
-!                corner_three = (imap+1)*(imap+1) - (imap+1) + 1
-!                corner_four  = corner_three + imap
-!                corner_five  = (imap+1)*(imap+1)*(imap+1) - (imap+1)*(imap+1) + 1
-!                corner_six   = corner_five + imap
-!                corner_seven = (imap+1)*(imap+1)*(imap+1) - (imap+1) + 1
-!                corner_eight = corner_seven + imap
-!
-!
-!                select case ( iface )
-!                    case ( XI_MIN )
-!                        face_corners(iface,1,imap) = corner_one
-!                        face_corners(iface,2,imap) = corner_three
-!                        face_corners(iface,3,imap) = corner_five
-!                        face_corners(iface,4,imap) = corner_seven
-!                    case ( XI_MAX )
-!                        face_corners(iface,1,imap) = corner_two
-!                        face_corners(iface,2,imap) = corner_four
-!                        face_corners(iface,3,imap) = corner_six
-!                        face_corners(iface,4,imap) = corner_eight
-!                    case ( ETA_MIN )
-!                        face_corners(iface,1,imap) = corner_one
-!                        face_corners(iface,2,imap) = corner_two
-!                        face_corners(iface,3,imap) = corner_five
-!                        face_corners(iface,4,imap) = corner_six
-!                    case ( ETA_MAX )
-!                        face_corners(iface,1,imap) = corner_three
-!                        face_corners(iface,2,imap) = corner_four
-!                        face_corners(iface,3,imap) = corner_seven
-!                        face_corners(iface,4,imap) = corner_eight
-!                    case ( ZETA_MIN )
-!                        face_corners(iface,1,imap) = corner_one
-!                        face_corners(iface,2,imap) = corner_two
-!                        face_corners(iface,3,imap) = corner_three
-!                        face_corners(iface,4,imap) = corner_four
-!                    case ( ZETA_MAX )
-!                        face_corners(iface,1,imap) = corner_five
-!                        face_corners(iface,2,imap) = corner_six
-!                        face_corners(iface,3,imap) = corner_seven
-!                        face_corners(iface,4,imap) = corner_eight
-!                    case default
-!                        call chidg_signal(FATAL,"compute_face_corner_indices")
-!                end select
-!
-!
-!
-!            end do !imap
-!        end do !iface
-!
-!
-!
-!
-!    end subroutine compute_face_corner_indices
-!    !**********************************************************************************************************
-
-
     !> Compute the indices of the nodes that are the face corners
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -341,10 +232,8 @@ contains
         integer(ik) :: corner_one, corner_two, corner_three, corner_four, &
                        corner_five, corner_six, corner_seven, corner_eight
 
-
         do iface = 1,NFACES
             do iorder = 1,NORDER
-
 
                 ! Still Plot3D faces, but CGNS nodes
                 select case ( iface )
@@ -382,19 +271,11 @@ contains
                         call chidg_signal(FATAL,"compute_face_corner_indices")
                 end select
 
-
-
             end do !iorder
         end do !iface
 
-
-
-
     end subroutine compute_face_corner_indices
     !**********************************************************************************************************
-
-
-
 
 
 

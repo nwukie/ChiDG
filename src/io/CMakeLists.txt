@@ -2,11 +2,11 @@ add_lib_sources(mod_io.f90
                 mod_hdfio.f90
                 mod_hdf_utilities.f90
                 mod_tecio.f90
-                mod_tecio_old.f90
                 mod_vtk_file_unstr.f90
                 mod_vtk_calc_func.f90
                 mod_vtkio.f90
                 mod_file_utilities.f90
+                mod_plot3dio.f90
                 mod_plot3d_utilities.f90
                 type_file_properties.f90
                 type_chidg_file.f90
@@ -14,4 +14,5 @@ add_lib_sources(mod_io.f90
                 mod_HB_interpolate.f90
                 mod_matplotlib_io.f90
                 mod_gmsh.f90
+                mod_datafile_io.f90
                 )

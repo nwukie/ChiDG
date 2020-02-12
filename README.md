@@ -80,8 +80,12 @@ and do not necessarily reflect the views of the National Science Foundation.
 Some contributions to ChiDG were made by the Air Force Research Laboratory at 
 Wright-Patterson Airforce Base in Dayton, Ohio. These contributions are marked 
 by @author notes in the source appended with (AFRL). These contributions were 
-cleared for resease to the public domain under 
-Case Numbers:88ABW-2016-5744(5/1/2016-9/30/2016), 88ABW-2017-5059(5/1/2017-8/30/2017), 88ABW-2019-4320 (09/06/2019)
+cleared for resease to the public domain under Case Numbers: 
+
+    - 88ABW-2016-5744(5/1/2016-9/30/2016)
+    - 88ABW-2017-5059(5/1/2017-8/30/2017)
+    - 88ABW-2019-4320(09/06/2019)
+    - 88ABW-2020-0466(02/11/2020)
 
 [license]:LICENSE
 [license img]:https://img.shields.io/badge/license-BSD%203--clause-blue.svg

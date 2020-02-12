@@ -70,7 +70,7 @@ contains
         select case (trim(backend))
             case('native')
                 self%LD = chidg_matrix(trim(backend))
-                call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
+                call self%LD%init(mesh=data%mesh, storage_config='LowerDiagonal',dof_type='primal')
                 call self%LD%clear()
 
             case('petsc')
@@ -125,9 +125,9 @@ contains
         if (self%petsc_initialized) then
         !******  petsc  implementation  ******!
             call PCSetOperators(self%pc, A%wrapped_petsc_matrix%petsc_matrix, A%wrapped_petsc_matrix%petsc_matrix, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%update: error calling PCSetOperators.')
+            if (perr /= 0) call chidg_signal(FATAL,'precon_ILU0%update: error calling PCSetOperators.')
             call PCSetUp(self%pc, perr)
-            if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%update: error calling PCSetUp.')
+            if (perr /= 0) call chidg_signal(FATAL,'precon_ILU0%update: error calling PCSetUp.')
 
 
         else
@@ -136,7 +136,7 @@ contains
 
 
             ! Test preconditioner initialization
-            if ( .not. self%initialized ) call chidg_signal(FATAL,'ILU0%update: preconditioner has not yet been initialized.')
+            if ( .not. self%initialized ) call chidg_signal(FATAL,'precon_ILU0%update: preconditioner has not yet been initialized.')
 
            
             do itime = 1,size(A%dom(1)%lblks,2)
@@ -145,14 +145,19 @@ contains
                 do idom = 1,size(A%dom)
 
                     ! Store diagonal blocks of A
-                    do ielem = 1,size(A%dom(idom)%lblks,1)
-
-                        idiagA = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
-                        idiagLD = self%LD%dom(idom)%lblks(ielem,itime)%get_diagonal()
-
-                        self%LD%dom(idom)%lblks(ielem,itime)%data_(idiagLD)%mat = A%dom(idom)%lblks(ielem,itime)%data_(idiagA)%mat
-
-                    end do !ielem
+                    if (A%transposed) then
+                        do ielem = 1,size(A%dom(idom)%lblks,1)
+                            idiagA = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
+                            idiagLD = self%LD%dom(idom)%lblks(ielem,itime)%get_diagonal()
+                            self%LD%dom(idom)%lblks(ielem,itime)%data_(idiagLD)%mat = transpose(A%dom(idom)%lblks(ielem,itime)%data_(idiagA)%mat)
+                        end do !ielem
+                    else
+                        do ielem = 1,size(A%dom(idom)%lblks,1)
+                            idiagA = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
+                            idiagLD = self%LD%dom(idom)%lblks(ielem,itime)%get_diagonal()
+                            self%LD%dom(idom)%lblks(ielem,itime)%data_(idiagLD)%mat = A%dom(idom)%lblks(ielem,itime)%data_(idiagA)%mat
+                        end do !ielem
+                    end if
 
 
                     ! Invert first diagonal block
@@ -161,51 +166,91 @@ contains
 
 
                     ! Loop through all Proc-Local rows
-                    do irow = 2,size(A%dom(idom)%lblks,1)
+                    if (A%transposed) then
+
+                        do irow = 2,size(A%dom(idom)%lblks,1)
+                            ! Operate on all the L blocks for the current row
+                            do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
+
+                                ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
+                                dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
+                                eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
+                                ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower,itime)
+
+                                if (A%dom(idom)%lblks(irow,itime)%parent_proc(ilowerA) == IRANK) then
+
+                                    ! Get parent index
+                                    eparent_l = A%dom(idom)%lblks(irow,itime)%eparent_l(ilowerA)
+
+                                    ! Retrieve the upper block of the current lower block (transpose block). Get diagonal entry.
+                                    itranspose = A%dom(idom)%lblks(irow,itime)%itranspose(ilowerA)
+                                    idiagLD = self%LD%dom(idom)%lblks(eparent_l,itime)%get_diagonal()
+
+                                    ! Compute and store the contribution to the lower-triangular part of LD
+                                    self%LD%dom(idom)%lblks(irow,itime)%data_(ilowerLD)%mat = matmul(transpose(A%dom(idom)%lblks(eparent_l,itime)%data_(itranspose)%mat),self%LD%dom(idom)%lblks(eparent_l,itime)%data_(idiagLD)%mat)
+
+                                    ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. (The component in the transposed position)
+                                    idiagLD = self%LD%dom(idom)%lblks(irow,itime)%get_diagonal()
+
+                                    ! Compute and store the contribution to the lower-triangular part of LD
+                                    self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat = self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat  -  &
+                                             matmul(self%LD%dom(idom)%lblks(irow,itime)%data_(ilowerLD)%mat,  transpose(A%dom(idom)%lblks(irow,itime)%data_(ilowerA)%mat))
+
+                                end if
+
+                            end do ! icol
+
+                            ! Pre-Invert current diagonal block and store
+                            idiagLD = self%LD%dom(idom)%lblks(irow,itime)%get_diagonal()
+                            self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat = inv(self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat)
+
+                        end do !irow
 
 
-                        ! Operate on all the L blocks for the current row
-                        do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
 
-                            ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
+                    else
 
-                            dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
-                            eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
+                        do irow = 2,size(A%dom(idom)%lblks,1)
+                            ! Operate on all the L blocks for the current row
+                            do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
 
-                            ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower,itime)
+                                ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
+                                dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
+                                eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
+                                ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower,itime)
 
-                            if (A%dom(idom)%lblks(irow,itime)%parent_proc(ilowerA) == IRANK) then
+                                if (A%dom(idom)%lblks(irow,itime)%parent_proc(ilowerA) == IRANK) then
 
-                                ! Get parent index
-                                eparent_l = A%dom(idom)%lblks(irow,itime)%eparent_l(ilowerA)
+                                    ! Get parent index
+                                    eparent_l = A%dom(idom)%lblks(irow,itime)%eparent_l(ilowerA)
 
-                                ! Get diagonal entry
-                                idiagLD = self%LD%dom(idom)%lblks(eparent_l,itime)%get_diagonal()
+                                    ! Get diagonal entry
+                                    idiagLD = self%LD%dom(idom)%lblks(eparent_l,itime)%get_diagonal()
 
-                                ! Compute and store the contribution to the lower-triangular part of LD
-                                self%LD%dom(idom)%lblks(irow,itime)%data_(ilowerLD)%mat = matmul(A%dom(idom)%lblks(irow,itime)%data_(ilowerA)%mat,self%LD%dom(idom)%lblks(eparent_l,itime)%data_(idiagLD)%mat)
+                                    ! Compute and store the contribution to the lower-triangular part of LD
+                                    self%LD%dom(idom)%lblks(irow,itime)%data_(ilowerLD)%mat = matmul(A%dom(idom)%lblks(irow,itime)%data_(ilowerA)%mat,self%LD%dom(idom)%lblks(eparent_l,itime)%data_(idiagLD)%mat)
 
-                                ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. (The component in the transposed position)
-                                itranspose = A%dom(idom)%lblks(irow,itime)%itranspose(ilowerA)
-                                idiagLD = self%LD%dom(idom)%lblks(irow,itime)%get_diagonal()
+                                    ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. (The component in the transposed position)
+                                    itranspose = A%dom(idom)%lblks(irow,itime)%itranspose(ilowerA)
+                                    idiagLD = self%LD%dom(idom)%lblks(irow,itime)%get_diagonal()
 
-                                ! Compute and store the contribution to the lower-triangular part of LD
-                                self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat = self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat  -  &
-                                         matmul(self%LD%dom(idom)%lblks(irow,itime)%data_(ilowerLD)%mat,  A%dom(idom)%lblks(eparent_l,itime)%data_(itranspose)%mat)
+                                    ! Compute and store the contribution to the lower-triangular part of LD
+                                    self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat = self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat  -  &
+                                             matmul(self%LD%dom(idom)%lblks(irow,itime)%data_(ilowerLD)%mat,  A%dom(idom)%lblks(eparent_l,itime)%data_(itranspose)%mat)
 
-                            end if
+                                end if
 
-                        end do ! icol
+                            end do ! icol
 
+                            ! Pre-Invert current diagonal block and store
+                            idiagLD = self%LD%dom(idom)%lblks(irow,itime)%get_diagonal()
+                            self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat = inv(self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat)
 
-                        ! Pre-Invert current diagonal block and store
-                        idiagLD = self%LD%dom(idom)%lblks(irow,itime)%get_diagonal()
-                        self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat = inv(self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat)
+                        end do !irow
 
-                    end do !irow
+                    end if ! A%transposed
 
                 end do ! idom
-
             end do  ! itime
 
 
@@ -239,16 +284,16 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     function apply(self,A,v,z_old) result(z)
-        class(precon_ILU0_t),   intent(inout)   :: self
-        type(chidg_matrix_t),    intent(in)      :: A
-        type(chidg_vector_t),    intent(in)      :: v
-        type(chidg_vector_t),    intent(in), optional :: z_old
+        class(precon_ILU0_t),   intent(inout)           :: self
+        type(chidg_matrix_t),   intent(in)              :: A
+        type(chidg_vector_t),   intent(in)              :: v
+        type(chidg_vector_t),   intent(in), optional    :: z_old
 
-        type(chidg_vector_t)         :: z
+        type(chidg_vector_t)    :: z
 
         integer(ik)             :: ielem, itime, idiag, eparent_l, idom, irow, icol, &
                                    ilowerA, ilowerLD, iupper, dparent_g_lower, eparent_g_lower, &
-                                   inner_time, precon_ntime
+                                   inner_time, precon_ntime, itranspose
         real(rk),   allocatable :: temp(:)
         PetscErrorCode          :: perr
 
@@ -263,7 +308,11 @@ contains
         if (self%petsc_initialized) then
         !******  petsc  implementation  ******!
 
-            call PCApply(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
+            if (A%transposed) then
+                call PCApplyTranspose(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
+            else
+                call PCApply(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
+            end if
             if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%apply: error calling PCApply.')
             z%petsc_needs_assembled = .true.
 
@@ -283,18 +332,13 @@ contains
                 ! For each domain
                 do idom = 1,size(A%dom)
 
-
                     ! Forward Solve - Local
                     do irow = 1,size(self%LD%dom(idom)%lblks,1)
-
-                        ! Lower-Triangular blocks
-                        do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
+                        do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()   ! lower-triangular blocks
 
                             ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
-
                             dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
                             eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
-                            
                             ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower,itime)
 
                             if ( A%dom(idom)%lblks(irow,itime)%parent_proc(ilowerA) == IRANK ) then
@@ -317,32 +361,35 @@ contains
 
                     ! Backward Solve
                     do irow = size(A%dom(idom)%lblks,1),1,-1
-
-                        ! Upper-Triangular blocks
-                        do icol = 1,A%dom(idom)%local_upper_blocks(irow,itime)%size()
+                        do icol = 1,A%dom(idom)%local_upper_blocks(irow,itime)%size()   ! upper-triangular blocks
 
                             iupper = A%dom(idom)%local_upper_blocks(irow,itime)%at(icol)
 
                             if (A%dom(idom)%lblks(irow,itime)%parent_proc(iupper) == IRANK) then
 
                                     ! Get associated parent block index
-                                    eparent_l = A%dom(idom)%lblks(irow,itime)%eparent_l(iupper)
+                                    eparent_l  = A%dom(idom)%lblks(irow,itime)%eparent_l(iupper)
+                                    itranspose = A%dom(idom)%lblks(irow,itime)%itranspose(iupper)
                                     !z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,itime)%data_(iupper)%mat, z%dom(idom)%vecs(eparent_l)%vec)
 
                                     if (allocated(temp)) deallocate(temp)
                                     allocate(temp(size(z%dom(idom)%vecs(irow)%gettime(itime))))
 
-                                    temp = z%dom(idom)%vecs(irow)%gettime(itime) - matmul(A%dom(idom)%lblks(irow,itime)%data_(iupper)%mat, z%dom(idom)%vecs(eparent_l)%gettime(itime))
+                                    if (A%transposed) then
+                                        temp = z%dom(idom)%vecs(irow)%gettime(itime) - &
+                                               matmul(transpose(A%dom(idom)%lblks(eparent_l,itime)%data_(itranspose)%mat), z%dom(idom)%vecs(eparent_l)%gettime(itime))
+                                    else
+                                        temp = z%dom(idom)%vecs(irow)%gettime(itime) - &
+                                               matmul(A%dom(idom)%lblks(irow,itime)%data_(iupper)%mat, z%dom(idom)%vecs(eparent_l)%gettime(itime))
+                                    end if
                                     call z%dom(idom)%vecs(irow)%settime(itime,temp)
 
                             end if
 
                         end do
 
-
                         ! Diagonal block
                         idiag = self%LD%dom(idom)%lblks(irow,itime)%get_diagonal()
-                        !z%dom(idom)%vecs(irow)%vec = matmul(self%LD%dom(idom)%lblks(irow,itime)%data_(idiag)%mat, z%dom(idom)%vecs(irow)%vec)
                         
                         if (allocated(temp)) deallocate(temp)
                         allocate(temp(size(z%dom(idom)%vecs(irow)%gettime(itime))))
@@ -354,7 +401,6 @@ contains
                     end do ! irow
 
                 end do ! idom
-
             end do ! itime
 
         end if !native/petsc

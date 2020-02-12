@@ -103,7 +103,7 @@ contains
             tau_11_m, tau_22_m, tau_33_m, tau_12_m, tau_13_m, tau_23_m,     &
             tau_11_p, tau_22_p, tau_33_p, tau_12_p, tau_13_p, tau_23_p,     &
             flux_1_m, flux_2_m, flux_3_m,                                   &
-            flux_1_p, flux_2_p, flux_3_p
+            flux_1_p, flux_2_p, flux_3_p, r
 
         type(AD_D), allocatable, dimension(:)   ::  &
             density_nutilde_m, grad1_density_nutilde_m,  grad2_density_nutilde_m,  grad3_density_nutilde_m, &
@@ -114,10 +114,6 @@ contains
             dnutilde_ddensity_p, dnutilde_ddensitynutilde_p,                                                &
             f_n1_m, nu_l_m, chi_m, diffusion_m,                                                             &
             f_n1_p, nu_l_p, chi_p, diffusion_p
-
-
-
-        real(rk), allocatable, dimension(:) :: r
 
 
 

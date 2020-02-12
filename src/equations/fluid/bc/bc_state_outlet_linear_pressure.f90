@@ -9,6 +9,7 @@ module bc_state_outlet_linear_pressure
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_point,             only: point_t
+    use type_point_ad,          only: point_ad_t
     use mpi_f08,                only: mpi_comm
     use ieee_arithmetic
     use DNAD_D
@@ -48,16 +49,12 @@ contains
     subroutine init(self)
         class(outlet_linear_pressure_t),   intent(inout) :: self
         
-        !
         ! Set name, family
-        !
         call self%set_name("Outlet - Linear Pressure")
         call self%set_family("Outlet")
 
 
-        !
         ! Add functions
-        !
         call self%bcproperties%add('Static Pressure Min','Required')
         call self%bcproperties%add('Static Pressure Max','Required')
 
@@ -96,30 +93,21 @@ contains
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
             u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc, mom_norm
             
+        type(AD_D), allocatable, dimension(:) :: p_min, p_max, r_min, r_max, r
 
-        real(rk),   allocatable, dimension(:) :: r, unorm1, unorm2, unorm3
-        real(rk),   allocatable, dimension(:) :: p_input, p_min, p_max, r_min, r_max
-
-        real(rk)    :: rho0, K0
         integer :: igq
 
-        type(point_t),  allocatable :: coords(:)
+        type(point_ad_t),  allocatable :: coords(:)
 
 
-
-
-        !
         ! Get back pressure from function.
-        !
         p_min = self%bcproperties%compute('Static Pressure Min',worker%time(),worker%coords())
         p_max = self%bcproperties%compute('Static Pressure Max',worker%time(),worker%coords())
         r_min = self%bcproperties%compute('Radius Min',worker%time(),worker%coords())
         r_max = self%bcproperties%compute('Radius Max',worker%time(),worker%coords())
 
 
-        !
         ! Interpolate interior solution to face quadrature nodes
-        !
         density_m = worker%get_field('Density'    , 'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1' , 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2' , 'value', 'face interior')
@@ -161,14 +149,6 @@ contains
         end if
 
 
-
-!        K0   = 100._rk
-!        rho0 = 1.2_rk
-!        p_input = p_input(1)  +  0.5_rk*rho0*K0*K0*(ONE/(FOUR*FOUR)  -  ONE/(r*r))
-
-
-
-
         ! Extrapolate temperature and velocity
         T_bc = T_m
         u_bc = mom1_m/density_m
@@ -178,11 +158,10 @@ contains
 
         ! Set user-specified linear pressure
         p_bc = density_m
-        p_bc = p_input
 
         coords = worker%coords()
         do igq = 1,size(density_m)
-            p_bc(igq) = interpolate_linear([r_min(1),r_max(1)],[p_min(1),p_max(1)],coords(igq)%c1_)
+            p_bc(igq) = interpolate_linear([r_min(1)%x_ad_,r_max(1)%x_ad_],[p_min(1)%x_ad_,p_max(1)%x_ad_],coords(igq)%c1_%x_ad_)
         end do
 
 

@@ -9,35 +9,40 @@
 !!  write_grids_hdf
 !!
 !!  read_boundaryconditions_hdf
-!!      read_patches_hdf
-!!      read_bc_state_groups_hdf
+!!      - read_patches_hdf
+!!      - read_bc_state_groups_hdf
 !!
 !!  write_boundaryconditions_hdf
-!!      write_patches_hdf
-!!      write_bc_state_groups_hdf
+!!      - write_patches_hdf
+!!      - write_bc_state_groups_hdf
 !!
-!!  read_fields_hdf
-!!      read_domain_field_hdf
-!!
+!!  read_primary_fields_hdf
+!!  read_adjoint_fields_hdf  
 !!  read_auxiliary_field_hdf
+!!      - read_domain_field_hdf
 !!
-!!  write_fields_hdf
-!!      write_domain_field_hdf
+!!
+!!  write_primary_fields_hdf
+!!  write_adjoint_fields_hdf
+!!      - write_domain_primary_field_hdf
+!!      - write_domain_adjoint_field_hdf
 !!
 !!  read_equations_hdf
 !!  write_equations_hdf
 !!
-!!  read_prescribedmeshmotion_hdf
-!!      read_pmm_groups_hdf
-!!      read_pmm_domain_data_hdf
+!!  read_mesh_motion_hdf
+!!      - read_mm_domain_data_hdf
+!!      - read_mm_groups_hdf
 !!
-!!  write_prescribedmeshmotion_hdf
-!!      write_pmm_groups_hdf
-!!      write_pmm_domain_data_hdf
+!!  write_mesh_motion_hdf
+!!      write_mm_groups_hdf
+!!      write_mm_domain_data_hdf
 !!
 !!  read_global_connectivity_hdf
 !!  TODO: write_global_connectivity_hdf
 !!
+!!  read_functionals_hdf 
+!!  write_functionals_hdf 
 !!  
 !!  copy_configuration_hdf
 !!
@@ -53,12 +58,15 @@
 module mod_hdfio
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik,rdouble
-    use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC, NO_ID
+    use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC, NO_ID, &
+                                          CARTESIAN, CYLINDRICAL
     use mod_bc,                     only: create_bc
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
+    use mod_io,                     only: backend
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
+    use type_chidg_vector,          only: chidg_vector_t, chidg_vector
     use type_chidg_data,            only: chidg_data_t
     use type_meshdata,              only: meshdata_t
     use type_element_info,          only: element_info_t, element_info
@@ -67,6 +75,9 @@ module mod_hdfio
     use type_bc_state,              only: bc_state_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
+    use type_functional_group,      only: functional_group_t
+    use type_evaluator,             only: evaluator_t
+    use mod_functional,             only: create_functional
 
     use iso_c_binding,              only: c_ptr
     use mod_hdf_utilities
@@ -200,12 +211,11 @@ contains
         integer(HID_T)                  :: fid, domain_id
         integer(HSIZE_T)                :: adim
         integer(ik)                     :: idom, time, &
-                                           field_index, iproc, nelements_g, ielem, eqn_ID
+                                           field_index, iproc, nelements_g, ielem, eqn_ID, idomain_g
         integer                         :: ierr, order_s
         logical                         :: file_exists
         integer(ik)                     :: itime, connectivity_size, order_c
         integer(ik),    allocatable     :: elements(:,:)
-
 
 
         ! Write solution for each domain
@@ -213,6 +223,7 @@ contains
         do idom = 1,data%mesh%ndomains()
 
             domain_name = data%mesh%domain(idom)%name
+            idomain_g   = data%mesh%domain(idom)%idomain_g
             domain_id   = open_domain_hdf(fid,trim(domain_name))
             
             ! Write domain attributes: solution order, equation set
@@ -229,6 +240,7 @@ contains
             call set_domain_coordinate_displacements_hdf(domain_id,data%mesh%domain(idom)%dnodes           )
             call set_domain_coordinate_velocities_hdf(   domain_id,data%mesh%domain(idom)%vnodes           )
             call set_domain_coordinate_system_hdf(       domain_id,data%mesh%domain(idom)%coordinate_system)
+            call set_domain_npoints_hdf(                 domain_id,data%mesh%npoints(idomain_g,:))
 
 
             ! Assemble element connectivities
@@ -253,7 +265,6 @@ contains
 
             ! Write equation set attribute
             eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has the same eqn_ID
-            !call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(eqn_ID)%name))
             call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(eqn_ID)%get_name()))
 
 
@@ -286,7 +297,7 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine read_fields_hdf(filename,data)
+    subroutine read_primary_fields_hdf(filename,data)
         character(*),       intent(in)              :: filename
         type(chidg_data_t), intent(inout)           :: data
 
@@ -327,7 +338,7 @@ contains
 
 
         ! Initialize q_in. This is collective so we don't want it inside a serial read loop
-        call data%sdata%q_in%init(data%mesh,ntime)
+        call data%sdata%q_in%init(data%mesh,ntime,'primal')
         call data%sdata%q_in%set_ntime(ntime)
 
 
@@ -369,8 +380,134 @@ contains
         call data%sdata%q_in%assemble()
 
 
-    end subroutine read_fields_hdf
+    end subroutine read_primary_fields_hdf
     !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Read adjoint solution modes from HDF file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/14/2017
+    !!
+    !!  @param[in]      filename    Character string of the file to be read from
+    !!  @param[inout]   data        chidg_data_t that will accept the solution modes
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine read_adjoint_fields_hdf(filename,data)
+        character(*),       intent(in)      :: filename
+        type(chidg_data_t), intent(inout)   :: data
+
+        integer(HID_T)                  :: fid, domain_id
+        integer                         :: ierr
+
+        real(rk),           allocatable :: times(:)
+        integer(ik)                     :: idom, ndomains, ifield, neqns, itime, ntime, eqn_ID, iread
+        integer(ik)                     :: nfunc, nstep, ifunc
+        character(:),       allocatable :: field_name, user_msg, domain_name
+        logical                         :: file_exists, contains_adjoint_solution
+
+        ! Get number of domains contained in the ChiDG data instance
+        ndomains = data%mesh%ndomains()
+
+        ! Each process read ntime in serial
+        do iread = 0,NRANK-1
+            if ( iread == IRANK ) then
+
+                ! Open file
+                fid = open_file_hdf(filename)
+
+                ! Check file contains adjoint solution
+                contains_adjoint_solution = get_contains_adjoint_solution_hdf(fid)
+                user_msg = "We didn't find an adjoint  solution to read in the file that was specified."
+                if (.not. contains_adjoint_solution) call chidg_signal(FATAL,user_msg)
+
+                ! Read solution for each time step
+                times = get_times_hdf(fid)
+                ntime = size(times)
+
+                ! Get number of functionals and steps
+                nfunc = get_nfunctionals_hdf(fid)
+                nstep = 1 ! One file contains one adjoint solution per functional
+
+                ! Close file
+                call close_file_hdf(fid)
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do ! iread
+
+
+        ! Initialize v_in vector. This is collective so we don't want it inside a serial read loop
+        if (allocated(data%sdata%adjoint%v_in)) deallocate (data%sdata%adjoint%v_in)
+        allocate( data%sdata%adjoint%v_in(nfunc), stat=ierr)
+        if (ierr/=0) call AllocationError
+
+        do ifunc = 1,nfunc
+            data%sdata%adjoint%v_in(ifunc) = chidg_vector(trim(backend))
+            call data%sdata%adjoint%v_in(ifunc)%init(data%mesh,ntime,'primal')
+            call data%sdata%adjoint%v_in(ifunc)%set_ntime(ntime)
+        end do
+
+
+        ! Each process reads solution in serial 
+        do iread = 0,NRANK-1
+            if ( iread == IRANK ) then
+
+                ! Open file
+                fid = open_file_hdf(filename)
+
+                do itime = 1, ntime
+                    do idom = 1,ndomains
+
+                        ! Get domain name and number of primary fields
+                        domain_name = data%mesh%domain(idom)%name
+                        ! For each primary field in the domain, get the field name and read from file.
+                        domain_id = open_domain_hdf(fid,domain_name)
+                        
+                        ! Loop thorugh the adjoint fields (a set of each functional) 
+                        eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has the same eqn_ID
+                        do ifield = 1,data%eqnset(eqn_ID)%prop%nadjoint_fields()
+                            field_name = trim(data%eqnset(eqn_ID)%prop%get_adjoint_field_name(ifield))
+                            ifunc      = data%eqnset(eqn_ID)%prop%adjoint_fields(ifield)%get_functional_ID()
+                            call read_domain_field_hdf(data,domain_id,field_name,itime,'Adjoint',ifunc=ifunc)
+                        end do ! ifield
+
+                        call close_domain_hdf(domain_id)
+
+                    end do ! idom
+                end do ! itime
+
+                call close_file_hdf(fid)
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do ! iread
+
+        ! Assemble
+        do ifunc = 1,nfunc
+            call data%sdata%adjoint%v_in(ifunc)%assemble()
+        end do
+
+    end subroutine read_adjoint_fields_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -432,7 +569,7 @@ contains
         if (aux_ID == NO_ID) aux_ID = data%sdata%add_auxiliary_field(trim(store_as))
 
         ! Initialize auxiliary_field vector. This is collective so we don't want it inside a serial read loop
-        call data%sdata%auxiliary_field(aux_ID)%init(data%mesh,ntime)
+        call data%sdata%auxiliary_field(aux_ID)%init(data%mesh,ntime,'auxiliary')
         call data%sdata%auxiliary_field(aux_ID)%set_ntime(ntime)
 
 
@@ -453,7 +590,7 @@ contains
                         eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has the same eqn_ID
 
                         ! Read field
-                        call read_domain_field_hdf(data,domain_id,field,itime,'Auxiliary',store_as)
+                        call read_domain_field_hdf(data,domain_id,field,itime,'Auxiliary',store_as=store_as)
 
                         ! Close domain
                         call close_domain_hdf(domain_id)
@@ -499,7 +636,7 @@ contains
     !!  @date   2/22/2017
     !!
     !----------------------------------------------------------------------------------------
-    subroutine write_fields_hdf(data,file_name,field)
+    subroutine write_primary_fields_hdf(data,file_name,field)
         type(chidg_data_t), intent(inout)           :: data
         character(*),       intent(in)              :: file_name
         character(*),       intent(in), optional    :: field
@@ -587,7 +724,7 @@ contains
                             field_index = data%eqnset(eqn_ID)%prop%get_primary_field_index(trim(field))
 
                             if (field_index /= 0) then
-                                call write_domain_field_hdf(domain_id,data,field,itime)
+                                call write_domain_primary_field_hdf(domain_id,data,field,itime)
                             end if
 
                         else
@@ -596,7 +733,7 @@ contains
                             nfields = data%eqnset(eqn_ID)%prop%nprimary_fields()
                             do ifield = 1,nfields
                                 field_name = trim(data%eqnset(eqn_ID)%prop%get_primary_field_name(ifield))
-                                call write_domain_field_hdf(domain_id,data,field_name,itime)
+                                call write_domain_primary_field_hdf(domain_id,data,field_name,itime)
                             end do ! ifield
                         end if
 
@@ -614,10 +751,139 @@ contains
             call MPI_Barrier(ChiDG_COMM,ierr)
         end do
 
-    end subroutine write_fields_hdf
+    end subroutine write_primary_fields_hdf
     !*****************************************************************************************
 
-   
+
+
+
+
+
+    !> Write adjoint solution modes to HDF file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   9/20/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine write_adjoint_fields_hdf(data,file_name,field)
+        type(chidg_data_t), intent(inout)           :: data
+        character(*),       intent(in)              :: file_name
+        character(*),       intent(in), optional    :: field
+
+
+        character(:),   allocatable     :: field_name, domain_name, time_string
+        integer(HID_T)                  :: fid, domain_id
+        integer(HSIZE_T)                :: adim, nfreq, ntime
+        integer(ik)                     :: idom, ifield, nfields, iwrite, &
+                                           time, field_index, iproc, eqn_ID
+        integer                         :: ierr, order_s
+        logical                         :: file_exists
+        integer(ik)                     :: itime, istep, ifunc
+        real(rk),       allocatable     :: freq(:), time_lev(:)
+
+        ! Check for file existence
+        file_exists = check_file_exists_hdf(file_name)
+
+        ! Make sure q is assembled so it doesn't trigger a collective operation
+        ! inside of a sequential operation
+        istep = data%time_manager%istep
+        do ifunc = 1,size(data%sdata%adjoint%v,1)
+            call data%sdata%adjoint%v(ifunc,istep)%assemble()
+        end do
+
+
+        ! Create new file if necessary
+        !   Barrier makes sure everyone has called file_exists before
+        !   one potentially gets created by another processor
+        call MPI_Barrier(ChiDG_COMM,ierr)
+        if (.not. file_exists) then
+
+
+                ! Create a new file
+                if (IRANK == GLOBAL_MASTER) then
+                    call initialize_file_hdf(file_name)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+
+
+                ! Initialize the file structure.
+                do iproc = 0,NRANK-1
+                    if (iproc == IRANK) then
+                        fid = open_file_hdf(file_name)
+                        call initialize_file_structure_hdf(fid,data%mesh)
+                        call close_file_hdf(fid)
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
+                end do
+
+        end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
+
+
+        ! Each process, write its own portion of the solution
+        do iwrite = 0,NRANK-1
+            if ( iwrite == IRANK ) then
+
+                fid = open_file_hdf(file_name)
+
+                ! Write solution for each domain
+                do idom = 1,data%mesh%ndomains()
+
+                    domain_name = data%mesh%domain(idom)%name
+                    eqn_ID      = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has same eqn_ID
+                    domain_id   = open_domain_hdf(fid,trim(domain_name))
+                    
+                    ! Write domain attributes: solution order, equation set
+                    adim = 1
+                    order_s = 0
+                    do while ( order_s*order_s*order_s /= data%mesh%domain(idom)%nterms_s )
+                       order_s = order_s + 1 
+                    end do
+                    order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
+
+
+                    ! Set some data about the block: solution order + equation set
+                    call set_domain_field_order_hdf(domain_id,order_s)
+                    
+
+                    ! Loop through time levels
+                    do itime = 1,data%ntime()
+
+                        ! If specified, only write specified field.
+                        if (present(field)) then
+                            field_index = data%eqnset(eqn_ID)%prop%get_primary_field_index(trim(field))
+
+                            if (field_index /= 0) then
+                                call write_domain_adjoint_field_hdf(domain_id,data,field,itime)
+                            end if
+
+                        ! Else, write each field in the file.
+                        else
+                            ! For each field: get the name, write to file
+                            nfields = data%eqnset(eqn_ID)%prop%nprimary_fields()
+                            do ifield = 1,nfields
+                                field_name = trim(data%eqnset(eqn_ID)%prop%get_primary_field_name(ifield))
+                                call write_domain_adjoint_field_hdf(domain_id,data,field_name,itime)
+                            end do ! ifield
+                        end if
+
+                    end do ! itime
+
+                    call close_domain_hdf(domain_id)
+
+                end do ! idom
+
+                call set_contains_adjoint_solution_hdf(fid,"True")
+                call close_file_hdf(fid)
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
+
+    end subroutine write_adjoint_fields_hdf
+    !*****************************************************************************************
+
+
    
    
    
@@ -649,13 +915,14 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine read_domain_field_hdf(data,domain_id,field_name,itime,field_type,store_as)
+    subroutine read_domain_field_hdf(data,domain_id,field_name,itime,field_type,store_as,ifunc)
         type(chidg_data_t),         intent(inout)           :: data
         integer(HID_T),             intent(in)              :: domain_id
         character(*),               intent(in)              :: field_name
         integer(ik),                intent(in)              :: itime
         character(*),               intent(in)              :: field_type
         character(*),               intent(in), optional    :: store_as
+        integer(ik),                intent(in), optional    :: ifunc
 
 
         integer(HID_T)          :: gid, sid, vid, memspace
@@ -678,8 +945,9 @@ contains
 
 
         ! Check valid field_type input
-        if ( (trim(field_type) /= 'Primary') .and. &
-             (trim(field_type) /= 'Auxiliary') ) then
+        if ( (trim(field_type) /= 'Primary')   .and. &
+             (trim(field_type) /= 'Auxiliary') .and. &
+             (trim(field_type) /= 'Adjoint') ) then
              user_msg = "read_field_domain_hdf: An invalid field type was passed to the routine. &
                          valid field types are 'Primary' and 'Auxiliary'."
              call chidg_signal_one(FATAL,user_msg,trim(field_type))
@@ -703,6 +971,7 @@ contains
 
         domain_name = get_domain_name_hdf(domain_id)
         idom     = data%get_domain_index(domain_name)
+        if (idom == NO_ID) call chidg_signal_one(FATAL, 'read_domain_field_hdf: domain not found.', trim(domain_name))
         nterms_s = nterms_1d*nterms_1d*nterms_1d
 
         
@@ -725,7 +994,6 @@ contains
                 if (aux_ID == NO_ID) aux_ID = data%sdata%add_auxiliary_field(trim(field_name))
             end if
         end if
-
 
 
         ! Allocate storage for incoming element modes, create a memory dataspace (memspace)
@@ -762,7 +1030,6 @@ contains
             if (ierr /= 0) call AllocationError
 
 
-
             ! Select subset of dataspace - sid, read selected modes into cp_var 
             call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"read_domain_field_hdf: h5sselect_hyperslab_f.")
@@ -792,6 +1059,9 @@ contains
                 ! Implicitly assuming that an auxiliary field is stored as the first field in a full-sized chidg_vector
                 ifield = 1
                 call data%sdata%auxiliary_field(aux_ID)%set_field(real(bufferterms,rk),elem_info,ifield,itime) 
+            else if (field_type == 'Adjoint') then
+                ifield = data%eqnset(eqn_ID)%prop%get_adjoint_field_index(trim(field_name))
+                call data%sdata%adjoint%v_in(ifunc)%set_field(real(bufferterms,rk),elem_info,ifield,itime)
             end if
 
 
@@ -846,7 +1116,7 @@ contains
     !!  Expanded the dataspace to include all the time levels
     !!
     !----------------------------------------------------------------------------------------
-    subroutine write_domain_field_hdf(domain_id,data,field_name,itime,attribute_name,attribute_value)
+    subroutine write_domain_primary_field_hdf(domain_id,data,field_name,itime,attribute_name,attribute_value)
         integer(HID_T),     intent(in)              :: domain_id
         type(chidg_data_t), intent(inout)           :: data
         character(*),       intent(in)              :: field_name
@@ -870,13 +1140,10 @@ contains
 
         logical     :: DataExists, ElementsEqual, exists
         integer(ik) :: type, ierr, ndomains,    &
-                       order, ivar, ielem, idom, nelem_g, &
-                       ielement_g, nterms_s, ntime, eqn_ID
+                       order, ifield, ielem, idom, nelem_g, &
+                       nterms_s, ntime
 
-
-        !
         ! Open the Domain/Fields group
-        !
         call h5lexists_f(domain_id, "Fields", exists, ierr)
         if (exists) then
             call h5gopen_f(domain_id, "Fields", gid, ierr, H5P_DEFAULT_F)
@@ -886,28 +1153,24 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: Domain/Fields group did not open properly.")
 
 
-
-        !
         ! Set dimensions of dataspace to write
-        !
         domain_name = get_domain_name_hdf(domain_id)
         idom        = data%get_domain_index(domain_name)
+        if (idom == NO_ID) call chidg_signal_one(FATAL, 'write_domain_primary_field_hdf: domain not found.', trim(domain_name))
+
         nelem_g     = data%mesh%domain(idom)%get_nelements_global()
         nterms_s    = data%mesh%domain(idom)%nterms_s
         ndims       = 3
         ntime       = data%ntime()
 
-        !
+
         ! Set the dimensions of the dataspace to write in
-        !
         dims(1:3)    = [nterms_s, nelem_g, ntime]
         maxdims(1:3) = H5S_UNLIMITED_F
 
 
-        !
         ! Modify dataset creation properties, i.e. enable chunking in order to append
         ! dataspace, if needed.
-        !
         dimsc = [1, nelem_g, 1]  ! Chunk size
 
         call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
@@ -917,93 +1180,64 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5pset_chunk_f error setting chunk properties.")
 
 
-
-        !
         ! Reset dataspace size if necessary
-        !
         call h5lexists_f(gid, trim(field_name), exists, ierr)
         if (exists) then
+
             ! Open the existing dataset
             call h5dopen_f(gid, trim(field_name), did, ierr, H5P_DEFAULT_F)
             if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: field does not exist or was not opened correctly.")
 
-
             ! Extend dataset if necessary
             call h5dset_extent_f(did, dims, ierr)
             if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5dset_extent_f.")
-
 
             ! Update existing dataspace ID since it may have been expanded
             call h5dget_space_f(did, sid, ierr)
             if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5dget_space_f.")
 
         else
+
             ! Create a new dataspace
             call h5screate_simple_f(ndims,dims,sid,ierr,maxdims)
             if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: h5screate_simple_f.")
 
-
             ! Create a new dataset
             call h5dcreate_f(gid, trim(field_name), H5T_NATIVE_DOUBLE, sid, did, ierr, crp_list)
             if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: h5dcreate_f.")
+
         end if
 
 
-
-        !
         ! Assemble field buffer matrix that gets written to file
-        !
         allocate(var(nterms_s,1,1))
-
-
 
         do ielem = 1,data%mesh%domain(idom)%nelem
 
             elem_info = data%mesh%get_element_info(idom,ielem)
 
-            !
-            ! Get field integer index from field character string
-            !
-            eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
-            ivar = data%eqnset(eqn_ID)%prop%get_primary_field_index(field_name)
-
-
-            !
             ! get domain-global element index
-            !
-            ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g
-            start = [1-1,ielement_g-1,itime-1]   ! 0-based
+            start = [1-1,elem_info%ielement_g-1,itime-1]   ! 0-based
             count = [nterms_s, 1, 1]
 
-            !
             ! Select subset of dataspace - sid
-            !
             call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
 
-            !
             ! Create a memory dataspace
-            !
             dimsm(1) = size(var,1)
             dimsm(2) = size(var,2)
             dimsm(3) = size(var,3)
             call h5screate_simple_f(ndims,dimsm,memspace,ierr)
 
-
-            !
             ! Write modes
-            !
-            !var(:,1,1) = real(data%sdata%q%dom(idom)%vecs(ielem)%getvar(ivar,itime),rdouble)
-            var(:,1,1) = real(data%sdata%q%get_field(elem_info,ivar,itime),rdouble)
+            ifield = data%eqnset(elem_info%eqn_ID)%prop%get_primary_field_index(field_name)
+            var(:,1,1) = real(data%sdata%q%get_field(elem_info,ifield,itime),rdouble)
             cp_var = c_loc(var(1,1,1))
             call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)
 
-
             call h5sclose_f(memspace,ierr)
 
-
         end do
-
-
 
 
         call h5pclose_f(crp_list, ierr) ! Close dataset creation property
@@ -1012,10 +1246,183 @@ contains
         call h5gclose_f(gid,ierr)       ! Close Domain/Field group
 
 
-    end subroutine write_domain_field_hdf
+    end subroutine write_domain_primary_field_hdf
     !****************************************************************************************
 
 
+
+
+
+
+
+
+
+
+    !>  write hdf5 adjoint field to a domain.
+    !!
+    !!  loads the equation set and solution order and calls solution
+    !!  initialization procedure for each domain. searches for the given field and time
+    !!  instance.
+    !!
+    !!  copied and adapted from write_domain_primary_field_hdf
+    !!
+    !!  @author matteo ugolotti
+    !!  @date   8/8/2018
+    !!
+    !!      @param[in]  data        chidg_data_t instance containing grid and solution.
+    !!      @param[in]  domain_id   hdf5 file identifier.
+    !!      @param[in]  field_name  character string of the field name to be read.
+    !!      @param[in]  itime       integer of the time instance for the current field
+    !!                          to be read.
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine write_domain_adjoint_field_hdf(domain_id,data,field_name,itime,attribute_name,attribute_value)
+        integer(HID_T),     intent(in)              :: domain_id
+        type(chidg_data_t), intent(inout)           :: data
+        character(*),       intent(in)              :: field_name
+        integer(ik),        intent(in)              :: itime
+        character(*),       intent(in), optional    :: attribute_name
+        real(rk),           intent(in), optional    :: attribute_value
+
+        type(H5O_INFO_T) :: info
+        integer(HID_T)   :: gid, sid, did, crp_list, memspace, filespace
+        integer(HSIZE_T) :: edims(2), maxdims(3), dims(3), dimsm(3), dimsc(3), &
+                            start(3), count(3)
+
+        type(element_info_t)    :: elem_info
+
+        integer                             :: ndims, ibuf(1)
+        character(100)                      :: cbuf, var_grp, ctime
+        character(:),   allocatable         :: domain_name, wrt_field_name
+        real(rdouble),  allocatable, target :: var(:,:,:)
+        type(c_ptr)                         :: cp_var
+        character(1)                        :: ifunc_string
+
+        logical     :: DataExists, ElementsEqual, exists
+        integer(ik) :: type, ierr, ndomains,    &
+                       order, ifield, ielem, idom, nelem_g, &
+                       nterms_s, ntime, ifunc, nfuncs, istep
+
+        ! Open the Domain/Fields group
+        call h5lexists_f(domain_id, "Fields", exists, ierr)
+        if (exists) then
+            call h5gopen_f(domain_id, "Fields", gid, ierr, H5P_DEFAULT_F)
+        else
+            call h5gcreate_f(domain_id, "Fields", gid, ierr)
+        end if
+        if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: Domain/Fields group did not open properly.")
+
+
+        ! Set dimensions of dataspace to write
+        domain_name = get_domain_name_hdf(domain_id)
+        idom        = data%get_domain_index(domain_name)
+        if (idom == NO_ID) call chidg_signal_one(FATAL, 'write_domain_field_hdf: domain not found.', trim(domain_name))
+
+        nelem_g     = data%mesh%domain(idom)%get_nelements_global()
+        nterms_s    = data%mesh%domain(idom)%nterms_s
+        ndims       = 3
+        ntime       = data%ntime()
+
+
+        ! Assemble field buffer matrix that gets written to file
+        allocate(var(nterms_s,1,1))
+
+        ! Loop and store the ajoint variables for each functional
+        nfuncs = size(data%sdata%adjoint%v,1)
+        istep  = data%time_manager%istep !current time step 
+
+
+        do ifunc = 1,nfuncs
+
+            ! Define adjoint variable name 
+            write(ifunc_string, "(I1)") ifunc
+            wrt_field_name = 'adjoint_' //  trim(field_name) // '_' // ifunc_string
+
+            ! Set the dimensions of the dataspace to write in
+            dims(1:3)    = [nterms_s, nelem_g, ntime]
+            maxdims(1:3) = H5S_UNLIMITED_F
+
+
+            ! Modify dataset creation properties, i.e. enable chunking in order to append
+            ! dataspace, if needed.
+            dimsc = [1, nelem_g, 1]  ! Chunk size
+
+            call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5pcreate_f error enabling chunking.")
+
+            call h5pset_chunk_f(crp_list, ndims, dimsc, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5pset_chunk_f error setting chunk properties.")
+
+
+            ! Reset dataspace size if necessary
+            call h5lexists_f(gid, trim(wrt_field_name), exists, ierr)
+            if (exists) then
+
+                ! Open the existing dataset
+                call h5dopen_f(gid, trim(wrt_field_name), did, ierr, H5P_DEFAULT_F)
+                if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: field does not exist or was not opened correctly.")
+
+                ! Extend dataset if necessary
+                call h5dset_extent_f(did, dims, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5dset_extent_f.")
+
+                ! Update existing dataspace ID since it may have been expanded
+                call h5dget_space_f(did, sid, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5dget_space_f.")
+
+            else
+
+                ! Create a new dataspace
+                call h5screate_simple_f(ndims,dims,sid,ierr,maxdims)
+                if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: h5screate_simple_f.")
+
+                ! Create a new dataset
+                call h5dcreate_f(gid, trim(wrt_field_name), H5T_NATIVE_DOUBLE, sid, did, ierr, crp_list)
+                if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: h5dcreate_f.")
+
+            end if ! dataspace exists
+
+
+            do ielem = 1,data%mesh%domain(idom)%nelem
+
+                elem_info = data%mesh%get_element_info(idom,ielem)
+
+                ! get domain-global element index
+                start = [1-1,elem_info%ielement_g-1,itime-1]   ! 0-based
+                count = [nterms_s, 1, 1]
+
+                ! Select subset of dataspace - sid
+                call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
+
+                ! Create a memory dataspace
+                dimsm(1) = size(var,1)
+                dimsm(2) = size(var,2)
+                dimsm(3) = size(var,3)
+                call h5screate_simple_f(ndims,dimsm,memspace,ierr)
+
+                ! Write modes
+                ifield = data%eqnset(elem_info%eqn_ID)%prop%get_primary_field_index(field_name)
+                !var(:,1,1) = real(data%sdata%q%get_field(elem_info,ifield,itime),rdouble)
+                !var(:,1,1) = real(data%sdata%adjoint%v(ifunc,istep)%dom(idom)%vecs(ielem)%getvar(ifield,itime),rdouble)
+                var(:,1,1) = real(data%sdata%adjoint%v(ifunc,istep)%get_field(elem_info,ifield,itime),rdouble)
+                cp_var = c_loc(var(1,1,1))
+
+                call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)
+                call h5sclose_f(memspace,ierr)
+
+            end do !ielem
+
+            call h5pclose_f(crp_list, ierr) ! Close dataset creation property
+            call h5dclose_f(did,ierr)       ! Close Field datasets
+            call h5sclose_f(sid,ierr)       ! Close Field dataspaces
+
+        end do !ifunc
+
+        call h5gclose_f(gid,ierr)       ! Close Domain/Field group
+
+
+    end subroutine write_domain_adjoint_field_hdf
+    !****************************************************************************************
 
 
 
@@ -1141,52 +1548,37 @@ contains
 
         patches = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
 
-
-        !
         !  Loop through connectivities and read boundary conditions
-        !
         nconn = size(partition%connectivities)
         do iconn = 1,nconn
 
-
-            !
             ! Get name of current domain, open domain group
-            !
             domain = partition%connectivities(iconn)%get_domain_name()
             patch_data(iconn)%domain_name = domain
             dom_id = open_domain_hdf(fid,trim(domain))
 
 
-            !
             ! Allocation bcs for current domain
-            !
             npatches = get_npatches_hdf(dom_id)
             allocate(patch_data(iconn)%bc_connectivity(npatches), stat=ierr)
             if (ierr /= 0) call AllocationError
 
-
-            !
             ! Loop faces and get boundary condition for each
-            !
             ! TODO: should probably turn this into a loop over bcs instead of faces.
             do ipatch = 1,npatches
 
-
                 ! Open face boundary condition group
                 patch_id = open_patch_hdf(dom_id,patches(ipatch))
-    
 
                 ! Get bc patch connectivity for current face
                 patch = get_patch_hdf(patch_id)
                 nbcfaces = size(patch,1)
-
 
                 ! Store boundary condition connectivity
                 call patch_data(iconn)%bc_connectivity(ipatch)%init(nbcfaces)
                 do ibc_face = 1,nbcfaces
                     patch_data(iconn)%bc_connectivity(ipatch)%data(ibc_face)%data = patch(ibc_face,:)
                 end do
-
                 
                 ! Read Boundary State Group
                 group_name = get_patch_group_hdf(patch_id)
@@ -1194,20 +1586,15 @@ contains
                 call patch_data(iconn)%group_name%push_back(string_t(trim(group_name)))
                 call patch_data(iconn)%patch_name%push_back(string_t(trim(patch_name)))
 
-
                 ! Close face boundary condition group
                 call close_patch_hdf(patch_id)
 
             end do ! ipatch
 
-
             ! Close domain group
             call close_domain_hdf(dom_id)
 
-
         end do  ! iconn
-
-
 
     end subroutine read_patches_hdf
     !****************************************************************************************
@@ -1258,23 +1645,17 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        !
         ! Read each group of bc_state's
-        !
         do igroup = 1,ngroups
 
             ! Open face boundary condition group
             group_name = bc_group_names%at(igroup)
             group_id = open_bc_state_group_hdf(fid,group_name%get())
 
-            !
             ! Get bc_group Family attribute.
-            !
             bc_state_groups(igroup)%family = get_bc_state_group_family_hdf(group_id)
 
-            !
             ! Loop through and read states + their properties
-            !
             bc_state_names = get_bc_state_names_hdf(group_id)
             do istate = 1,bc_state_names%size()
 
@@ -1408,26 +1789,19 @@ contains
 
         fid = open_file_hdf(file_name)
 
-
-        !
         ! Add boundary condition state groups to the file.
-        !
         do igroup = 1,data%nbc_state_groups()
+
             group_name = data%bc_state_group(igroup)%get_name()
 
-            !
             ! If the group already exists, completely remove so we don't end up with
             ! conflicting settings.
-            !
             exists = check_link_exists_hdf(fid,"BCSG_"//group_name)
             if (exists) call remove_bc_state_group_hdf(fid,trim(group_name))
 
-            !
             ! Add all states
-            !
             call create_bc_state_group_hdf(fid,trim(group_name))
             bcsg_id = open_bc_state_group_hdf(fid,trim(group_name))
-
             do istate = 1,data%bc_state_group(igroup)%nbc_states()
 
                 state_name = data%bc_state_group(igroup)%bc_state(istate)%state%name
@@ -1435,16 +1809,13 @@ contains
 
             end do !istate
 
-
             call close_bc_state_group_hdf(bcsg_id)
         end do !igroup
-
 
         call close_file_hdf(fid)
 
     end subroutine write_bc_state_groups_hdf
     !***************************************************************************************
-
 
 
 
@@ -1553,6 +1924,382 @@ contains
 
 
 
+
+
+    !>  Read functionals from .h5 file and store in fcl_group.
+    !!
+    !!  This is called by chidg_t and the filename is the gridfile, whereas the fcl_group argument
+    !!  is chidg%data%functional_group
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   05/15/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine read_functionals_hdf(filename,data)
+        character(*),         intent(in)      :: filename
+        class(chidg_data_t),  intent(inout)   :: data
+        
+        integer(HID_T)      :: fid
+        integer(ik)         :: nfunctions, astep, ifcl
+        integer(ik)         :: ierr
+        character(len=1024),    allocatable :: ref_geom, aux_geom
+        type(svector_t)                     :: names
+        class(evaluator_t),     allocatable :: fcl_temp
+
+        ! Open gridfile
+        fid = open_file_hdf(filename)
+        
+        ! Get number of functionals entered
+        nfunctions = get_nfunctionals_hdf(fid)
+
+        ! If no functional is required, do nothing
+        if (nfunctions /= 0) then
+        
+            ! Initialize functional_group%fcl_state
+            call data%functional_group%init(nfunctions)
+        
+            ! Get functional names to be read
+            names = get_functionals_names_hdf(fid)
+
+            do ifcl = 1,nfunctions
+                
+                ! Read all the information relative to the ifcl
+                ref_geom = get_functional_reference_geom_hdf(fid,names%data_(ifcl)%get())
+                aux_geom = get_functional_auxiliary_geom_hdf(fid,names%data_(ifcl)%get())
+
+                ! Create concrete functional
+                call create_functional(names%data_(ifcl)%get(),fcl_temp)
+                allocate(data%functional_group%fcl_entities(ifcl)%func, source = fcl_temp, stat=ierr)
+                if (ierr/=0) call AllocationError
+                
+                ! Add attributes
+                call data%functional_group%fcl_entities(ifcl)%func%set_ref_geom(trim(ref_geom))
+                call data%functional_group%fcl_entities(ifcl)%func%set_aux_geom(trim(aux_geom))
+                data%functional_group%fcl_entities(ifcl)%func%ID = ifcl
+
+                ! Initialize integral storage and check functional information completeness
+                call data%functional_group%fcl_entities(ifcl)%func%check()
+
+            end do
+        
+        end if
+
+        ! Close gridfile
+        call close_file_hdf(fid)
+
+    end subroutine read_functionals_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+    !> Write functionals to HDF file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   7/17/2017
+    !!
+    !!  @param[in]      filename    Character string of the file to be written to
+    !!  @param[inout]   data        chidg_data_t containing solution to be written
+    !!
+    !!  TODO: ADD PARALLEL CAPABILITY, ONLY SERIAL AS OF NOW!!!
+    !!  TODO: think about adding a initialize_file_functional_structure_hdf routine
+    !----------------------------------------------------------------------------------------
+    subroutine write_functionals_hdf(data,file_name)
+        type(chidg_data_t), intent(in)              :: data
+        character(*),       intent(in)              :: file_name
+
+        character(:),   allocatable     :: func_name, ref_geom, aux_geom
+        integer(HID_T)                  :: fid, fcl_id, fcld_id, did, sid
+        integer(HSIZE_T)                :: dims(2)
+        integer                         :: ierr
+        logical                         :: file_exists, exists
+        integer(ik)                     :: ntime, ifunc, ndims, iproc, iwrite
+        real(rk),       allocatable     :: func_data(:)
+
+        ! Check for file existence
+        file_exists = check_file_exists_hdf(file_name)
+
+        ! Create new file if necessary
+        !   Barrier makes sure everyone has called file_exists before
+        !   one potentially gets created by another processor
+        call MPI_Barrier(ChiDG_COMM,ierr)
+        if (.not. file_exists) then
+
+                ! Create a new file
+                if (IRANK == GLOBAL_MASTER) then
+                    call initialize_file_hdf(file_name)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+
+                ! Initialize the file structure.
+                do iproc = 0,NRANK-1
+                    if (iproc == IRANK) then
+                        fid = open_file_hdf(file_name)
+                        call initialize_file_structure_hdf(fid,data%mesh)
+                        call close_file_hdf(fid)
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
+                end do
+
+        end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
+
+
+        ! Only the master rank writes the functional to hdf
+        if ( IRANK == GLOBAL_MASTER ) then
+
+            ! Open hdf file
+            fid = open_file_hdf(file_name)
+            
+            ! Create functional group if it does not exist yet
+            call create_functional_group_hdf(fid)
+
+            do ifunc = 1,data%sdata%functional%nfunc()
+
+                func_name = data%functional_group%fcl_entities(ifunc)%func%get_name()
+                ref_geom  = data%functional_group%fcl_entities(ifunc)%func%get_ref_geom()
+                aux_geom  = data%functional_group%fcl_entities(ifunc)%func%get_aux_geom()
+                ntime     = 1 ! Each hdf file contains the functional of that time instance
+                ndims     = 2
+                dims(1:2) = [1,ntime]
+               
+                ! Check if the functional exists, if not create it
+                call create_functional_hdf(fid,trim(func_name))
+                
+                ! Set reference and auxiliary geometries
+                call set_functional_reference_geom_hdf(fid,trim(func_name),trim(ref_geom))
+                call set_functional_auxiliary_geom_hdf(fid,trim(func_name),trim(aux_geom))
+
+                ! Open Functional group
+                fcl_id = open_functional_group_hdf(fid)
+
+                ! Open functional
+                call h5gopen_f(fcl_id,trim(func_name),fcld_id,ierr)
+                
+                ! Reset dataspace size if necessary
+                exists = check_link_exists_hdf(fcld_id,trim(func_name))
+                if (exists) then
+                    ! Open the existing dataset
+                    call h5dopen_f(fcld_id, trim(func_name), did, ierr, H5P_DEFAULT_F)
+                    if (ierr /= 0) call chidg_signal(FATAL,"write_functional_hdf: functional does not exist or was not opened correctly")
+
+                else
+                    ! Create a new dataspace
+                    call h5screate_simple_f(ndims,dims,sid,ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"write_functional_hdf: h5screate_simple_f")
+
+
+                    ! Create a new dataset
+                    call h5dcreate_f(fcld_id, trim(func_name), H5T_NATIVE_DOUBLE, sid, did, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"write_functional_hdf: h5dcreate_f")
+                
+                    ! Close dataspace
+                    call h5sclose_f(sid,ierr)
+                    if (ierr /=0 ) call chidg_signal(FATAL,"write_functional_HDF: h5sclose_f")
+                
+                end if
+
+                ! Retrive data
+                func_data = data%sdata%functional%get_func(ifunc,data%time_manager%istep)
+
+                ! Write data to dataset
+                call h5dwrite_f(did, H5T_NATIVE_DOUBLE, func_data, dims, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL, "write_functional_hdf: h5dwrite_f.")
+
+                call h5dclose_f(did, ierr)
+                call h5gclose_f(fcld_id,ierr)
+                call h5gclose_f(fcl_id,ierr)
+            end do !ifunc
+            
+            call close_file_hdf(fid)
+
+        end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
+    
+    end subroutine write_functionals_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Write a hdf5 file with a specific format for mesh sensitivites.
+    !!  The file is written by the master processor who has gathered all the informations
+    !!  about the node sensitivities of all the nodes for all the blocks. 
+    !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/26/2018
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine write_x_sensitivities_hdf(data,ifunc,file_name)
+        type(chidg_data_t), intent(inout)   :: data
+        integer(ik),        intent(in)      :: ifunc
+        character(*),       intent(in)      :: file_name
+
+
+        character(:),   allocatable     :: field_name, filename
+        integer(HID_T)                  :: fid, domain_id
+        integer                         :: ierr,idom,nnodes,inode
+        logical                         :: file_exists
+        real(rk),       allocatable     :: nodes_coords(:,:), nodes_sens(:,:)
+        real(rk)                        :: r, theta, z,   &
+                                           dJdr, dJdtheta, dJdz
+        integer(ik),    allocatable     :: nodes_info(:,:)
+        character(2)                    :: domain_name
+
+        ! Check for file existence
+        filename    = trim(file_name) // ".h5"
+        file_exists = check_file_exists_hdf(filename)
+        
+        ! Create new file if necessary
+        if (.not. file_exists) then
+
+            ! Create a new file
+            call initialize_file_xhdf(filename)
+
+            ! Initialize the file structure.
+            fid = open_file_hdf(filename)
+            call initialize_file_structure_xhdf(fid,data%mesh)
+            call close_file_hdf(fid)
+
+        end if
+
+
+        associate ( node_sensitivities => data%sdata%adjointx%node_sensitivities )
+
+            ! Master process writs grid-node info and sensitivities fro each block
+            fid = open_file_hdf(filename)
+
+            ! Write solution for each domain
+            do idom = 1,size(data%mesh%npoints,1)
+
+                write(domain_name,'(I2.2)') idom
+                domain_id   = open_domain_hdf(fid,trim(domain_name))
+                nnodes      = node_sensitivities(ifunc,idom)%size()
+
+
+                ! Reallocate array
+                if (allocated(nodes_coords)) deallocate(nodes_coords,nodes_info,nodes_sens)
+                allocate(nodes_coords(nnodes,3),nodes_info(nnodes,2),nodes_sens(nnodes,3),stat=ierr)
+                if (ierr/=0) call AllocationError
+
+
+                ! Write nodes coordinates
+                if (node_sensitivities(ifunc,idom)%data(1)%coordinate_system == CARTESIAN) then
+                    nodes_coords = node_sensitivities(ifunc,idom)%get_nodes_coords()
+                    call set_domain_coordinates_hdf(domain_id,nodes_coords)
+                end if
+
+                if (node_sensitivities(ifunc,idom)%data(1)%coordinate_system == CYLINDRICAL) then
+                    do inode = 1,nnodes
+                        r     = node_sensitivities(ifunc,idom)%data(inode)%coords(1) 
+                        theta = node_sensitivities(ifunc,idom)%data(inode)%coords(2) 
+                        z     = node_sensitivities(ifunc,idom)%data(inode)%coords(3) 
+                        nodes_coords(inode,1) = r*cos(theta) 
+                        nodes_coords(inode,2) = r*sin(theta)
+                        nodes_coords(inode,3) = z
+                    end do
+                end if
+
+
+                ! Write node info
+                nodes_info(:,1) = node_sensitivities(ifunc,idom)%get_nodes_domain_g()
+                nodes_info(:,2) = node_sensitivities(ifunc,idom)%get_nodes_ID()
+                call set_domain_nodeinfo_xhdf(domain_id,nodes_info)
+
+
+                ! Write node sensitivities
+                if (node_sensitivities(ifunc,idom)%data(1)%coordinate_system == CARTESIAN) then
+                    nodes_sens = node_sensitivities(ifunc,idom)%get_nodes_sensitivities()
+                    call set_domain_sensitivities_xhdf(domain_id,nodes_sens)
+                end if
+
+                if (node_sensitivities(ifunc,idom)%data(1)%coordinate_system == CYLINDRICAL) then
+                    do inode = 1,nnodes
+                        theta    = node_sensitivities(ifunc,idom)%data(inode)%coords(2) 
+                        dJdr     = node_sensitivities(ifunc,idom)%data(inode)%sensitivities(1) 
+                        dJdtheta = node_sensitivities(ifunc,idom)%data(inode)%sensitivities(2) 
+                        dJdz     = node_sensitivities(ifunc,idom)%data(inode)%sensitivities(3) 
+                        nodes_sens(inode,1) = dJdr*cos(theta) - dJdtheta*sin(theta)
+                        nodes_sens(inode,2) = dJdr*sin(theta) + dJdtheta*cos(theta)
+                        nodes_sens(inode,3) = dJdz
+                    end do
+                    call set_domain_sensitivities_xhdf(domain_id,nodes_sens)
+                end if
+
+                
+                ! Close domian
+                call close_domain_hdf(domain_id)
+
+
+            end do ! idom
+
+
+        end associate
+
+        call set_contains_solution_hdf(fid,"True")
+        call close_file_hdf(fid)
+
+
+    end subroutine write_x_sensitivities_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     !>  This reads an HDF ChiDG grid file and returns an array of connectivities, one 
     !!  for each domain.
     !!
@@ -1630,6 +2377,79 @@ contains
     end subroutine read_global_connectivity_hdf
     !****************************************************************************************
 
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine read_grid_npoints_hdf(filename,npoints)
+        character(*),               intent(in)      :: filename
+        integer(ik), allocatable,   intent(inout)   :: npoints(:,:)
+
+        integer(HID_T)   :: fid, domain_id
+
+        integer(ik),            allocatable :: connectivity(:,:)
+        character(len=1024),    allocatable :: domain_names(:)
+        character(:),           allocatable :: user_msg, domain_name
+        integer                             :: type, ierr, ndomains,    &
+                                               idom, idomain_g
+        logical                             :: contains_grid
+
+
+        fid = open_file_hdf(filename)
+
+        ! Check contains grid
+        contains_grid = get_contains_grid_hdf(fid)
+        user_msg = "We didn't find a grid to read in the file that was specified. &
+                    The file could be a bare ChiDG file or maybe was generated by &
+                    an incompatible version of the ChiDG library."
+        if (.not. contains_grid) call chidg_signal(FATAL,user_msg)
+
+
+        ! Allocate number of domains
+        ndomains = get_ndomains_hdf(fid)
+        user_msg = "read_grid_npoints_hdf: No domains were found in the file."
+        if (ndomains == 0) call chidg_signal(FATAL,user_msg)
+        allocate(npoints(ndomains,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        ! Loop through groups and read domain connectivities
+        domain_names = get_domain_names_hdf(fid)
+        do idom = 1,size(domain_names)
+
+                domain_name = domain_names(idom)
+                domain_id = open_domain_hdf(fid,trim(domain_name))
+
+                ! Get connectivity and total number of nodes in the domain
+                connectivity = get_domain_connectivity_hdf(domain_id)
+
+                ! Get domain global index from the first element
+                idomain_g = connectivity(1,1)
+                
+                ! Set domain npoints in array
+                npoints(idomain_g,:) = get_domain_npoints_hdf(domain_id)
+
+                ! Close domain
+                call close_domain_hdf(domain_id)
+
+        end do  ! idom
+
+        ! Close file
+        call close_file_hdf(fid)
+
+    end subroutine read_grid_npoints_hdf
+    !****************************************************************************************
 
 
 
@@ -1794,20 +2614,14 @@ contains
             allocate(pmm_groups_wrapper%mm_groups(ngroups), stat=ierr)
             if (ierr /= 0) call AllocationError
 
-
             do igroup = 1,ngroups
 
                 ! Open face boundary condition group
                 group_name = pmm_group_names%at(igroup)
-                !group_id = open_pmm_group_hdf(fid,group_name%get())
                 group_id = open_mm_group_hdf(fid, trim(group_name%get()))
-                !call h5gopen_f(fid, "MM_"//trim(group_name%get()), group_id, ierr)
-                !if (ierr /= 0) call chidg_signal_one(FATAL,"read_mm_groups_hdf: error opening bc_state group.",trim(pmm_name%get()))
-
 
                 if (allocated(pmm)) deallocate(pmm)
                 if (allocated(pmm_temp)) deallocate(pmm_temp)
-                
                 
                 call get_mm_hdf(fid,group_id, group_name%get(), pmm_temp)
                 allocate(pmm, source = pmm_temp)
@@ -1816,18 +2630,13 @@ contains
                 pmm_groups_wrapper%ngroups = pmm_groups_wrapper%ngroups+1
                 pmm_groups_wrapper%mm_groups(igroup)%name = trim(group_name%get())
                 allocate(pmm_groups_wrapper%mm_groups(igroup)%mm, source = pmm)
-                !pmm_groups_wrapper%pmm_groups(igroup)%pmm = pmm
-
-
 
                 ! Close boundary condition state group
                 call h5gclose_f(group_id, ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,"read_mm_groups_hdf: h5gclose")
 
-
             end do !igroup
         end if
-
 
 
     end subroutine read_mm_groups_hdf
@@ -1895,32 +2704,17 @@ contains
         nnodes_g = 0
         do idom = 1,size(domain_names)
 
-                domain_name = domain_names(idom)
-                domain_id = open_domain_hdf(fid,trim(domain_name))
+            domain_name = domain_names(idom)
+            domain_id = open_domain_hdf(fid,trim(domain_name))
 
-                ! Get connectivity and total number of nodes in the domain
-                !connectivity = get_domain_connectivity_hdf(domain_id)
-                nnodes       = get_domain_nnodes_hdf(domain_id)
- 
-                global_nodes(nnodes_g+1:nnodes_g+nnodes,:) = get_domain_coordinates_hdf(domain_id)
-                nnodes_g = nnodes_g + nnodes
-!                !
-!                ! Initialize domain connectivity structure
-!                !
-!                nelements = size(connectivity,1)
-!                call connectivities(idom)%init(domain_name,nelements, nnodes)
-!
-!
-!                do ielem = 1,nelements
-!                    mapping = connectivity(ielem,3)
-!                    call connectivities(idom)%data(ielem)%init(mapping)
-!                    connectivities(idom)%data(ielem)%data = connectivity(ielem,:)
-!                    call connectivities(idom)%data(ielem)%set_element_partition(NO_PROC)
-!                end do
+            ! Get connectivity and total number of nodes in the domain
+            nnodes = get_domain_nnodes_hdf(domain_id)
 
+            global_nodes(nnodes_g+1:nnodes_g+nnodes,:) = get_domain_coordinates_hdf(domain_id)
+            nnodes_g = nnodes_g + nnodes
 
-                ! Close domain
-                call close_domain_hdf(domain_id)
+            ! Close domain
+            call close_domain_hdf(domain_id)
 
         end do  ! idom
 

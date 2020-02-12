@@ -73,22 +73,18 @@ contains
             u_m,  u_p,                              &
             c1_m, c2_m, c3_m,                       &
             c1_p, c2_p, c3_p,                       &
-            c_n_m, c_n_p, dissipation, wave_speed
+            c_n_m, c_n_p, dissipation, wave_speed,  &
+            unorm_1, unorm_2, unorm_3, grid_vel_n
             
         real(rk),   allocatable, dimension(:,:) :: grid_vel
-        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, grid_vel_n
 
 
-
-        !
         ! Interpolate solution to quadrature nodes
-        !
         u_m = worker%get_field('u', 'value', 'face interior')
         u_p = worker%get_field('u', 'value', 'face exterior')
 
-        !
+
         ! Get model coefficients
-        !
         c1_m = worker%get_field('Scalar Advection Velocity-1', 'value', 'face interior')
         c2_m = worker%get_field('Scalar Advection Velocity-2', 'value', 'face interior')
         c3_m = worker%get_field('Scalar Advection Velocity-3', 'value', 'face interior')
@@ -97,30 +93,23 @@ contains
         c3_p = worker%get_field('Scalar Advection Velocity-3', 'value', 'face exterior')
         
 
-        !
         ! Get normal vector
-        !
         unorm_1  = worker%unit_normal_ale(1)
         unorm_2  = worker%unit_normal_ale(2)
         unorm_3  = worker%unit_normal_ale(3)
 
                
-        !
         ! Compute boundary upwind dissipation
-        !
         grid_vel   = worker%get_grid_velocity_face('face interior')
         c_n_m      = c1_m*unorm_1 + c2_m*unorm_2 + c3_m*unorm_3
         c_n_p      = c1_p*unorm_1 + c2_p*unorm_2 + c3_p*unorm_3
         grid_vel_n = grid_vel(:,1)*unorm_1  +  grid_vel(:,2)*unorm_2  +  grid_vel(:,3)*unorm_3
 
         wave_speed  = max(abs(c_n_m),abs(c_n_p)) + grid_vel_n
-        !dissipation = HALF*wave_speed*(u_m-u_p)
         dissipation = -HALF*wave_speed*(u_p-u_m)
 
 
-        !
         ! Integrate flux
-        !
         call worker%integrate_boundary_upwind('u',dissipation)
 
 

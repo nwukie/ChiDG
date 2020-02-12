@@ -1,7 +1,6 @@
 module type_petsc_vector_wrapper
 #include <messenger.h>
 #include "petsc/finclude/petscvec.h"
-!#include "petscconf.h"
     use mod_kinds,  only: ik
     use petscvec,   only: tVec, VecDestroy
     implicit none
@@ -24,14 +23,12 @@ contains
     subroutine destroy(self)
         type(petsc_vector_wrapper_t),   intent(inout)   :: self
 
-        integer(ik) :: ierr
-
+        PetscErrorCode :: ierr
 
         ! We assume, that whenever a petsc_vector_wrapper_t is allocated, the petsc_vector 
         ! component is also created. So, we do not check that this is actually the case.
         call VecDestroy(self%petsc_vector,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'petsc_vector_wrapper%destroy: error calling VecDestroy.')
-
 
         ! NOTE: petsc sets vector objects to NULL after destroying them. The problem is that
         ! VecScatterCreateToAll won't create a new vector for petsc_vector_recv if it is NULL
@@ -46,7 +43,6 @@ contains
         ! be any '=' below or the compiler will error.
         !
         self%petsc_vector%v      PETSC_FORTRAN_TYPE_INITIALIZE
-
 
     end subroutine destroy
     !*************************************************************************************

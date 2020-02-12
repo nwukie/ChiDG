@@ -19,13 +19,10 @@ module bc_state_spalart_allmaras_symmetry
     type, public, extends(bc_state_t) :: spalart_allmaras_symmetry_t
 
     contains
-
         procedure   :: init
         procedure   :: compute_bc_state
-
     end type spalart_allmaras_symmetry_t
     !*******************************************************************************************
-
 
 
 
@@ -42,9 +39,7 @@ contains
     subroutine init(self)
         class(spalart_allmaras_symmetry_t),   intent(inout) :: self
         
-        !
         ! Set operator name
-        !
         call self%set_name('Spalart Allmaras Symmetry')
         call self%set_family('Symmetry')
 
@@ -53,16 +48,10 @@ contains
 
 
 
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie
     !!  @date   12/9/2016
-    !!
-    !!
     !!
     !----------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
@@ -71,31 +60,20 @@ contains
         class(properties_t),                intent(inout)   :: prop
         type(mpi_comm),                     intent(in)      :: bc_COMM
 
-
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   :: &
             density_nutilde_m, grad1_density_nutilde_m, grad2_density_nutilde_m, grad3_density_nutilde_m
 
-
-        !
         ! Interpolate interior solution to quadrature nodes
-        !
         density_nutilde_m       = worker%get_field('Density * NuTilde', 'value', 'face interior')
         grad1_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad1', 'face interior')
         grad2_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad2', 'face interior')
         grad3_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad3', 'face interior')
 
-
-
-        !
         ! Store boundary condition state - Extrapolate
-        !
         call worker%store_bc_state('Density * NuTilde', density_nutilde_m,'value')
 
-
-        !
         ! Store boundary condition gradient - Zero Gradient
-        !
         grad1_density_nutilde_m = ZERO
         grad2_density_nutilde_m = ZERO
         grad3_density_nutilde_m = ZERO

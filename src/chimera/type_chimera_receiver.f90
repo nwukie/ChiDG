@@ -130,52 +130,11 @@ contains
         donor_ID = self%find_donor(donor%idomain_g,donor%ielement_g)
         if ( donor_ID == NO_ID ) then
             donor_ID = self%new_donor()
-            !self%donor(donor_ID) = chimera_donor(idomain_g, idomain_l, ielement_g, ielement_l, iproc)
             self%donor(donor_ID)%elem_info = donor
         end if
 
     end function add_donor
     !****************************************************************************************
-
-
-
-
-
-
-
-!    !>  Add chimera donor to the receiver face object.
-!    !!
-!    !!  If donor matching the incoming donor already exists, return its ID instead of
-!    !!  creating a new instance.
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   7/25/2017
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    function add_donor(self, idomain_g, idomain_l, ielement_g, ielement_l, iproc) result(donor_ID)
-!        class(chimera_receiver_t),  intent(inout)   :: self
-!        integer(ik),                intent(in)      :: idomain_g
-!        integer(ik),                intent(in)      :: idomain_l
-!        integer(ik),                intent(in)      :: ielement_g
-!        integer(ik),                intent(in)      :: ielement_l
-!        integer(ik),                intent(in)      :: iproc
-!
-!        integer(ik) :: donor_ID
-!
-!
-!        ! Check if receiver matching the incoming face already exists.
-!        ! If not, call new and construct new object.
-!        donor_ID = self%find_donor(idomain_g,ielement_g)
-!        if ( donor_ID == NO_ID ) then
-!            donor_ID = self%new_donor()
-!            self%donor(donor_ID) = chimera_donor(idomain_g, idomain_l, ielement_g, ielement_l, iproc)
-!        end if
-!
-!    end function add_donor
-!    !****************************************************************************************
-
-
-
 
 
 
@@ -193,29 +152,22 @@ contains
         type(chimera_donor_t),  allocatable :: temp(:)
         integer(ik)                         :: ierr, donor_ID
 
-
-
         ! Resize array storage
         allocate(temp(self%ndonors() + 1), stat=ierr)
-
 
         ! Copy previously initialized instances to new array.
         if (self%ndonors() > 0) then
             temp(1:size(self%donor)) = self%donor(1:size(self%donor))
         end if
 
-
         ! Move resized temp allocation back to parent. 
         call move_alloc(temp,self%donor)
-
 
         ! Set domain identifier of newly allocated domain that will be returned
         donor_ID = self%ndonors()
 
-
     end function new_donor
     !*****************************************************************************************
-
 
 
 

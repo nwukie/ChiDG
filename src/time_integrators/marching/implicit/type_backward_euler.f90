@@ -2,9 +2,8 @@ module type_backward_euler
 #include <messenger.h>
     use messenger,                      only: write_line
     use mod_kinds,                      only: rk,ik
-    use mod_constants,                  only: ONE, NO_ID
+    use mod_constants,                  only: ONE, NO_ID, dQ_DIFF, NO_DIFF
     use mod_spatial,                    only: update_space
-!    use mod_update_grid,                only: update_grid
 
     use type_time_integrator_marching,  only: time_integrator_marching_t
     use type_system_assembler,          only: system_assembler_t
@@ -192,7 +191,7 @@ contains
     subroutine assemble(self,data,differentiate,timing)
         class(assemble_backward_euler_t),   intent(inout)               :: self
         type(chidg_data_t),                 intent(inout)               :: data
-        logical,                            intent(in)                  :: differentiate
+        integer(ik),                        intent(in)                  :: differentiate
         real(rk),                           intent(inout),  optional    :: timing
 
         integer(ik)                 :: itime, idom, ielem, ifield, ierr
@@ -209,7 +208,7 @@ contains
 
         ! Clear data containers
         call rhs%clear()
-        if (differentiate) call lhs%clear()
+        if (differentiate == dQ_DIFF) call lhs%clear()
 
         ! Get spatial update
         call update_space(data,differentiate,timing)
@@ -229,7 +228,7 @@ contains
                     do ifield = 1,data%eqnset(elem_info%eqn_ID)%prop%nprimary_fields()
 
                         ! Add time derivative to left-hand side
-                        if (differentiate) then
+                        if (differentiate == dQ_DIFF) then
                             mat = data%mesh%domain(idom)%elems(ielem)%mass * (ONE/dt)
                             call data%sdata%lhs%scale_diagonal(mat,elem_info,ifield,itime)
                         end if
@@ -246,7 +245,7 @@ contains
 
         ! Reassemble
         call data%sdata%rhs%assemble()
-        if (differentiate) call data%sdata%lhs%assemble()
+        if (differentiate == dQ_DIFF) call data%sdata%lhs%assemble()
 
         end associate
 
@@ -279,7 +278,7 @@ contains
         integer(ik),                                intent(in)      :: niter
         real(rk),                                   intent(in)      :: residual_ratio
 
-        logical :: update
+        integer(ik) :: update
 
         ! Update lhs if:
         !   1: If matrix(lhs/A) hasn't been updated before
@@ -290,13 +289,17 @@ contains
             (niter > 10)                .or. &
             (residual_ratio > 10._rk)   .or. &
             (self%force_update_lhs) ) then
-            update = .true.
+            !update = .true.
+            update = dQ_DIFF
+            self%lhs_updated = .true.
         else
-            update = .false.
+            !update = .false.
+            update = NO_DIFF
+            self%lhs_updated = .false.
         end if
 
-        ! Store action
-        self%lhs_updated = update
+        !! Store action
+        !self%lhs_updated = update
 
         ! Turn off forced update
         self%force_update_lhs = .false.

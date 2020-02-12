@@ -116,6 +116,7 @@ contains
                 call set_time_integrator_hdf(fid, trim(data%time_manager%get_name()))
                 call set_times_hdf(          fid, [data%time_manager%t]             )
                 call set_time_step_hdf(      fid, data%time_manager%dt              )
+                call set_istep_hdf(          fid, data%time_manager%istep           )
                 call set_nsteps_hdf(         fid, data%time_manager%nsteps          )
                 call set_nwrite_hdf(         fid, data%time_manager%nwrite          )
                 call close_file_hdf(fid)
@@ -191,7 +192,7 @@ contains
 
         associate (q_out => data%sdata%q_out, q_in => data%sdata%q_in)
 
-            call q_out%init(data%mesh,data%time_manager%ntime)
+            call q_out%init(data%mesh,data%time_manager%ntime,'primal')
             call q_out%set_ntime(data%time_manager%ntime)
             call q_out%clear()
 

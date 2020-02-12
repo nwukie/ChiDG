@@ -88,6 +88,7 @@ contains
         integer(ik),        allocatable :: elements(:,:), faces(:,:)
         character(len=8)                :: bc_face_strings(6)
         character(:),   allocatable     :: bc_face_string
+        integer(ik)                     :: npoints(3)
 
 
         !
@@ -119,6 +120,7 @@ contains
         npt_xi   = nelem_xi*4 + 1
         npt_eta  = nelem_eta*4 + 1
         npt_zeta = nelem_zeta*4 + 1
+        npoints  = [npt_xi,npt_eta,npt_zeta]
 
 
         !
@@ -257,7 +259,7 @@ contains
             ! Add domains
             !
             write(domainname, '(I2.2)') idomain
-            call add_domain_hdf(file_id,trim(domainname),nodes,elements,'Cartesian','Euler')
+            call add_domain_hdf(file_id,trim(domainname),npoints,nodes,elements,'Cartesian','Euler')
 
 
 

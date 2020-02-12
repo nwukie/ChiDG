@@ -19,6 +19,7 @@ module mod_io
     character(len=100),     save    :: gridfile         = 'none'
     character(len=100),     save    :: solutionfile_in  = 'none'
     character(len=100),     save    :: solutionfile_out = 'none'
+    character(len=100),     save    :: adjointfile_out  = 'none'
 
     ! Space
     character(len=100),     save    :: basis            = 'legendre'
@@ -41,6 +42,7 @@ module mod_io
     logical,                save    :: construct_octree_rbf         = .false.
     logical,                save    :: construct_smooth_mesh_fields = .false.
     character(len=100),     save    :: h_field_dimension            = '3D'
+    character(len=100),     save    :: hole_cutter                  = 'tioga'
 
    
     ! Nonlinear solver parameters
@@ -139,7 +141,8 @@ module mod_io
     ! Namelist Groups
     namelist /files/                    gridfile,           &
                                         solutionfile_in,    &
-                                        solutionfile_out
+                                        solutionfile_out,   &
+                                        adjointfile_out
 
     namelist /space/                    basis,              &
                                         solution_order,     &

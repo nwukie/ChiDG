@@ -3,13 +3,13 @@ subroutine test_integrate_boundary_constant()
     use pfunit_mod
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ONE, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  BOUNDARY_ADVECTIVE_FLUX, IO_DESTINATION, NO_ID
+                                  BOUNDARY_ADVECTIVE_FLUX, IO_DESTINATION, NO_ID, CARTESIAN, dQ_DIFF
     use mod_integrate,      only: integrate_boundary_scalar_flux
 
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
     use type_element_info,          only: element_info_t, element_info
-    use type_function_info,         only: function_info_t
+    use type_function_info,         only: function_info_t, function_info
     use type_seed,                  only: seed_t
 
     use type_function,              only: function_t
@@ -75,16 +75,17 @@ subroutine test_integrate_boundary_constant()
     !
     ! Set seed. Doesn't really matter what, since we are just checking the values here
     !
-    !call seed%init(1,1,1,1,1,1,0,1,1,1,1)
     call seed%init(idomain_g=1,         &
                    idomain_l=1,         &
                    ielement_g=1,        &
                    ielement_l=1,        &
                    nfields=1,           &
                    nterms_s=1,          &
+                   nnodes_r=8,          &
                    iproc=0,             &
                    itime=1,             &
                    dof_start=0,         &
+                   xdof_start=0,        &
                    recv_comm=NO_ID,     &
                    recv_domain=NO_ID,   &
                    recv_element=NO_ID)
@@ -96,6 +97,7 @@ subroutine test_integrate_boundary_constant()
                              ielement_l=1,      &
                              iproc=0,           &
                              pelem_ID=NO_ID,    &
+                             coordinate_system=CARTESIAN, &
                              eqn_ID=1,          &
                              nfields=1,         &
                              ntime=1,           &
@@ -103,11 +105,13 @@ subroutine test_integrate_boundary_constant()
                              nterms_c=8,        &
                              dof_start=1,       &
                              dof_local_start=1, &
+                             xdof_start=1,       &
+                             xdof_local_start=1, &
                              recv_comm=NO_ID,   &
                              recv_domain=NO_ID, &
                              recv_element=NO_ID,&
-                             recv_dof=NO_ID)
-
+                             recv_dof=NO_ID,    &
+                             recv_xdof=NO_ID)
 
 
     idomain = 1
@@ -118,10 +122,19 @@ subroutine test_integrate_boundary_constant()
 
 
 
-    fcn_info%type    = BOUNDARY_ADVECTIVE_FLUX
-    fcn_info%ifcn    = ifcn
-    fcn_info%idepend = idonor
-    fcn_info%seed    = seed
+    fcn_info = function_info(type    = BOUNDARY_ADVECTIVE_FLUX, &
+                             ifcn    = ifcn,                    &
+                             idepend = idonor,                  &
+                             idiff   = NO_ID,                   &
+                             dtype   = dQ_DIFF,                 &
+                             seed    = seed,                    &
+                             bc_param = '',                     &
+                             bc_group_match = .false.)
+
+!    fcn_info%type    = BOUNDARY_ADVECTIVE_FLUX
+!    fcn_info%ifcn    = ifcn
+!    fcn_info%idepend = idonor
+!    fcn_info%seed    = seed
 
 
 

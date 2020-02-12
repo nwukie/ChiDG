@@ -10,6 +10,7 @@ module bc_state_outlet_characteristic_quasi3d_unsteady_HB
     use mod_chimera,            only: find_gq_donor, find_gq_donor_parallel
 
     use type_point,             only: point_t
+    use type_point_ad,          only: point_ad_t
     use type_mesh,              only: mesh_t
     use type_bc_state,          only: bc_state_t
     use bc_state_fluid_averaging,   only: bc_fluid_averaging_t
@@ -174,15 +175,17 @@ contains
             density_Fts_imag_gq, vel1_Fts_imag_gq, vel2_Fts_imag_gq, vel3_Fts_imag_gq, pressure_Fts_imag_gq
 
 
-        real(rk),       allocatable, dimension(:)   :: p_user, r, pitch
+        type(AD_D),     allocatable, dimension(:)   :: p_user, r, pitch_ad, time_value
+        real(rk),       allocatable, dimension(:)   :: pitch
         real(rk)                                    :: theta_offset
-        type(point_t),  allocatable                 :: coords(:)
+        type(point_ad_t),  allocatable              :: coords(:)
         integer                                     :: i, ngq, ivec, imode, itheta, itime, iradius, nmodes, ierr, igq
 
 
         ! Get back pressure from function.
         p_user = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
-        pitch  = self%bcproperties%compute('Pitch',           worker%time(),worker%coords())
+        pitch_ad  = self%bcproperties%compute('Pitch',           worker%time(),worker%coords())
+        pitch = pitch_ad(:)%x_ad_
 
 !        ! Interpolate interior solution to face quadrature nodes
 !        density_m = worker%get_field('Density'   , 'value', 'face interior')
@@ -340,16 +343,16 @@ contains
         do igq = 1,size(coords)
             do itheta = 1,size(density_Fts_real,2)
                 do itime = 1,size(density_Fts_real,3)
-                    density_Fts_real_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_Fts_real(:,itheta,itime), coords(igq)%c1_)
-                    density_Fts_imag_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_Fts_imag(:,itheta,itime), coords(igq)%c1_)
-                    vel1_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_Fts_real(:,itheta,itime),    coords(igq)%c1_)
-                    vel1_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_Fts_imag(:,itheta,itime),    coords(igq)%c1_)
-                    vel2_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_Fts_real(:,itheta,itime),    coords(igq)%c1_)
-                    vel2_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_Fts_imag(:,itheta,itime),    coords(igq)%c1_)
-                    vel3_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_Fts_real(:,itheta,itime),    coords(igq)%c1_)
-                    vel3_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_Fts_imag(:,itheta,itime),    coords(igq)%c1_)
-                    pressure_Fts_real_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_Fts_real(:,itheta,itime),coords(igq)%c1_)
-                    pressure_Fts_imag_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_Fts_imag(:,itheta,itime),coords(igq)%c1_)
+                    density_Fts_real_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_Fts_real(:,itheta,itime), coords(igq)%c1_%x_ad_)
+                    density_Fts_imag_gq( igq,itheta,itime) = interpolate_linear_ad(self%r,density_Fts_imag(:,itheta,itime), coords(igq)%c1_%x_ad_)
+                    vel1_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_Fts_real(:,itheta,itime),    coords(igq)%c1_%x_ad_)
+                    vel1_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel1_Fts_imag(:,itheta,itime),    coords(igq)%c1_%x_ad_)
+                    vel2_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_Fts_real(:,itheta,itime),    coords(igq)%c1_%x_ad_)
+                    vel2_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel2_Fts_imag(:,itheta,itime),    coords(igq)%c1_%x_ad_)
+                    vel3_Fts_real_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_Fts_real(:,itheta,itime),    coords(igq)%c1_%x_ad_)
+                    vel3_Fts_imag_gq(    igq,itheta,itime) = interpolate_linear_ad(self%r,vel3_Fts_imag(:,itheta,itime),    coords(igq)%c1_%x_ad_)
+                    pressure_Fts_real_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_Fts_real(:,itheta,itime),coords(igq)%c1_%x_ad_)
+                    pressure_Fts_imag_gq(igq,itheta,itime) = interpolate_linear_ad(self%r,pressure_Fts_imag(:,itheta,itime),coords(igq)%c1_%x_ad_)
                 end do !itime
             end do !itheta
         end do !igq
@@ -390,35 +393,36 @@ contains
         pressure_t_imag = ZERO*density_Fts_real_gq(:,1,:)
         do igq = 1,size(coords)
             do itime = 1,size(density_Fts_real_gq,3)
-                theta_offset = coords(igq)%c2_ - self%theta_ref
+                !theta_offset = coords(igq)%c2_ - self%theta_ref
+                theta_offset = coords(igq)%c2_%x_ad_ - self%theta_ref
                 ! **** WARNING: probably want ipdft_eval here ****
                 call idft_eval(density_Fts_real_gq(igq,:,itime),    &
                                density_Fts_imag_gq(igq,:,itime),    &
-                               [theta_offset]/pitch(1),             &
+                               [theta_offset]/pitch_ad(1),             &
                                density_t_real(igq:igq,itime),       &
                                density_t_imag(igq:igq,itime))
 
                 call idft_eval(vel1_Fts_real_gq(igq,:,itime),   &
                                vel1_Fts_imag_gq(igq,:,itime),   &
-                               [theta_offset]/pitch(1),         &
+                               [theta_offset]/pitch_ad(1),         &
                                vel1_t_real(igq:igq,itime),      &
                                vel1_t_imag(igq:igq,itime))
 
                 call idft_eval(vel2_Fts_real_gq(igq,:,itime),   &
                                vel2_Fts_imag_gq(igq,:,itime),   &
-                               [theta_offset]/pitch(1),         &
+                               [theta_offset]/pitch_ad(1),         &
                                vel2_t_real(igq:igq,itime),      &
                                vel2_t_imag(igq:igq,itime))
 
                 call idft_eval(vel3_Fts_real_gq(igq,:,itime),   &
                                vel3_Fts_imag_gq(igq,:,itime),   &
-                               [theta_offset]/pitch(1),         &
+                               [theta_offset]/pitch_ad(1),         &
                                vel3_t_real(igq:igq,itime),      &
                                vel3_t_imag(igq:igq,itime))
 
                 call idft_eval(pressure_Fts_real_gq(igq,:,itime),   &
                                pressure_Fts_imag_gq(igq,:,itime),   &
-                               [theta_offset]/pitch(1),             &
+                               [theta_offset]/pitch_ad(1),             &
                                pressure_t_real(igq:igq,itime),      &
                                pressure_t_imag(igq:igq,itime))
             end do !itime
@@ -429,6 +433,10 @@ contains
         vel2_bc     = ZERO*density_Fts_real_gq(:,1,1)
         vel3_bc     = ZERO*density_Fts_real_gq(:,1,1)
         pressure_bc = ZERO*density_Fts_real_gq(:,1,1)
+
+        time_value = [density_t_real(1,1)]
+        time_value(1) = real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)
+
 
         ! Inverse DFT of temporal Fourier modes to give primitive variables
         ! at quarature nodes for the current time instance.
@@ -441,32 +449,37 @@ contains
             ! **** WARNING: probably want ipdft_eval here ****
             call idft_eval(density_t_real(igq,:),   &
                            density_t_imag(igq,:),   &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           time_value,              &
                            density_bc_tmp,          &
                            expect_zero)
 
             call idft_eval(vel1_t_real(igq,:),      &
                            vel1_t_imag(igq,:),      &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           vel1_bc_tmp,        &
+                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           time_value,              &
+                           vel1_bc_tmp,             &
                            expect_zero)
 
             call idft_eval(vel2_t_real(igq,:),      &
                            vel2_t_imag(igq,:),      &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           vel2_bc_tmp,        &
+                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           time_value,              &
+                           vel2_bc_tmp,             &
                            expect_zero)
 
             call idft_eval(vel3_t_real(igq,:),      &
                            vel3_t_imag(igq,:),      &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           vel3_bc_tmp,        &
+                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           time_value,              &
+                           vel3_bc_tmp,             &
                            expect_zero)
 
             call idft_eval(pressure_t_real(igq,:),  &
                            pressure_t_imag(igq,:),  &
-                           [real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
-                           pressure_bc_tmp,    &
+                           ![real(worker%itime-1,rk)/real(worker%time_manager%ntime,rk)],    &
+                           time_value,              &
+                           pressure_bc_tmp,         &
                            expect_zero)
 
             ! Accumulate contribution from unsteady modes
@@ -686,6 +699,7 @@ contains
 
         integer(ik)             :: nradius, ntheta, iradius, itheta, imode, itime, ntime, ierr
         real(rk)                :: shift_r, shift_i
+        type(AD_D), allocatable :: spatial_periodicity_ad(:)
         real(rk),   allocatable :: spatial_periodicity(:)
 
         ! Define Fourier space discretization to determine
@@ -693,7 +707,8 @@ contains
         ntheta  = size(self%theta,2)
         nradius = size(self%r)
         ntime   = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%ntime
-        spatial_periodicity = self%bcproperties%compute('Spatial Periodicity', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+        spatial_periodicity_ad = self%bcproperties%compute('Spatial Periodicity', time=ZERO,coord=[point_ad_t([ZERO,ZERO,ZERO])])
+        spatial_periodicity = spatial_periodicity_ad(:)%x_ad_
         
         ! Allocate storage in result
         allocate(density_Fts_real( nradius,ntheta,ntime), density_Fts_imag( nradius,ntheta,ntime),  &
@@ -779,15 +794,19 @@ contains
         type(AD_D),     allocatable,                intent(inout)   :: pressure_Fts_imag(:,:,:)
 
         integer(ik)             :: iradius, itheta, itime, ntheta
-        real(rk),   allocatable :: pitch(:), spatial_periodicity(:), p_user(:)
+        type(AD_D), allocatable :: pitch_ad(:), spatial_periodicity_ad(:), p_user(:)
+        real(rk),   allocatable :: pitch(:), spatial_periodicity(:)
         real(rk)                :: omega, kz
         type(AD_D)              :: state_real(5), state_imag(5), alpha_real(5), alpha_imag(5),  &
                                    density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar,     &
                                    k123, k4, k5, pyramid, c5, ddensity, dvel3, dpressure, c_bar, T(5,5), Tinv(5,5)
 
-        p_user              = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
-        pitch               = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
-        spatial_periodicity = self%bcproperties%compute('Spatial Periodicity', time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+        p_user                 = self%bcproperties%compute('Average Pressure',    worker%time(),worker%coords())
+        pitch_ad               = self%bcproperties%compute('Pitch',               time=ZERO,coord=[point_ad_t([ZERO,ZERO,ZERO])])
+        spatial_periodicity_ad = self%bcproperties%compute('Spatial Periodicity', time=ZERO,coord=[point_ad_t([ZERO,ZERO,ZERO])])
+
+        pitch = pitch_ad(:)%x_ad_
+        spatial_periodicity = spatial_periodicity_ad(:)%x_ad_
 
         ! Initialize derivatives for eigenvectors
         T    = ZERO*density_Fts_real(1,1,1)
@@ -1017,7 +1036,8 @@ contains
                        A3_real, A3_imag, A4_real, A4_imag, beta
 
         type(point_t),  allocatable                 :: coords(:)
-        real(rk),       allocatable, dimension(:)   :: p_user, r, pitch
+        type(AD_D),     allocatable, dimension(:)   :: p_user, r, pitch_ad
+        real(rk),       allocatable, dimension(:)   :: pitch
         real(rk)                                    :: theta_offset
         integer(ik)                                 :: iradius, igq, ierr, imode, nmodes, itheta
 
@@ -1029,8 +1049,9 @@ contains
         pressure_bar = pressure_Fts_real(:,1)
 
         ! Retrieve target average pressure
-        p_user = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
-        pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
+        p_user   = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
+        pitch_ad = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
+        pitch = pitch_ad(:)%x_ad_
 
 
         ! Compute Fourier decomposition at set of radial stations: 
@@ -1198,6 +1219,7 @@ contains
         integer(ik)             :: nmodes, nradius, iradius, itheta, ntheta, imode, ierr
         real(rk)                :: shift_r, shift_i
         real(rk),   allocatable :: pitch(:)
+        type(AD_D), allocatable :: pitch_ad(:)
 
         ! Get spatio-temporal average at radial stations
         density_bar  = density_Fts_real(:,1)
@@ -1211,7 +1233,8 @@ contains
         ntheta  = 1 + (nmodes-1)*2
         nradius = size(self%r)
 
-        pitch  = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+        pitch_ad = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_ad_t([ZERO,ZERO,ZERO])])
+        pitch = pitch_ad(:)%x_ad_
 
         ! Allocate storage in result
         allocate(c1_hat_real(ntheta,nradius), c1_hat_imag(ntheta,nradius),  &
@@ -1637,6 +1660,7 @@ contains
                                        iradius, itheta, ierr, noverset
         real(rk)                    :: dtheta, dtheta_n, midpoint(3), try_offset(3), node(3), z
         real(rk),       allocatable :: pitch(:)
+        type(AD_D),     allocatable :: pitch_ad(:)
         character(:),   allocatable :: user_msg
         logical                     :: donor_found
 
@@ -1668,7 +1692,9 @@ contains
         ntheta  = ncoeff
         
         ! Initialize theta discretization parameters
-        pitch  = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+        pitch_ad  = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_ad_t([ZERO,ZERO,ZERO])])
+        pitch = pitch_ad(:)%x_ad_
+
         dtheta = pitch(1)
         dtheta_n = dtheta/ntheta
 

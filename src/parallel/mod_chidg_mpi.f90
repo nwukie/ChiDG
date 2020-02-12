@@ -81,7 +81,6 @@ contains
         call MPI_Comm_Rank(ChiDG_COMM,IRANK,ierr)
 
 
-
         ! Initialize PETSc
         PETSC_COMM_WORLD = ChiDG_COMM%mpi_val
         call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
@@ -116,6 +115,9 @@ contains
         call PetscFinalize(ierr)
 
 
+        ! Only finalize if mpi was initialized by ChiDG. In tests,
+        ! MPI is initialized by the test framework, so we count on it
+        ! to also finalize and we don't finalize here.
         if (mpi_initialized_by_chidg) then
 
             ! Check if MPI_Finalize has been called already or by someone else

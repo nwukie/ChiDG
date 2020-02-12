@@ -147,6 +147,7 @@ module integration_force_cylindrical_mod
 
     use mod_string,                 only: string_t
     use type_point,                 only: point_t
+    use type_point_ad,              only: point_ad_t
     use mod_chidg_mpi,              only: IRANK, NRANK
     use mpi_f08,                    only: MPI_COMM
     use mod_io
@@ -314,12 +315,16 @@ contains
     impure elemental function compute_initial_solution(self,time,coord) result(val)
         class(initial_solution_f),  intent(inout)   :: self
         real(rk),                   intent(in)      :: time
-        type(point_t),              intent(in)      :: coord
+        type(point_ad_t),           intent(in)      :: coord
 
-        real(rk)    :: val, x, y, z, ivar, tol,             &
-                       velocity_1, velocity_2, velocity_3,  &
-                       momentum_1, momentum_2, momentum_3,  &
-                       dudy, density, pressure, energy, gam, vmag
+        real(rk)    :: ivar, tol,          &
+                       velocity_2, velocity_3,  &
+                       momentum_2, momentum_3,  &
+                       dudy, density, pressure, &
+                       gam
+        type(AD_D)  :: x, y, z, velocity_1,     &
+                       vmag, momentum_1,        &
+                       energy, val
 
 
         tol = 1.e-5_rk
@@ -346,6 +351,11 @@ contains
         energy     = (pressure/(gam-ONE)) + HALF*density*vmag*vmag
 
 
+        !
+        ! Initialize val, in case we put equal to a real
+        !
+        val = energy
+        val = 0.0_rk
 
         if (     real(ivar-1) < tol) then
             val = density
@@ -368,7 +378,6 @@ contains
         else
             print*, 'Bad function parameter!'
         end if
-
 
     end function compute_initial_solution
     !**********************************************************************************

@@ -101,8 +101,8 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     subroutine compute(self,worker)
-        class(selfblended_reynolds_shear_stress_t),  intent(in)      :: self
-        type(chidg_worker_t),   intent(inout)   :: worker
+        class(selfblended_reynolds_shear_stress_t), intent(in)      :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
 
         type(AD_D), allocatable,    dimension(:) ::         &
             density, mom1, mom2, mom3, energy,              &
@@ -123,9 +123,7 @@ contains
             du_dmom1,      dv_dmom2,      dw_dmom3,         &
             reynolds_11,    reynolds_22, reynolds_33,       &
             reynolds_12,    reynolds_13, reynolds_23,       &
-            invdensity, div_velocity, u, v
-
-        real(rk),   allocatable,    dimension(:) :: r
+            invdensity, div_velocity, u, v, r
 
         integer(ik) :: ii, nnodes
 

@@ -37,6 +37,8 @@ module type_svector
         ! Data accessors
         procedure, public   :: at       !< return data from element svector%at(ielem)
         procedure, public   :: data     !< return full data vector
+        procedure, public   :: concatenate !< return a string_t with all the item concatenated
+
 
     end type svector_t
     !*****************************************************************************************
@@ -359,6 +361,35 @@ contains
     !*****************************************************************************************
 
 
+
+    !>  TODO: description
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   12/8/2017
+    !!
+    !------------------------------------------------------------------------------------------
+    function concatenate(self,separator) result(string)
+        class(svector_t),   intent(in)      :: self
+        character(len=1),   intent(in)      :: separator
+
+        type(string_t)      :: string, item
+        character(len=100)  :: str
+        integer(ik)         :: istr
+        
+        ! Initialize the output string
+        str = ""
+        do istr = 1,self%size()
+            item = self%at(istr)
+            str = trim(adjustl(trim(str) // item%get()))
+            if (istr /= self%size()) then
+                str = trim(str) // separator
+            end if
+        end do
+        
+        call string%set(str)
+
+    end function concatenate
+    !*****************************************************************************************
 
 
 

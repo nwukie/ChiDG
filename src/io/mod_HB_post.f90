@@ -35,7 +35,7 @@ contains
             !
             ! Initialize Fourier coefficient chidg_vector
             !
-            call q_coeff_vector%init(data%mesh,q_in%get_ntime())
+            call q_coeff_vector%init(data%mesh,q_in%get_ntime(),'primal')
             call q_coeff_vector%set_ntime(q_in%get_ntime())
             call q_coeff_vector%clear()
 
@@ -112,7 +112,7 @@ contains
             !
             ! Initialize coefficient vector at itime
             !
-            call q_coeffs(itime)%init(data%mesh,1)
+            call q_coeffs(itime)%init(data%mesh,1,'primal')
             call q_coeffs(itime)%clear()
 
             do idom = 1,data%mesh%ndomains()
@@ -229,7 +229,7 @@ contains
         !
         ! Initialize the interpolated solution vector
         !
-        call q_time%init(data%mesh,1)
+        call q_time%init(data%mesh,1,'primal')
         call q_time%clear()
 
 
@@ -318,7 +318,7 @@ contains
         !
         ! Reinitialize q_out
         !
-        call data%sdata%q_out%init(data%mesh,ntime_interp)
+        call data%sdata%q_out%init(data%mesh,ntime_interp,'primal')
         call data%sdata%q_out%set_ntime(ntime_interp)
         call data%sdata%q_out%clear()
 

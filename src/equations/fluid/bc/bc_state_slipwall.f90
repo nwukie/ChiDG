@@ -74,17 +74,11 @@ contains
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
             normal_momentum, wmom1_m, wmom2_m, wmom3_m, wmom1_bc, wmom2_bc, wmom3_bc,   &
-            wmom_mag_m, wmom_mag_bc
-
-        real(rk), allocatable, dimension(:) :: &
-            unorm_1, unorm_2, unorm_3, r
-
+            wmom_mag_m, wmom_mag_bc, r, unorm_1, unorm_2, unorm_3
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
+       
 
-
-        !
         ! Interpolate interior solution to quadrature nodes
-        !
         density_m = worker%get_field('Density'   , 'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
@@ -113,9 +107,8 @@ contains
         grad3_energy_m  = worker%get_field('Energy'    , 'grad3', 'face interior')
 
 
-        !
+
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
@@ -131,9 +124,7 @@ contains
         energy_bc  = energy_m
 
 
-        !
         ! Get unit normal vector
-        !
         unorm_1 = worker%unit_normal_ale(1)
         unorm_2 = worker%unit_normal_ale(2)
         unorm_3 = worker%unit_normal_ale(3)
@@ -147,11 +138,14 @@ contains
         !
         !   We then rescale the velocity to have the same magnitude as the interior velocity.
         !
+
+        ! Convert to relative momentum
         grid_velocity = worker%get_grid_velocity_face('face interior')
         wmom1_m = mom1_m-grid_velocity(:,1)*density_m
         wmom2_m = mom2_m-grid_velocity(:,2)*density_m
         wmom3_m = mom3_m-grid_velocity(:,3)*density_m
 
+        ! Subtract wall-normal component of momentum
         wmom1_bc = wmom1_m - (wmom1_m*unorm_1 + wmom2_m*unorm_2 + wmom3_m*unorm_3)*unorm_1
         wmom2_bc = wmom2_m - (wmom1_m*unorm_1 + wmom2_m*unorm_2 + wmom3_m*unorm_3)*unorm_2
         wmom3_bc = wmom3_m - (wmom1_m*unorm_1 + wmom2_m*unorm_2 + wmom3_m*unorm_3)*unorm_3
@@ -168,7 +162,7 @@ contains
         wmom2_bc = wmom2_bc * (wmom_mag_m/wmom_mag_bc)
         wmom3_bc = wmom3_bc * (wmom_mag_m/wmom_mag_bc)
 
-        ! Convert to absolute
+        ! Convert to absolute momentum
         mom1_bc = wmom1_bc + grid_velocity(:,1)*density_m
         mom2_bc = wmom2_bc + grid_velocity(:,2)*density_m
         mom3_bc = wmom3_bc + grid_velocity(:,3)*density_m

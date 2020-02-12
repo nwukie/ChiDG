@@ -60,9 +60,7 @@ contains
         log_initialized = .true.
 
 
-        !
         ! Write log header
-        !
         print_header = .true.
         if (present(header)) print_header = header
 
@@ -100,10 +98,7 @@ contains
         logical :: file_exists = .false.
         integer :: ierr, iproc
 
-        !
         ! Close file
-        !
-
         do iproc = 0,NRANK
             if (iproc == IRANK) then
 
@@ -186,15 +181,11 @@ contains
         blankstr = new_line('A')
 
 
-
-        !
         ! Set message length 
-        !
         chidg_signal_length = 105
 
-        !
+
         ! Chop off unimportant beginning of file path
-        !
         temppath = pathname
         pathstart = index(temppath, 'src/')
         if (pathstart == 0) then
@@ -204,16 +195,12 @@ contains
         end if
 
 
-        !
         ! Assemble string including file name and line number
-        !
         write(linechar, '(i10)') linenum
         genstr = trim(subpath) // ' at ' // adjustl(trim(linechar))
 
 
-        !
         ! Print message header
-        !
         call write_line(blankstr, width=chidg_signal_length)
         call write_line(trim(dashstr))
         select case (sig)
@@ -234,35 +221,28 @@ contains
         call write_line(trim(dashstr), width=chidg_signal_length)
 
 
-        ! 
         ! Print USER message
-        !
         call write_line(trim(blankstr), width=chidg_signal_length)
         call write_line('For users:',   color='blue', bold=.true., width=chidg_signal_length)
         call write_line(trim(user_msg), color='blue', width=chidg_signal_length-10)
         call write_line(trim(blankstr), width=chidg_signal_length)
 
-        !
+
         ! Print DEVELOPER message
-        !
         if (present(dev_msg)) then
             call write_line('For developers:', color='red', bold=.true., width=chidg_signal_length)
             call write_line(trim(dev_msg),     color='red', width=chidg_signal_length-10)
             call write_line(trim(blankstr), width=chidg_signal_length)
         end if
 
-        !
+
         ! Print File/Line information
-        !
         call write_line('Information about the message:', bold=.true., width=chidg_signal_length)
         call write_line(trim(genstr), width=chidg_signal_length)
         call write_line(blankstr, width=chidg_signal_length)
 
 
-
-        !
         ! Loop through auxiliary variables. If present, try to print.
-        !
         do iaux = 1,3
 
             print_info_one   = ( present(info_one)   .and. (iaux == 1) )
@@ -273,9 +253,8 @@ contains
             if ( print_info_two )   auxdata => info_two
             if ( print_info_three ) auxdata => info_three
 
-            !
+             
             ! auxdata pointer is used to point to current auxiliary data variable and then go through the available IO types
-            !
             if ( associated(auxdata) ) then
                 call write_line('Information about the message:', bold=.true., width=chidg_signal_length)
 
@@ -304,36 +283,25 @@ contains
             end if ! present(info_one)
 
 
-            !
             ! Disassociate pointer so it doesn't try to print the same thing twice in some cases.
-            !
             auxdata => null()
 
         end do ! iaux
 
 
 
-
-
-        !
         ! Print message footer
-        !
         call write_line(blankstr, width=chidg_signal_length)
         call write_line(dashstr, width=chidg_signal_length)
 
 
-
-        !
         ! Select signal action
-        !
         select case (sig)
             case (3,4)    ! Fatal Error -- Code terminates
                 call log_finalize() !Make sure log file is flushed before everything gets killed.
                 call chidg_abort()
                 !stop
                 !error stop
-
-
             case default
 
         end select
@@ -404,10 +372,7 @@ contains
                    print_info_seven, print_info_eight, proc_write
 
 
-        
-        !
         ! Decide if io_proc is writing or if all are writing
-        !
         if ( present(io_proc) ) then
             if ( IRANK == io_proc ) then
                 proc_write = .true.
@@ -420,30 +385,23 @@ contains
         end if
 
 
-        !
         ! Handle 'silence' input logical. 
         !   - proc_write only needs modified if silence is requested,
         !     and if proc_write was already set to true. In this case,
         !     silence requests that it be set back to false.
-        !
         if ( present(silence) ) then
             if (proc_write .and. silence) proc_write = .false.
         end if
 
 
-        !
         ! Set width
-        !
         if (present(width)) msg_length = width
-
-
 
 
         if ( proc_write ) then
 
-            !
+             
             ! Loop through variables and compose line to write
-            !
             do iaux = 1,8
 
                 print_info_one   = ( present(a) .and. (iaux == 1) )
@@ -465,7 +423,6 @@ contains
                 if ( print_info_eight )  auxdata => h
 
 
-
                 ! Add data to line
                 if ( associated(auxdata) ) then
                     call add_to_line(auxdata,delimiter,columns,column_width,color,ltrim,bold)
@@ -476,19 +433,16 @@ contains
 
             end do
 
-
             ! Send line to output
             call send_line(handle=handle)
 
         end if ! proc_write
-
 
         ! ReSet width
         if (present(width)) msg_length = max_msg_length
 
     end subroutine write_line
     !******************************************************************************************
-
 
 
 
@@ -523,15 +477,12 @@ contains
         logical                         :: blank_line, silent_status
 
 
-        !
+        
         ! Initialize temp
-        !
         temp = ''
 
 
-        !
         ! Select delimiter
-        !
         if (  present(delimiter) ) then
             current_delimiter = delimiter
         else
@@ -539,10 +490,7 @@ contains
         end if
 
 
-
-        !
         ! Set color
-        !
         if ( present(color) .and. (.not. present(bold)) ) then
             call set_color(color)
         else if ( (.not. present(color)) .and. present(bold) ) then
@@ -556,11 +504,9 @@ contains
 
 
 
-        !
         ! Add to line. Since variable is polymorphic, we have to test for each type and handle
         ! appropriately. Numeric data gets first written to a string variable and then concatatenated to 
         ! the module-global 'line' variable.
-        !
         select type(linedata)
 
             type is(character(len=*))
@@ -626,9 +572,8 @@ contains
         end select
 
 
-        !
+        
         ! Test for blank line
-        !
         test_blank = verify(temp, set=' ')
         if ( test_blank == 0 ) then
             blank_line = .true.
@@ -637,9 +582,7 @@ contains
         end if
 
 
-        !
         ! Rules for neatening up the string. Check blank string. Check ltrim.
-        !
         if ( blank_line ) then
             temp_a = temp   ! blank line, dont do any modification.
 
@@ -656,11 +599,7 @@ contains
 
 
 
-
-
-        !
         ! Append spaces for column alignment
-        !
         if ( present(columns) ) then
             if (columns) then
 
@@ -673,19 +612,14 @@ contains
                 current_width = len_trim(temp_a)  ! length without trailing blanks
                 extra_space = width - current_width
 
-                !
                 ! Add spaces on front and back. Could cause misalignment with dividing integer by 2.
-                !
                 do while ( len(temp_a) < width )
                     temp_a = ' '//temp_a//' '
                 end do
 
-                !
                 ! Make sure we are at exactly width. Could have gone over the the step above.
-                !
                 temp_b = temp_a(1:width)
 
-                 
             end if
         else
             
@@ -721,8 +655,6 @@ contains
 
 
 
-
-
     !>  Handles sending module-global 'line' string to a destination of either the screen, 
     !!  a file, or both. Is is determined by the IO_DESTINATION variable from mod_constants.
     !!
@@ -747,30 +679,22 @@ contains
         integer(ik) :: write_handle
 
 
-        !
         ! Handle optional input
-        !
         write_handle = log_unit
         if (present(handle)) write_handle = handle
 
 
-        !
         ! Detect silent or not
-        !
         send = .true.
         if (present(silent)) then
             if (silent) send = .false.
         end if
 
 
-        !
         ! Enable silent
-        !
         if (send) then
 
-            !
             ! Get line section length
-            !
             if ( len(line) > msg_length ) then
                 section_length = msg_length
             else
@@ -778,40 +702,28 @@ contains
             end if
 
 
-            !
             ! Get line/delimiter sizes
-            !
             delimiter_size = len(current_delimiter)
             line_size      = len(line)
             line_trim      = line_size - delimiter_size
 
 
-
-            !
             ! Remove trailing delimiter
-            !
             line = line(1:line_trim)
 
 
-
-            !
             ! Handle line IO. Writes the line in chunks for line-wrapping until the entire 
             ! line has been processed.
-            !
             writeline = line
             section = 1
             lend    = 0
             !do while ( lend /= len(line) ) 
             do while ( lend < len(line) ) 
 
-                !
                 ! Set position to start writing
-                !
                 lstart = lend + 1
 
-                !
                 ! Set position to stop writing
-                !
                 lend = lend + section_length
 
                 ! Don't go out-of-bounds
@@ -832,17 +744,14 @@ contains
                 if (lend == 1) lend = len(line)
 
 
-                !
                 ! Make sure to at least print something in case where was a really long solid string 
                 ! and we stepped backwards too far.
-                !
                 if (lend < lstart) then
                     lend = lstart + section_length
                 end if
 
-                !
+
                 ! Dont go out-of-bounds
-                !
                 if (lstart > len(line) ) then
                     exit
                 end if
@@ -851,15 +760,11 @@ contains
                 end if
 
 
-                !
                 ! Get line for writing
-                !
                 writeline = line(lstart:lend)
 
 
-                !
                 ! Write to destination
-                !
                 if ( trim(IO_DESTINATION) == 'screen' ) then
                     print*, writeline
 
@@ -872,8 +777,6 @@ contains
                         stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
                     end if
 
-
-
                 else if ( trim(IO_DESTINATION) == 'both' ) then
                     if (log_initialized) then
                         print*, writeline
@@ -885,25 +788,19 @@ contains
                         stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
                     end if
 
-
-
                 else
                     print*, "Error: value for IO_DESTINATION is invalid. Valid selections are 'screen', 'file', 'both'."
 
                 end if
 
 
-                !
                 ! Next line chunk to write
-                !
                 section = section + 1
 
             end do ! len(line) > msg_length
 
 
-            !
             ! Clear line
-            !
             line = ''
 
         end if !silent
@@ -944,10 +841,7 @@ contains
         color_begin = achar(27)//'['
         color_end   = achar(27)//'[m'
 
-        
-        !
         ! Add color if present
-        !
         if (present(color)) then
             select case (color)
                 case ('black')
@@ -984,10 +878,7 @@ contains
         end if
 
 
-
-        !
         ! Add bold if present
-        !
         if (present(bold)) then
             if (bold) then
                 color_begin = color_begin//";1"
@@ -995,18 +886,12 @@ contains
         end if
 
 
-
-        !
         ! Terminate color_begin
-        !
         color_begin = color_begin//'m'
 
 
     end subroutine set_color
     !******************************************************************************************
-
-
-
 
 
 
@@ -1029,35 +914,24 @@ contains
         integer(ik)                 :: format_begin, format_end
         logical                     :: contains_formatting 
 
-        !
         ! Initialize string_out
-        !
         string_out = string
-
         
         contains_formatting = ( index(string_out,achar(27)) /= 0 )
         do while (contains_formatting)
 
-
-            !
             ! Check contains formatting
-            !
             format_begin = index(string_out,achar(27))
             if (format_begin /= 0) then
 
-                !
                 ! Find terminating string location
-                !
                 format_end = format_begin
                 do while ( string_out(format_end:format_end) /= 'm' )
                     format_end = format_end + 1
                     if (format_end > len(string_out)) exit
                 end do
             
-
-                !
                 ! Remove formatting entry
-                !
                 if ( (format_begin == 1) .and. (format_end == len(string_out)) ) then
                     string_out = ' '
                 else if ( (format_begin == 1) .and. (format_end /= len(string_out)) ) then
@@ -1073,13 +947,10 @@ contains
 
             end if
 
-            !
             ! Check exit condition
-            !
             contains_formatting = ( index(string_out,achar(27)) /= 0 )
 
         end do !contains_formatting
-
 
     end function remove_formatting
     !******************************************************************************************

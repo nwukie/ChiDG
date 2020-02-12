@@ -92,6 +92,7 @@ contains
         real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords
         character(len=8)                            :: bc_face_strings(6)
         character(:),   allocatable                 :: bc_face_string
+        integer(ik)                                 :: npoints(3)
         class(prescribed_mesh_motion_function_t), allocatable    :: pmmf
 
 
@@ -113,14 +114,20 @@ contains
         nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
         elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping,idomain=1)
 
+        !
+        ! Get npoints in each direction
+        !
+        npoints(1) = size(xcoords,1)
+        npoints(2) = size(xcoords,2)
+        npoints(3) = size(xcoords,3)
 
         !
         ! Add domains
         !
         if ( present(equation_sets) ) then
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get())
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian',equation_sets(1)%get())
         else
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Scalar Advection')
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian','Scalar Advection')
         end if
 
 
@@ -252,7 +259,6 @@ contains
         character(len=10)                           :: patch_names(6)
         integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id, mmgroup_id
         integer(ik)                                 :: mapping, bcface, ierr, igroup, istate
-        !type(point_t),                  allocatable :: nodes(:)
         real(rk),                       allocatable :: nodes(:,:)
         integer(ik),                    allocatable :: elements(:,:) 
         integer(ik),                    allocatable :: faces(:,:)
@@ -260,6 +266,7 @@ contains
         character(len=8)                            :: bc_face_strings(6)
         character(:),   allocatable                 :: bc_face_string
         class(prescribed_mesh_motion_function_t), allocatable    :: pmmf
+        integer(ik)                                 :: npoints(3)
 
 
         ! Create/initialize file
@@ -272,7 +279,6 @@ contains
         call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx)
 
 
-
         !
         ! Get nodes/elements
         !
@@ -282,12 +288,20 @@ contains
 
 
         !
+        ! Get npoints in each direction
+        !
+        npoints(1) = size(xcoords,1)
+        npoints(2) = size(xcoords,2)
+        npoints(3) = size(xcoords,3)
+
+
+        !
         ! Add domains
         !
         if ( present(equation_sets) ) then
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get())
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian',equation_sets(1)%get())
         else
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Scalar Advection')
+            call add_domain_hdf(file_id,'01',npoints,nodes,elements,'Cartesian','Scalar Advection')
         end if
 
 

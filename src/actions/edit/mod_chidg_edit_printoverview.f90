@@ -4,17 +4,16 @@ module mod_chidg_edit_printoverview
     use hdf5
     use h5lt
 
-    use mod_hdf_utilities,  only: get_properties_hdf, get_ndomains_hdf, get_domain_names_hdf,   &
-                                  get_domain_coordinate_orders_hdf, get_domain_field_orders_hdf,           &
-                                  get_domain_equation_sets_hdf, get_contains_grid_hdf,          &
-                                  get_contains_solution_hdf, get_domain_name_hdf
-
+    use mod_hdf_utilities,  only: get_properties_hdf, get_ndomains_hdf, get_domain_names_hdf,       &
+                                  get_domain_coordinate_orders_hdf, get_domain_field_orders_hdf,    &
+                                  get_domain_equation_sets_hdf, get_contains_grid_hdf,              &
+                                  get_contains_solution_hdf, get_domain_name_hdf,                   &
+                                  get_adjoint_status_hdf, get_nfunctionals_hdf,                     &
+                                  get_functionals_names_hdf, get_functional_auxiliary_geom_hdf,     &
+                                  get_functional_reference_geom_hdf, get_functional_LS_hdf
+    use type_svector,   only: svector_t
+    use mod_string,     only: string_t
     implicit none
-
-
-
-
-
 
 
 
@@ -44,32 +43,19 @@ contains
         logical                             :: contains_grid, contains_solution
 
 
-
-        !
         ! Print header
-        !
         call print_chidg_edit_header()
 
-
-
-        !
         ! Get HDF5 ChiDG file information
-        !
         ndom     = get_ndomains_hdf(fid)
         dnames   = get_domain_names_hdf(fid)
         eqnset   = get_domain_equation_sets_hdf(fid)
 
-
-
-        !
         ! Check file contents
-        !
         contains_grid     = get_contains_grid_hdf(fid)
         contains_solution = get_contains_solution_hdf(fid)
 
-        !
         ! Handle contains_grid
-        !
         if ( contains_grid ) then
             corder   = get_domain_coordinate_orders_hdf(fid,dnames)
         else
@@ -79,10 +65,7 @@ contains
             corder = 0  ! 0-Order coordinate indicating no grid
         end if
 
-        
-        !
         ! Handle contains_solution
-        !
         if ( contains_solution ) then
             sorder   = get_domain_field_orders_hdf(fid)
         else
@@ -92,19 +75,12 @@ contains
             sorder = 0  ! 0-Order solution inticating no solution
         end if
 
-
-
-
-        
-        
-        !
+       
         ! Print information
-        !
         call write_line('Domain name', 'Coordinate expansion', 'Solution expansion', 'Equation set', delimiter='  :  ', columns=.True., column_width=20)
 
-        !
+
         ! Find the correct hdf domain index to print so they are in order
-        !
         do idom = 1,ndom
 
                 dname_trim = trim(dnames(idom))
@@ -123,8 +99,6 @@ contains
 
 
         end do !idom
-
-        
 
         call write_line(" ")
 
@@ -177,6 +151,38 @@ contains
 
     end subroutine print_chidg_edit_header
     !*******************************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   5/8/2017
+    !!
+    !------------------------------------------------------------------------------------------------------
+    subroutine print_line_separator(color)
+    character(*), intent(in), optional :: color
+    
+    character(20)  :: color_trim
+
+        
+        if (present(color)) then
+
+        color_trim = trim(color)
+
+            call write_line("----------------------------------------------------------------------------------------------------------------------", color=color_trim, ltrim=.false.)
+
+        else
+
+            call write_line("----------------------------------------------------------------------------------------------------------------------", ltrim=.false.)
+
+        end if
+
+    end subroutine print_line_separator
+    !*******************************************************************************************************
+
 
 
 

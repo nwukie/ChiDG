@@ -140,7 +140,7 @@ contains
 
         type(AD_D)  :: density_avg, vel1_avg, vel2_avg, vel3_avg, pressure_avg, c_avg, c5_1d
 
-        real(rk),       allocatable, dimension(:)   :: p_user, r
+        type(AD_D),     allocatable, dimension(:)   :: p_user, r
         integer(ik) :: igq
 
 
@@ -543,7 +543,7 @@ contains
 
         type(AD_D), allocatable, dimension(:)   :: ddensity, dvel1, dvel2, dvel3, dpressure, c1_1d, c2_1d, c3_1d, c4_1d, c5_1d
 
-        real(rk),   allocatable, dimension(:)   :: p_user
+        type(AD_D), allocatable, dimension(:)   :: p_user
         integer(ik) :: iradius, itheta, itime, ntheta
 
         ! Retrieve target average pressure

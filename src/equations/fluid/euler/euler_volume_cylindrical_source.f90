@@ -77,9 +77,9 @@ contains
 
 
         type(AD_D), allocatable, dimension(:)   ::    &
-            density, mom2, v, p, source 
+            density, mom2, v, p, source , r
 
-        real(rk),   allocatable :: r(:), ale_g(:), grid_vel(:,:), ale_Dinv(:,:,:)
+        real(rk),   allocatable :: ale_g(:), grid_vel(:,:), ale_Dinv(:,:,:)
 
 
 

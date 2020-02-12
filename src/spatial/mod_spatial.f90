@@ -1,7 +1,8 @@
 module mod_spatial
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR, NO_ID, ZERO
+    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR, NO_ID, ZERO, &
+                                      dD_DIFF, dQ_DIFF, dX_DIFF, dBC_DIFF, NO_DIFF
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
     use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier
@@ -13,10 +14,10 @@ module mod_spatial
     use type_cache_handler,     only: cache_handler_t
     use type_element_info,      only: element_info_t, element_info
     use type_timer,             only: timer_t
+    use type_svector,           only: svector_t
     implicit none
 
     type(chidg_cache_t)         :: cache
-    type(cache_handler_t)       :: cache_handler
 
 contains
 
@@ -36,10 +37,11 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine update_space(data,differentiate,timing)
+    subroutine update_space(data,differentiate,timing,bc_parameters)
         type(chidg_data_t), intent(inout),  target      :: data
-        logical,            intent(in)                  :: differentiate
+        integer(ik),        intent(in)                  :: differentiate
         real(rk),           intent(inout),  optional    :: timing
+        type(svector_t),    intent(in),     optional    :: bc_parameters
 
         integer(ik)                 :: idom, ielem, iface, idiff, ierr, &
                                        diff_min, diff_max, eqn_ID, nelem_total, &
@@ -49,6 +51,7 @@ contains
 
         type(element_info_t)        :: elem_info
         type(chidg_worker_t)        :: worker
+        type(cache_handler_t)       :: cache_handler
 
 
         ! Initialize Chidg Worker references
@@ -66,7 +69,6 @@ contains
         ! that data here. This is only tracked for the interior discretization. Boundary condition 
         ! evaluations and Chimera faces are not tracked.
         call data%sdata%function_status%clear()
-
 
 
         ! Communicate solution vector
@@ -87,7 +89,6 @@ contains
         call data%sdata%function_status%clear()
 
 
-
         ! Set time info on chidg_worker
         worker%itime = data%time_manager%itime
         worker%t     = data%time_manager%t
@@ -102,16 +103,21 @@ contains
                 eqn_ID = worker%mesh%domain(idom)%elems(ielem)%eqn_ID
                 associate ( domain => data%mesh%domain(idom), eqnset => data%eqnset(eqn_ID) )
 
+
                 ! Set local element
                 elem_info = worker%mesh%get_element_info(idom,ielem)
                 call worker%set_element(elem_info)
 
+
+                ! Compute differential interpolator for mesh sensititivites
+                call worker%mesh%compute_derivatives_dx(elem_info,differentiate)
 
                 ! Update the element cache
                 call cache_timer%start()
                 call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'all',           &
                                                                                    face          = NO_ID,           &
                                                                                    differentiate = differentiate,   &
+                                                                                   bc_parameters = bc_parameters,   &
                                                                                    lift          = .true.)
                 call cache_timer%stop()
 
@@ -135,7 +141,8 @@ contains
                 call eqnset%compute_volume_diffusive_operators(worker, differentiate)
                 call function_timer%stop()
 
-
+                ! Release differential interpolators allocated memory
+                call worker%mesh%release_derivatives_dx(elem_info,differentiate)
 
 
                 end associate
@@ -155,8 +162,14 @@ contains
 
 
         call data%sdata%rhs%assemble()
-        if (differentiate) call data%sdata%lhs%assemble()
-
+        !if (differentiate == dD_DIFF .or. &
+        !    differentiate == dQ_DIFF .or. &
+        !    differentiate == dX_DIFF .or. &
+        !    differentiate == dBC_DIFF) call data%sdata%lhs%assemble()
+        if (differentiate == dQ_DIFF)  call data%sdata%lhs%assemble()
+        if (differentiate == dD_DIFF)  call data%sdata%adjoint%Rd(1)%assemble()
+        if (differentiate == dX_DIFF)  call data%sdata%adjointx%Rx%assemble()
+        if (differentiate == dBC_DIFF) call data%sdata%adjointbc%Ra%assemble()
 
         ! Synchronize
         call MPI_Barrier(ChiDG_COMM,ierr)
@@ -164,14 +177,17 @@ contains
 
 
         ! Timing IO
-        if (data%mesh%ndomains() > 0) call write_line('- total time: ',    total_timer%elapsed(),                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        if (data%mesh%ndomains() > 0) call write_line('- comm time: ',     comm_timer%elapsed(),                   delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        if (data%mesh%ndomains() > 0) call write_line('- cache time: ',    cache_timer%elapsed(),                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        if (data%mesh%ndomains() > 0) call write_line('-- resize time: ',   cache_handler%timer_resize%elapsed(),  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        if (data%mesh%ndomains() > 0) call write_line('-- primary time: ',  cache_handler%timer_primary%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        if (data%mesh%ndomains() > 0) call write_line('-- model time: ',    cache_handler%timer_model%elapsed(),   delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        if (data%mesh%ndomains() > 0) call write_line('-- gradient time: ', cache_handler%timer_lift%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
-        if (data%mesh%ndomains() > 0) call write_line('- function time: ', function_timer%elapsed(),               delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('- total time: ',        total_timer%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('- comm time: ',         comm_timer%elapsed(),                      delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('- cache time: ',        cache_timer%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- resize time: ',      cache_handler%timer_resize%elapsed(),      delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- primary time: ',     cache_handler%timer_primary%elapsed(),     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- model time: ',       cache_handler%timer_model%elapsed(),       delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- gradient time: ',    cache_handler%timer_gradient%elapsed(),    delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- lift time: ',        cache_handler%timer_lift%elapsed(),        delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- ale: ',              cache_handler%timer_ale%elapsed(),         delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('-- interpolate time: ', cache_handler%timer_interpolate%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        if (data%mesh%ndomains() > 0) call write_line('- function time: ',     function_timer%elapsed(),                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
         if (present(timing)) then
             timing = total_timer%elapsed()

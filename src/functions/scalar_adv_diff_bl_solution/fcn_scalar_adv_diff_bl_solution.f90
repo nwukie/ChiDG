@@ -3,7 +3,9 @@ module fcn_scalar_adv_diff_bl_solution
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE
     use type_point,     only: point_t
+    use type_point_ad,  only: point_ad_t
     use type_function,  only: function_t
+    use DNAD_D
     implicit none
 
 
@@ -87,14 +89,14 @@ contains
     impure elemental function compute(self,time,coord) result(val)
         class(scalar_adv_diff_bl_solution_f),  intent(inout)  :: self
         real(rk),           intent(in)  :: time
-        type(point_t),      intent(in)  :: coord
+        type(point_ad_t),   intent(in)  :: coord
 
-        real(rk)                        :: val
+        type(AD_D)                      :: val
 
         
         integer(ik) :: fcn_dim
-        real(rk)    :: x,   y,   z, &
-                       mu, cx 
+        type(AD_D)  :: x, y, z
+        real(rk)    :: mu, cx 
 
         !
         ! Get inputs and function parameters

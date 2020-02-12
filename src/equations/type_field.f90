@@ -14,11 +14,14 @@ module type_field
     type, public :: field_t
         character(:),   allocatable :: name
         integer(ik)                 :: cache_index
+        integer(ik)                 :: functional_ID ! Functional ID associate with the adjoint field
     contains
         procedure   :: set_name
         procedure   :: get_name
         procedure   :: set_cache_index
         procedure   :: get_cache_index
+        procedure   :: set_functional_ID
+        procedure   :: get_functional_ID
     end type field_t
     !***********************************************************************************
 
@@ -100,6 +103,44 @@ contains
 
     end function get_cache_index
     !***********************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/8/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine set_functional_ID(self,func_id)
+        class(field_t), intent(inout)   :: self
+        integer(ik),    intent(in)      :: func_id
+
+        self%functional_ID = func_id
+
+    end subroutine set_functional_ID
+    !***********************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/8/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------
+    function get_functional_ID(self) result(func_id)
+        class(field_t), intent(in)  :: self
+
+        integer(ik) :: func_id
+
+        func_id = self%functional_ID
+
+    end function get_functional_ID
+    !***********************************************************************************
+
 
 
 end module type_field

@@ -76,8 +76,8 @@ contains
         type(chidg_worker_t),                               intent(inout)   :: worker
         class(properties_t),                                intent(inout)   :: prop
 
-        type(AD_D), allocatable, dimension(:) :: tau_22, source 
-        real(rk),   allocatable               :: r(:), ale_g(:), ale_Dinv(:,:,:)
+        type(AD_D), allocatable, dimension(:) :: tau_22, source, r
+        real(rk),   allocatable               :: ale_g(:), ale_Dinv(:,:,:)
 
 
         !=================================================

@@ -15,16 +15,22 @@ program driver
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use mod_file_utilities,         only: delete_file
+    use mod_string,                 only: str
+    use mod_version,                only: ChiDG_VERSION_MAJOR, ChiDG_VERSION_MINOR, ChiDG_VERSION_PATCH, get_git_hash
     use mpi_f08,                    only: MPI_AllReduce, MPI_INTEGER4, MPI_MAX, MPI_CHARACTER, MPI_LOGICAL
     use mod_io
 
     ! Actions
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
-    use mod_chidg_post,         only: chidg_post, chidg_post_vtk, chidg_post_matplotlib
     use mod_chidg_forces,       only: chidg_forces
+    use mod_chidg_adjoint,      only: chidg_adjoint
+    use mod_chidg_adjointx,     only: chidg_adjointx
+    use mod_chidg_adjointbc,    only: chidg_adjointbc
     use mod_chidg_clone,        only: chidg_clone
-    use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec_new
+    use mod_chidg_dot,          only: chidg_dot_fd, chidg_dot_cd, chidg_dot
+    use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec
+    use mod_chidg_post_hdf2vtk, only: chidg_post_hdf2vtk
     use mod_tutorials,          only: tutorial_driver
     use mod_euler_eigenmodes,   only: compute_euler_eigenmodes
 
@@ -33,11 +39,14 @@ program driver
     type(chidg_t)                               :: chidg
     integer                                     :: narg, ierr, ifield
     integer(ik)                                 :: nfields, nfields_global
-    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern, tutorial, patch_group
+    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, &
+                                                   pattern, tutorial, patch_group, adjoint_pattern, primal_pattern, fd_delta, &
+                                                   mesh_sensitivities, original_grid, perturbed_grid, pos_perturbed_grid,     &
+                                                   neg_perturbed_grid, func_sensitivities
     character(len=10)                           :: time_string
     character(:),                   allocatable :: command, tmp_file
     class(function_t),              allocatable :: fcn
-    logical                                     :: run_chidg_action, file_exists, exit_signal
+    logical                                     :: run_chidg_action, file_exists, exit_signal, call_shutdown
 
 
     ! Check for command-line arguments
@@ -45,22 +54,31 @@ program driver
 
     ! Get potential 'action'
     call get_command_argument(1,chidg_action)
+    
 
     run_chidg_action = .false.
     if (trim(chidg_action) == '2tec'       .or. &
         trim(chidg_action) == '2vtk'       .or. &
         trim(chidg_action) == 'convert'    .or. &
         trim(chidg_action) == 'edit'       .or. &
-        trim(chidg_action) == 'post'       .or. &
         trim(chidg_action) == 'clone'      .or. &
         trim(chidg_action) == 'forces'     .or. &
+        trim(chidg_action) == 'adjoint'    .or. &
+        trim(chidg_action) == 'adjointx'   .or. &
+        trim(chidg_action) == 'adjointbc'  .or. &
         trim(chidg_action) == 'inputs'     .or. &
         trim(chidg_action) == 'tutorial'   .or. &
-        trim(chidg_action) == 'matplotlib') run_chidg_action = .true.
+        trim(chidg_action) == 'dot'        .or. &
+        trim(chidg_action) == 'dot-fd'      .or. &
+        trim(chidg_action) == 'dot-cd'      .or. &
+        trim(chidg_action) == 'tutorial'   .or. &
+        trim(chidg_action) == '-v'         .or. & 
+        trim(chidg_action) == '-h') run_chidg_action = .true.
 
 
     ! Execute ChiDG calculation
     if (.not. run_chidg_action) then
+
 
         ! Initialize ChiDG environment
         call chidg%start_up('mpi')
@@ -83,7 +101,7 @@ program driver
         call chidg%set('Solution Order'  , integer_input=solution_order                )
 
         ! Read grid and boundary condition data
-        call chidg%read_mesh(gridfile)
+        call chidg%read_mesh(gridfile,storage='primal storage')
 
         ! Initialize solution
         !   1: 'none', init fields with values from mod_io module variable initial_fields(:)
@@ -124,10 +142,52 @@ program driver
 
         ! Get 'action'
         call get_command_argument(1,chidg_action)
-        !call chidg%start_up('core')
+
+        ! Default, call shutdown procedures at end
+        call_shutdown = .true.
 
         ! Select 'action'
         select case (trim(chidg_action))
+
+            !>  Print version and git data
+            !!
+            !!  @author Nathan A. Wukie (AFRL)
+            !!  @date   11/20/2019
+            !!
+            !----------------------------------------------------------------------------
+            case ('-v')
+                print*, "------------------------------------------------------"
+                print*, "chidg: An overset discontinuous Galerkin framework"
+                print*, "   version:  ", trim(str(ChiDG_VERSION_MAJOR))//"."//trim(str(ChiDG_VERSION_MINOR))//"."//trim(str(ChiDG_VERSION_PATCH))
+                print*, "   git hash: ", get_git_hash()
+                print*, "------------------------------------------------------"
+                call_shutdown = .false.
+            !*****************************************************************************
+
+            !>  Print help data
+            !!
+            !!  @author Nathan A. Wukie (AFRL)
+            !!  @date   11/20/2019
+            !!
+            !----------------------------------------------------------------------------
+            case ('-h')
+                print*, "------------------------------------------------------"
+                print*, "chidg: An overset discontinuous Galerkin framework"
+                print*, "[usage]"
+                print*, "   chidg                               [run analysis. expects to find chidg.nml]"
+                print*, "   chidg 2tec file.h5                  [create tecplot .szplt visualization file from .h5 chidg data. Can be run in parallel.]"
+                print*, "   chidg 2vtk file.h5                  [create vtk visualization file from .h5 chidg data. Must be run in serial.]"
+                print*, "   chidg convert file.x                [convert .x (Unformatted, Multi-Block, Double-Precision Plot3D file) to chidg .h5 grid file. Must be run in serial.]"
+                print*, "   chidg edit file.h5                  [edit chidg file.h5 setup (boundary conditions, equations, etc.). Must be run in serial.]"
+                print*, "   chidg clone template.h5 stamp.h5    [clone chidg template.h5 configuration to stamp.h5. Must be run in serial.]"
+                print*, "   chidg inputs                        [write out chidg.nml input file with all valid parameters. Must be run in serial.]"
+                print*, "   chidg tutorial tutorial_name        [run chidg tutorial. tutorials: smooth_bump]"
+                print*, "------------------------------------------------------"
+                call_shutdown = .false.
+            !*****************************************************************************
+
+
+
             !>  ChiDG:convert   src/actions/convert
             !!
             !!  Convert Multi-block, Unformatted, Double-Precision, Plot3D grids to
@@ -176,53 +236,6 @@ program driver
 
             !*****************************************************************************
 
-
-
-            case ('post')
-            !>  ChiDG:post  src/actions/post
-            !!
-            !!  Post-process solution files for visualization.
-            !!
-            !!  Command-Line MODE 1: Single-file
-            !!  --------------------------------
-            !!
-            !!     Command-line:                    Output:
-            !!  chidg post myfile.h5       myfile.plt (Tecplot-readable)
-            !!
-            !!  Command-Line MODE 2: Multi-file
-            !!  --------------------------------
-            !!  In the case where there are several files that need processed,
-            !!  wildcards can be passed in, but must be wrapped in quotes " ".
-            !!
-            !!  Files: myfile_0.1000.h5, myfile_0.2000.h5, myfile_0.3000.h5
-            !!
-            !!     Command-line:                Output:
-            !!  chidg post "myfile*"        myfile_0.1000.plt
-            !!                              myfile_0.2000.plt
-            !!                              myfile_0.3000.plt
-            !!
-            !!---------------------------------------------------------------------------
-                call chidg%start_up('mpi')
-                call chidg%start_up('core',header=.false.)
-                if (narg /= 2) call chidg_signal(FATAL,"The 'post' action expects: chidg post file.h5")
-
-                call date_and_time(time=time_string)
-                tmp_file = 'chidg_post_files'//time_string//'.txt'
-                call get_command_argument(2,pattern)
-                command = 'ls '//trim(pattern)//' > '//tmp_file
-                call system(command)
-            
-
-                open(7,file=tmp_file,action='read')
-                do
-                    read(7,fmt='(a)', iostat=ierr) solution_file
-                    if (ierr /= 0) exit
-                    call chidg_post(trim(solution_file), trim(solution_file))
-                end do
-                close(7)
-
-                call delete_file(tmp_file)
-            !*****************************************************************************
 
 
 
@@ -290,7 +303,7 @@ program driver
 
 
 
-                    call chidg_post_hdf2tec_new(chidg,trim(solution_file),trim(solution_file))
+                    call chidg_post_hdf2tec(chidg,trim(solution_file),trim(solution_file))
 
                     ! Release existing data
                     call chidg%data%release()
@@ -347,7 +360,7 @@ program driver
                 do
                     read(7,fmt='(a)', iostat=ierr) solution_file
                     if (ierr /= 0) exit
-                    call chidg_post_vtk(trim(solution_file), trim(solution_file))
+                    call chidg_post_hdf2vtk(trim(solution_file), trim(solution_file))
                 end do
                 close(7)
 
@@ -384,14 +397,6 @@ program driver
 
 
 
-            case ('matplotlib')
-                call chidg%start_up('mpi')
-                call chidg%start_up('core',header=.false.)
-                if (narg /= 3) call chidg_signal(FATAL,"The 'matplotlib' action expects: chidg matplotlib gridfile.h5solutionfile.h5")
-                call get_command_argument(2,grid_file)
-                call get_command_argument(3,solution_file)
-                call chidg_post_matplotlib(trim(grid_file),trim(solution_file))
-
             case ('forces')
                 call chidg%start_up('mpi')
                 call chidg%start_up('core',header=.false.)
@@ -419,6 +424,199 @@ program driver
 
 
 
+            !>  ChiDG:adjoint src/actions/adjoint
+            !!
+            !!  Run an adjoint simulation 
+            !!
+            !!  Command-Line:
+            !!  --------------------------------
+            !!  chidg adjoint
+            !!
+            !!
+            !!  The input flow solution is taken from the chidg.nml file
+            !!
+            !!      'solutionfile_in'
+            !!
+            !!  If there are multiple solution in time, such as:
+            !!
+            !!      flow_01.h5, flow_02.h5, flow_03.h5
+            !!
+            !!  simply set in chidg.nml:
+            !!
+            !!      'solutionfile_in' = flow.h5
+            !!
+            !!  ChiDG will search files with 
+            !!
+            !!      ls flow* 
+            !!
+            !!  WARNING: make sure that only the flow solutions in time are named with the same 
+            !!           prefix.
+            !!
+            !-----------------------------------------------------------------------------
+            case ('adjoint')
+                if (narg /= 1) call chidg_signal(FATAL,"the 'adjoint' action does not expect other arguments.")
+
+                call chidg_adjoint()
+                call_shutdown = .false.
+            !*****************************************************************************
+
+
+
+
+            !>  ChiDG:adjointx src/actions/adjointx
+            !!
+            !!  Compute objective function sensitivities wrt grid nodes based on an 
+            !!  adjoint solution.
+            !!
+            !!  Command-Line:
+            !!  --------------------------------
+            !!  chidg adjointx
+            !!
+            !!
+            !!  The input flow and adjoint solutions are taken from the chidg.nml file
+            !!
+            !!      'solutionfile_in', 'adjoint_solutionfile_out'
+            !!
+            !!  If there are multiple solution in time, such as:
+            !!
+            !!      flow_01.h5, flow_02.h5, flow_03.h5 and adj_flow_01.h5, adj_flow_02.h5, adj_flow_03.h5 
+            !!
+            !!  simply set in chidg.nml:
+            !!
+            !!      'solutionfile_in' = flow.h5 and 'adjoint_solutionfile_out' = adj_flow.h5
+            !!
+            !!  ChiDG will search files with 
+            !!
+            !!      ls flow* and ls adj_flow* 
+            !!
+            !!  WARNING: make sure that only the flow solutions in time are named with the same 
+            !!           prefix.
+            !!
+            !-----------------------------------------------------------------------------
+            case ('adjointx')
+                if (narg /=1) call chidg_signal(FATAL,"the 'adjointx' action does not expect other arguments.")
+                call chidg_adjointx()
+                call_shutdown = .false.
+            !*****************************************************************************
+
+
+
+            !>  ChiDG:adjointx src/actions/adjointbc
+            !!
+            !!  Compute objective function sensitivities wrt BC parameters based on an 
+            !!  adjoint solution.
+            !!
+            !!  Command-Line:
+            !!  --------------------------------
+            !!  chidg adjointx
+            !!
+            !!
+            !!  The input flow and adjoint solutions are taken from the chidg.nml file
+            !!
+            !!      'solutionfile_in', 'adjoint_solutionfile_out'
+            !!
+            !!  If there are multiple solution in time, such as:
+            !!
+            !!      flow_01.h5, flow_02.h5, flow_03.h5 and adj_flow_01.h5, adj_flow_02.h5, adj_flow_03.h5 
+            !!
+            !!  simply set in chidg.nml:
+            !!
+            !!      'solutionfile_in' = flow.h5 and 'adjoint_solutionfile_out' = adj_flow.h5
+            !!
+            !!  ChiDG will search files with 
+            !!
+            !!      ls flow* and ls adj_flow* 
+            !!
+            !!  WARNING: make sure that only the flow solutions in time are named with the same 
+            !!           prefix.
+            !!                                       
+            !!
+            !-----------------------------------------------------------------------------
+            case ('adjointbc')
+                if (narg /=1) call chidg_signal(FATAL,"the 'adjointbc' action does not expect other arguments.")
+                call chidg_adjointbc()
+                call_shutdown = .false.
+            !*****************************************************************************
+
+
+            !>  ChiDG:adjointx src/actions/dot
+            !!
+            !!  This action works actually with plot3d files (.x)
+            !!
+            !!  Computes the overall objecive function sensitivities wrt to a mesh parameter
+            !!  using a .q (function file) for mesh sensitivites. 
+            !!
+            !!  Command-Line MODE 1: Single-file
+            !!  --------------------------------
+            !!  chidg dot functional_sensitivities.q  mesh_sensitivities.q
+            !!                                       
+            !!
+            !-----------------------------------------------------------------------------
+            case ('dot')
+                if (narg /=3) call chidg_signal(FATAL,"The 'dot' action expects: chidg dot func_sensitivities.q mesh_sensitivities.q")
+                call get_command_argument(2,func_sensitivities)
+                call get_command_argument(3,mesh_sensitivities)
+                call chidg_dot(trim(func_sensitivities),trim(mesh_sensitivities))
+            !*****************************************************************************
+
+
+
+            !>  ChiDG:adjointx src/actions/dot
+            !!
+            !!  This action works actually with plot3d files (.x)
+            !!
+            !!  Computes the overall objecive function sensitivities wrt to a mesh parameter
+            !!  using the forward finite difference dX/dY (Y being the parameter). 
+            !!
+            !!  Command-Line MODE 1: Single-file
+            !!  --------------------------------
+            !!  chidg dot original.x perturbed.x mesh_sensitivities.q FD_delta
+            !!
+            !!  FD_delta is a real number (for instance 10e-05) used for computing
+            !!  dX/dY by Forward Difference
+            !!                                       
+            !!
+            !-----------------------------------------------------------------------------
+            case ('dot-fd')
+                if (narg /=5) call chidg_signal(FATAL,"The 'dotfd' action expects: chidg dotfd original.x perturbed.x mesh_sens.q FD_delta")
+                call get_command_argument(2,original_grid)
+                call get_command_argument(3,perturbed_grid)
+                call get_command_argument(4,func_sensitivities)
+                call get_command_argument(5,fd_delta)
+                call chidg_dot_fd(trim(original_grid),trim(perturbed_grid),trim(func_sensitivities),fd_delta)
+            !*****************************************************************************
+
+
+
+            !>  ChiDG:adjointx src/actions/dot
+            !!
+            !!  This action works actually with plot3d files (.x)
+            !!
+            !!  Computes the overall objecive function sensitivities wrt to a mesh parameter
+            !!  using the central finite difference dX/dY (Y being the parameter). 
+            !!
+            !!  Command-Line MODE 1: Single-file
+            !!  --------------------------------
+            !!  chidg dot neg_perturbed.x pos_perturbed.x mesh_sensitivities.q CD_delta
+            !!
+            !!  CD_delta is a real number (for instance 10e-05) used for computing
+            !!  dX/dY by Central Difference ( that is h in (H_{i+1}-H_{i-1})/2h )
+            !!                                       
+            !!
+            !-----------------------------------------------------------------------------
+            case ('dot-cd')
+                if (narg /=5) call chidg_signal(FATAL,"The 'dotcd' action expects: chidg dotcd neg_perturbed.x pos_perturbed.x mesh_sens.q CD_delta")
+                call get_command_argument(2,neg_perturbed_grid)
+                call get_command_argument(3,pos_perturbed_grid)
+                call get_command_argument(4,func_sensitivities)
+                call get_command_argument(5,fd_delta)
+                call chidg_dot_cd(trim(neg_perturbed_grid),trim(pos_perturbed_grid),trim(func_sensitivities),fd_delta)
+            !*****************************************************************************
+
+
+
+
+
             case ('inputs')
                 call chidg%start_up('mpi')
                 call chidg%start_up('core',header=.false.)
@@ -433,25 +631,21 @@ program driver
                 call get_command_argument(2,tutorial)
                 call tutorial_driver(trim(tutorial))
 
-            case ('eigen')
-                call chidg%start_up('mpi')
-                call chidg%start_up('core',header=.false.)
-                call compute_euler_eigenmodes()
-
             case default
                 call chidg%start_up('mpi')
                 call chidg%start_up('core',header=.false.)
-                call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' 'inputs' and 'forces'.")
+                call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'inputs' and 'forces'.")
         end select
 
 
-        call chidg%shut_down('core')
-        call chidg%shut_down('mpi')
+        if (call_shutdown) then
+            call chidg%shut_down('core')
+            call chidg%shut_down('mpi')
+        end if
 
 
 
     end if
-
 
 
 

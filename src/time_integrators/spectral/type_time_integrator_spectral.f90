@@ -130,6 +130,7 @@ contains
                 call set_time_integrator_hdf(fid, trim(data%time_manager%get_name()))
                 call set_times_hdf(          fid, data%time_manager%times           )
                 call set_frequencies_hdf(    fid, data%time_manager%freqs           )
+                call set_istep_hdf(          fid, data%time_manager%istep           )
                 call set_nsteps_hdf(         fid, data%time_manager%nsteps          )
                 call set_nwrite_hdf(         fid, data%time_manager%nwrite          )        
                 call close_file_hdf(fid)
@@ -158,15 +159,9 @@ contains
 
         integer(HID_T)  :: fid
         
-        !
-        ! Open hdf file
-        !  
         fid = open_file_hdf(filename)
 
-
-        !
         ! Set no. of time levels and frequencies
-        !
         select case(trim(read_type))
             case('run')
 
@@ -174,6 +169,7 @@ contains
                 data%time_manager%time_scheme = trim(get_time_integrator_hdf(fid))
                 data%time_manager%times       = get_times_hdf(fid)
                 data%time_manager%freqs       = get_frequencies_hdf(fid)
+                data%time_manager%istep       = get_istep_hdf(fid)
                 data%time_manager%nsteps      = get_nsteps_hdf(fid)
                 data%time_manager%nwrite      = get_nwrite_hdf(fid)
                 data%time_manager%ntime       = size(data%time_manager%times)

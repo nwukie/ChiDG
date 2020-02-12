@@ -67,13 +67,15 @@ module type_chidg_vector
         procedure(vector_store_interface),     pointer, pass   :: set_field         => chidg_set_field
         procedure(vector_setfields_interface), pointer, pass   :: set_fields        => chidg_set_fields
         procedure(vector_store_interface),     pointer, pass   :: add_field         => chidg_add_field
+        procedure(vector_setfields_interface), pointer, pass   :: add_fields        => chidg_add_fields
         procedure(vector_getfield_interface),  pointer, pass   :: select_get_field  => chidg_get_field
         procedure(vector_getfields_interface), pointer, pass   :: select_get_fields => chidg_get_fields
         procedure(vector_self_interface),      pointer, pass   :: clear             => chidg_clear_vector
         procedure(vector_self_interface),      pointer, pass   :: assemble          => chidg_assemble_vector
         procedure(vector_assign_interface),    pointer, nopass :: assign_vector     => chidg_assign_vector
 
-        integer(ik),    private                 :: ntime_       ! No. of time instances stored
+        integer(ik),                private :: ntime
+        character(:), allocatable,  private :: dof_type
 
     contains
 
@@ -99,10 +101,10 @@ module type_chidg_vector
         procedure,  public  :: get_ntime                        ! Return ntime associated with
         procedure,  public  :: set_ntime                        ! Set ntime in the associated
                                                                 ! densevectors
-        procedure,  public  :: ndomains
-
-        procedure,  public  :: restrict
-        procedure,  public  :: prolong
+!        procedure,  public  :: ndomains
+!        procedure,  public  :: restrict
+!        procedure,  public  :: prolong
+        procedure, public   :: nentries     ! TODO: TEST
                                                                     
 
         final               :: destroy
@@ -156,13 +158,14 @@ module type_chidg_vector
 
 
     interface 
-        subroutine vector_init_interface(self,mesh,ntime)
+        subroutine vector_init_interface(self,mesh,ntime,dof_type)
             import chidg_vector_t
             import mesh_t
             import ik
-            class(chidg_vector_t),  intent(inout), target :: self
-            type(mesh_t),           intent(inout)   :: mesh
-            integer(ik),            intent(in)      :: ntime
+            class(chidg_vector_t),  intent(inout), target   :: self
+            type(mesh_t),           intent(inout)           :: mesh
+            integer(ik),            intent(in)              :: ntime
+            character(*),           intent(in)              :: dof_type
         end subroutine vector_init_interface
     end interface
 
@@ -290,16 +293,21 @@ contains
     !!                      domain_vector_t subcomponent.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_init_vector(self,mesh,ntime)
+    subroutine chidg_init_vector(self,mesh,ntime,dof_type)
         class(chidg_vector_t),  intent(inout), target   :: self
         type(mesh_t),           intent(inout)           :: mesh
         integer(ik),            intent(in)              :: ntime
+        character(*),           intent(in)              :: dof_type
 
         integer(ik) :: ierr, ndomains, idom
 
+        if ( (trim(dof_type) /= 'primal')     .and. &
+             (trim(dof_type) /= 'coordinate') .and. &
+             (trim(dof_type) /= 'auxiliary') ) call chidg_signal_one(FATAL,"chidg_vector%init: invalid input for 'dof_type'.",trim(dof_type))
 
         ! Set ntime_ for the chidg_vector
-        self%ntime_ = ntime
+        self%ntime    = ntime
+        self%dof_type = dof_type
 
         ! Deallocate storage if necessary in case this is being called as a 
         ! reinitialization routine.
@@ -313,7 +321,7 @@ contains
 
         ! Call initialization procedure for each domain_vector_t
         do idom = 1,ndomains
-            call self%dom(idom)%init(mesh%domain(idom))
+            call self%dom(idom)%init(mesh%domain(idom),dof_type)
         end do
 
 
@@ -337,13 +345,16 @@ contains
     !!                      domain_vector_t subcomponent.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine petsc_init_vector(self,mesh,ntime)
-        class(chidg_vector_t),  intent(inout), target :: self
-        type(mesh_t),           intent(inout)         :: mesh
-        integer(ik),            intent(in)            :: ntime
+    subroutine petsc_init_vector(self,mesh,ntime,dof_type)
+        class(chidg_vector_t),  intent(inout), target   :: self
+        type(mesh_t),           intent(inout)           :: mesh
+        integer(ik),            intent(in)              :: ntime
+        character(*),           intent(in)              :: dof_type
 
-        integer(ik)     :: ndomains, idom, ielem, nparallel_dofs
-        integer(ik), allocatable :: parallel_dof_indices(:)
+        integer(ik)                 :: ndomains, idom, ielem, nparallel_dofs
+        integer(ik),    allocatable :: parallel_dof_indices(:)
+        character(:),   allocatable :: error_string
+
         PetscErrorCode  :: ierr
         PetscInt        :: nlocal_rows, nglobal_rows
 
@@ -358,8 +369,9 @@ contains
                  self%wrapped_petsc_is, stat=ierr)
         if (ierr /= 0) call AllocationError
 
-        ! Set ntime_ for the chidg_vector
-        self%ntime_ = ntime
+        ! Set ntime for the chidg_vector
+        self%ntime    = ntime
+        self%dof_type = dof_type
 
         ! Create vector object
         call VecCreate(ChiDG_COMM%mpi_val, self%wrapped_petsc_vector%petsc_vector, ierr)
@@ -374,7 +386,23 @@ contains
         nlocal_rows = 0
         do idom = 1,mesh%ndomains()
             do ielem = 1,mesh%domain(idom)%nelements()
-                nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%nterms_s * ntime)
+
+                select case(trim(dof_type))
+                    case ('primal')
+                        nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%nterms_s * ntime)
+                    case ('coordinate')
+                        nlocal_rows = nlocal_rows + ( 3 * mesh%domain(idom)%elems(ielem)%basis_c%nnodes_r() * ntime)
+                    !case ('auxiliary')
+                    !    nlocal_rows = nlocal_rows + ( 1 * mesh%domain(idom)%elems(ielem)%nterms_s * ntime)
+                    case ('auxiliary')  
+                        ! Allocate storage for nfields so the access pattern stays the same as primal, 
+                        ! but the convention we use elsewhere is that the auxiliary vector only contains
+                        ! one real field 
+                        nlocal_rows = nlocal_rows + (mesh%domain(idom)%elems(ielem)%nfields * mesh%domain(idom)%elems(ielem)%nterms_s * ntime)
+                    case default
+                        call chidg_signal_one(FATAL,"chidg_vector%petsc_init_vector: Invalid dof_type parameter.",trim(dof_type))
+                end select 
+
             end do !ielem
         end do !idom
 
@@ -410,7 +438,14 @@ contains
 
 
         ! Get parallel communication indices
-        parallel_dof_indices = mesh%get_parallel_dofs()
+        !if (trim(dof_type) == 'primal' .or. trim(dof_type) == 'coordinate') then
+        if (trim(dof_type) == 'primal' .or. &
+            trim(dof_type) == 'auxiliary') then
+            parallel_dof_indices = mesh%get_parallel_dofs(dof_type)
+        else
+            ! Parallel communication for auxiliary fields not yet implemented. Dummy connection here.
+            parallel_dof_indices = [1]
+        end if
 
         ! DOF indices are Fortran 1-based. Convert to C 0-based for passing to ISCreateGeneral 
         parallel_dof_indices = parallel_dof_indices - 1
@@ -539,6 +574,29 @@ contains
 
 
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   12/14/2019
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine chidg_add_fields(self,values,element_info)
+        class(chidg_vector_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: values(:)
+        type(element_info_t),   intent(in)      :: element_info
+
+        if (any(ieee_is_nan(values))) print*, 'adding NaN!'
+
+        ! Access current field and add new contribution
+        self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%vec = self%dom(element_info%idomain_l)%vecs(element_info%ielement_l)%vec + values
+
+    end subroutine chidg_add_fields
+    !**************************************************************************************
+
+
+
+
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -556,8 +614,16 @@ contains
         PetscInt                :: istart
         PetscInt, allocatable   :: indices(:)
 
-        istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
-        indices = [(i, i=istart,(istart+element_info%nterms_s-1),1)]
+        select case (trim(self%dof_type))
+            case('primal','auxiliary')
+                istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
+                indices = [(i, i=istart,(istart+element_info%nterms_s-1),1)]
+            case('coordinate')
+                istart = element_info%xdof_start + (ifield-1)*element_info%nterms_c + (itime-1)*(3*element_info%nterms_c)
+                indices = [(i, i=istart,(istart+element_info%nterms_c-1),1)]
+            case default
+                call chidg_signal_one(FATAL,"chidg_vector%petsc_set_field: invalid value of 'dof_type'.", trim(self%dof_type))
+        end select
 
         ! Decrement by 1 for 0-based indexing
         indices = indices - 1
@@ -591,8 +657,16 @@ contains
         PetscInt                :: istart
         PetscInt, allocatable   :: indices(:)
 
-        istart = element_info%dof_start
-        indices = [(i, i=istart,(istart + element_info%nfields*element_info%nterms_s*element_info%ntime - 1),1)]
+        select case (trim(self%dof_type))
+            case('primal','auxiliary')
+                istart = element_info%dof_start
+                indices = [(i, i=istart,(istart + element_info%nfields*element_info%nterms_s*element_info%ntime - 1),1)]
+            case('coordinate')
+                istart = element_info%xdof_start
+                indices = [(i, i=istart,(istart + 3*element_info%nterms_c*element_info%ntime - 1),1)]
+            case default
+                call chidg_signal_one(FATAL,"chidg_vector%petsc_set_fields: invalid value of 'dof_type'.", trim(self%dof_type))
+        end select
 
         ! Decrement by 1 for 0-based indexing
         indices = indices - 1
@@ -630,8 +704,16 @@ contains
         PetscInt                :: istart
         PetscInt, allocatable   :: indices(:)
 
-        istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
-        indices = [(i, i=istart,(istart+element_info%nterms_s-1),1)]
+        select case (trim(self%dof_type))
+            case('primal')
+                istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
+                indices = [(i, i=istart,(istart+element_info%nterms_s-1),1)]
+            case('coordinate')
+                istart = element_info%xdof_start + (ifield-1)*element_info%nterms_c + (itime-1)*(3*element_info%nterms_c)
+                indices = [(i, i=istart,(istart+element_info%nterms_c-1),1)]
+            case default
+                call chidg_signal_one(FATAL,"chidg_vector%petsc_add_fields: invalid value of 'dof_type'.", trim(self%dof_type))
+        end select
 
         ! Decrement by 1 for 0-based indexing
         indices = indices - 1
@@ -646,6 +728,47 @@ contains
     !***********************************************************************************
 
 
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   12/14/2019
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine petsc_add_fields(self,values,element_info)
+        class(chidg_vector_t),  intent(inout)   :: self
+        real(rk),               intent(in)      :: values(:)
+        type(element_info_t),   intent(in)      :: element_info
+
+        PetscErrorCode          :: ierr, i
+        PetscInt                :: istart
+        PetscInt, allocatable   :: indices(:)
+
+        !istart = element_info%dof_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
+        select case (trim(self%dof_type))
+            case('primal')
+                istart = element_info%dof_start 
+                indices = [(i, i=istart,(istart+(element_info%nterms_s*element_info%nfields*element_info%ntime)-1),1)]
+            case('coordinate')
+                istart = element_info%xdof_start 
+                indices = [(i, i=istart,(istart+(element_info%nterms_c*3*element_info%ntime)-1),1)]
+            case default
+                call chidg_signal_one(FATAL,"chidg_vector%petsc_add_fields: invalid value of 'dof_type'.", trim(self%dof_type))
+        end select
+
+        ! Decrement by 1 for 0-based indexing
+        indices = indices - 1
+
+        call VecSetValues(self%wrapped_petsc_vector%petsc_vector,size(values),indices,values,ADD_VALUES,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_add_vector: error calling VecSetValues.')
+
+        ! Indicate needs assembled
+        self%petsc_needs_assembled = .true.
+
+    end subroutine petsc_add_fields
+    !***********************************************************************************
 
 
 
@@ -742,12 +865,19 @@ contains
 
 
             ! Compute start and end indices for accessing modes of a variable
-            istart = element_info%dof_local_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
-            iend = istart + (element_info%nterms_s-1)
+            select case (trim(self%dof_type))
+                case('primal','auxiliary')
+                    istart = element_info%dof_local_start + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
+                    iend = istart + (element_info%nterms_s-1)
+                case('coordinate')
+                    istart = element_info%xdof_local_start + (ifield-1)*element_info%nterms_c + (itime-1)*(3*element_info%nterms_c)
+                    iend = istart + (element_info%nterms_c-1)
+                case default
+                    call chidg_signal_one(FATAL,"chidg_vector%petsc_get_field: vector initialize with invalid 'dof_type'",trim(self%dof_type))
+            end select
 
             ! Access modes
             values = array(istart:iend)
-
 
             ! Restore petsc array
             call VecRestoreArrayF90(self%wrapped_petsc_vector%petsc_vector,array,ierr)
@@ -762,8 +892,14 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
 
             ! Compute start and end indices for accessing modes of a variable
-            istart = element_info%recv_dof + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
-            iend = istart + (element_info%nterms_s-1)
+            select case (trim(self%dof_type))
+                case('primal','auxiliary')
+                    istart = element_info%recv_dof + (ifield-1)*element_info%nterms_s + (itime-1)*(element_info%nfields*element_info%nterms_s)
+                    iend = istart + (element_info%nterms_s-1)
+                case('coordinate') 
+                    istart = element_info%recv_xdof + (ifield-1)*element_info%nterms_c + (itime-1)*(3*element_info%nterms_c)
+                    iend = istart + (element_info%nterms_c-1)
+            end select
 
             ! Access modes
             values = array(istart:iend)
@@ -817,8 +953,14 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
 
             ! Compute start and end indices for accessing modes of a variable
-            istart = element_info%dof_local_start
-            iend = istart + (element_info%nfields*element_info%ntime*element_info%nterms_s) - 1
+            select case (trim(self%dof_type))
+                case('primal')
+                    istart = element_info%dof_local_start
+                    iend = istart + (element_info%nfields*element_info%ntime*element_info%nterms_s) - 1
+                case('coordinate')
+                    istart = element_info%xdof_local_start
+                    iend = istart + (3*element_info%ntime*element_info%nterms_c) - 1
+            end select
 
             ! Access modes
             values = array(istart:iend)
@@ -837,8 +979,14 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL,'chidg_vector%petsc_get_field: error calling VecGetArrayF90.')
 
             ! Compute start and end indices for accessing modes of a variable
-            istart = element_info%recv_dof
-            iend = istart + (element_info%nfields*element_info%ntime*element_info%nterms_s) - 1
+            select case (trim(self%dof_type))
+                case('primal')
+                    istart = element_info%recv_dof
+                    iend = istart + (element_info%nfields*element_info%ntime*element_info%nterms_s) - 1
+                case('coordinate')
+                    istart = element_info%recv_xdof
+                    iend = istart + (3*element_info%ntime*element_info%nterms_c) - 1
+            end select
 
             ! Access modes
             values = array(istart:iend)
@@ -852,9 +1000,6 @@ contains
 
     end subroutine petsc_get_fields
     !***********************************************************************************
-
-
-
 
 
 
@@ -1498,7 +1643,7 @@ contains
         integer(ik)     :: ntime_out
 
         ! Get ntime 
-        ntime_out = self%ntime_
+        ntime_out = self%ntime
 
     end function get_ntime
     !****************************************************************************************
@@ -1521,7 +1666,7 @@ contains
 
         integer(ik)     :: idom, ielem
 
-        self%ntime_ = ntime
+        self%ntime = ntime
 
         ! Set ntime
         if (.not. allocated(self%wrapped_petsc_vector)) then
@@ -1538,110 +1683,40 @@ contains
 
 
 
-    !>
+    !>  Return number of entries in the processor-local part of the vector.
     !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   12/02/2019
     !!
-    !!  @author Nathan A. Wukie
-    !!  @date   7/21/2017
+    !!  TODO: TEST
     !!
-    !---------------------------------------------------------------------------------------
-    function ndomains(self) result(ndomains_)
-        class(chidg_vector_t),  intent(in)  :: self
+    !----------------------------------------------------------------------------------------
+    function nentries(self) result(nentries_)
+        class(chidg_vector_t),  intent(inout)   :: self
 
-        integer(ik) :: ndomains_
+        integer(ik) :: idom, ielem
 
-        if (allocated(self%dom)) then
-            ndomains_ = size(self%dom)
+        PetscReal      :: nentries_
+        PetscErrorCode :: perr
+
+
+        nentries_ = 0
+        if (allocated(self%wrapped_petsc_vector)) then
+
+            call VecGetLocalSize(self%wrapped_petsc_vector%petsc_vector, nentries_, perr)
+
         else
-            ndomains_ = 0
+
+            do idom = 1,size(self%dom)
+                do ielem = 1,size(self%dom(idom)%vecs)
+                    nentries_ = nentries_ + self%dom(idom)%vecs(ielem)%nentries()
+                end do !ielem
+            end do !idom
+
         end if
 
-    end function ndomains
-    !***************************************************************************************
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   7/21/2017
-    !!
-    !---------------------------------------------------------------------------------------
-    function restrict(self,nterms_r) result(restricted)
-        class(chidg_vector_t),  intent(inout)   :: self
-        integer(ik),            intent(in)      :: nterms_r
-
-        type(chidg_vector_t)    :: restricted
-        integer(ik)             :: idom, ierr
-        
-
-        restricted%send = self%send                     ! Copy self%send directly
-        restricted%recv = self%recv%restrict(nterms_r)  ! Get restricted copy of self%recv
-
-
-        ! Allocate storage for each domain
-        if (allocated(restricted%dom)) deallocate(restricted%dom)
-        allocate(restricted%dom(self%ndomains()), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        ! Return restricted domain_vector objects for each domain
-        do idom = 1,self%ndomains()
-            restricted%dom(idom) = self%dom(idom)%restrict(nterms_r)
-        end do !idom
-
-        ! Set ntime
-        restricted%ntime_ = self%ntime_
-
-    end function restrict
-    !***************************************************************************************
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   7/21/2017
-    !!
-    !---------------------------------------------------------------------------------------
-    function prolong(self,nterms_p) result(prolonged)
-        class(chidg_vector_t),  intent(inout)   :: self
-        integer(ik),            intent(in)      :: nterms_p
-
-        type(chidg_vector_t)    :: prolonged
-        integer(ik)             :: idom, ierr
-        
-
-        prolonged%send = self%send                     ! Copy self%send directly
-        prolonged%recv = self%recv%prolong(nterms_p)   ! Get prolonged copy of self%recv
-
-
-        ! Allocate storage for each domain
-        allocate(prolonged%dom(self%ndomains()), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        ! Return restricted domain_vector objects for each domain
-        do idom = 1,self%ndomains()
-            prolonged%dom(idom) = self%dom(idom)%prolong(nterms_p)
-        end do !idom
-
-        ! Set ntime
-        prolonged%ntime_ = self%ntime_
-
-    end function prolong
-    !***************************************************************************************
-
-
-
-
-
-
-
+    end function nentries
+    !****************************************************************************************
 
 
 
@@ -1670,7 +1745,8 @@ contains
         integer(ik)             :: idom, ndom
         PetscErrorCode          :: perr
 
-        res%ntime_ = right%ntime_
+        res%ntime    = right%ntime
+        res%dof_type = right%dof_type
 
         if (allocated(right%wrapped_petsc_vector)) then
 
@@ -1719,7 +1795,8 @@ contains
         integer(ik)             :: idom, ndom
         PetscErrorCode          :: perr
 
-        res%ntime_ = left%ntime_
+        res%ntime    = left%ntime
+        res%dof_type = left%dof_type
 
         if (allocated(left%wrapped_petsc_vector)) then
 
@@ -1768,7 +1845,8 @@ contains
         integer(ik)             :: idom, ndom
         PetscErrorCode          :: perr
 
-        res%ntime_ = right%ntime_
+        res%ntime    = right%ntime
+        res%dof_type = right%dof_type
 
         if (allocated(right%wrapped_petsc_vector)) then
 
@@ -1822,7 +1900,8 @@ contains
         integer(ik)             :: idom, ndom
         PetscErrorCode          :: perr
 
-        res%ntime_ = left%ntime_
+        res%ntime    = left%ntime
+        res%dof_type = left%dof_type
 
         if (allocated(left%wrapped_petsc_vector)) then
 
@@ -1871,7 +1950,8 @@ contains
         integer(ik)             :: idom, ndom
         PetscErrorCode          :: perr
 
-        res%ntime_ = right%ntime_
+        res%ntime    = right%ntime
+        res%dof_type = right%dof_type
 
         if (allocated(left%wrapped_petsc_vector)) then
 
@@ -1920,7 +2000,8 @@ contains
         type(chidg_vector_t)    :: res
         PetscErrorCode          :: perr
 
-        res%ntime_ = right%ntime_
+        res%ntime    = right%ntime
+        res%dof_type = right%dof_type
 
         if (allocated(left%wrapped_petsc_vector)) then
 
@@ -1967,7 +2048,8 @@ contains
         integer(ik)             :: idom, ndom
         PetscErrorCode          :: perr
 
-        res%ntime_ = right%ntime_
+        res%ntime    = right%ntime
+        res%dof_type = right%dof_type
 
         if (allocated(right%wrapped_petsc_vector)) then
 
@@ -2005,9 +2087,10 @@ contains
         class(chidg_vector_t),  intent(in)      :: vec_in
 
         if (allocated(vec_in%dom)) vec_out%dom = vec_in%dom
-        vec_out%send   = vec_in%send
-        vec_out%recv   = vec_in%recv
-        vec_out%ntime_ = vec_in%ntime_
+        vec_out%send     = vec_in%send
+        vec_out%recv     = vec_in%recv
+        vec_out%ntime    = vec_in%ntime
+        vec_out%dof_type = vec_in%dof_type
 
         ! Update procedure pointers
         call vector_assign_pointers_chidg(vec_out)
@@ -2087,7 +2170,8 @@ contains
 
 
             vec_out%petsc_needs_assembled = .true.
-            vec_out%ntime_ = vec_in%ntime_
+            vec_out%ntime    = vec_in%ntime
+            vec_out%dof_type = vec_in%dof_type
 
         end if
 
@@ -2117,6 +2201,7 @@ contains
         vec%set_field         => chidg_set_field
         vec%set_fields        => chidg_set_fields
         vec%add_field         => chidg_add_field
+        vec%add_fields        => chidg_add_fields
         vec%select_get_field  => chidg_get_field
         vec%select_get_fields => chidg_get_fields
         vec%assemble          => chidg_assemble_vector
@@ -2132,6 +2217,7 @@ contains
         vec%set_field         => petsc_set_field
         vec%set_fields        => petsc_set_fields
         vec%add_field         => petsc_add_field
+        vec%add_fields        => petsc_add_fields
         vec%select_get_field  => petsc_get_field
         vec%select_get_fields => petsc_get_fields
         vec%assemble          => petsc_assemble_vector
@@ -2185,6 +2271,9 @@ contains
 
             vec_out%petsc_needs_assembled = .true.
 
+            vec_out%ntime    = self%ntime
+            vec_out%dof_type = self%dof_type
+
             ! Update procedure pointers
             call vector_assign_pointers_petsc(vec_out)
 
@@ -2192,9 +2281,10 @@ contains
 
             ! Update procedure pointers
             if (allocated(self%dom)) vec_out%dom = self%dom
-            vec_out%send   = self%send
-            vec_out%recv   = self%recv
-            vec_out%ntime_ = self%ntime_
+            vec_out%send     = self%send
+            vec_out%recv     = self%recv
+            vec_out%ntime    = self%ntime
+            vec_out%dof_type = self%dof_type
 
             ! Update procedure pointers
             call vector_assign_pointers_chidg(vec_out)

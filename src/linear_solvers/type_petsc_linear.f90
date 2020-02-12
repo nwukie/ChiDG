@@ -114,7 +114,11 @@ contains
 
 
         ! Solve
-        call KSPSolve(self%ksp,b%wrapped_petsc_vector%petsc_vector,x%wrapped_petsc_vector%petsc_vector,perr)
+        if (A%transposed) then
+            call KSPSolveTranspose(self%ksp,b%wrapped_petsc_vector%petsc_vector,x%wrapped_petsc_vector%petsc_vector,perr)
+        else
+            call KSPSolve(self%ksp,b%wrapped_petsc_vector%petsc_vector,x%wrapped_petsc_vector%petsc_vector,perr)
+        end if
         if (perr /= 0) call chidg_signal(FATAL,'petsc_linear: error calling KSPSolve.')
 
 
@@ -122,6 +126,9 @@ contains
         call KSPGetIterationNumber(self%ksp, self%niter, perr)
         if (perr /= 0) call chidg_signal(FATAL,'petsc_linear: error calling KSPGetIterationNumber.')
 
+
+        ! Record error
+        self%residual_norm = self%error(A,x,b)
 
     end subroutine solve
     !************************************************************************************************************

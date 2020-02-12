@@ -130,12 +130,14 @@ subroutine test_dft_idft_eval_signal_reproduction()
     
 
     integer(ik)                 :: res
-    type(AD_D), allocatable     :: signal(:), Xr(:), Xi(:), sig_real(:), sig_imag(:)
+    type(AD_D), allocatable     :: signal(:), Xr(:), Xi(:), sig_real(:), sig_imag(:), theta(:)
     real(rk)                    :: A0, A1, A2, tol, period
-    real(rk),   allocatable     :: theta(:)
 
     res = 7
     period = TWO*PI
+
+    allocate(theta(res))
+    theta(:) = AD_D(1)
     theta = linspace(0._rk,period - period/res,res)
 
     ! Construct signal
@@ -325,13 +327,16 @@ subroutine test_ipdft_eval()
 
     integer(ik)                 :: res
     type(AD_D), allocatable     :: signal(:), signal_n(:), Xr(:), Xi(:), pXr(:), pXi(:), &
-                                   sig_real(:), sig_imag(:), sig_real_p(:), sig_imag_p(:)
+                                   sig_real(:), sig_imag(:), sig_real_p(:), sig_imag_p(:), theta(:)
     real(rk)                    :: A0, A1, A2, tol, period, n
-    real(rk),   allocatable     :: theta(:), theta_n(:)
+    real(rk),   allocatable     :: theta_n(:)
 
     res = 9
     period  = TWO*PI
     n       = TWO
+
+    allocate(theta(res))
+    theta(:) = AD_D(1)
     theta   = linspace(0._rk,period - period/res,res)
     theta_n = linspace(0._rk,(period/n) - (period/n)/res,res)
 
@@ -353,7 +358,7 @@ subroutine test_ipdft_eval()
     allocate(sig_real(size(theta)), sig_imag(size(theta)), &
              sig_real_p(size(theta)), sig_imag_p(size(theta)))
     call idft_eval(Xr,Xi,theta/period, sig_real, sig_imag)
-    call ipdft_eval(pXr,pXi,theta/period, 2, [0,2,4,-4,-2], sig_real_p, sig_imag_p)
+    call ipdft_eval(pXr,pXi,theta%x_ad_/period, 2, [0,2,4,-4,-2], sig_real_p, sig_imag_p)
 
     ! Test original signal against signal after DFT+IDFT
     tol = 1.e-12_rk

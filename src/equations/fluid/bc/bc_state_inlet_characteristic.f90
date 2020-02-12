@@ -56,19 +56,18 @@ contains
         call self%set_family("Inlet")
 
         ! Add functions
-        call self%bcproperties%add('Total Pressure',       'Required')
-        call self%bcproperties%add('Total Temperature',    'Required')
-
-        call self%bcproperties%add('Normal-1',         'Required')
-        call self%bcproperties%add('Normal-2',         'Required')
-        call self%bcproperties%add('Normal-3',         'Required')
+        call self%bcproperties%add('Total Pressure',    'Required')
+        call self%bcproperties%add('Total Temperature', 'Required')
+        call self%bcproperties%add('Normal-1',          'Required')
+        call self%bcproperties%add('Normal-2',          'Required')
+        call self%bcproperties%add('Normal-3',          'Required')
 
         ! Set default values
         call self%set_fcn_option('Total Pressure',    'val', 110000._rk)
         call self%set_fcn_option('Total Temperature', 'val', 300._rk)
-        call self%set_fcn_option('Normal-1', 'val', 1._rk)
-        call self%set_fcn_option('Normal-2', 'val', 0._rk)
-        call self%set_fcn_option('Normal-3', 'val', 0._rk)
+        call self%set_fcn_option('Normal-1',          'val', 1._rk)
+        call self%set_fcn_option('Normal-2',          'val', 0._rk)
+        call self%set_fcn_option('Normal-3',          'val', 0._rk)
 
     end subroutine init
     !********************************************************************************
@@ -101,18 +100,15 @@ contains
             vel1_bc,   vel2_bc,   vel3_bc,                                                       &
             T_bc,   vmag2_m, vmag, f, df, dT, T, vel, veln, rminus, asp_ext, asp_int, M, ddensity, dvel1, dvel2, dvel3, dp, denergy, dmom1, dmom2, dmom3, &
             density_real, vel1_real, vel2_real, vel3_real, pressure_real,   &
-            density_imag, vel1_imag, vel2_imag, vel3_imag, pressure_imag, c1, c2, c3, c4, c5
+            density_imag, vel1_imag, vel2_imag, vel3_imag, pressure_imag, c1, c2, c3, c4, c5, &
+            PT, TT, n1, n2, n3, nmag, r, unorm_1, unorm_2, unorm_3
 
 
         type(AD_D)  :: vel1_avg, vel2_avg, vel3_avg, density_avg, pressure_avg, c_avg
 
-        real(rk),       allocatable, dimension(:)   ::  &
-            PT, TT, DRHO, n1, n2, n3, nmag, alpha, r, unorm_1, unorm_2, unorm_3
-
-
         real(rk)    :: K0, u_axial, amp, omega
             
-        integer(ik) :: ierr, igq, inewton, nmax
+        integer(ik) :: ierr, igq
 
         logical :: converged
 

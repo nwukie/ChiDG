@@ -11,7 +11,7 @@ module test_interpolate_chimera_multipledonor_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  NEIGHBOR, IO_DESTINATION, NO_ID
+                                  NEIGHBOR, IO_DESTINATION, NO_ID, CARTESIAN, dQ_DIFF
     use mod_chidg_mpi,      only: IRANK
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_face_standard
     use mod_test_utilities, only: create_mesh_file
@@ -154,15 +154,18 @@ contains
             ! A seed element, this is a neighbor for this test - so all derivative arrays 
             ! should be seeded to zero
             !
+            fcn_info%dtype = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 2,     &
                                     ielement_l   = 2,     &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 8,     &
+                                    xdof_start   = 25,    &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -178,6 +181,7 @@ contains
                                      ielement_l      = ielem,   &
                                      iproc           = 0,       &
                                      pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID          = 1,       &
                                      nfields         = 1,       &
                                      ntime           = 1,       &
@@ -185,10 +189,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 1,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 1,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm       = NO_ID,   &
                                      recv_domain     = NO_ID,   &
                                      recv_element    = NO_ID,   &
-                                     recv_dof        = NO_ID)
+                                     recv_dof        = NO_ID,   &
+                                     recv_xdof       = NO_ID)
 
 
 
@@ -260,15 +267,18 @@ contains
             ! A seed element, this is the current element. Since we are performing a 
             ! NEIGHBOR interpolation, derivatives should be zero.
             !
+            fcn_info%dtype = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 2,     &
                                     ielement_l   = 2,     &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 8,     &
+                                    xdof_start   = 25,    &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -282,6 +292,7 @@ contains
                                      ielement_l      = ielem,   &
                                      iproc           = 0,       &
                                      pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID          = 1,       &
                                      nfields         = 1,       &
                                      ntime           = 1,       &
@@ -289,10 +300,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 1,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 1,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm       = NO_ID,   &
                                      recv_domain     = NO_ID,   &
                                      recv_element    = NO_ID,   &
-                                     recv_dof        = NO_ID)
+                                     recv_dof        = NO_ID,   &
+                                     recv_xdof       = NO_ID)
 
 
             tol    = 1.e-13_rk
@@ -362,15 +376,18 @@ contains
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
             ! all dervative arrays should be nonzero.
             !
+            fcn_info%dtype = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 2,     &
                                     idomain_l    = 2,     &
                                     ielement_g   = 1,     &
                                     ielement_l   = 1,     &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 40,    &
+                                    xdof_start   = 97,    &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -385,6 +402,7 @@ contains
                                      ielement_l      = ielem,   &
                                      iproc           = 0,       &
                                      pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID          = 1,       &
                                      nfields         = 1,       &
                                      ntime           = 1,       &
@@ -392,10 +410,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 1,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 1,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm    = NO_ID,      &
                                      recv_domain  = NO_ID,      &
                                      recv_element = NO_ID,      &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,      &
+                                     recv_xdof    = NO_ID)
 
 
             tol  = 1.e-13_rk
@@ -470,15 +491,18 @@ contains
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all 
             ! dervative arrays should be nonzero.
             !
+            fcn_info%dtype = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 2,     &
                                     idomain_l    = 2,     &
                                     ielement_g   = 1,     &
                                     ielement_l   = 1,     &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 40,    &
+                                    xdof_start   = 97,    &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -493,6 +517,7 @@ contains
                                      ielement_l      = ielem,   &
                                      iproc           = 0,       &
                                      pelem_ID        = NO_ID,   &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID          = 1,       &
                                      nfields         = 1,       &
                                      ntime           = 1,       &
@@ -500,11 +525,13 @@ contains
                                      nterms_c        = 8,       &
                                      dof_start       = 1,       &
                                      dof_local_start = 1,       &
+                                     xdof_start       = 1,      &
+                                     xdof_local_start = 1,      &
                                      recv_comm    = NO_ID,      &
                                      recv_domain  = NO_ID,      &
                                      recv_element = NO_ID,      &
-                                     recv_dof     = NO_ID)
-
+                                     recv_dof     = NO_ID,      &
+                                     recv_xdof     = NO_ID)
 
 
             
@@ -529,15 +556,11 @@ contains
             !
             ! Test derivatives from first donor
             !
-            !mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_interpolator%at(idonor)
             mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%value
-            !ndonor_nodes = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_gq_indices(idonor)%size()
             ndonor_nodes = size(self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%node_index)
 
             do igq = 1,ndonor_nodes
-                !node_index = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_gq_indices(idonor)%at(igq)
                 node_index = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%node_index(igq)
-
                 deriv_ref = mat(igq,:)     ! Set expected derivatives
                 
                 @assertEqual(deriv_ref,u_gq(node_index)%xp_ad_,tol)
@@ -552,15 +575,11 @@ contains
             ! Test derivatives from second donor
             !
             idonor = 2
-            !mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_interpolator%at(idonor)
             mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%value
-            !ndonor_nodes = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_gq_indices(idonor)%size()
             ndonor_nodes = size(self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%node_index)
 
             do igq = 1,ndonor_nodes
-                !node_index = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_gq_indices(idonor)%at(igq)
                 node_index = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%node_index(igq)
-
                 deriv_ref = mat(igq,:)      ! Set expected derivatives
                 deriv_ref = ZERO            ! should be zero since donor 1 was being differentiated and this is donor two
                 

@@ -4,7 +4,7 @@ subroutine test_chidg_matrix_operator_chimera_mv()
 
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, &
-                                  ONE, TWO, THREE, FOUR, ZERO, IO_DESTINATION
+                                  ONE, TWO, THREE, FOUR, ZERO, IO_DESTINATION, dQ_DIFF
 
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
@@ -190,7 +190,7 @@ subroutine test_chidg_matrix_operator_chimera_mv()
 
 
 
-    call update_space(chidg%data,differentiate=.true.)
+    call update_space(chidg%data,differentiate=dQ_DIFF)
 
 
 

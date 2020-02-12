@@ -1,0 +1,1285 @@
+!--------------------------------------------------------------------------------
+!
+!           Test volume mesh sensitivities from a 1D linear advection adjoint problem with a source term:
+!               - Primal solution (u)
+!               - Adjoint solution (v) for "Solution Integral" objective function, J
+!               - Mesh Adjoint (dJ/dX)
+!
+!   div(c*u) = S
+!
+!   Linear advection Flux Definition:
+!       F(u) = c 
+!
+!   advection Coefficient Model:
+!       c(u) = 1.0
+!
+!   Source Definition:
+!       S(x) = 1
+!
+!   Boundary conditions are:
+!       Dirichlet U(x=0) = 0
+!
+!   Analytical Primal Solution is:
+!       U(x) = x     for x in [0,1]
+!
+!   Adjoint objective function
+!       integral[(U(x)] from 0 to 1
+!
+!   Adjoint solution
+!       v(x) = -x    
+!
+!   Mesh sensitivities verified with Finite Difference using delta = 10e-8
+!
+!   Tests that are being run here:
+!       - Run the primal calculation with order of accuracy 3
+!       - Run the adjoint calculation with order of accuracy 3
+!       - Run adjointx on each case
+!       - Test sensitivities
+!
+!   Cases:
+!       - single block, 4 elements, linear mapping
+!       - single block, 2 elements, quadratic mapping
+!       - two blocks, 2 elements each block, linear mapping
+!
+!   Parallel:
+!       - up to 2 procs
+!
+!--------------------------------------------------------------------------------
+module integration_adjointx_1D_LA_mod
+#include <messenger.h>
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_mvector,           only: mvector_t
+    use type_chidg,             only: chidg_t
+    use type_chidg_data,        only: chidg_data_t
+    use mod_string,             only: string_t
+    use type_bc_state,          only: bc_state_t
+    use type_bc_state_group,    only: bc_state_group_t
+    use mod_bc,                 only: create_bc
+    use type_function,          only: function_t
+    use type_ivector,           only: ivector_t
+    use mod_function,           only: create_function
+    use mod_interpolate,        only: interpolate_element_standard
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
+    use type_file_properties,   only: file_properties_t
+    use mod_hdf_utilities,      only: get_properties_hdf 
+
+    use mod_functional,         only: create_functional
+    use type_evaluator,         only: evaluator_t
+    use type_functional_group,  only: functional_group_t
+
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
+    use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
+    use mod_io
+
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+    use DNAD_D
+
+    ! Imports for defining a new operator and model
+    use mod_operators,          only: operator_factory
+    use type_operator,          only: operator_t
+    use mod_models,             only: model_factory
+    use type_model,             only: model_t
+
+    ! Imports for defining a new equation builder
+    use mod_equations,                  only: equation_set_factory
+    use type_equation_builder,          only: equation_builder_t
+    use type_equation_set,              only: equation_set_t
+    implicit none
+
+
+    type(mvector_t) :: case1_sens(2,2) ! nprocs, nbackend
+    type(mvector_t) :: case2_sens(2,2) ! nprocs, nbackend
+    type(mvector_t) :: case3_sens(2,2) ! nprocs, nbackend
+
+
+    public  :: adjointx_linear_advection_1D
+
+
+
+    !>  A custom source term for the current test case
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!  S(x) = 4*cos(4x)
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(operator_t), public :: test_LA_volume_source_t
+
+    contains
+        procedure   :: init    => init_source
+        procedure   :: compute => compute_source
+    end type test_LA_volume_source_t
+    !***************************************************************************************
+
+
+
+    !>  The advection coefficient model.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(model_t), public :: testing_1D_linear_advection_model_t
+
+    contains
+        procedure   :: init    => init_model
+        procedure   :: compute => compute_model
+    end type testing_1D_linear_advection_model_t
+    !***************************************************************************************
+
+
+
+    !>  A new equation set builder to build a linear advection equation set with the 
+    !!  new custom volume source.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    type, extends(equation_builder_t), public :: test_linear_advection_builder_t
+
+    contains
+        procedure   :: init => init_builder
+        procedure   :: build
+    end type test_linear_advection_builder_t
+    !****************************************************************************************
+
+
+    !>  This parameter initialize the state for each test
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !-------------------------------------------------------------------------------
+    @TestParameter
+    type, extends(MpiTestParameter) :: case_grid
+        integer(ik)                 :: nelem_xi
+        integer(ik)                 :: nblocks
+        character(:),   allocatable :: gridtype     ! singleblock, doubleblock
+        character(:),   allocatable :: gridfile 
+        character(:),   allocatable :: backend
+    contains
+        procedure   :: toString
+    end type case_grid
+    !*******************************************************************************
+
+
+
+
+
+
+
+    !>  Main testing fixture with test components that get initialized for each test
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !-------------------------------------------------------------------------------
+    @TestCase(testParameters={getParameters()}, constructor=newTest)
+    type, extends(MpiTestCase) :: adjointx_linear_advection_1D
+        integer(ik)                 :: nelem_xi
+        integer(ik)                 :: nblocks
+        character(:),   allocatable :: gridtype
+        character(:),   allocatable :: gridfile
+        character(:),   allocatable :: backend
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type adjointx_linear_advection_1D
+    !*******************************************************************************
+
+
+    type(chidg_t)   :: chidg
+    type(chidg_t)   :: chidg_adj
+    type(chidg_t)   :: chidg_adjx
+
+
+contains
+
+    !-------------------------------------------------------------------------------
+    !                           Volume Source Methods
+    !-------------------------------------------------------------------------------
+
+    !>  Initialize the new volume source operator.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init_source(self)
+        class(test_LA_volume_source_t),   intent(inout)      :: self
+
+        ! Set operator name
+        call self%set_name("Test Linear Advection Constant Volume Source")
+
+        ! Set operator type
+        call self%set_operator_type("Volume Diffusive Flux")
+
+        ! Set operator equations
+        call self%add_primary_field("u")
+
+    end subroutine init_source
+    !********************************************************************************
+
+
+
+    !>  Implement the volume source definition.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine compute_source(self,worker,prop)
+        class(test_LA_volume_source_t),     intent(inout)   :: self
+        type(chidg_worker_t),               intent(inout)   :: worker
+        class(properties_t),                intent(inout)   :: prop
+
+        type(AD_D), allocatable, dimension(:)   :: source, x
+
+        ! Interpolate solution to quadrature nodes
+        source = worker%get_field('u','grad1','element',override_lift=.true.)
+
+        x = worker%x('volume')
+        source = ONE
+
+        ! Integrate volume flux
+        call worker%integrate_volume_source('u',source)
+
+    end subroutine compute_source
+    !***************************************************************************************
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------------
+    !                       Scalar Advection Coefficient Model Methods
+    !----------------------------------------------------------------------------------------
+
+    !>  Initialize scalar advectionn coefficient model with name and model field being 
+    !!  provided.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_model(self)
+        class(testing_1D_linear_advection_model_t),    intent(inout)   :: self
+
+        call self%set_name('Testing 1D Linear Advection :: Coefficient Model')
+        call self%set_dependency('f(Q-)')
+
+        call self%add_model_field('Scalar Advection Velocity-1')
+        call self%add_model_field('Scalar Advection Velocity-2')
+        call self%add_model_field('Scalar Advection Velocity-3')
+
+    end subroutine init_model
+    !****************************************************************************************
+
+
+
+    !>  Implement the function for providing the scalar advection coefficient field.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine compute_model(self,worker)
+        class(testing_1D_linear_advection_model_t), intent(in)      :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
+
+        type(AD_D), allocatable, dimension(:)   :: u, cx_model, cy_model, cz_model
+
+        u = worker%get_field('u', 'value')
+
+        ! Initialize derivative array
+        cx_model = u
+        cy_model = u
+        cz_model = u
+
+        cx_model = ONE
+        cy_model = ZERO
+        cz_model = ZERO
+
+        call worker%store_model_field('Scalar Advection Velocity-1', 'value', cx_model)
+        call worker%store_model_field('Scalar Advection Velocity-2', 'value', cy_model)
+        call worker%store_model_field('Scalar Advection Velocity-3', 'value', cz_model)
+
+
+    end subroutine compute_model
+    !****************************************************************************************
+
+
+
+
+
+    
+    !----------------------------------------------------------------------------------------
+    !                           Builder Methods for new equation set
+    !----------------------------------------------------------------------------------------
+
+
+    !>  Initialize the new linear advection builder.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_builder(self)
+        class(test_linear_advection_builder_t),   intent(inout)  :: self
+
+        call self%set_name("Test AdjointX 1D Linear Advection")
+
+    end subroutine init_builder
+    !****************************************************************************************
+
+    
+
+
+
+    !>  Implement the linear advection builder definition.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    function build(self,blueprint) result(linear_advection_eqn)
+        class(test_linear_advection_builder_t), intent(in)  :: self
+        character(*),                           intent(in)  :: blueprint
+
+        type(equation_set_t)    :: linear_advection_eqn
+        
+        ! Set equationset name.
+        call linear_advection_eqn%set_name("Test AdjointX 1D Linear Advection")
+
+        ! Add spatial operators
+        call linear_advection_eqn%add_operator('Scalar Advection Boundary Average Operator')
+        call linear_advection_eqn%add_operator('Scalar Advection Volume Operator')
+        call linear_advection_eqn%add_operator('Scalar Advection LaxFriedrichs Operator')
+        call linear_advection_eqn%add_operator('Scalar Advection BC Operator')
+        call linear_advection_eqn%add_operator("Test Linear Advection Constant Volume Source")
+
+        ! Add model for 'compute_mu' scalar coefficient
+        call linear_advection_eqn%add_model("Testing 1D Linear Advection :: Coefficient Model")
+
+    end function build
+    !***************************************************************************************
+
+
+
+
+
+
+    !-------------------------------------------------------------------------------
+    !                               Test methods
+    !-------------------------------------------------------------------------------
+
+
+
+    !> Parameter constructors
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function newTest(test_parameter) result(test)
+        type(case_grid),  intent(in)        :: test_parameter
+        type(adjointx_linear_advection_1D)  :: test
+
+        test%nelem_xi   = test_parameter%nelem_xi
+        test%nblocks    = test_parameter%nblocks
+        test%gridtype   = test_parameter%gridtype
+        test%gridfile   = test_parameter%gridfile
+        test%backend    = test_parameter%backend
+
+    end function newTest
+    !******************************************************************************
+
+
+    !> Parameter initialization
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function getParameters() result(params)
+        type(case_grid), allocatable :: params(:)
+    
+        integer(ik),        allocatable :: nelem_xi(:)
+        integer(ik),        allocatable :: nblocks(:)
+        type(string_t),     allocatable :: gridtype(:)
+        type(string_t),     allocatable :: files(:)
+        type(string_t),     allocatable :: backends(:)
+        integer(ik) :: icase, ncases, ifile, ibackend
+
+        ! These go together
+        nelem_xi = [4, 4, 2]
+        nblocks  = [1, 2, 1]
+        gridtype = [ string_t("singleblock"), string_t("doubleblock"), string_t("singleblock") ]
+        files    = [ string_t("1D_linear_advection_D1_4x1x1.h5"), string_t("1D_linear_advection_D2_4x1x1.h5"), string_t("1D_linear_advection_D1_2x1x1.h5") ]
+
+        ! These go together
+        backends  = [string_t("native"), string_t("petsc") ]
+
+        ncases = size(nelem_xi)*size(backends)
+        if (allocated(params)) deallocate(params)
+        allocate(params(ncases))
+
+        icase = 1
+        do ifile = 1,size(files)
+            do ibackend = 1,size(backends)
+
+                params(icase)%nelem_xi  = nelem_xi(ifile)
+                params(icase)%nblocks   = nblocks(ifile)
+                params(icase)%gridtype  = gridtype(ifile)%str
+                params(icase)%gridfile  = files(ifile)%str
+                params(icase)%backend   = backends(ibackend)%str
+                icase = icase + 1
+
+            end do
+        end do
+
+    end function getParameters
+    !****************************************************************************************
+
+
+
+    !>  Reporting the parameters of the test
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function toString(this) result(string)
+        class (case_grid),    intent(in)    :: this
+        character(:), allocatable           :: string
+
+        character(len=200) :: buffer
+
+        write(buffer,'( "(nelem_xi, gridtype, backend)=","(", I2,",", A10,",", A10,")" )') this%nelem_xi, trim(this%gridtype), trim(this%backend)
+        string = trim(buffer)
+
+    end function toString
+    !****************************************************************************************
+
+
+
+    !>  Set up test routine.
+    !!
+    !!  This routine reads the grid file, sets up boundary conditions, initializes storage
+    !!  and sets the appropriate configuration options.
+    !!  This routine also gets the numer of processors and the correct MPI communicator for 
+    !!  the test.
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(adjointx_linear_advection_1D),  intent(inout)   :: this
+
+        class(function_t),  allocatable :: fcn
+        type(string_t)                  :: group_names_D1(1,6)
+        type(string_t)                  :: group_names_D2(2,6)
+        type(bc_state_group_t)          :: bc_state_groups(2)
+        class(bc_state_t),  allocatable :: bc_state
+        class(evaluator_t), allocatable :: fcl_temp
+        type(functional_group_t)        :: fcl_group
+        type(file_properties_t)         :: file_props
+
+        type(testing_1D_linear_advection_model_t)   :: advection_coefficient_model
+        type(test_LA_volume_source_t)               :: source_test_linear_advection
+        type(test_linear_advection_builder_t)       :: builder_test_linear_advection
+
+
+        integer(ik) :: npes_index, grid_index, order_index, iproc, ierr, istep, nfuncs
+        real(rk)    :: p_computed_error
+        
+        ! Get MPI communicator information from pFUnit
+        IRANK              = this%getProcessRank()
+        NRANK              = this%getNumProcessesRequested()
+        ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+        ! Initialize ChiDG environment
+        call chidg%start_up('mpi',ChiDG_COMM)
+        call chidg%start_up('core')
+
+        !********************
+        !
+        !   PRIMAL RUN
+        !   primal chidg entity
+        !
+        !*********************
+
+            !-------------------------------------------------------------------------------
+            !               Initialize and register the advection coefficient model
+            !-------------------------------------------------------------------------------
+            call advection_coefficient_model%init()
+            call model_factory%register(advection_coefficient_model)
+
+            !-------------------------------------------------------------------------------
+            !                 Initialize and register the source operator
+            !   This has to be done before the equation set builder because it needs to be
+            !   able to find this operator.
+            !-------------------------------------------------------------------------------
+            call source_test_linear_advection%init()
+            call operator_factory%register(source_test_linear_advection)
+
+            !-------------------------------------------------------------------------------
+            !                 Initialize and register equation set builder
+            !-------------------------------------------------------------------------------
+            call builder_test_linear_advection%init()
+            call equation_set_factory%register(builder_test_linear_advection%build('default'))
+
+            !------------------------------------------------------------------------------
+            ! Define input data here that is normally read through the namelist input file
+            ! As a result, we don't call chidg%init('io')
+            !------------------------------------------------------------------------------
+            basis            = "legendre"
+            gq_rule          = 3
+            backend          = trim(this%backend)
+            time_integrator  = "steady"
+            nonlinear_solver = "newton"
+            linear_solver    = "fgmres"
+            preconditioner   = "jacobi"
+            IO_DESTINATION   = "file"
+            time_steps       = 1 ! This is important for adjointx
+            !------------------------------------------------------------------------------
+
+
+            ! Set linear solver options to pass during initialization
+            call loptions%set("tol",1.e-15_rk)
+
+            ! Set nonlinear solver options
+            call noptions%set("tol",5.e-11_rk)
+            call noptions%set("cfl0",1.0_rk)
+            call noptions%set("nsteps",100)
+
+
+
+
+            ! Create mesh
+            if (IRANK == GLOBAL_MASTER) then
+
+                bc_state_groups(1)%name = "Left Boundary"
+                call create_bc("Scalar Value",bc_state)
+                call bc_state%set_fcn_option("Value","val",ZERO)
+                call bc_state_groups(1)%add_bc_state(bc_state)
+
+                bc_state_groups(2)%name = "Extrapolation"
+                call create_bc("Scalar Extrapolate", bc_state)
+                call bc_state_groups(2)%add_bc_state(bc_state)
+
+
+                if (this%gridtype == 'doubleblock') then
+
+
+                    group_names_D2(1,:) = [string_t("Left Boundary") , &
+                                           string_t("Empty")         , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation")]
+
+                    group_names_D2(2,:) = [string_t("Empty")         , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation")]
+
+
+                    ! Define functional
+                    call create_functional("Test 1D Energy",fcl_temp)
+                    call fcl_temp%set_ref_geom("01,02")
+                    call fcl_group%add_functional(fcl_temp)
+
+
+                    call create_mesh_file('D2 NxNxN M1',this%gridfile,equation_sets   = [string_t("Test AdjointX 1D Linear Advection"),  &
+                                                                                         string_t("Test AdjointX 1D Linear Advection")], &
+                                                                      group_names     = group_names_D2,                         &
+                                                                      bc_state_groups = bc_state_groups,                        &
+                                                                      nelem_xi        = this%nelem_xi,                          &
+                                                                      nelem_eta       = 1,                                      &
+                                                                      nelem_zeta      = 1,                                      &
+                                                                      functionals     = fcl_group)
+
+                else if (this%gridtype == 'singleblock' .and. this%nelem_xi == 2) then
+
+
+                    group_names_D1(1,:) = [string_t("Left Boundary") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation")]
+                    
+                    ! Define functional
+                    call create_functional("Test 1D Energy",fcl_temp)
+                    call fcl_temp%set_ref_geom("01")
+                    call fcl_group%add_functional(fcl_temp)
+
+
+                    call create_mesh_file('D1 NxNxN M2',this%gridfile,equation_sets  = [string_t("Test AdjointX 1D Linear Advection")],    &
+                                                                     group_names     = group_names_D1,                            &
+                                                                     bc_state_groups = bc_state_groups,                           &
+                                                                     nelem_xi        = this%nelem_xi,                             &
+                                                                     nelem_eta       = 1,                                         &
+                                                                     nelem_zeta      = 1,                                         &
+                                                                     functionals     = fcl_group)
+                
+                
+                else
+
+
+                    group_names_D1(1,:) = [string_t("Left Boundary") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation") , &
+                                           string_t("Extrapolation")]
+                    
+                    ! Define functional
+                    call create_functional("Test 1D Energy",fcl_temp)
+                    call fcl_temp%set_ref_geom("01")
+                    call fcl_group%add_functional(fcl_temp)
+
+
+                    call create_mesh_file('D1 NxNxN',this%gridfile,equation_sets  = [string_t("Test AdjointX 1D Linear Advection")],    &
+                                                                   group_names     = group_names_D1,                            &
+                                                                   bc_state_groups = bc_state_groups,                           &
+                                                                   nelem_xi        = this%nelem_xi,                             &
+                                                                   nelem_eta       = 1,                                         &
+                                                                   nelem_zeta      = 1,                                         &
+                                                                   functionals     = fcl_group)
+
+                end if
+
+            end if
+
+            ! Set ChiDG components
+            call chidg%set('Solution Order',   integer_input=3)
+            call chidg%set('Time Integrator',  algorithm=time_integrator)
+            call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+            call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+            call chidg%set('Preconditioner',   algorithm=preconditioner)
+
+            ! Read grid
+            call chidg%read_mesh(this%gridfile,'primal storage')
+
+            ! Initialize solution
+            call create_function(fcn,'constant')
+            call fcn%set_option('val',0.5_rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
+
+            ! Run ChiDG simulation
+            call chidg%run(write_initial=.false., write_final=.false.)
+
+            ! Write out primal solution
+            call chidg%write_fields(this%gridfile,'primary')
+
+    
+        !********************
+        !
+        !   ADJOINT RUN
+        !   Adjoint chidg entity
+        !
+        !*********************
+
+            !-------------------------------------------------------------------------------
+            !   Here chidg_adj is setup. Models, source, and equations will be read in from
+            !   the final written file of the primal solution, together with the primal 
+            !   solution itself. This is what is typically done in a routine adjoint run.
+            !-------------------------------------------------------------------------------
+            
+            
+            !------------------------------------------------------------------------------
+            ! Define input data here that is normally read through the namelist input file
+            ! As a result, we don't call chidg%init('io')
+            !------------------------------------------------------------------------------
+            basis            = "legendre"
+            gq_rule          = 3
+            time_integrator  = "steady"
+            nonlinear_solver = "newton"
+            linear_solver    = "fgmres"
+            preconditioner   = "jacobi"
+            IO_DESTINATION   = "file"
+            time_steps       = 1 ! This is important for adjointx
+            !------------------------------------------------------------------------------
+
+
+            ! Set linear solver options to pass during initialization
+            call loptions%set("tol",1.e-15_rk)
+
+            ! Set nonlinear solver options
+            call noptions%set("tol",5.e-11_rk)
+            call noptions%set("cfl0",1.0_rk)
+            call noptions%set("nsteps",100)
+
+
+            ! Set ChiDG components
+            call chidg_adj%set('Solution Order',   integer_input=3)
+            call chidg_adj%set('Time Integrator',  algorithm=time_integrator)
+            call chidg_adj%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+            call chidg_adj%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+            call chidg_adj%set('Preconditioner',   algorithm=preconditioner)
+
+            ! Read grid
+            call chidg_adj%read_mesh(this%gridfile,storage = 'adjoint storage')
+
+            ! Read Primal Solution
+            call chidg_adj%read_fields(this%gridfile,'primary')
+
+            ! Process primal solution for adjoint 
+            do iproc = 0,NRANK-1
+                if (iproc == IRANK) then
+                    file_props  = get_properties_hdf(this%gridfile)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+            end do
+
+            call chidg_adj%data%sdata%adjoint%process_primal_solution( &
+                                    chidg_adj%data%sdata%q_in,file_props%istep)
+        
+            
+            ! Run ChiDG Adjoint simulation
+            call chidg_adj%run_adjoint(write_final=.false.)
+           
+            ! Write out adjoint solution
+            call chidg_adj%write_fields(this%gridfile,'adjoint')
+
+        !********************
+        !
+        !   ADJOINTX RUN
+        !   Adjointx chidg entity
+        !
+        !*********************
+
+
+            !-------------------------------------------------------------------------------
+            !   Here chidg_adj is setup. Models, source, and equations will be read in from
+            !   the final written file of the primal solution, together with the primal 
+            !   solution itself. This is what is typically done in a routine adjoint run.
+            !-------------------------------------------------------------------------------
+            
+            
+            !------------------------------------------------------------------------------
+            ! Define input data here that is normally read through the namelist input file
+            ! As a result, we don't call chidg%init('io')
+            !------------------------------------------------------------------------------
+            basis            = "legendre"
+            gq_rule          = 3
+            time_integrator  = "steady"
+            nonlinear_solver = "newton"
+            linear_solver    = "fgmres"
+            preconditioner   = "jacobi"
+            IO_DESTINATION   = "file"
+            time_steps       = 1 ! This is important for adjointx
+            !------------------------------------------------------------------------------
+
+            ! Set linear solver options to pass during initialization
+            call loptions%set("tol",1.e-15_rk)
+
+            ! Set nonlinear solver options
+            call noptions%set("tol",5.e-11_rk)
+            call noptions%set("cfl0",1.0_rk)
+            call noptions%set("nsteps",100)
+
+
+            ! Set ChiDG components
+            call chidg_adjx%set('Solution Order',   integer_input=3)
+            call chidg_adjx%set('Time Integrator',  algorithm=time_integrator)
+            call chidg_adjx%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+            call chidg_adjx%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+            call chidg_adjx%set('Preconditioner',   algorithm=preconditioner)
+
+            ! Read grid
+            call chidg_adjx%read_mesh(this%gridfile,storage = 'adjointx storage')
+
+            ! Read Primal Solution
+            call chidg_adjx%read_fields(this%gridfile,'primary')
+
+            ! Process primal solution for adjoint 
+            do iproc = 0,NRANK-1
+                if (iproc == IRANK) then
+                    file_props  = get_properties_hdf(this%gridfile)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+            end do
+            call chidg_adjx%data%sdata%adjoint%process_primal_solution(chidg_adjx%data%sdata%q_in,file_props%istep)
+            
+            ! Read Adjoint Solution
+            istep   = 1
+            nfuncs  = 1
+            call chidg_adjx%data%set_fields_adjoint(nfuncs)
+            call chidg_adjx%read_fields(this%gridfile,'adjoint')
+            call chidg_adjx%data%sdata%adjoint%process_adjoint_solution(istep)
+            call chidg_adjx%data%reset_fields()
+
+    end subroutine SetUp
+    !*****************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(adjointx_linear_advection_1D),  intent(inout)   :: this
+
+        ! Close ChiDG
+        call chidg_adjx%shut_down('core')
+        call chidg_adj%shut_down('core')
+        call chidg%shut_down('core')
+
+        call chidg%shut_down('mpi')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+            call delete_file("Test_1D_Energy.txt")
+        end if
+
+    end subroutine tearDown
+    !*****************************************************************************************
+
+
+
+    !> Run and save senstivities for each case
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1,2])
+    subroutine run(self)
+        class(adjointx_linear_advection_1D),  intent(inout)   :: self
+
+        integer(ik) :: grid_index, backend_index, nprocs
+
+        ! Run ChiDG Adjointx simulation
+        call chidg_adjx%run_adjointx(write_final=.false.)
+        
+        ! Gather sensitivities to global master
+        call chidg_adjx%data%sdata%adjointx%gather_all(chidg_adjx%data%mesh)
+
+        ! Store sensitivities
+        grid_index    = get_case(self%nelem_xi,self%nblocks)
+        backend_index = get_backend_index(self%backend)
+        nprocs = NRANK
+        
+        if (IRANK == GLOBAL_MASTER) then 
+
+            select case(grid_index)
+                case(1)
+                    if (nprocs==1) call case1_sens(1,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==2) call case1_sens(2,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                case(2)
+                    if (nprocs==1) call case2_sens(1,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==1) call case2_sens(1,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,2)%get_nodes_sensitivities())
+                    if (nprocs==2) call case2_sens(2,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==2) call case2_sens(2,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,2)%get_nodes_sensitivities())
+                case(3)
+                    if (nprocs==1) call case3_sens(1,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+                    if (nprocs==2) call case3_sens(2,backend_index)%push_back(chidg_adjx%data%sdata%adjointx%node_sensitivities(1,1)%get_nodes_sensitivities())
+            end select
+
+        end if
+
+    end subroutine run
+    !-----------------------------------------------------------------------------------------
+
+
+
+
+
+    !>  Test x-sensitivities based on the type of case 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_xsensitivities(self)
+        class(adjointx_linear_advection_1D),  intent(inout)   :: self
+
+        real(rk),   allocatable :: node_sens(:,:)
+        real(rk),   allocatable :: ref_xsens(:)
+        real(rk)                :: tol
+        integer(ik)             :: iproc, ibackend
+
+        tol = 1.e-9_rk 
+
+        ! Check serial and parallel solution
+        do iproc = 1,2
+            do ibackend = 1,2
+
+                ! 1 block, 4 elements, linear mapping
+
+                    ! Dom 1
+                    if (allocated(node_sens)) deallocate(node_sens)
+                    node_sens = case1_sens(iproc,ibackend)%at(1) 
+                    
+                    if (allocated(ref_xsens)) deallocate(ref_xsens)
+                    ref_xsens = [-0.125_rk,0.0_rk,0.0_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.0_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.0_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.0_rk,0.0_rk,0.125_rk ]
+
+                    @assertEqual(ref_xsens,node_sens(:,1),tol)
+
+                ! 2 block, 4 elements, linear mapping
+
+                    ! Dom 1
+                    if (allocated(node_sens)) deallocate(node_sens)
+                    node_sens = case2_sens(iproc,ibackend)%at(1) 
+                    
+                    if (allocated(ref_xsens)) deallocate(ref_xsens)
+                    ref_xsens = [-0.125_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.125_rk ]
+
+                    @assertEqual(ref_xsens,node_sens(:,1),tol)
+                    
+                    ! Dom 2
+                    if (allocated(node_sens)) deallocate(node_sens)
+                    node_sens = case2_sens(iproc,ibackend)%at(2) 
+                    
+                    if (allocated(ref_xsens)) deallocate(ref_xsens)
+                    ref_xsens = [-0.125_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.125_rk, &
+                                 -0.125_rk,0.0_rk,0.125_rk ]
+
+                    @assertEqual(ref_xsens,node_sens(:,1),tol)
+
+                ! 1 block, 2 elements, quadratic mapping
+
+                    ! Dom 1
+                    if (allocated(node_sens)) deallocate(node_sens)
+                    node_sens = case3_sens(iproc,ibackend)%at(1) 
+                    
+                    ! Allocate ref vector and set it to zeros
+                    if (allocated(ref_xsens)) deallocate(ref_xsens)
+                    allocate(ref_xsens(size(node_sens(:,1))))
+                    ref_xsens = ZERO
+
+                    ! Define non-zero entries
+                    ref_xsens(1)  = -0.0138888888_rk
+                    ref_xsens(5)  =  0.0138888888_rk
+                    ref_xsens(6)  = -0.0555555555_rk
+                    ref_xsens(10) =  0.0555555555_rk
+                    ref_xsens(11) = -0.0138888888_rk
+                    ref_xsens(15) =  0.0138888888_rk
+                    ref_xsens(16) = -0.0555555555_rk
+                    ref_xsens(20) =  0.0555555555_rk
+                    ref_xsens(21) = -0.2222222222_rk
+                    ref_xsens(25) =  0.2222222222_rk
+                    ref_xsens(26) = -0.0555555555_rk
+                    ref_xsens(30) =  0.0555555555_rk
+                    ref_xsens(31) = -0.0138888888_rk
+                    ref_xsens(35) =  0.0138888888_rk
+                    ref_xsens(36) = -0.0555555555_rk
+                    ref_xsens(40) =  0.0555555555_rk
+                    ref_xsens(41) = -0.0138888888_rk
+                    ref_xsens(45) =  0.0138888888_rk
+
+                    @assertEqual(ref_xsens,node_sens(:,1),tol)
+
+            end do !ibackend
+        end do !iproc
+
+    end subroutine test_xsensitivities
+    !*****************************************************************************************
+
+
+
+
+
+
+
+    !>  Test y-sensitivities based on the type of case 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_ysensitivities(self)
+        class(adjointx_linear_advection_1D),  intent(inout)   :: self
+
+        real(rk),   allocatable :: node_sens(:,:)
+        real(rk),   allocatable :: ref_ysens(:)
+        real(rk)                :: tol
+        integer(ik)             :: iproc, ibackend
+
+        tol = 1.e-9_rk 
+
+        ! Check serial and parallel solution
+        do iproc = 1,2
+            do ibackend = 1,2
+
+            ! 1 block, 4 elements, linear mapping
+
+                ! Dom 1
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case1_sens(iproc,ibackend)%at(1) 
+                
+                if (allocated(ref_ysens)) deallocate(ref_ysens)
+                ref_ysens = [-0.000325520833_rk,-0.00455729166_rk,-0.01627604166_rk,-0.03580729166_rk,-0.0263671875_rk, &
+                              0.000325520833_rk, 0.00455729166_rk, 0.01627604166_rk, 0.03580729166_rk, 0.0263671875_rk, &
+                             -0.000325520833_rk,-0.00455729166_rk,-0.01627604166_rk,-0.03580729166_rk,-0.0263671875_rk, &
+                              0.000325520833_rk, 0.00455729166_rk, 0.01627604166_rk, 0.03580729166_rk, 0.0263671875_rk ]
+
+                @assertEqual(ref_ysens,node_sens(:,2),tol)
+
+            ! 2 block, 4 elements, linear mapping
+
+                ! Dom 1
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case2_sens(iproc,ibackend)%at(1) 
+                
+                if (allocated(ref_ysens)) deallocate(ref_ysens)
+                ref_ysens = [-0.0003255208333_rk,-0.00455729166_rk,-0.005533854166_rk, &
+                              0.0003255208333_rk, 0.00455729166_rk, 0.005533854166_rk, &
+                             -0.0003255208333_rk,-0.00455729166_rk,-0.005533854166_rk, &
+                              0.0003255208333_rk, 0.00455729166_rk, 0.005533854166_rk ]
+
+                @assertEqual(ref_ysens,node_sens(:,2),tol)
+                
+                ! Dom 2
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case2_sens(iproc,ibackend)%at(2) 
+                
+                if (allocated(ref_ysens)) deallocate(ref_ysens)
+                ref_ysens = [-0.010742187500_rk,-0.03580729166_rk,-0.026367187499_rk, &
+                              0.010742187500_rk, 0.03580729166_rk, 0.026367187499_rk, &
+                             -0.010742187500_rk,-0.03580729166_rk,-0.026367187499_rk, &
+                              0.010742187500_rk, 0.03580729166_rk, 0.026367187499_rk ]
+
+                @assertEqual(ref_ysens,node_sens(:,2),tol)
+
+            ! 1 block, 2 elements, quadratic mapping
+
+                ! Dom 1
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case3_sens(iproc,ibackend)%at(1) 
+                
+                ! Allocate ref vector and set it to zeros
+                if (allocated(ref_ysens)) deallocate(ref_ysens)
+                allocate(ref_ysens(size(node_sens(:,2))))
+                ref_ysens = ZERO
+
+                ! Define non-zero entries
+                ref_ysens(1)  =  0.0001736111_rk
+                ref_ysens(2)  = -0.0020833333_rk
+                ref_ysens(3)  = -0.0031250000_rk
+                ref_ysens(4)  = -0.0159722222_rk
+                ref_ysens(5)  = -0.0067708333_rk
+                ref_ysens(11) = -0.0001736111_rk
+                ref_ysens(12) =  0.0020833333_rk
+                ref_ysens(13) =  0.0031250000_rk
+                ref_ysens(14) =  0.0159722222_rk
+                ref_ysens(15) =  0.0067708333_rk
+                ref_ysens(16) =  0.0006944444_rk
+                ref_ysens(17) = -0.0083333333_rk
+                ref_ysens(18) = -0.0124999999_rk
+                ref_ysens(19) = -0.0638888888_rk
+                ref_ysens(20) = -0.0270833333_rk
+                ref_ysens(26) = -0.0006944444_rk
+                ref_ysens(27) =  0.0083333333_rk
+                ref_ysens(28) =  0.0124999999_rk
+                ref_ysens(29) =  0.0638888888_rk
+                ref_ysens(30) =  0.0270833333_rk
+                ref_ysens(31) =  0.0001736111_rk
+                ref_ysens(32) = -0.0020833333_rk
+                ref_ysens(33) = -0.0031250000_rk
+                ref_ysens(34) = -0.0159722222_rk
+                ref_ysens(35) = -0.0067708333_rk
+                ref_ysens(41) = -0.0001736111_rk
+                ref_ysens(42) =  0.0020833333_rk
+                ref_ysens(43) =  0.0031250000_rk
+                ref_ysens(44) =  0.0159722222_rk
+                ref_ysens(45) =  0.0067708333_rk
+
+                @assertEqual(ref_ysens,node_sens(:,2),tol)
+
+            end do !ibackend
+        end do !iproc
+
+    end subroutine test_ysensitivities
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Test z-sensitivities based on the type of case 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   11/11/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_zsensitivities(self)
+        class(adjointx_linear_advection_1D),  intent(inout)   :: self
+
+        real(rk),   allocatable :: node_sens(:,:)
+        real(rk),   allocatable :: ref_zsens(:)
+        real(rk)                :: tol
+        integer(ik)             :: iproc, ibackend
+
+        tol = 1.e-9_rk 
+
+        ! Check serial and parallel solution
+        do iproc = 1,2
+            do ibackend = 1,2
+
+            ! 1 block, 4 elements, linear mapping
+
+                ! Dom 1
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case1_sens(iproc,ibackend)%at(1) 
+                
+                if (allocated(ref_zsens)) deallocate(ref_zsens)
+                ref_zsens = [-0.000325520833_rk,-0.00455729166_rk,-0.01627604166_rk,-0.03580729166_rk,-0.0263671875_rk, &
+                             -0.000325520833_rk,-0.00455729166_rk,-0.01627604166_rk,-0.03580729166_rk,-0.0263671875_rk, &
+                              0.000325520833_rk, 0.00455729166_rk, 0.01627604166_rk, 0.03580729166_rk, 0.0263671875_rk, &
+                              0.000325520833_rk, 0.00455729166_rk, 0.01627604166_rk, 0.03580729166_rk, 0.0263671875_rk ]
+
+                @assertEqual(ref_zsens,node_sens(:,3),tol)
+
+            ! 2 block, 4 elements, linear mapping
+
+                ! Dom 1
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case2_sens(iproc,ibackend)%at(1) 
+                
+                if (allocated(ref_zsens)) deallocate(ref_zsens)
+                ref_zsens = [-0.0003255208333_rk,-0.00455729166_rk,-0.005533854166_rk, &
+                             -0.0003255208333_rk,-0.00455729166_rk,-0.005533854166_rk, &
+                              0.0003255208333_rk, 0.00455729166_rk, 0.005533854166_rk, &
+                              0.0003255208333_rk, 0.00455729166_rk, 0.005533854166_rk ]
+
+                @assertEqual(ref_zsens,node_sens(:,3),tol)
+                
+                ! Dom 2
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case2_sens(iproc,ibackend)%at(2) 
+                
+                if (allocated(ref_zsens)) deallocate(ref_zsens)
+                ref_zsens = [-0.010742187500_rk,-0.03580729166_rk,-0.026367187499_rk, &
+                             -0.010742187500_rk,-0.03580729166_rk,-0.026367187499_rk, &
+                              0.010742187500_rk, 0.03580729166_rk, 0.026367187499_rk, &
+                              0.010742187500_rk, 0.03580729166_rk, 0.026367187499_rk ]
+
+                @assertEqual(ref_zsens,node_sens(:,3),tol)
+
+            ! 1 block, 2 elements, quadratic mapping
+
+                ! Dom 1
+                if (allocated(node_sens)) deallocate(node_sens)
+                node_sens = case3_sens(iproc,ibackend)%at(1) 
+                
+                ! Allocate ref vector and set it to zeros
+                if (allocated(ref_zsens)) deallocate(ref_zsens)
+                allocate(ref_zsens(size(node_sens(:,3))))
+                ref_zsens = ZERO
+
+                ! Define non-zero entries
+                ref_zsens(1)  =  0.0001736111_rk
+                ref_zsens(2)  = -0.0020833333_rk
+                ref_zsens(3)  = -0.0031250000_rk
+                ref_zsens(4)  = -0.0159722222_rk
+                ref_zsens(5)  = -0.0067708333_rk
+                ref_zsens(6)  =  0.0006944444_rk
+                ref_zsens(7)  = -0.0083333333_rk
+                ref_zsens(8)  = -0.0124999999_rk
+                ref_zsens(9)  = -0.0638888888_rk
+                ref_zsens(10) = -0.0270833333_rk
+                ref_zsens(11) =  0.0001736111_rk
+                ref_zsens(12) = -0.0020833333_rk
+                ref_zsens(13) = -0.0031250000_rk
+                ref_zsens(14) = -0.0159722222_rk
+                ref_zsens(15) = -0.0067708333_rk
+                ref_zsens(31) = -0.0001736111_rk
+                ref_zsens(32) =  0.0020833333_rk
+                ref_zsens(33) =  0.0031250000_rk
+                ref_zsens(34) =  0.0159722222_rk
+                ref_zsens(35) =  0.0067708333_rk
+                ref_zsens(36) = -0.0006944444_rk
+                ref_zsens(37) =  0.0083333333_rk
+                ref_zsens(38) =  0.0124999999_rk
+                ref_zsens(39) =  0.0638888888_rk
+                ref_zsens(40) =  0.0270833333_rk
+                ref_zsens(41) = -0.0001736111_rk
+                ref_zsens(42) =  0.0020833333_rk
+                ref_zsens(43) =  0.0031250000_rk
+                ref_zsens(44) =  0.0159722222_rk
+                ref_zsens(45) =  0.0067708333_rk
+
+                @assertEqual(ref_zsens,node_sens(:,3),tol)
+    
+            end do !ibackend
+        end do !iproc
+
+    end subroutine test_zsensitivities
+    !*****************************************************************************************
+
+
+    ! Utility for returning the index associated with a certain grid file
+    ! igrid represents the case
+    !------------------------------------------------------------------------------
+    function get_case(nelem,nblocks) result(igrid)
+        integer(ik),    intent(in)  :: nelem
+        integer(ik),    intent(in)  :: nblocks
+
+        integer(ik) :: igrid
+
+        select case (nelem)
+            case(2)
+                igrid = 3
+            case(4)
+                if (nblocks == 1) igrid = 1
+                if (nblocks == 2) igrid = 2
+        end select
+
+    end function get_case
+    !******************************************************************************
+
+
+    ! Utility for returning the index associated with a certain number of procs
+    !------------------------------------------------------------------------------
+    function get_backend_index(backend) result(ibackend)
+        character(*),   intent(in)  :: backend
+
+        integer(ik) :: ibackend
+
+        select case (trim(backend))
+            case('native')
+                ibackend = 1
+            case('petsc')
+                ibackend = 2
+            case default
+                call chidg_signal_one(FATAL,'Invalid backend.', trim(backend))
+        end select
+
+    end function get_backend_index
+    !******************************************************************************
+
+
+
+end module integration_adjointx_1D_LA_mod

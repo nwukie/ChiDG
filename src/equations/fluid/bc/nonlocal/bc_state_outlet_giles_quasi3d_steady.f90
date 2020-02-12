@@ -10,6 +10,7 @@ module bc_state_outlet_giles_quasi3d_steady
     use mod_chimera,            only: find_gq_donor, find_gq_donor_parallel
 
     use type_point,             only: point_t
+    use type_point_ad,          only: point_ad_t
     use type_mesh,              only: mesh_t
     use type_bc_state,          only: bc_state_t
     use bc_state_fluid_averaging,   only: bc_fluid_averaging_t
@@ -167,20 +168,21 @@ contains
 
 
         type(AD_D)  :: pressure_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, c_avg, &
-                       !ddensity_mean, dvel1_mean, dvel2_mean, dvel3_mean, dpressure_mean,   &
                        density_bar_r, vel1_bar_r, vel2_bar_r,       &
                        vel3_bar_r, pressure_bar_r, c_bar_r, A3_real, A3_imag,       &
                        A4_real, A4_imag, beta
 
-        real(rk),       allocatable, dimension(:)   :: p_user, r, pitch
+        type(AD_D),     allocatable, dimension(:)   :: p_user, r, pitch_ad
+        real(rk),       allocatable, dimension(:)   :: pitch
         real(rk)                                    :: theta_offset
-        type(point_t),  allocatable                 :: coords(:)
-        integer                                     :: i, ngq, ivec, imode, iradius, ierr, igq, nmodes
+        type(point_ad_t),  allocatable              :: coords(:)
+        integer                                     :: i, imode, iradius, ierr, igq, nmodes
 
 
         ! Get back pressure from function.
-        p_user = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
-        pitch  = self%bcproperties%compute('Pitch',           worker%time(),worker%coords())
+        p_user   = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
+        pitch_ad = self%bcproperties%compute('Pitch',           worker%time(),worker%coords())
+        pitch = pitch_ad(:)%x_ad_
 
 
         ! Interpolate interior solution to face quadrature nodes
@@ -317,8 +319,8 @@ contains
         c5_hat_imag_gq = ZERO
         do igq = 1,size(coords)
             do imode = 2,size(c5_hat_real,1) ! not interpolating mode1, so it remains zero and isn't present in idft
-                c5_hat_real_gq(imode,igq) = interpolate_linear_ad(self%r,c5_hat_real(imode,:),coords(igq)%c1_)
-                c5_hat_imag_gq(imode,igq) = interpolate_linear_ad(self%r,c5_hat_imag(imode,:),coords(igq)%c1_)
+                c5_hat_real_gq(imode,igq) = interpolate_linear_ad(self%r,c5_hat_real(imode,:),coords(igq)%c1_%x_ad_)
+                c5_hat_imag_gq(imode,igq) = interpolate_linear_ad(self%r,c5_hat_imag(imode,:),coords(igq)%c1_%x_ad_)
             end do
         end do
 
@@ -328,13 +330,14 @@ contains
         c5_3d = c5_hat_real_gq(1,:)
         c5_3d = ZERO
         do igq = 1,size(coords)
-            theta_offset = coords(igq)%c2_ - self%theta_ref
+            !theta_offset = coords(igq)%c2_ - self%theta_ref
+            theta_offset = coords(igq)%c2_%x_ad_ - self%theta_ref
             ! We include all modes here for generality, but we already set mode1 to zero
             ! so we are only getting the perturbation part.
-            call idft_eval(c5_hat_real_gq(:,igq),   &
-                           c5_hat_imag_gq(:,igq),   &
-                           [theta_offset]/pitch(1), &
-                           c5_3d(igq:igq),          &
+            call idft_eval(c5_hat_real_gq(:,igq),       &
+                           c5_hat_imag_gq(:,igq),       &
+                           [theta_offset]/pitch_ad(1),  &
+                           c5_3d(igq:igq),              &
                            expect_zero)
         end do
 
@@ -350,11 +353,11 @@ contains
         vel3_bar     = ZERO*c5_3d
         pressure_bar = ZERO*c5_3d
         do igq = 1,size(coords)
-            density_bar(igq)  = interpolate_linear_ad(self%r, density_hat_real( 1,:), coords(igq)%c1_)
-            vel1_bar(igq)     = interpolate_linear_ad(self%r, vel1_hat_real(    1,:), coords(igq)%c1_)
-            vel2_bar(igq)     = interpolate_linear_ad(self%r, vel2_hat_real(    1,:), coords(igq)%c1_)
-            vel3_bar(igq)     = interpolate_linear_ad(self%r, vel3_hat_real(    1,:), coords(igq)%c1_)
-            pressure_bar(igq) = interpolate_linear_ad(self%r, pressure_hat_real(1,:), coords(igq)%c1_)
+            density_bar(igq)  = interpolate_linear_ad(self%r, density_hat_real( 1,:), coords(igq)%c1_%x_ad_)
+            vel1_bar(igq)     = interpolate_linear_ad(self%r, vel1_hat_real(    1,:), coords(igq)%c1_%x_ad_)
+            vel2_bar(igq)     = interpolate_linear_ad(self%r, vel2_hat_real(    1,:), coords(igq)%c1_%x_ad_)
+            vel3_bar(igq)     = interpolate_linear_ad(self%r, vel3_hat_real(    1,:), coords(igq)%c1_%x_ad_)
+            pressure_bar(igq) = interpolate_linear_ad(self%r, pressure_hat_real(1,:), coords(igq)%c1_%x_ad_)
         end do
         c_bar = sqrt(gam*pressure_bar/density_bar)
 
@@ -511,6 +514,7 @@ contains
         integer(ik)             :: nmodes, nradius, ntheta, iradius, itheta, ncoeff, imode, ierr
         real(rk)                :: shift_r, shift_i
         real(rk),   allocatable :: pitch(:)
+        type(AD_D), allocatable :: pitch_ad(:)
 
         ! Define Fourier discretization
         nmodes  = self%nfourier_space
@@ -518,7 +522,8 @@ contains
         nradius = size(self%r)
         ntheta  = ncoeff
 
-        pitch  = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+        pitch_ad = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_ad_t([ZERO,ZERO,ZERO])])
+        pitch = pitch_ad(:)%x_ad_
 
         ! Allocate storage in result
         allocate(density_hat_real( ncoeff,nradius), density_hat_imag( ncoeff,nradius),  &
@@ -809,6 +814,7 @@ contains
                                        iradius, itheta, ierr, noverset
         real(rk)                    :: dtheta, dtheta_n, midpoint(3), try_offset(3), node(3), z
         real(rk),       allocatable :: pitch(:)
+        type(AD_D),     allocatable :: pitch_ad(:)
         character(:),   allocatable :: user_msg
         logical                     :: donor_found
 
@@ -840,7 +846,8 @@ contains
         ntheta  = ncoeff
         
         ! Initialize theta discretization parameters
-        pitch  = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+        pitch_ad  = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_ad_t([ZERO,ZERO,ZERO])])
+        pitch = pitch_ad(:)%x_ad_
         dtheta = pitch(1)
         dtheta_n = dtheta/ntheta
 

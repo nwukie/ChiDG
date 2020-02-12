@@ -25,8 +25,8 @@ module precon_jacobi
 
         type(chidg_matrix_t) :: D     ! inverse of block diagonal, (ndom,maxelems,ntime)
 
-        PC      :: pc
-        logical :: petsc_initialized = .false.
+        PC          :: pc
+        logical     :: petsc_initialized = .false.
 
     contains
         procedure   :: init
@@ -60,7 +60,7 @@ contains
         select case (trim(backend))
             case('native')
                 self%D = chidg_matrix(trim(backend))
-                call self%D%init(data%mesh,mtype='Diagonal')
+                call self%D%init(data%mesh,storage_config='Diagonal',dof_type='primal')
 
             case('petsc')
 
@@ -103,11 +103,11 @@ contains
 
         if (self%petsc_initialized) then
         !******  petsc  implementation  ******!
+
             call PCSetOperators(self%pc, A%wrapped_petsc_matrix%petsc_matrix, A%wrapped_petsc_matrix%petsc_matrix, perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%update: error calling PCSetOperators.')
             call PCSetUp(self%pc, perr)
             if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%update: error calling PCSetUp.')
-
 
         else
         !******  ChiDG native implementation    ******!
@@ -117,7 +117,13 @@ contains
                 do ielem = 1,size(A%dom(idom)%lblks,1)
                     do itime = 1,size(A%dom(idom)%lblks,2)
                         diag = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
-                        self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat = A%dom(idom)%lblks(ielem,itime)%dmat(diag)
+
+                        if (A%transposed) then
+                            self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat = transpose(A%dom(idom)%lblks(ielem,itime)%dmat(diag))
+                        else
+                            self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat = A%dom(idom)%lblks(ielem,itime)%dmat(diag)
+                        end if
+
                     end do
                 end do
             end do
@@ -179,7 +185,11 @@ contains
         if (self%petsc_initialized) then
         !******  petsc  implementation  ******!
 
-            call PCApply(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
+            if (A%transposed) then
+                call PCApplyTranspose(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
+            else
+                call PCApply(self%pc,v%wrapped_petsc_vector%petsc_vector,z%wrapped_petsc_vector%petsc_vector,perr)
+            end if
             if (perr /= 0) call chidg_signal(FATAL,'precon_jacobi%apply: error calling PCApply.')
             z%petsc_needs_assembled = .true.
 
@@ -191,8 +201,6 @@ contains
             do idom = 1,size(A%dom)
                 do ielem = 1,size(A%dom(idom)%lblks,1)
                     do itime = 1,size(A%dom(idom)%lblks,2)
-                        !z%dom(idom)%vecs(ielem)%vec = &
-                        !    matmul(self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat,v%dom(idom)%vecs(ielem)%vec)
                         mv = matmul(self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat,v%dom(idom)%vecs(ielem)%gettime(itime))
                         call z%dom(idom)%vecs(ielem)%settime(itime, mv)
                     end do

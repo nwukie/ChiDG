@@ -52,8 +52,8 @@ module type_densevector
         procedure, public :: gettime
         procedure, public :: setvar
         procedure, public :: getvar
-        procedure, public :: setterm
-        procedure, public :: getterm
+        procedure, public :: setterm ! TODO: test
+        procedure, public :: getterm ! TODO: test
 
         procedure, public :: get_time_start
         procedure, public :: get_time_end
@@ -407,7 +407,7 @@ contains
  
         ! Compute start and end indices for accessing modes of a variable
         istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1) + 1
-        iterm_g = istart + iterm
+        iterm_g = istart + (iterm - 1)
         
         ! Get mode
         mode_out = self%vec(iterm_g)
@@ -446,7 +446,7 @@ contains
 
         ! Compute start and end indices for accessing modes of a variable
         istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1) + 1
-        iterm_g = istart + iterm
+        iterm_g = istart + (iterm - 1)
 
         ! Set mode
         self%vec(iterm_g) = mode_in
@@ -766,30 +766,6 @@ contains
 
     end function prolong
     !********************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

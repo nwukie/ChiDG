@@ -1897,6 +1897,60 @@ CONTAINS
 
 
 
+    !-----------------------------------------
+    ! MULTIPLY Matrix(Dual)-Vector(real)
+    !
+    ! <u,up>.<v,vp>=<u.v,up.v+u.vp>
+    !
+    !   Matteo Ugolotti
+    !
+    !----------------------------------------
+    function MATMUL_MV_DR_D(u,v) result(res)
+        type(AD_D), intent(in)          :: u(:,:)
+        real(rk),   intent(in)          :: v(:)
+
+        type(AD_D)                                  :: res(size(u,1))  !> Causes memory leak in ifort 15.0.3. Doesn't seem to be deallocating everything correctly
+        real(rk), dimension(size(u,1),size(u,2))    :: tmp
+        real(rk), dimension(size(u,1))              :: tmp2
+        integer                                     :: i,j,vecsize
+
+
+        do j = 1,size(res)
+               allocate(res(j)%xp_ad_(size(u(1,1)%xp_ad_)))
+               res(j)%xp_ad_ = ZERO
+        end do
+
+
+        !
+        ! Standard matrix multiplication of function values
+        !
+
+        ! Broken with GCC 6.1.0
+        ! res%x_ad_ = MATMUL(u,v%x_ad_)
+
+        ! Fix for GCC 6.1.0
+        tmp = u%x_ad_
+        tmp2 = matmul(tmp,v)
+        res%x_ad_ = tmp2
+
+
+        !
+        ! Multiply derivatives and accumulate
+        !
+        vecsize = size(u(1,1)%xp_ad_)
+        do j = 1,size(u,2)
+            do i = 1,size(u,1)
+!                res(i)%xp_ad_ = res(i)%xp_ad_ + u(i,j)%xp_ad_*v(j)
+                call DAXPY(vecsize,v(j),u(i,j)%xp_ad_,1,res(i)%xp_ad_,1)    ! Noticable improvement
+            end do
+        end do
+
+
+    end function MATMUL_MV_DR_D
+    !*****************************************************************************************
+
+
+
 
 
 

@@ -159,10 +159,10 @@ contains
         !
         ! Get boundary condition Total Temperature, Total Pressure, and normal vector
         !
-        density_bc = self%bcproperties%compute("Density",    worker%time(), worker%coords())
-        u_bc       = self%bcproperties%compute("X-Velocity", worker%time(), worker%coords())
-        v_bc       = self%bcproperties%compute("Y-Velocity", worker%time(), worker%coords())
-        w_bc       = self%bcproperties%compute("Z-Velocity", worker%time(), worker%coords())
+        density_bc = self%bcproperties%compute("Density",    worker%time(), worker%coords(), worker%function_info)
+        u_bc       = self%bcproperties%compute("X-Velocity", worker%time(), worker%coords(), worker%function_info)
+        v_bc       = self%bcproperties%compute("Y-Velocity", worker%time(), worker%coords(), worker%function_info)
+        w_bc       = self%bcproperties%compute("Z-Velocity", worker%time(), worker%coords(), worker%function_info)
 
 
         !

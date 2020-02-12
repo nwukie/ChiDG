@@ -73,3 +73,187 @@ subroutine test_inv()
 
 end subroutine test_inv
 !*******************************************************************
+
+
+
+
+
+
+
+
+!>  Test differentiation of a 3x3 inverse matrix routine.
+!!
+!!  We want to test the differentiation of a 3x3 inverse matrix using 
+!!  the following formula
+!!
+!!      -A^(-1)*dA/dx*A^(-1) = d(A^(-1))/dx
+!!
+!!
+!!  The 3x3 matrix that we want to invert and differentiate is
+!!
+!!      | x^2+x     x       -1 |
+!!      |   3       2      x^3 |
+!!      |   1    -2x+1      1  |
+!!
+!!  evalauted at x = 1.0.
+!!
+!!  To verify both the formula used and the concrete result a symbolic
+!!  python solution (using SymPy) is used and the script is reported below.
+!!
+!!
+!!           from __future__ import division
+!!           
+!!           import numpy as np
+!!           from sympy import init_printing, integrate
+!!           from sympy import Heaviside, diff
+!!           from sympy import *
+!!           from sympy import log
+!!           x, y, z, t = symbols('x y z t')
+!!           k, m, n = symbols('k m n', integer=True)
+!!           f, g, h = symbols('f g h', cls=Function)
+!!           
+!!           
+!!           init_printing()
+!!           
+!!           a = sympify(x**2.0+x)
+!!           b = sympify(x)
+!!           c = -1.0
+!!           d = 3.0
+!!           e = 2.0
+!!           f = sympify(x**3.0)
+!!           g = 1.0
+!!           h = sympify(-2.0*x+1)
+!!           i = 1.0
+!!           
+!!           
+!!           eval_at = 1.0
+!!           
+!!           
+!!           print "Matrix A"
+!!           A = Matrix( [[a,b,c],[d,e,f],[g,h,i]] )
+!!           pprint (A,use_unicode=False)
+!!           
+!!           print "Matrix dA/dx"
+!!           dAdx = diff(A)
+!!           pprint (dAdx,use_unicode=False)
+!!           
+!!           print "Matrix A^-1"
+!!           Ainv = A**(-1)
+!!           pprint (Ainv,use_unicode=False)
+!!           
+!!           print "Matrix dAinv/dx"
+!!           dAinvdx = diff(Ainv)
+!!           pprint (dAinvdx,use_unicode=False)
+!!           
+!!           print "------------------------------------"
+!!           
+!!           print "Matrix A evaulated at x=", eval_at
+!!           A = A.subs(x,eval_at)
+!!           pprint (A,use_unicode=False)
+!!           
+!!           print "Matrix dA/dx evaluated at x=", eval_at
+!!           dAdx = dAdx.subs(x,eval_at)
+!!           pprint (dAdx,use_unicode=False)
+!!           
+!!           print "Matrix A^-1 evaluated at x=", eval_at
+!!           Ainv = Ainv.subs(x,eval_at)
+!!           pprint (Ainv,use_unicode=False)
+!!           
+!!           print "Matrix dAinv/dx evaluated at x=", eval_at
+!!           dAinvdx = dAinvdx.subs(x,eval_at)
+!!           pprint (dAinvdx,use_unicode=False)
+!!           
+!!  Furthermore, the python result has been also checked using the
+!!  online matrix calculator https://matrix.reshish.com/multCalculation.php.
+!!
+!!
+!!  @author Matteo Ugolotti
+!!  @date   10/1/2018
+!!
+!!------------------------------------------------------------------
+@Test
+subroutine test_dinv_3x3()
+    use pfunit_mod
+    use mod_kinds,          only: rk
+    use mod_inv,            only: dinv_3x3
+    
+    real(rk)    :: A(3,3), dAinvdx_computed(3,3), dAinvdx_expected(3,3), tol, &
+                   dA(3,3)
+
+    tol = 1.e-10_rk
+
+    A = reshape([2._rk, 1._rk, -1._rk, &
+                 3._rk, 2._rk,  1._rk, &
+                 1._rk,-1._rk,  1._rk], [3,3])
+
+    dA = reshape([3._rk, 1._rk,  0._rk, &
+                  0._rk, 0._rk,  3._rk, &
+                  0._rk,-2._rk,  0._rk], [3,3])
+    
+    
+    dAinvdx_expected = reshape([-11._rk/27._rk,  1._rk/9._rk ,-14._rk/27._rk, &
+                                 79._rk/81._rk,-17._rk/27._rk, 49._rk/81._rk,  &
+                                 76._rk/81._rk, -2._rk/27._rk,  1._rk/81._rk], [3,3])
+
+
+    ! THIS IS BEING TESTED.
+    !
+    dAinvdx_computed = dinv_3x3(A,dA)
+
+    @assertEqual(dAinvdx_expected, dAinvdx_computed, tol)
+
+end subroutine test_dinv_3x3
+!*******************************************************************
+
+
+
+
+
+
+!>  Same test of test_dinv_3x3 but using dinv function
+!!
+!!  @author Matteo Ugolotti
+!!  @date   2/1/2019
+!!
+!!------------------------------------------------------------------
+@Test
+subroutine test_dinv()
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_inv,            only: dinv
+    
+    real(rk)                 :: dAinvdx_computed(3,3), dAinvdx_expected(3,3), tol
+    real(rk), allocatable    :: A(:,:), dA(:,:)
+    integer(ik)              :: ierr
+
+    tol = 1.e-10_rk
+
+    allocate(A(3,3),stat=ierr)
+    allocate(dA(3,3),stat=ierr)
+
+    A = reshape([2._rk, 1._rk, -1._rk, &
+                 3._rk, 2._rk,  1._rk, &
+                 1._rk,-1._rk,  1._rk], [3,3])
+
+    dA = reshape([3._rk, 1._rk,  0._rk, &
+                  0._rk, 0._rk,  3._rk, &
+                  0._rk,-2._rk,  0._rk], [3,3])
+    
+    
+    dAinvdx_expected = reshape([-11._rk/27._rk,  1._rk/9._rk ,-14._rk/27._rk, &
+                                 79._rk/81._rk,-17._rk/27._rk, 49._rk/81._rk,  &
+                                 76._rk/81._rk, -2._rk/27._rk,  1._rk/81._rk], [3,3])
+
+
+    ! THIS IS BEING TESTED.
+    !
+    dAinvdx_computed = dinv(A,dA)
+
+    @assertEqual(dAinvdx_expected, dAinvdx_computed, tol)
+
+end subroutine test_dinv
+!*******************************************************************
+
+
+
+

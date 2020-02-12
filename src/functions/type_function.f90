@@ -55,14 +55,15 @@ module type_function
 
     abstract interface
         impure elemental function compute_interface(self,time,coord)
-            use type_point, only: point_t
-            use mod_kinds,  only: rk
+            use type_point_ad, only: point_ad_t
+            use mod_kinds,     only: rk
+            use DNAD_D
             import function_t
 
             class(function_t),  intent(inout)   :: self
             real(rk),           intent(in)      :: time
-            type(point_t),      intent(in)      :: coord
-            real(rk)                            :: compute_interface
+            type(point_ad_t),   intent(in)      :: coord
+            type(AD_D)                          :: compute_interface
         end function
     end interface
 
@@ -72,9 +73,7 @@ module type_function
     abstract interface
         subroutine init_interface(self)
             import function_t
-
             class(function_t),  intent(inout)  :: self
-
         end subroutine
     end interface
 
@@ -151,19 +150,14 @@ contains
         character(len=1024),    allocatable :: temp_keys(:)
         real(rk),               allocatable :: temp_vals(:)
 
-
         noptions = self%get_noptions()
 
-        !
         ! Check if key already exists
-        !
         key_exists = .false.
         if ( noptions > 0 ) then
             do iopt = 1,noptions
                 
-                !
                 ! Test if current option key matches the incoming key
-                !
                 if ( trim(self%option_keys(iopt)) == trim(key) ) then
                     key_exists = .true.
                     key_location = iopt
@@ -174,21 +168,15 @@ contains
 
 
 
-        !
         ! Handle key_exists status
-        !
         if ( key_exists ) then
 
-            !
             ! Set value of existing key to incoming new value
-            !
             self%option_vals(key_location) = val
 
         else
 
-            !
             ! Extend the option allocation by 1 and set a new key/val pair.
-            !
             allocate(temp_keys(noptions+1), stat=ierr)
             if (ierr /= 0) call AllocationError
 
@@ -196,25 +184,19 @@ contains
             if (ierr /= 0) call AllocationError
 
 
-            !
             ! Copy existing key/val pairs
-            !
             if (noptions > 0) then
                 temp_keys(1:noptions) = self%option_keys(1:noptions)
                 temp_vals(1:noptions) = self%option_vals(1:noptions)
             end if
 
 
-            !
             ! Set new key/val pair
-            !
             temp_keys(noptions+1) = key
             temp_vals(noptions+1) = val
 
 
-            !
             ! Move allocation to self
-            !
             call move_alloc(temp_keys, self%option_keys)
             call move_alloc(temp_vals, self%option_vals)
 
@@ -232,14 +214,11 @@ contains
 
 
 
-
     !>  Set an option that exists in the available list of options. Option must have been previously
     !!  added with the 'add_option' procedure.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
-    !!
-    !!
     !!
     !----------------------------------------------------------------------------------------------
     subroutine set_option(self,key,val)
@@ -250,15 +229,11 @@ contains
         integer(ik) :: iopt, noptions, key_loc
         logical     :: key_exists
 
-        !
         ! Check that key exists in the current list.
-        !
         key_exists = self%check_key_exists(key)
 
 
-        !
         ! Set dictionary key/value pair
-        !
         if (key_exists) then
             
             key_loc = self%get_key_index(key)
@@ -285,14 +260,6 @@ contains
 
     end subroutine set_option
     !*********************************************************************************************
-
-
-
-
-
-
-
-
 
 
 
@@ -333,10 +300,6 @@ contains
 
 
 
-
-
-
-
     !>  Return the value of an option, given an option key.
     !!
     !!  @author Nathan A. Wukie
@@ -357,14 +320,10 @@ contains
         key_exists = self%check_key_exists(key)
 
 
-
-        !
         ! Handle key status
-        !
         if ( key_exists ) then
 
             key_loc = self%get_key_index(key)
-
             val = self%option_vals(key_loc)
 
         else
@@ -374,10 +333,6 @@ contains
 
     end function get_option_value
     !********************************************************************************************
-
-
-
-
 
 
 
@@ -398,7 +353,6 @@ contains
 
 
         if ( allocated(self%option_vals) ) then
-
             nopt = size(self%option_vals)
         else
             nopt = 0
@@ -407,14 +361,6 @@ contains
 
     end function get_noptions
     !*********************************************************************************************
-
-
-
-
-
-
-
-
 
 
 
@@ -438,16 +384,12 @@ contains
         noptions = self%get_noptions()
 
 
-        !
         ! Check if key exists in the current list
-        !
         key_exists = .false.
         if ( noptions > 0 ) then
             do iopt = 1,noptions
                 
-                !
                 ! Test if current option key matches the incoming key
-                !
                 if ( trim(self%option_keys(iopt)) == trim(key) ) then
                     key_exists = .true.
                 end if

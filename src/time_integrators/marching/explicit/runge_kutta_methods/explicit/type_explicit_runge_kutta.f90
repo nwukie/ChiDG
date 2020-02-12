@@ -1,6 +1,6 @@
 module type_explicit_runge_kutta
     use mod_kinds,                      only: rk,ik
-    use mod_constants,                  only: ZERO,HALF,ONE,TWO,SIX
+    use mod_constants,                  only: ZERO,HALF,ONE,TWO,SIX,NO_DIFF
     use mod_spatial,                    only: update_space
 
     use type_time_integrator_marching,  only: time_integrator_marching_t
@@ -54,13 +54,9 @@ module type_explicit_runge_kutta
     type, extends(time_integrator_marching_t), public :: explicit_runge_kutta_t
 
 
-
     contains
-
         procedure   :: init
         procedure   :: step
-
-
     end type explicit_runge_kutta_t
     !*********************************************************************************************************************
 
@@ -160,7 +156,7 @@ contains
                 !
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
-                call update_space(data,differentiate=.false.)
+                call update_space(data,differentiate=NO_DIFF)
                 call self%residual_norm%push_back(rhs%norm(ChiDG_COMM))
 
                 do idom = 1,data%mesh%ndomains()
@@ -215,20 +211,6 @@ contains
 
     end subroutine step
     !*********************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

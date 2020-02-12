@@ -95,7 +95,7 @@ contains
             invdensity
 
 
-        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, distance_field
+        type(AD_D), allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, distance_field
         real(rk),   allocatable, dimension(:,:) :: h_sm
         real(rk) :: h(3), distance, alpha_p, y_plus
         integer(ik) :: ii, nnodes, order

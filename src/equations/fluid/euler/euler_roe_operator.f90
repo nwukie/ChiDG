@@ -99,13 +99,9 @@ contains
             vmag_p, vmag_m,                                         &
             delr,   delp,   delvmag, delu, delv, delw,              &
             lamda1, lamda2, lamda3,                                 &
-            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, upwind
-
-        real(rk), allocatable, dimension(:) ::              &
-            norm_1,         norm_2,         norm_3,         &
-            unorm_1,        unorm_2,        unorm_3,        &
+            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, upwind, r,    &
             unorm_1_ale,    unorm_2_ale,    unorm_3_ale,    &
-            ale_area_ratio, r, grid_vel_n
+            grid_vel_n
 
         real(rk), allocatable, dimension(:,:) :: grid_vel
 
@@ -113,12 +109,9 @@ contains
 
 
         grid_vel = worker%get_grid_velocity_face('face interior')
-        ale_area_ratio = worker%get_area_ratio()
 
 
-        !
         ! Interpolate solution to quadrature nodes
-        !
         density_m = worker%get_field('Density'   , 'value', 'face interior')
         density_p = worker%get_field('Density'   , 'value', 'face exterior')
 
@@ -135,51 +128,31 @@ contains
         energy_p  = worker%get_field('Energy'    , 'value', 'face exterior')
 
 
-        !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         if (worker%coordinate_system() == 'Cylindrical') then
             r = worker%coordinate('1','face interior') 
             mom2_m = mom2_m / r
             mom2_p = mom2_p / r
         end if
 
-
-
-        norm_1  = worker%normal(1)
-        norm_2  = worker%normal(2)
-        norm_3  = worker%normal(3)
-
-        unorm_1 = worker%unit_normal(1)
-        unorm_2 = worker%unit_normal(2)
-        unorm_3 = worker%unit_normal(3)
-
         unorm_1_ale = worker%unit_normal_ale(1)
         unorm_2_ale = worker%unit_normal_ale(2)
         unorm_3_ale = worker%unit_normal_ale(3)
 
 
-
-
-        !
         ! Compute pressure and gamma
-        !
         p_m = worker%get_field('Pressure', 'value', 'face interior')
         p_p = worker%get_field('Pressure', 'value', 'face exterior')
 
         invdensity_m = ONE/density_m
         invdensity_p = ONE/density_p
 
-        !
         ! Compute enthalpy
-        !
         enthalpy_m = (energy_m + p_m)*invdensity_m
         enthalpy_p = (energy_p + p_p)*invdensity_p
 
 
-        !
         ! Compute velocity components
-        !
         u_m = mom1_m*invdensity_m 
         v_m = mom2_m*invdensity_m 
         w_m = mom3_m*invdensity_m 
@@ -191,9 +164,7 @@ contains
         vmag_p = u_p*unorm_1_ale + v_p*unorm_2_ale + w_p*unorm_3_ale
 
 
-        !
         ! Compute Roe-averaged variables
-        !
         sqrt_rhom = sqrt(density_m)
         sqrt_rhop = sqrt(density_p)
         sqrt_rhom_plus_rhop = sqrt_rhom + sqrt_rhop
@@ -209,10 +180,7 @@ contains
         ctil2 = ctil**TWO
 
 
-
-        !
         ! Compute jump terms
-        !
         delr    = (density_m - density_p)
         delu    = (u_m - u_p)
         delv    = (v_m - v_p)
@@ -221,17 +189,15 @@ contains
         delp    = (p_m - p_p)
 
 
-        !
         ! Limit wave speeds for entropy fix
-        !
         !lamda1 = abs(vmagtil - ctil) + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
         !lamda2 = abs(vmagtil)        + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
         !lamda3 = abs(vmagtil + ctil) + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
 
         grid_vel_n = grid_vel(:,1)*unorm_1_ale  +  grid_vel(:,2)*unorm_2_ale  +  grid_vel(:,3)*unorm_3_ale
-        lamda1 = abs(vmagtil + grid_vel_n - ctil)
-        lamda2 = abs(vmagtil + grid_vel_n)
-        lamda3 = abs(vmagtil + grid_vel_n + ctil)
+        lamda1 = abs(vmagtil - grid_vel_n - ctil)
+        lamda2 = abs(vmagtil - grid_vel_n)
+        lamda3 = abs(vmagtil - grid_vel_n + ctil)
 
         eps = 0.01_rk
         where ( (-eps*ctil < lamda1) .and. (lamda1 < eps*ctil) )

@@ -21,6 +21,8 @@ module type_chidg_data
     use type_equationset_function_data, only: equationset_function_data_t
     use type_svector,                   only: svector_t
     use mod_string,                     only: string_t
+    use type_functional_group,          only: functional_group_t
+    use type_storage_flags,             only: storage_flags_t
 
     ! Factory methods
     use mod_equations,                  only: equation_set_factory
@@ -63,6 +65,7 @@ module type_chidg_data
         type(bc_state_group_t),         allocatable :: bc_state_group(:)
         type(equation_set_t),           allocatable :: eqnset(:)
         type(mesh_motion_wrapper_t),    allocatable :: mesh_motion(:)
+        type(functional_group_t)                    :: functional_group
 
     contains
 
@@ -79,6 +82,11 @@ module type_chidg_data
         procedure   :: get_equation_set_id
         procedure   :: get_equation_set_name
         procedure   :: nequation_sets
+
+        procedure   :: clear_io_fields              ! Clear all io fields
+        procedure   :: set_fields_post              ! Set up the fields (io/primary/adjoint) for post
+        procedure   :: set_fields_adjoint           ! Set up adjoint fields for reading adj solution
+        procedure   :: reset_fields                 ! Reset the fields as standard (primary fields only)
 
 
         ! Initialization procedure for solution data. Execute after all domains are added.
@@ -140,15 +148,21 @@ contains
     !!  @date   2/1/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine initialize_solution_solver(self)
-        class(chidg_data_t),     intent(inout)   :: self
+    subroutine initialize_solution_solver(self,storage_type)
+        class(chidg_data_t),    intent(inout)   :: self
+        character(*),           intent(in)      :: storage_type
 
         integer(ik) :: idom, ndom, ierr, eqn_ID
 
         type(equationset_function_data_t),  allocatable :: function_data(:)
+        type(storage_flags_t)                           :: storage_flags
 
 
         call write_line("Initialize: matrix/vector allocation...", io_proc=GLOBAL_MASTER)
+
+        ! Determine storage flags based on the type of simulation we are about to run
+        call storage_flags%set(storage_type,self%sdata%nauxiliary_fields())
+
         ! Assemble array of function_data from the eqnset array to pass to the solver data 
         ! structure for initialization
         ndom = self%mesh%ndomains()
@@ -161,10 +175,19 @@ contains
             function_data(idom) = self%eqnset(eqn_ID)%function_data
         end do
 
+!        ! Initialize solver data 
+!        call self%sdata%init(self%mesh, function_data)
 
-        ! Initialize solver data 
-        call self%sdata%init(self%mesh, function_data)
-
+        ! Initialize necessary solver containers
+        call self%sdata%init(self%mesh,function_data,storage_flags)
+        call self%sdata%init_adjoint(self%functional_group%n_functionals(),self%time_manager%nsteps,self%mesh,storage_flags)
+        call self%sdata%init_adjointx(self%functional_group%n_functionals(),self%time_manager%nsteps,self%mesh,storage_flags)
+        call self%sdata%init_adjointbc(self%functional_group%n_functionals(),self%time_manager%nsteps,self%mesh,storage_flags)
+        
+        ! Allocate solver data functional container (when functional are computed w/o adjoint)
+        if (self%functional_group%compute_functionals) then
+            call self%sdata%init_functional(self%functional_group%n_functionals())
+        end if
 
     end subroutine initialize_solution_solver
     !***************************************************************************************
@@ -726,7 +749,9 @@ contains
         integer(ik),            intent(in)      :: level
         integer(ik),            intent(in)      :: nterms_s
 
-        integer(ik) :: idomain, nfields, ntime, eqn_ID, domain_dof_start, domain_dof_local_start
+        integer(ik) :: idomain, nfields, ntime, eqn_ID, nterms_c, &
+                       domain_dof_start, domain_dof_local_start,  &
+                       domain_xdof_start, domain_xdof_local_start
 
         ! Initialize mesh numerics based on equation set and polynomial expansion order
         call write_line(" ", ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -739,24 +764,29 @@ contains
         do idomain = 1,self%mesh%ndomains()
 
             ! Initialize mesh_dof_start
-            eqn_ID = self%mesh%domain(idomain)%elems(1)%eqn_ID
-            ntime   = self%time_manager%ntime
-            nfields = self%eqnset(eqn_ID)%prop%nprimary_fields()
-            self%mesh%mesh_dof_start = sum(self%mesh%nelements_per_proc(1:IRANK))*nterms_s*nfields*ntime + 1
-
+            eqn_ID   = self%mesh%domain(idomain)%elems(1)%eqn_ID
+            nterms_c = self%mesh%domain(idomain)%elems(1)%nterms_c
+            ntime    = self%time_manager%ntime
+            nfields  = self%eqnset(eqn_ID)%prop%nprimary_fields()
+            self%mesh%mesh_dof_start  = sum(self%mesh%nelements_per_proc(1:IRANK))*nterms_s*nfields*ntime + 1
+            self%mesh%mesh_xdof_start = sum(self%mesh%nelements_per_proc(1:IRANK))*nterms_c*3      *ntime + 1
 
             ! Get the starting dof index for the domain
             if (idomain==1) then
-                domain_dof_start       = self%mesh%mesh_dof_start
-                domain_dof_local_start = 1
+                domain_dof_start        = self%mesh%mesh_dof_start
+                domain_dof_local_start  = 1
+                domain_xdof_start       = self%mesh%mesh_xdof_start
+                domain_xdof_local_start = 1
             else
-                domain_dof_start       = self%mesh%domain(idomain-1)%get_dof_end() + 1
-                domain_dof_local_start = self%mesh%domain(idomain-1)%get_dof_local_end() + 1
+                domain_dof_start        = self%mesh%domain(idomain-1)%get_dof_end('primal') + 1
+                domain_dof_local_start  = self%mesh%domain(idomain-1)%get_dof_local_end('primal') + 1
+                domain_xdof_start       = self%mesh%domain(idomain-1)%get_dof_end('coordinate') + 1
+                domain_xdof_local_start = self%mesh%domain(idomain-1)%get_dof_local_end('coordinate') + 1
             end if
 
             ! Call initialization
             self%mesh%ntime_ = self%time_manager%ntime
-            call self%mesh%domain(idomain)%init_sol(interpolation,level,nterms_s,nfields,self%time_manager%ntime,domain_dof_start,domain_dof_local_start)
+            call self%mesh%domain(idomain)%init_sol(interpolation,level,nterms_s,nfields,self%time_manager%ntime,domain_dof_start,domain_dof_local_start,domain_xdof_start,domain_xdof_local_start)
             call self%mesh%domain(idomain)%update_interpolations_ale()
         end do
 
@@ -1503,6 +1533,7 @@ contains
 
         call self%mesh%release()
         call self%sdata%release()
+        call self%functional_group%release()
 
     end subroutine release
     !****************************************************************************************
@@ -1518,23 +1549,195 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine report(self,selection)
-        class(chidg_data_t),    intent(in)  :: self
-        character(*),           intent(in)  :: selection
+        class(chidg_data_t),    intent(inout)   :: self
+        character(*),           intent(in)      :: selection
 
         integer(ik) :: idom
 
-
         if ( trim(selection) == 'grid' ) then
-
             do idom = 1,self%mesh%ndomains()
                 call write_line('Domain ', idom, '  :  ', self%mesh%domain(idom)%nelem, ' Elements', io_proc=IRANK)
             end do
 
-        else
+        else if ( trim(selection) == 'adjoint' ) then
+            call self%sdata%adjoint%report(self%functional_group%functionals_name())
+
+
+        else if ( trim(selection) == 'functional' ) then
+            call self%sdata%functional%report(self%functional_group%functionals_name())
+
+        else 
+            call chidg_signal_one(FATAL,'type_chidg_data%report: unexpected input string', trim(selection))
 
         end if
 
     end subroutine report
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Add clear io_fields in eqnset(:)%prop
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   10/6/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine clear_io_fields(self)
+        class(chidg_data_t),    intent(inout)  :: self
+
+        integer(ik) :: idom, eqn_ID
+        character(:), allocatable   :: user_msg
+
+        do idom = 1,self%mesh%ndomains()
+            eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
+            call self%eqnset(eqn_ID)%prop%clear_io_fields()
+        end do
+
+    end subroutine clear_io_fields
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Set fields based on the type/s of solution to post process 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   10/31/2017
+    !!
+    !!  Added capability for n different functionals.
+    !!  This means we will have neqns*nfunctionals adjoint variables  
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   10/31/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_fields_post(self,primary_sol,adjoint_sol,nfunctionals)
+        class(chidg_data_t),    intent(inout)  :: self
+        logical,                intent(in)     :: primary_sol
+        logical,                intent(in)     :: adjoint_sol
+        integer(ik),            intent(in)     :: nfunctionals
+
+        integer(ik) :: idom, eqn_ID
+        character(:), allocatable   :: user_msg, sol_type
+
+
+
+        if ( primary_sol .and. .not.(adjoint_sol) ) sol_type = 'primary'
+        if ( adjoint_sol .and. .not.(primary_sol) ) sol_type = 'adjoint'
+        if ( primary_sol .and.       adjoint_sol  ) sol_type = 'primary+adjoint'
+
+        select case (trim(sol_type))
+            
+            case ('primary')
+                
+                ! Nothing to do since all the fields are already setup by default
+
+            case ('adjoint')
+
+                ! order matters here!
+
+                do idom = 1,self%mesh%ndomains()
+                    eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
+                    ! Clear io_fields
+                    call self%eqnset(eqn_ID)%prop%clear_io_fields()
+                    ! Add adjoint fields to adjoint_fields
+                    call self%eqnset(eqn_ID)%prop%add_adjoint_fields(nfunctionals)
+                    ! Add adjoint_fields also to io_fields
+                    call self%eqnset(eqn_ID)%prop%add_adjoint_fields_to_io_fields()
+                    ! Clear primary fields, so that cache_handler does not update primary fields
+                    call self%eqnset(eqn_ID)%prop%clear_primary_fields()
+                    ! Clear model fields, so that chace_handler does not update model fields
+                    call self%eqnset(eqn_ID)%prop%clear_model_fields()
+                end do
+
+            case ('primary+adjoint')
+
+                do idom = 1,self%mesh%ndomains()
+                    eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
+                    ! Add adjoint fields to adjoint_fields and io_fields
+                    call self%eqnset(eqn_ID)%prop%add_adjoint_fields(nfunctionals)
+                    ! Add adjoint_fields also to io_fields
+                    call self%eqnset(eqn_ID)%prop%add_adjoint_fields_to_io_fields()
+                end do
+
+            case default
+
+                user_msg = "chidg_data%fields_post: combination of solution not recognized"
+                call chidg_signal(FATAL,user_msg)
+                
+
+        end select
+
+
+    end subroutine set_fields_post
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Set adjoint fields based on primary fields and n number of functionals.
+    !!  This allows chidg to read in multiple adjoint solution for each functional
+    !!  mainly for comuting the mesh-sensitivities.
+    !!
+    !!  Since no io is necessary the adjoint fields are not added to io fields. 
+    !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/8/2018
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_fields_adjoint(self,nfunctionals)
+        class(chidg_data_t),    intent(inout)  :: self
+        integer(ik),            intent(in)     :: nfunctionals
+
+        integer(ik) :: idom, eqn_ID
+
+        ! Add adjoint fields corresponding to primary fields
+        do idom = 1,self%mesh%ndomains()
+            eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
+            call self%eqnset(eqn_ID)%prop%add_adjoint_fields(nfunctionals)
+        end do
+
+    end subroutine set_fields_adjoint
+    !****************************************************************************************
+
+
+
+
+
+    !>  Reset fields to default.
+    !!  This is used in ChiDG AdjointX after the fields have been altered for reading
+    !!  the adjoint solutions.
+    !!
+    !!  However, to allow chace_handler to compute the correct mesh-sensitivities we
+    !!  need to remove the adjoint fields.  
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   8/8/2018
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine reset_fields(self)
+        class(chidg_data_t),    intent(inout)  :: self
+
+        integer(ik) :: idom, eqn_ID
+
+        ! Remove adjoint fields corresponding to primary fields
+        do idom = 1,self%mesh%ndomains()
+            eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
+            call self%eqnset(eqn_ID)%prop%clear_adjoint_fields()
+        end do
+
+    end subroutine reset_fields
     !****************************************************************************************
 
 

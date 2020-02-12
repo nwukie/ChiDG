@@ -1,8 +1,11 @@
 add_subdirectory(octree)
 add_subdirectory(radial_basis_functions)
+add_subdirectory(hole_cutting)
 
 add_lib_sources(
                 type_point.f90 
+                type_point_ad.f90 
+                type_node.f90
                 type_element.f90 
                 type_face.f90 
                 type_domain.f90
@@ -14,6 +17,7 @@ add_lib_sources(
                 mod_grid.f90 
                 mod_reference_elements.f90
                 mod_DNAD_tools.f90
+                mod_differentiate.f90
                 type_domain_connectivity.f90
                 type_element_connectivity.f90
                 type_boundary_connectivity.f90

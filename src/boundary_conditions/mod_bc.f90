@@ -54,7 +54,7 @@ module mod_bc
     use bc_state_outlet_neumann_pressure_localdg,       only: outlet_neumann_pressure_localdg_t
     use bc_state_outlet_neumann_pressure_localdg_new,   only: outlet_neumann_pressure_localdg_new_t
     use bc_state_outlet_neumann_pressure_globaldg,      only: outlet_neumann_pressure_globaldg_t
-    use bc_state_outlet_neumann_LODI_localdg,           only: outlet_neumann_LODI_localdg_t
+    !use bc_state_outlet_neumann_LODI_localdg,           only: outlet_neumann_LODI_localdg_t
     !use bc_state_outlet_point_pressure,                 only: outlet_point_pressure_t
     !use bc_state_outlet_LODI_pressure,                  only: outlet_LODI_pressure_t
     !use bc_state_outlet_LODI_z_pressure,                only: outlet_LODI_z_pressure_t
@@ -167,7 +167,7 @@ contains
         type(outlet_neumann_pressure_localdg_t) :: OUTLET_NEUMANN_PRESSURE_LOCALDG
         type(outlet_neumann_pressure_localdg_new_t) :: OUTLET_NEUMANN_PRESSURE_LOCALDG_NEW
         type(outlet_neumann_pressure_globaldg_t):: OUTLET_NEUMANN_PRESSURE_GLOBALDG
-        type(outlet_neumann_LODI_localdg_t)     :: OUTLET_NEUMANN_LODI_LOCALDG
+        !type(outlet_neumann_LODI_localdg_t)     :: OUTLET_NEUMANN_LODI_LOCALDG
         !type(outlet_point_pressure_t)           :: OUTLET_POINT_PRESSURE
         !type(outlet_LODI_pressure_t)            :: OUTLET_LODI_PRESSURE
         !type(outlet_LODI_z_pressure_t)          :: OUTLET_LODI_Z_PRESSURE
@@ -252,12 +252,12 @@ contains
             call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_LOCALDG)
             call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_LOCALDG_NEW)
             call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_GLOBALDG)
-            call registered_bcs%push_back(OUTLET_NEUMANN_LODI_LOCALDG)
             call registered_bcs%push_back(OUTLET_STEADY_1DCHAR)
             call registered_bcs%push_back(OUTLET_GILES_QUASI3D_STEADY)
             call registered_bcs%push_back(OUTLET_GILES_QUASI3D_UNSTEADY_HB)
             call registered_bcs%push_back(INLET_GILES_QUASI3D_UNSTEADY_HB)
             call registered_bcs%push_back(TURBO_INTERFACE_STEADY)
+            !call registered_bcs%push_back(OUTLET_NEUMANN_LODI_LOCALDG)
             !call registered_bcs%push_back(OUTLET_POINT_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_Z_PRESSURE)

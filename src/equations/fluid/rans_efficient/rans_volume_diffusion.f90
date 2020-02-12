@@ -91,15 +91,13 @@ contains
             k,       k_l,     k_t,                  &
             tau_11, tau_22, tau_33,                 &
             tau_12, tau_13, tau_23,                 &
-            flux_1, flux_2, flux_3
+            flux_1, flux_2, flux_3, r
 
         type(AD_D), allocatable, dimension(:)   ::  &
             density_nutilde, grad1_density_nutilde, grad2_density_nutilde, grad3_density_nutilde,   &
             nutilde,         grad1_nutilde,         grad2_nutilde,         grad3_nutilde,           &
             dnutilde_ddensity, dnutilde_ddensitynutilde,                                            &
             f_n1, nu_l, chi, diffusion
-
-        real(rk),   allocatable, dimension(:)   ::  r
 
         ! Interpolate boundary condition state to face quadrature nodes
         density       = worker%get_field('Density', 'value', 'element')

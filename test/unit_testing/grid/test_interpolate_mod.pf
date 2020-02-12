@@ -11,7 +11,7 @@ module test_interpolate_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  ME, NEIGHBOR, IO_DESTINATION, VOLUME_ADVECTIVE_FLUX, NO_ID
+                                  ME, NEIGHBOR, IO_DESTINATION, VOLUME_ADVECTIVE_FLUX, NO_ID, CARTESIAN, dQ_DIFF
     use mod_function,       only: create_function
     use mod_interpolate,    only: interpolate_face_standard, interpolate_face_autodiff, &
                                   interpolate_element_standard, interpolate_element_autodiff
@@ -269,15 +269,19 @@ contains
             function_info%ifcn    = 1
             function_info%idepend = 1
             function_info%idiff   = 1
+            function_info%dtype   = dQ_DIFF
+
             call function_info%seed%init(idomain_g    = 1,     &
                                          idomain_l    = 1,     &
                                          ielement_g   = 15,    &
                                          ielement_l   = 15,    &
                                          nfields      = 1,     &
                                          nterms_s     = 8,     &
+                                         nnodes_r     = 8,     &
                                          iproc        = IRANK, &
                                          itime        = itime, &
                                          dof_start    = 112,   &
+                                         xdof_start   = 337,   &
                                          recv_comm    = 0,     &
                                          recv_domain  = 0,     &
                                          recv_element = 0)
@@ -351,15 +355,18 @@ contains
             function_info%ifcn    = 1
             function_info%idepend = 1
             function_info%idiff   = 1
+            function_info%dtype   = dQ_DIFF
             call function_info%seed%init(idomain_g    = 1,     &
                                          idomain_l    = 1,     &
                                          ielement_g   = 15,    &
                                          ielement_l   = 15,    &
                                          nfields      = 1,     &
                                          nterms_s     = 8,     &
+                                         nnodes_r     = 8,     &
                                          iproc        = IRANK, &
                                          itime        = itime, &
                                          dof_start    = 112,   &
+                                         xdof_start   = 337,   &
                                          recv_comm    = 0,     &
                                          recv_domain  = 0,     &
                                          recv_element = 0)
@@ -437,15 +444,18 @@ contains
             function_info%ifcn    = 1
             function_info%idepend = 1
             function_info%idiff   = 1
+            function_info%dtype   = dQ_DIFF
             call function_info%seed%init(idomain_g    = 1,     &
                                          idomain_l    = 1,     &
                                          ielement_g   = 14,    &
                                          ielement_l   = 14,    &
                                          nfields      = 1,     &
                                          nterms_s     = 8,     &
+                                         nnodes_r     = 8,     &
                                          iproc        = IRANK, &
                                          itime        = itime, &
                                          dof_start    = 104,   &
+                                         xdof_start   = 337,   &
                                          recv_comm    = 0,     &
                                          recv_domain  = 0,     &
                                          recv_element = 0)
@@ -522,15 +532,18 @@ contains
             function_info%ifcn    = 1
             function_info%idepend = 1
             function_info%idiff   = 1
+            function_info%dtype   = dQ_DIFF
             call function_info%seed%init(idomain_g    = 1,     &
                                          idomain_l    = 1,     &
                                          ielement_g   = 14,    &
                                          ielement_l   = 14,    &
                                          nfields      = 1,     &
                                          nterms_s     = 8,     &
+                                         nnodes_r     = 8,     &
                                          iproc        = IRANK, &
                                          itime        = itime, &
                                          dof_start    = 104,   &
+                                         xdof_start   = 337,   &
                                          recv_comm    = 0,     &
                                          recv_domain  = 0,     &
                                          recv_element = 0)
@@ -621,15 +634,18 @@ contains
             ! A seed element, this is a neighbor for this test - so all derivative 
             ! arrays should be seeded to zero.
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 15,    &
                                     ielement_l   = 15,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 112,   &
+                                    xdof_start   = 337,   &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -644,6 +660,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -651,10 +668,13 @@ contains
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
                                      dof_local_start = 104, &
+                                     xdof_start  = 104,      &
+                                     xdof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
                                      recv_element = NO_ID,  &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,  &
+                                     recv_xdof    = NO_ID)
 
 
 
@@ -724,15 +744,18 @@ contains
             ! A seed element, this is a neihgbor for this test - so all derivative 
             ! arrays should be seeded to zero.
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 15,    &
                                     ielement_l   = 15,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 112,   &
+                                    xdof_start   = 337,   &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -748,6 +771,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -755,10 +779,13 @@ contains
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
                                      dof_local_start = 104, &
+                                     xdof_start  = 104,      &
+                                     xdof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
                                      recv_element = NO_ID,  &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,  &
+                                     recv_xdof    = NO_ID)
 
 
             tol    = 1.e-13_rk
@@ -827,15 +854,18 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 14,    &
                                     ielement_l   = 14,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 104,   &
+                                    xdof_start   = 313,   &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -850,6 +880,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -857,10 +888,13 @@ contains
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
                                      dof_local_start = 104, &
+                                     xdof_start  = 104,      &
+                                     xdof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
                                      recv_element = NO_ID,  &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,  &
+                                     recv_xdof    = NO_ID)
 
 
 
@@ -933,15 +967,18 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 14,    &
                                     ielement_l   = 14,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 104,   &
+                                    xdof_start   = 313,   &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -956,6 +993,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -963,10 +1001,13 @@ contains
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
                                      dof_local_start = 104, &
+                                     xdof_start  = 104,      &
+                                     xdof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
                                      recv_element = NO_ID,  &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,  &
+                                     recv_xdof    = NO_ID)
 
             
             tol    = 1.e-13_rk
@@ -1045,15 +1086,18 @@ contains
             ! A seed element, this is a neighbor for this test - so all derivative 
             ! arrays should be seeded to zero.
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 15,    &
                                     ielement_l   = 15,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 112,   &
+                                    xdof_start   = 337,   &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -1068,6 +1112,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -1075,10 +1120,13 @@ contains
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
                                      dof_local_start = 104, &
+                                     xdof_start  = 104,      &
+                                     xdof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
                                      recv_element = NO_ID,  &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,  &
+                                     recv_xdof     = NO_ID)
 
 
             tol  = 1.e-13_rk
@@ -1150,15 +1198,18 @@ contains
             ! A seed element, this is a neihgbor for this test - so all derivative 
             ! arrays should be seeded to zero.
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 15,    &
                                     ielement_l   = 15,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 112,   &
+                                    xdof_start   = 337,   &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -1172,6 +1223,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -1179,10 +1231,13 @@ contains
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
                                      dof_local_start = 104, &
+                                     xdof_start  = 104,      &
+                                     xdof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
                                      recv_element = NO_ID,  &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,  &
+                                     recv_xdof    = NO_ID)
 
 
 
@@ -1253,15 +1308,18 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 13,    &
                                     ielement_l   = 13,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 96,    &
+                                    xdof_start   = 289,   &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -1276,6 +1334,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -1283,10 +1342,13 @@ contains
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
                                      dof_local_start = 104, &
+                                     xdof_start  = 104,      &
+                                     xdof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
                                      recv_element = NO_ID,  &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,  &
+                                     recv_xdof     = NO_ID)
 
 
             tol  = 1.e-13_rk
@@ -1357,15 +1419,18 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
+            fcn_info%dtype   = dQ_DIFF
             call fcn_info%seed%init(idomain_g    = 1,     &
                                     idomain_l    = 1,     &
                                     ielement_g   = 13,    &
                                     ielement_l   = 13,    &
                                     nfields      = 1,     &
                                     nterms_s     = 8,     &
+                                    nnodes_r     = 8,     &
                                     iproc        = IRANK, &
                                     itime        = itime, &
                                     dof_start    = 96,    &
+                                    xdof_start   = 289,   &
                                     recv_comm    = 0,     &
                                     recv_domain  = 0,     &
                                     recv_element = 0)
@@ -1380,6 +1445,7 @@ contains
                                      ielement_l = ielem,    &
                                      iproc      = 0,        &
                                      pelem_ID   = NO_ID,    &
+                                     coordinate_system = CARTESIAN, &
                                      eqn_ID     = 1,        &
                                      nfields    = 1,        &
                                      ntime      = 1,        &
@@ -1387,10 +1453,13 @@ contains
                                      nterms_c   = 8,        &
                                      dof_start  = 104,      &
                                      dof_local_start = 104, &
+                                     xdof_start  = 104,      &
+                                     xdof_local_start = 104, &
                                      recv_comm    = NO_ID,  &
                                      recv_domain  = NO_ID,  &
                                      recv_element = NO_ID,  &
-                                     recv_dof     = NO_ID)
+                                     recv_dof     = NO_ID,  &
+                                     recv_xdof     = NO_ID)
 
             
             tol    = 1.e-13_rk

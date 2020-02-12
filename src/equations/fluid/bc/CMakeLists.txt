@@ -11,7 +11,6 @@ add_lib_sources(
                 bc_state_outlet_neumann_pressure_localdg.f90
                 bc_state_outlet_neumann_pressure_localdg_new.f90
                 bc_state_outlet_neumann_pressure_globaldg.f90
-                bc_state_outlet_neumann_LODI_localdg.f90
                 bc_state_wall.f90
                 bc_state_stationary_adiabatic_wall.f90
                 bc_state_moving_wall.f90

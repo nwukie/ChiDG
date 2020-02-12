@@ -1,0 +1,434 @@
+!>  Test chidg_functional procedures
+!!
+!!  @author Matteo Ugolotti
+!!  @date   10/29/2018
+!!
+!------------------------------------------------------------------------------
+
+
+
+
+
+
+
+!>  Test chidg_functional init
+!!
+!!  @author Matteo Ugolotti
+!!  @date   10/29/2018
+!!
+!------------------------------------------------------------------------------
+@Test
+subroutine test_chidg_functional__init()
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN
+    use type_chidg_functional,  only: chidg_functional_t
+
+    implicit none
+    type(chidg_functional_t)    :: chidg_fcl
+
+    !
+    ! This being tested
+    !
+    call chidg_fcl%init(2)
+
+    !
+    ! Test
+    !
+    @assertTrue( chidg_fcl%functional_storage_initialized)
+    @assertEqual(2,size(chidg_fcl%func))
+
+
+end subroutine test_chidg_functional__init
+!******************************************************************************
+
+
+
+
+
+
+!>  Test chidg_functional check_functional_stored
+!!
+!!  @author Matteo Ugolotti
+!!  @date   10/29/2018
+!!
+!------------------------------------------------------------------------------
+@Test
+subroutine test_chidg_functional__check_storage()
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN
+    use type_chidg_functional,  only: chidg_functional_t
+
+    implicit none
+    type(chidg_functional_t)    :: chidg_fcl
+    logical                     :: functional_stored
+
+    !
+    ! Initialize storage 
+    !
+    call chidg_fcl%init(3)
+
+    !
+    ! Test
+    !
+    @assertTrue( chidg_fcl%functional_storage_initialized)
+    @assertEqual(3,size(chidg_fcl%func))
+
+    !
+    ! This being tested
+    !
+    functional_stored =  chidg_fcl%check_functional_stored()
+
+
+    !
+    ! Test
+    !
+    @assertFalse(functional_stored)
+
+    !
+    ! Define some random functional value
+    !
+    call chidg_fcl%func(1)%push_back(TWO)
+
+    !
+    ! This being tested
+    !
+    functional_stored =  chidg_fcl%check_functional_stored()
+
+    !
+    ! Test
+    !
+    @assertTrue(functional_stored)
+
+
+end subroutine test_chidg_functional__check_storage
+!******************************************************************************
+
+
+
+
+
+
+
+
+
+
+!>  test chidg_functional nfunc
+!!
+!!  @author Matteo Ugolotti
+!!  @date   10/29/2018
+!!
+!------------------------------------------------------------------------------
+@test
+subroutine test_chidg_functional__nfunc()
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: one, two, three, four, five, six, seven
+    use type_chidg_functional,  only: chidg_functional_t
+
+    implicit none
+    type(chidg_functional_t)    :: chidg_fcl
+    integer(ik)                 :: nfuncs
+
+    !
+    ! init storage
+    !
+    call chidg_fcl%init(2)
+
+    !
+    ! this being tested
+    !
+    nfuncs = chidg_fcl%nfunc()
+
+    !
+    ! test
+    !
+    @assertequal(2,nfuncs)
+
+
+end subroutine test_chidg_functional__nfunc
+!******************************************************************************
+
+
+
+
+
+
+
+!>  test chidg_functional nstep
+!!
+!!  @author Matteo Ugolotti
+!!  @date   10/29/2018
+!!
+!------------------------------------------------------------------------------
+@test
+subroutine test_chidg_functional__nstep()
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: one, two, three, four, five, six, seven
+    use type_chidg_functional,  only: chidg_functional_t
+
+    implicit none
+    type(chidg_functional_t)    :: chidg_fcl
+    integer(ik)                 :: nsteps
+
+    !
+    ! init storage
+    !
+    call chidg_fcl%init(2)
+
+    !
+    ! Add steps
+    !
+    call chidg_fcl%step%push_back(1)
+    call chidg_fcl%step%push_back(11)
+    call chidg_fcl%step%push_back(21)
+
+    !
+    ! this being tested
+    !
+    nsteps = chidg_fcl%nstep()
+
+    !
+    ! test
+    !
+    @assertequal(3,nsteps)
+
+
+end subroutine test_chidg_functional__nstep
+!******************************************************************************
+
+
+
+
+
+
+
+!>  test chidg_functional get_func
+!!
+!!  @author Matteo Ugolotti
+!!  @date   10/29/2018
+!!
+!------------------------------------------------------------------------------
+@test
+subroutine test_chidg_functional__get_func()
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: one, two, three, four, five, six, seven
+    use type_chidg_functional,  only: chidg_functional_t
+
+    implicit none
+    type(chidg_functional_t)    :: chidg_fcl
+    real(rk), allocatable       :: func_value(:)
+    real(rk)                    :: full_vector(3)
+
+    !
+    ! init storage
+    !
+    call chidg_fcl%init(2)
+
+    !
+    ! Add funcs and steps
+    !
+    call chidg_fcl%func(1)%push_back(ONE)
+    call chidg_fcl%func(1)%push_back(TWO)
+    call chidg_fcl%func(1)%push_back(THREE)
+    call chidg_fcl%func(2)%push_back(FOUR)
+    call chidg_fcl%func(2)%push_back(FIVE)
+    call chidg_fcl%func(2)%push_back(SIX)
+    call chidg_fcl%step%push_back(1)
+    call chidg_fcl%step%push_back(11)
+    call chidg_fcl%step%push_back(21)
+
+    !
+    ! this being tested
+    !
+    func_value = chidg_fcl%get_func(1,2)
+
+    !
+    ! test
+    !
+    @assertequal([TWO],func_value)
+
+
+    !
+    ! this being tested
+    !
+    func_value = chidg_fcl%get_func(1,3)
+
+    !
+    ! test
+    !
+    @assertequal([THREE],func_value)
+    
+    !
+    ! this being tested
+    !
+    func_value = chidg_fcl%get_func(2,1)
+
+    !
+    ! test
+    !
+    @assertequal([FOUR],func_value)
+    
+    !
+    ! this being tested
+    !
+    func_value = chidg_fcl%get_func(2,2)
+
+    !
+    ! test
+    !
+    @assertequal([FIVE],func_value)
+
+    !
+    ! this being tested
+    !
+    func_value = chidg_fcl%get_func(2)
+
+    !
+    ! test
+    !
+    full_vector = [FOUR,FIVE,SIX]
+    @assertequal(full_vector,func_value)
+
+end subroutine test_chidg_functional__get_func
+!******************************************************************************
+
+
+
+
+
+
+!>  test chidg_functional get_step
+!!
+!!  @author Matteo Ugolotti
+!!  @date   10/29/2018
+!!
+!------------------------------------------------------------------------------
+@test
+subroutine test_chidg_functional__get_step()
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: one, two, three, four, five, six, seven
+    use type_chidg_functional,  only: chidg_functional_t
+
+    implicit none
+    type(chidg_functional_t)    :: chidg_fcl
+    integer(ik)                 :: step1, step2, step3
+
+    !
+    ! init storage
+    !
+    call chidg_fcl%init(2)
+
+    !
+    ! Add funcs and steps
+    !
+    call chidg_fcl%func(1)%push_back(ONE)
+    call chidg_fcl%func(1)%push_back(TWO)
+    call chidg_fcl%func(1)%push_back(THREE)
+    call chidg_fcl%func(2)%push_back(FOUR)
+    call chidg_fcl%func(2)%push_back(FIVE)
+    call chidg_fcl%func(2)%push_back(SIX)
+    call chidg_fcl%step%push_back(1)
+    call chidg_fcl%step%push_back(11)
+    call chidg_fcl%step%push_back(21)
+
+    !
+    ! this being tested
+    !
+    step1 = chidg_fcl%get_step(1)
+    step2 = chidg_fcl%get_step(2)
+    step3 = chidg_fcl%get_step(3)
+
+    !
+    ! test
+    !
+    @assertequal(1 ,step1)
+    @assertequal(11,step2)
+    @assertequal(21,step3)
+
+
+
+end subroutine test_chidg_functional__get_step
+!******************************************************************************
+
+
+
+
+
+
+!>  test chidg_functional get_time
+!!
+!!  @author Matteo Ugolotti
+!!  @date   10/29/2018
+!!
+!------------------------------------------------------------------------------
+@test
+subroutine test_chidg_functional__get_time()
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: one, two, three, four, five, six, seven
+    use type_chidg_functional,  only: chidg_functional_t
+
+    implicit none
+    type(chidg_functional_t)    :: chidg_fcl
+    real(rk)                    :: time1, time2, time3
+
+    !
+    ! init storage
+    !
+    call chidg_fcl%init(2)
+
+    !
+    ! Add funcs and steps
+    !
+    call chidg_fcl%func(1)%push_back(ONE)
+    call chidg_fcl%func(1)%push_back(TWO)
+    call chidg_fcl%func(1)%push_back(THREE)
+    call chidg_fcl%func(2)%push_back(FOUR)
+    call chidg_fcl%func(2)%push_back(FIVE)
+    call chidg_fcl%func(2)%push_back(SIX)
+    call chidg_fcl%step%push_back(1)
+    call chidg_fcl%step%push_back(11)
+    call chidg_fcl%step%push_back(21)
+    call chidg_fcl%time%push_back(1.1_rk)
+    call chidg_fcl%time%push_back(1.2_rk)
+    call chidg_fcl%time%push_back(1.3_rk)
+
+    !
+    ! this being tested
+    !
+    time1 = chidg_fcl%get_time(1)
+    time2 = chidg_fcl%get_time(2)
+    time3 = chidg_fcl%get_time(3)
+
+    !
+    ! test
+    !
+    @assertequal(1.1_rk,time1)
+    @assertequal(1.2_rk,time2)
+    @assertequal(1.3_rk,time3)
+
+
+
+end subroutine test_chidg_functional__get_time
+!******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

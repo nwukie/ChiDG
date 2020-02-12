@@ -12,6 +12,7 @@ module mod_function
     use fcn_ysquared,                       only: ysquared_f
     use fcn_zsquared,                       only: zsquared_f
     use fcn_xyz,                            only: xyz_f
+    use fcn_xlinear,                        only: xlinear_f
     use fcn_radius,                         only: radius_f
     use fcn_gaussian,                       only: gaussian_f
     use fcn_constant,                       only: constant_f
@@ -23,7 +24,6 @@ module mod_function
     use fcn_pressure_pulse,                 only: pressure_pulse_f
     use fcn_euler_gradients,                only: euler_gradients_f
     use fcn_isentropic_vortex,              only: isentropic_vortex_f
-!    use fcn_cylindricalduct_eigenfunction,  only: cylindricalduct_eigenfunction_f
     use fcn_monopole,                       only: monopole_f
     implicit none
 
@@ -58,6 +58,7 @@ contains
         type(ysquared_f)                        :: ysquared
         type(zsquared_f)                        :: zsquared
         type(xyz_f)                             :: xyz
+        type(xlinear_f)                         :: xlinear
         type(radius_f)                          :: radius
         type(gaussian_f)                        :: gaussian
         type(convecting_vortex_f)               :: convecting_vortex
@@ -86,6 +87,7 @@ contains
             call registered_fcns%push_back(ysquared)
             call registered_fcns%push_back(zsquared)
             call registered_fcns%push_back(xyz)
+            call registered_fcns%push_back(xlinear)
             call registered_fcns%push_back(radius)
             call registered_fcns%push_back(gaussian)
             call registered_fcns%push_back(constant)

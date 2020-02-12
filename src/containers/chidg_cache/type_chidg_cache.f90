@@ -64,7 +64,8 @@ contains
         type(properties_t),     intent(in)      :: prop(:)
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
-        logical,                intent(in)      :: differentiate
+        !logical,                intent(in)      :: differentiate
+        integer(ik),            intent(in)      :: differentiate
         logical,                intent(in)      :: lift
 
         integer(ik) :: iface, ierr

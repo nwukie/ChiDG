@@ -1,7 +1,7 @@
 module type_mesh
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: NO_ID, INTERIOR, NFACES, CARTESIAN, CYLINDRICAL, NO_PROC
+    use mod_constants,              only: NO_ID, INTERIOR, NFACES, CARTESIAN, CYLINDRICAL, NO_PROC, dX_DIFF
     use mod_grid,                   only: NFACE_CORNERS
     use mod_chidg_mpi,              only: NRANK, IRANK
     use type_element,               only: element_t
@@ -35,8 +35,9 @@ module type_mesh
     !----------------------------------------------------------------------------------
     type, public :: mesh_t
 
-        integer(ik)                         :: ntime_         = NO_ID
-        integer(ik)                         :: mesh_dof_start = NO_ID ! Based on Fortran 1-indexing
+        integer(ik)                         :: ntime_          = NO_ID
+        integer(ik)                         :: mesh_dof_start  = NO_ID ! Based on Fortran 1-indexing
+        integer(ik)                         :: mesh_xdof_start = NO_ID ! Based on Fortran 1-indexing
 
         ! Local data
         type(domain_t),         allocatable :: domain(:)
@@ -48,10 +49,12 @@ module type_mesh
         type(mpi_request_vector_t)          :: comm_requests
 
         ! Tree data
-        real(rk), allocatable               :: global_nodes(:,:)
+        real(rk),               allocatable :: global_nodes(:,:)
         type(octree_t)                      :: octree
-        integer(ik),    allocatable         :: nelems_per_domain(:)
+        integer(ik),            allocatable :: nelems_per_domain(:)
 
+        ! Global data
+        integer(ik),            allocatable :: npoints(:,:)         ! [gobal_dom_id,(i,j,k)]
 
         ! Interpolation node set ('Uniform', 'Quadrature')
         character(:),           allocatable :: interpolation
@@ -68,6 +71,7 @@ module type_mesh
         procedure           :: get_domain_id
         procedure, private  :: new_domain
         procedure           :: ndomains
+        procedure           :: ndomains_g
 
         ! Boundary patch group procedures
         procedure, private  :: new_bc_patch_group
@@ -78,12 +82,15 @@ module type_mesh
         ! Chimera
         procedure           :: assemble_chimera_data
 
+        ! Mesh Sensitivities
+        procedure, public   :: compute_derivatives_dx
+        procedure, public   :: release_derivatives_dx
+
         ! Octree
         procedure           :: set_global_nodes
         procedure           :: set_nelems_per_domain
         procedure           :: rbf_index_to_element_info
         procedure           :: global_to_local_indices
-
 
         ! Resouce management
         procedure           :: release
@@ -295,11 +302,10 @@ contains
 
 
 
-    !>  Return the number of domains in the chidg_data_t instance.
+    !>  Return the number of domains in the mesh_t instance.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
-    !!
     !!
     !--------------------------------------------------------------------------------
     function ndomains(self) result(ndomains_)
@@ -320,13 +326,43 @@ contains
 
 
 
+    !>  Return the global number of domains in the parallel mesh_t object.
+    !!
+    !!  MPI Collective function
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   11/26/2019
+    !!
+    !--------------------------------------------------------------------------------
+    function ndomains_g(self) result(idomain_g_global_max)
+        class(mesh_t),  intent(in)  :: self
+
+        integer(ik) :: idomain_g_local_max, idomain_g_global_max, idom, ierr
+
+        idomain_g_local_max = 0
+        do idom = 1,self%ndomains()
+            if (self%domain(idom)%idomain_g > idomain_g_local_max) idomain_g_local_max = self%domain(idom)%idomain_g
+        end do
+
+        ! Reduce max domain index across processes
+        call MPI_AllReduce(idomain_g_local_max,idomain_g_global_max,1,MPI_INTEGER4,MPI_MAX,ChiDG_COMM,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"mesh%ndomains_g: error reducing max number of domains.")
+
+
+    end function ndomains_g
+    !********************************************************************************
+
+
+
+
 
     !>  Given a domain name, return the domain identifier so that it can be 
     !!  indexed in self%domains(:).
     !!
+    !!  Return NO_ID if no domain named 'domain_name' was found.
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   4/6/2017
-    !!
     !!
     !--------------------------------------------------------------------------------
     function get_domain_id(self,domain_name) result(domain_index)
@@ -337,7 +373,8 @@ contains
         integer(ik)  :: idom
         integer(ik)  :: domain_index
         
-        domain_index = 0
+        ! Default if not replaced with valid ID
+        domain_index = NO_ID
 
         do idom = 1,self%ndomains()
             if ( trim(domain_name) == trim(self%domain(idom)%name) ) then
@@ -347,10 +384,9 @@ contains
         end do
 
 
-        user_msg = "mesh%get_domain_index: No domain was found with a name &
-                    matching the incoming string"
-        if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,domain_name)
-
+!        user_msg = "mesh%get_domain_index: No domain was found with a name &
+!                    matching the incoming string"
+!        if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,domain_name)
 
     end function get_domain_id
     !********************************************************************************
@@ -624,6 +660,76 @@ contains
 
 
 
+
+
+    !>  Compute the differentiate interpolators for both current element and adjacent
+    !!  element face
+    !!
+    !!  @author Matteo Ugolotti 
+    !!  @date   12/12/2018
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine compute_derivatives_dx(self,elem_info,differentiate)
+        class(mesh_t),          intent(inout)   :: self
+        type(element_info_t),   intent(in)      :: elem_info
+        integer(ik),            intent(in)      :: differentiate
+
+        integer(ik) :: ielement_l, idomain_l 
+
+        ! Compute only if we need mesh senstitivities
+        if (differentiate == dX_DIFF) then
+
+            ielement_l = elem_info%ielement_l
+            idomain_l  = elem_info%idomain_l
+            
+            ! Compute element and faces differentiated interpolators
+            call self%domain(idomain_l)%compute_interpolations_dx(ielement_l)
+
+        end if
+
+    end subroutine compute_derivatives_dx
+    !*********************************************************************************
+
+
+
+
+
+
+    
+    !>  Release memory of differentiated interpolators for current element, current
+    !!  element's faces and neighbor's element faces. 
+    !!  
+    !!  @author Matteo Ugolotti 
+    !!  @date   12/12/2018
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine release_derivatives_dx(self,elem_info,differentiate)
+        class(mesh_t),          intent(inout)   :: self
+        type(element_info_t),   intent(in)      :: elem_info
+        integer(ik),            intent(in)      :: differentiate
+
+        integer(ik) :: ielement_l, idomain_l 
+
+        ! Release only if we need mesh senstitivities
+        if (differentiate == dX_DIFF) then
+
+            ielement_l = elem_info%ielement_l
+            idomain_l  = elem_info%idomain_l
+            
+            ! Realse element and faces differentiated interpolators
+            call self%domain(idomain_l)%release_interpolations_dx(ielement_l)
+
+        end if
+
+    end subroutine release_derivatives_dx
+    !*********************************************************************************
+
+
+
+
+
+
+
     !>
     !!
     !! @author  Eric M. Wolf
@@ -797,37 +903,25 @@ contains
         type(ivector_t)             :: recv_procs
 
 
-        !
         ! Accumulate processor ranks that we are receiving from: domains
-        !
         do idom = 1,self%ndomains()
             recv_procs_dom = self%domain(idom)%get_recv_procs()
-
             do iproc = 1,size(recv_procs_dom)
                 call recv_procs%push_back_unique(recv_procs_dom(iproc))
             end do ! iproc
-
         end do ! idom
 
 
-
-        !
         ! Accumulate processor ranks that we are receiving from: bc_patch_groups
-        !
         do igroup = 1,self%nbc_patch_groups()
             recv_procs_bc = self%bc_patch_group(igroup)%get_recv_procs()
-
             do iproc = 1,size(recv_procs_bc)
                 call recv_procs%push_back_unique(recv_procs_bc(iproc))
             end do ! iproc
-
         end do ! igroup
 
 
-
-        !
         ! Return as integer array
-        !
         recv_procs_array = recv_procs%data()
 
 
@@ -854,38 +948,25 @@ contains
         integer(ik),    allocatable :: send_procs_dom(:), send_procs_bc(:), send_procs_array(:)
         type(ivector_t)             :: send_procs
 
-
-        !
         ! Accumulate processor ranks that we are receiving from: domains
-        !
         do idom = 1,self%ndomains()
             send_procs_dom = self%domain(idom)%get_send_procs()
-
             do iproc = 1,size(send_procs_dom)
                 call send_procs%push_back_unique(send_procs_dom(iproc))
             end do ! iproc
-
         end do ! idom
 
 
-
-        !
         ! Accumulate processor ranks that we are receiving from: bc_patch_groups
-        !
         do igroup = 1,self%nbc_patch_groups()
             send_procs_bc = self%bc_patch_group(igroup)%get_send_procs()
-
             do iproc = 1,size(send_procs_bc)
                 call send_procs%push_back_unique(send_procs_bc(iproc))
             end do ! iproc
-
         end do ! igroup
 
 
-
-        !
         ! Return as integer array
-        !
         send_procs_array = send_procs%data()
 
 
@@ -912,10 +993,7 @@ contains
 
         integer(ik) :: idom, ielem, iface, n
 
-
-        !
         ! Accumulate number of INTERIOR neighbors that live on iproc
-        !
         n = 0
         do idom = 1,self%ndomains()
             do ielem = 1,self%domain(idom)%get_nelements_local()
@@ -925,8 +1003,6 @@ contains
             end do !ielem
         end do !idom
         
-
-
     end function get_proc_ninterior_neighbors
     !**********************************************************************************
 
@@ -983,9 +1059,7 @@ contains
         end do !idom
         
 
-        !
         ! Get number of counted donors coming from iproc
-        !
         n = donor_elements_g%size()
 
     end function get_proc_nchimera_donors
@@ -1081,11 +1155,7 @@ contains
         end do !idom
 
 
-
-
-        !
         ! Get size of accumulated elements being received
-        !
         n = recv_element_g%size()
 
     end function get_nelements_recv
@@ -1207,12 +1277,16 @@ contains
     !!
     !!  Returned indices based on Fortran 1-indexing
     !!
+    !!  dof_type indicates what type of dofs we are trying to measure here. Could be
+    !!  solution or coordinate, since we need to store some vectors that are dimensioned
+    !!  by the number of coordinate dof's for gradient-based design.
     !!
     !----------------------------------------------------------------------------------
-    function get_parallel_dofs(self) result(parallel_dofs)
+    function get_parallel_dofs(self,dof_type) result(parallel_dofs)
         class(mesh_t),  intent(in)  :: self
+        character(*),   intent(in)  :: dof_type
 
-        integer(ik) :: dof_start, nterms_s, ntime, nfields, pelem_ID, idof
+        integer(ik) :: dof_start, ndof_field, ntime, nfields, pelem_ID, idof
 
         type(ivector_t)             :: parallel_dofs_vector
         integer(ik),    allocatable :: parallel_dofs(:)
@@ -1221,13 +1295,23 @@ contains
         ! Loop through parallel_elements and accumulate dof indices
         do pelem_ID = 1,self%nparallel_elements()
 
-            dof_start = self%parallel_element(pelem_ID)%dof_start
-            nfields   = self%parallel_element(pelem_ID)%nfields
-            nterms_s  = self%parallel_element(pelem_ID)%nterms_s
-            ntime     = self%parallel_element(pelem_ID)%ntime
+            select case (trim(dof_type))
+                case('primal','auxiliary') 
+                    dof_start  = self%parallel_element(pelem_ID)%dof_start
+                    nfields    = self%parallel_element(pelem_ID)%nfields
+                    ndof_field = self%parallel_element(pelem_ID)%nterms_s
+                    ntime      = self%parallel_element(pelem_ID)%ntime
+                case('coordinate')
+                    dof_start  = self%parallel_element(pelem_ID)%xdof_start
+                    nfields    = 3
+                    ndof_field = self%parallel_element(pelem_ID)%nterms_c
+                    ntime      = self%parallel_element(pelem_ID)%ntime
+                case default
+                    call chidg_signal(FATAL,"mesh%get_parallel_dofs: invalid input for dof_type.")
+            end select
 
             ! Store each dof index
-            do idof = dof_start, dof_start + (nfields*nterms_s*ntime - 1)
+            do idof = dof_start, dof_start + (nfields*ndof_field*ntime - 1)
                 call parallel_dofs_vector%push_back(idof)
             end do !idof
 
@@ -1516,7 +1600,7 @@ contains
                 
                         ! First send location of donor
                         call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,             5, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
-                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_data,                 9, mpi_integer4, iproc, 0, ChiDG_COMM, request(2), ierr)
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_data,                10, mpi_integer4, iproc, 0, ChiDG_COMM, request(2), ierr)
                         call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords,        send_size_b, mpi_real8,    iproc, 0, ChiDG_COMM, request(3), ierr)
                         call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_def,    send_size_c, mpi_real8,    iproc, 0, ChiDG_COMM, request(4), ierr)
                         call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_vel,    send_size_d, mpi_real8,    iproc, 0, ChiDG_COMM, request(5), ierr)
@@ -1738,11 +1822,11 @@ contains
                                        ntime, pelem_ID, interpolation_level,        &
                                        idomain_g, ielement_g, coordinate_system,    & 
                                        recv_size_a, recv_size_b, recv_size_c,       &
-                                       neighbor_location(7), element_location(5),       &
-                                       element_data(9), spacedim, inode, dof_start, &
+                                       neighbor_location(9), element_location(5),   &
+                                       element_data(10), spacedim, inode, dof_start, &
                                        ineighbor_domain_g, ineighbor_element_g,     &
-                                       recv_dof, ChiID, idonor, idonor_domain_g,    &
-                                       idonor_element_g
+                                       recv_dof, recv_xdof, ChiID, idonor, idonor_domain_g,    &
+                                       idonor_element_g, xdof_start
         logical :: interior_face, parallel_neighbor, parallel_donor
 
 
@@ -1793,7 +1877,7 @@ contains
 
 
                 ! element_data = [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level]
-                call mpi_recv(element_data, 9, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(element_data, 10, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
                 etype               = element_data(1)
                 spacedim            = element_data(2)
                 coordinate_system   = element_data(3)
@@ -1803,6 +1887,7 @@ contains
                 ntime               = element_data(7)
                 interpolation_level = element_data(8)
                 dof_start           = element_data(9)
+                xdof_start          = element_data(10)
                 nnodes = (etype+1)*(etype+1)*(etype+1)
                 
 
@@ -1871,7 +1956,15 @@ contains
 
 
                 ! NOTE: we want to be able to reinitialize parallel_element solution data-space (e.g. for wall_distance calculation)
-                call self%parallel_element(pelem_ID)%init_sol(self%interpolation,interpolation_level,nterms_s,nfields,ntime,dof_start,dof_local_start=NO_ID)
+                call self%parallel_element(pelem_ID)%init_sol(self%interpolation,     &
+                                                              interpolation_level,    &
+                                                              nterms_s,               &
+                                                              nfields,                &
+                                                              ntime,                  &
+                                                              dof_start        = dof_start,  &
+                                                              dof_local_start  = NO_ID,      &
+                                                              xdof_start       = xdof_start, &
+                                                              xdof_local_start = NO_ID)
 
 
                 call self%parallel_element(pelem_ID)%set_displacements_velocities(nodes_disp,nodes_vel)
@@ -1884,31 +1977,30 @@ contains
 
 
 
-        !
         ! Update recv_dof indices for all parallel elements. 
         ! NOTE: this should be done after the previous loop structure to allow parallel elements
         ! to be reinitialized (for example if we are reinitializing nterms_s).
-        !
         recv_dof = 1    ! DOF indices are based on Fortran 1-indexing
+        recv_xdof = 1   ! DOF indices are based on Fortran 1-indexing
         do pelem_ID = 1,self%nparallel_elements()
 
             ! Set current element
-            self%parallel_element(pelem_ID)%recv_dof = recv_dof
+            self%parallel_element(pelem_ID)%recv_dof  = recv_dof
+            self%parallel_element(pelem_ID)%recv_xdof = recv_xdof
 
             ! Update start of potential next element
-            nterms_s = self%parallel_element(pelem_ID)%nterms_s 
-            nfields  = self%parallel_element(pelem_ID)%nfields
-            ntime    = self%parallel_element(pelem_ID)%ntime
-
-            recv_dof = recv_dof + nterms_s*nfields*ntime
+            nterms_s  = self%parallel_element(pelem_ID)%nterms_s 
+            nterms_c  = self%parallel_element(pelem_ID)%nterms_c
+            nfields   = self%parallel_element(pelem_ID)%nfields
+            ntime     = self%parallel_element(pelem_ID)%ntime
+            recv_dof  = recv_dof  + nterms_s*nfields*ntime
+            recv_xdof = recv_xdof + nterms_c*3*ntime
 
         end do
 
 
 
-        !
         ! Initialize interior parallel neighbor element ID and recv_dof
-        !
         do idom = 1,self%ndomains()
             do ielem = 1,self%domain(idom)%nelements()
                 do iface = 1,NFACES
@@ -1927,6 +2019,7 @@ contains
 
                         self%domain(idom)%faces(ielem,iface)%ineighbor_pelem_ID = pelem_ID
                         self%domain(idom)%faces(ielem,iface)%recv_dof           = self%parallel_element(pelem_ID)%recv_dof
+                        self%domain(idom)%faces(ielem,iface)%recv_xdof          = self%parallel_element(pelem_ID)%recv_xdof
 
                     end if
 
@@ -1950,8 +2043,9 @@ contains
                         pelem_ID = self%find_parallel_element(idonor_domain_g,idonor_element_g)
                         if (pelem_ID == NO_ID) call chidg_signal(FATAL,'mesh%comm_recv: could not find overset donor parallel element.')
 
-                        self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%pelem_ID = pelem_ID
-                        self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_dof = self%parallel_element(pelem_ID)%recv_dof
+                        self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%pelem_ID  = pelem_ID
+                        self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_dof  = self%parallel_element(pelem_ID)%recv_dof
+                        self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%elem_info%recv_xdof = self%parallel_element(pelem_ID)%recv_xdof
                     end if
 
                 end do !idonor
@@ -2053,38 +2147,67 @@ contains
     !!  @date   1/24/2019
     !!
     !--------------------------------------------------------------------------------
-    function get_dof_start(self,idomain_l,ielement_l) result(dof_start)
+    function get_dof_start(self,idomain_l,ielement_l,dof_type) result(dof_start)
         class(mesh_t),  intent(in)  :: self
         integer(ik),    intent(in)  :: idomain_l
         integer(ik),    intent(in)  :: ielement_l
+        character(*),   intent(in)  :: dof_type
 
 
         integer(ik) :: dof_start, ndof_prev, idom, end_elem, ielem
 
-        ! Sum DOF on ranks 0 to IRANK-1. Indexing goes to IRANK since Fortran starts at 1.
-        ! WARNING: ASSUMING ALL ELEMENTS ON OTHER PROCS HAVE SAME nterms_s
-        ndof_prev = self%mesh_dof_start - 1
+        select case (trim(dof_type))
+            case('primal')
 
+                ! Sum DOF on ranks 0 to IRANK-1. Indexing goes to IRANK since Fortran starts at 1.
+                ! WARNING: ASSUMING ALL ELEMENTS ON OTHER PROCS HAVE SAME nterms_s
+                ndof_prev = self%mesh_dof_start - 1
 
-        ! Accumulate dofs on current RANK until idomain_l,ielement_l
-        do idom = 1,idomain_l
+                ! Accumulate dofs on current RANK until idomain_l,ielement_l
+                do idom = 1,idomain_l
 
-            if (idom < idomain_l) then
-                end_elem = self%domain(idom)%nelements()
-            else if (idom == idomain_l) then
-                end_elem = ielement_l-1
-            end if
+                    if (idom < idomain_l) then
+                        end_elem = self%domain(idom)%nelements()
+                    else if (idom == idomain_l) then
+                        end_elem = ielement_l-1
+                    end if
 
-            do ielem = 1,end_elem
-                ndof_prev = ndof_prev + self%domain(idom)%elems(ielem)%nterms_s*self%domain(idom)%elems(ielem)%nfields*self%domain(idom)%elems(ielem)%ntime
-            end do
+                    do ielem = 1,end_elem
+                        ndof_prev = ndof_prev + self%domain(idom)%elems(ielem)%nterms_s*self%domain(idom)%elems(ielem)%nfields*self%domain(idom)%elems(ielem)%ntime
+                    end do
 
-        end do
+                end do
 
+                ! dof index for requested element starts on dof after all previous
+                dof_start = ndof_prev + 1
 
-        ! dof index for requested element starts on dof after all previous
-        dof_start = ndof_prev + 1
+            case('coordinate')
 
+                ! Sum DOF on ranks 0 to IRANK-1. Indexing goes to IRANK since Fortran starts at 1.
+                ! WARNING: ASSUMING ALL ELEMENTS ON OTHER PROCS HAVE SAME nterms_s
+                ndof_prev = self%mesh_xdof_start - 1
+
+                ! Accumulate dofs on current RANK until idomain_l,ielement_l
+                do idom = 1,idomain_l
+
+                    if (idom < idomain_l) then
+                        end_elem = self%domain(idom)%nelements()
+                    else if (idom == idomain_l) then
+                        end_elem = ielement_l-1
+                    end if
+
+                    do ielem = 1,end_elem
+                        ndof_prev = ndof_prev + self%domain(idom)%elems(ielem)%nterms_c*3*self%domain(idom)%elems(ielem)%ntime
+                    end do
+
+                end do
+
+                ! dof index for requested element starts on dof after all previous
+                dof_start = ndof_prev + 1
+
+            case default
+                call chidg_signal_one(FATAL,"mesh%get_dof_start: invalid input for dof_type.",trim(dof_type))
+        end select
 
     end function get_dof_start
     !********************************************************************************
@@ -2107,24 +2230,27 @@ contains
 
         type(element_info_t)    :: elem_info
 
-        elem_info = element_info(idomain_g       = self%domain(idomain_l)%elems(ielement_l)%idomain_g,       &
-                                 idomain_l       = self%domain(idomain_l)%elems(ielement_l)%idomain_l,       &
-                                 ielement_g      = self%domain(idomain_l)%elems(ielement_l)%ielement_g,      &
-                                 ielement_l      = self%domain(idomain_l)%elems(ielement_l)%ielement_l,      &
-                                 iproc           = self%domain(idomain_l)%elems(ielement_l)%iproc,           &
-                                 pelem_ID        = NO_ID,                                                    &
-                                 eqn_ID          = self%domain(idomain_l)%elems(ielement_l)%eqn_ID,          &
-                                 nfields         = self%domain(idomain_l)%elems(ielement_l)%nfields,         &
-                                 ntime           = self%domain(idomain_l)%elems(ielement_l)%ntime,           &
-                                 nterms_s        = self%domain(idomain_l)%elems(ielement_l)%nterms_s,        &
-                                 nterms_c        = self%domain(idomain_l)%elems(ielement_l)%nterms_c,        &
-                                 dof_start       = self%domain(idomain_l)%elems(ielement_l)%dof_start,       &
-                                 dof_local_start = self%domain(idomain_l)%elems(ielement_l)%dof_local_start, &
-                                 recv_comm       = self%domain(idomain_l)%elems(ielement_l)%recv_comm,       &
-                                 recv_domain     = self%domain(idomain_l)%elems(ielement_l)%recv_domain,     &
-                                 recv_element    = self%domain(idomain_l)%elems(ielement_l)%recv_element,    &
-                                 recv_dof        = self%domain(idomain_l)%elems(ielement_l)%recv_dof)
-
+        elem_info = element_info(idomain_g         = self%domain(idomain_l)%elems(ielement_l)%idomain_g,         &
+                                 idomain_l         = self%domain(idomain_l)%elems(ielement_l)%idomain_l,         &
+                                 ielement_g        = self%domain(idomain_l)%elems(ielement_l)%ielement_g,        &
+                                 ielement_l        = self%domain(idomain_l)%elems(ielement_l)%ielement_l,        &
+                                 iproc             = self%domain(idomain_l)%elems(ielement_l)%iproc,             &
+                                 pelem_ID          = NO_ID,                                                      &
+                                 coordinate_system = self%domain(idomain_l)%elems(ielement_l)%coordinate_system, &
+                                 eqn_ID            = self%domain(idomain_l)%elems(ielement_l)%eqn_ID,            &
+                                 nfields           = self%domain(idomain_l)%elems(ielement_l)%nfields,           &
+                                 ntime             = self%domain(idomain_l)%elems(ielement_l)%ntime,             &
+                                 nterms_s          = self%domain(idomain_l)%elems(ielement_l)%nterms_s,          &
+                                 nterms_c          = self%domain(idomain_l)%elems(ielement_l)%nterms_c,          &
+                                 dof_start         = self%domain(idomain_l)%elems(ielement_l)%dof_start,         &
+                                 dof_local_start   = self%domain(idomain_l)%elems(ielement_l)%dof_local_start,   &
+                                 xdof_start        = self%domain(idomain_l)%elems(ielement_l)%xdof_start,        &
+                                 xdof_local_start  = self%domain(idomain_l)%elems(ielement_l)%xdof_local_start,  &
+                                 recv_comm         = self%domain(idomain_l)%elems(ielement_l)%recv_comm,         &
+                                 recv_domain       = self%domain(idomain_l)%elems(ielement_l)%recv_domain,       &
+                                 recv_element      = self%domain(idomain_l)%elems(ielement_l)%recv_element,      &
+                                 recv_dof          = self%domain(idomain_l)%elems(ielement_l)%recv_dof,          &
+                                 recv_xdof         = self%domain(idomain_l)%elems(ielement_l)%recv_xdof)
 
     end function get_element_info
     !********************************************************************************

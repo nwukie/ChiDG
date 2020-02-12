@@ -3,7 +3,9 @@ module fcn_pressure_pulse
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, HALF, ONE, TWO, THREE, FIVE, EIGHT, PI
     use type_point,     only: point_t
+    use type_point_ad,  only: point_ad_t
     use type_function,  only: function_t
+    use DNAD_D
     implicit none
     private
 
@@ -63,9 +65,7 @@ contains
     subroutine init(self)
         class(pressure_pulse_f),  intent(inout)  :: self
 
-        !
         ! Set function name
-        !
         call self%set_name("pressure_pulse")
 
         call self%add_option('ivar', 1._rk)
@@ -73,9 +73,6 @@ contains
 
     end subroutine init
     !*************************************************************************
-
-
-
 
 
 
@@ -88,16 +85,16 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     impure elemental function compute(self,time,coord) result(val)
-        class(pressure_pulse_f),     intent(inout)  :: self
-        real(rk),                       intent(in)  :: time
-        type(point_t),                  intent(in)  :: coord
+        class(pressure_pulse_f),    intent(inout)   :: self
+        real(rk),                   intent(in)      :: time
+        type(point_ad_t),           intent(in)      :: coord
 
-        real(rk)                                    :: val
-        integer(ik)                                 :: ivar
-
-        real(rk)    :: x, y, z, r, &
+        type(AD_D)  :: x, y, z, r, &
                        u, v, w, &
-                       b, rho, p, drho, dp, gam
+                       rho, p, drho, dp, val
+
+        integer(ik) :: ivar
+        real(rk)    :: b, gam
 
         x   = coord%c1_
         y   = coord%c2_

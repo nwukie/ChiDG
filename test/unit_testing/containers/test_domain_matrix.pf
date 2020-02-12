@@ -14,7 +14,7 @@
 subroutine test_domain_matrix__store_1eq_8terms()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NO_ID
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NO_ID, CARTESIAN
     use mod_string,                 only: string_t
     use type_chidg,                 only: chidg_t
     use type_domain,                only: domain_t
@@ -56,6 +56,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
 
     nfields  = 1
     nterms_s = 8
+    nterms_c = 8
     call chidg%set('Solution Order', integer_input=2)
     call chidg%set('Time Integrator' , algorithm='Steady')
     call chidg%set('Nonlinear Solver', algorithm='Newton')
@@ -129,6 +130,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
                               ielement_l=14,        &
                               iproc=0,              &
                               pelem_ID=NO_ID,       &
+                              coordinate_system=CARTESIAN, &
                               eqn_ID=1,             &
                               nfields=1,            &
                               ntime=1,              &
@@ -136,10 +138,13 @@ subroutine test_domain_matrix__store_1eq_8terms()
                               nterms_c=8,           &
                               dof_start=104,        &
                               dof_local_start=104,  &
+                              xdof_start=104,        &
+                              xdof_local_start=104,  &
                               recv_comm=NO_ID,      &
                               recv_domain=NO_ID,    &
                               recv_element=NO_ID,   &
-                              recv_dof=NO_ID)
+                              recv_dof=NO_ID,       &
+                              recv_xdof=NO_ID)
 
     call seed%init(idomain_g=1,         &
                    idomain_l=1,         &
@@ -147,9 +152,11 @@ subroutine test_domain_matrix__store_1eq_8terms()
                    ielement_l=13,       &
                    nfields=nfields,     &
                    nterms_s=nterms_s,   &
+                   nnodes_r=nterms_c,   &
                    iproc=0,             &
                    itime=itime,         &
                    dof_start=96,        &
+                   xdof_start=289,      &
                    recv_comm=0,         &
                    recv_domain=0,       &
                    recv_element=0)
@@ -195,7 +202,7 @@ end subroutine test_domain_matrix__store_1eq_8terms
 subroutine test_domain_matrix__store_2eq_8terms()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NO_ID
+    use mod_constants,              only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NO_ID, CARTESIAN
     use mod_string,                 only: string_t
     use type_chidg,                 only: chidg_t
     use type_domain,                only: domain_t
@@ -236,6 +243,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
 
     nfields  = 2
     nterms_s = 8
+    nterms_c = 8
     call chidg%set('Solution Order', integer_input=2)
     call chidg%set('Time Integrator' , algorithm='Steady')
     call chidg%set('Nonlinear Solver', algorithm='Newton')
@@ -295,23 +303,27 @@ subroutine test_domain_matrix__store_2eq_8terms()
     !
     ! PROCEDURE BEING TESTED, bmat%store
     !
-    elem_info = element_info(idomain_g=1,         &
-                             idomain_l=1,         &
-                             ielement_g=14,       &
-                             ielement_l=14,       &
-                             iproc=0,             &
-                             pelem_ID=NO_ID,      &
-                             eqn_ID=1,            &
-                             nfields=nfields,     &
-                             ntime=1,             &
-                             nterms_s=8,          &
-                             nterms_c=8,          &
-                             dof_start=104,       &
-                             dof_local_start=104, &
-                             recv_comm=NO_ID,     &
-                             recv_domain=NO_ID,   &
-                             recv_element=NO_ID,  &
-                             recv_dof=NO_ID)
+    elem_info = element_info(idomain_g=1,           &
+                             idomain_l=1,           &
+                             ielement_g=14,         &
+                             ielement_l=14,         &
+                             iproc=0,               &
+                             pelem_ID=NO_ID,        &
+                             coordinate_system=CARTESIAN, &
+                             eqn_ID=1,              &
+                             nfields=nfields,       &
+                             ntime=1,               &
+                             nterms_s=8,            &
+                             nterms_c=8,            &
+                             dof_start=104,         &
+                             dof_local_start=104,   &
+                             xdof_start=104,        &
+                             xdof_local_start=104,  &
+                             recv_comm=NO_ID,       &
+                             recv_domain=NO_ID,     &
+                             recv_element=NO_ID,    &
+                             recv_dof=NO_ID,        &
+                             recv_xdof=NO_ID)
 
 
     call seed%init(idomain_g=1,         &
@@ -320,9 +332,11 @@ subroutine test_domain_matrix__store_2eq_8terms()
                    ielement_l=13,       &
                    nfields=nfields,     &
                    nterms_s=nterms_s,   &
+                   nnodes_r=nterms_c,   &
                    iproc=0,             &
                    itime=itime,         &
                    dof_start=96,        &
+                   xdof_start=289,      &
                    recv_comm=0,         &
                    recv_domain=0,       &
                    recv_element=0)
@@ -373,7 +387,7 @@ end subroutine test_domain_matrix__store_2eq_8terms
 subroutine test_domain_matrix__clear_1eq_8terms()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NO_ID
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NO_ID, CARTESIAN
     use mod_string,                 only: string_t
     use type_chidg,                 only: chidg_t
     use type_domain,                only: domain_t
@@ -415,6 +429,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
 
     nfields  = 1
     nterms_s = 8
+    nterms_c = 8
     call chidg%set('Solution Order', integer_input=2)
     call chidg%set('Time Integrator' , algorithm='Steady')
     call chidg%set('Nonlinear Solver', algorithm='Newton')
@@ -464,23 +479,27 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     ! Store Derivatives
     ivar  = 1
     itime = 1
-    elem_info = element_info(idomain_g=1,         &
-                             idomain_l=1,         &
-                             ielement_g=14,       &
-                             ielement_l=14,       &
-                             iproc=0,             &
-                             pelem_ID=NO_ID,      &
-                             eqn_ID=1,            &
-                             nfields=nfields,     &
-                             ntime=1,             &
-                             nterms_s=8,          &
-                             nterms_c=8,          &
-                             dof_start=104,       &
-                             dof_local_start=104, &
-                             recv_comm=NO_ID,     &
-                             recv_domain=NO_ID,   &
-                             recv_element=NO_ID,  &
-                             recv_dof=NO_ID)
+    elem_info = element_info(idomain_g=1,           &
+                             idomain_l=1,           &
+                             ielement_g=14,         &
+                             ielement_l=14,         &
+                             iproc=0,               &
+                             pelem_ID=NO_ID,        &
+                             coordinate_system=CARTESIAN, &
+                             eqn_ID=1,              &
+                             nfields=nfields,       &
+                             ntime=1,               &
+                             nterms_s=8,            &
+                             nterms_c=8,            &
+                             dof_start=104,         &
+                             dof_local_start=104,   &
+                             xdof_start=104,        &
+                             xdof_local_start=104,  &
+                             recv_comm=NO_ID,       &
+                             recv_domain=NO_ID,     &
+                             recv_element=NO_ID,    &
+                             recv_dof=NO_ID,        &
+                             recv_xdof=NO_ID)
 
 
     call seed%init(idomain_g=1,         &
@@ -489,9 +508,11 @@ subroutine test_domain_matrix__clear_1eq_8terms()
                    ielement_l=13,       &
                    nfields=nfields,     &
                    nterms_s=nterms_s,   &
+                   nnodes_r=nterms_c,   &
                    iproc=0,             &
                    itime=itime,         &
                    dof_start=96,        &
+                   xdof_start=289,      &
                    recv_comm=0,         &
                    recv_domain=0,       &
                    recv_element=0)

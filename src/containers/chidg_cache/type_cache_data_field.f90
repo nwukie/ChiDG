@@ -1,7 +1,7 @@
 module type_cache_data_field
 #include <messenger.h>
     use mod_kinds,              only: ik
-    use mod_constants,          only: INTERIOR, BOUNDARY, CHIMERA, NFACES, ZERO
+    use mod_constants,          only: INTERIOR, BOUNDARY, CHIMERA, NFACES, ZERO, NO_DIFF
     use type_mesh,              only: mesh_t
     use type_properties,        only: properties_t
     use type_seed,              only: seed_t
@@ -77,26 +77,21 @@ contains
         integer(ik),                intent(in)              :: idomain_l
         integer(ik),                intent(in)              :: ielement_l
         integer(ik),                intent(in), optional    :: iface
-        logical,                    intent(in), optional    :: differentiate
+!        logical,                    intent(in), optional    :: differentiate
+        integer(ik),                intent(in), optional    :: differentiate
 
         character(:),   allocatable :: user_msg
         integer(ik)                 :: nnodes, nnodes_vol, nnodes_face, ndepend_value, &
                                        ndepend_deriv, ierr, iface_loop, iseed
         logical                     :: reallocate
 
-
-        !
         ! Set name
-        !
         self%name = field
 
 
-
-        !
         ! Get number of nodes(nnodes - face/element), number of elements that the function 
         ! value depends on(ndepend_value), number of elements that the function derivative 
         ! depends on(ndepend_deriv).
-        !
         select case (trim(cache_component))
 
 
@@ -161,20 +156,18 @@ contains
         ! Default if 'differentiate' is not present, continue with differentiation.
         !
         if (present(differentiate)) then
-            if (.not. differentiate) then
+            !if (.not. differentiate) then
+            if (differentiate == NO_DIFF) then
                 ndepend_value = 1
                 ndepend_deriv = 1
             end if
         end if
 
 
-        !
         ! Re/Allocate 'value' component
-        !
         if (allocated(self%value)) then
             reallocate = (size(self%value,1) /= nnodes) .or. &
                          (size(self%value,2) /= ndepend_value)
-
             if (reallocate) deallocate(self%value, self%value_seeds)
         end if
 
@@ -185,15 +178,11 @@ contains
         end if
 
 
-
-        !
         ! Re/Allocate 'gradient', 'lift' components
-        !
         if (allocated(self%gradient)) then
             reallocate = ( (size(self%gradient,1) /= nnodes)       .or. &
                            (size(self%gradient,2) /= 3)            .or. &
                            (size(self%gradient,3) /= ndepend_deriv) )
-
             if (reallocate) deallocate(self%gradient, self%gradient_seeds, &
                                        self%lift_face, self%lift_element, self%lift_seeds)
         end if
@@ -209,12 +198,8 @@ contains
         end if
 
 
-
-        !
         ! Clear entries
-        !
         call self%clear()
-
 
 
     end subroutine resize
@@ -516,31 +501,6 @@ contains
 
         integer(ik) :: iseed
 
-
-!        !
-!        ! Zero values, gradients, lift
-!        !
-!        if (allocated(self%value)) then
-!            self%value = ZERO
-!        end if
-!
-!        if (allocated(self%gradient)) then
-!            self%gradient = ZERO
-!        end if
-!
-!        if (allocated(self%lift_face)) then
-!            self%lift_face = ZERO
-!        end if
-!
-!        if (allocated(self%lift_element)) then
-!            self%lift_element = ZERO
-!        end if
-
-
-
-        !
-        ! Clear seed contents, zero values
-        !
         do iseed = 1,size(self%value_seeds)
             call self%value_seeds(iseed)%clear()
         end do
@@ -552,8 +512,6 @@ contains
         do iseed = 1,size(self%lift_seeds)
             call self%lift_seeds(iseed)%clear()
         end do
-
-
 
     end subroutine clear
     !***********************************************************************************

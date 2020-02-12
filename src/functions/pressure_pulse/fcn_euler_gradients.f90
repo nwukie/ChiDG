@@ -3,14 +3,11 @@ module fcn_euler_gradients
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, HALF, ONE, TWO, THREE, FIVE, EIGHT, PI
     use type_point,     only: point_t
+    use type_point_ad,  only: point_ad_t
     use type_function,  only: function_t
+    use DNAD_D
     implicit none
     private
-
-
-
-
-
 
 
 
@@ -63,9 +60,7 @@ contains
     subroutine init(self)
         class(euler_gradients_f),  intent(inout)  :: self
 
-        !
         ! Set function name
-        !
         call self%set_name("euler_gradients")
 
         call self%add_option('ivar', 1._rk)
@@ -88,14 +83,12 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     impure elemental function compute(self,time,coord) result(val)
-        class(euler_gradients_f),     intent(inout)  :: self
-        real(rk),                       intent(in)  :: time
-        type(point_t),                  intent(in)  :: coord
+        class(euler_gradients_f),   intent(inout)   :: self
+        real(rk),                   intent(in)      :: time
+        type(point_ad_t),           intent(in)      :: coord
 
-        real(rk)                                    :: val
-        integer(ik)                                 :: ivar
-
-        real(rk)    :: x, y, z
+        type(AD_D)  :: val, x, y, z
+        integer(ik) :: ivar
 
         x   = coord%c1_
         y   = coord%c2_

@@ -122,58 +122,80 @@ contains
     !!  @date   11/5/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine init_local(self,domain)
-        class(domain_vector_t),   intent(inout) :: self
-        type(domain_t),         intent(in)    :: domain
+    subroutine init_local(self,domain,dof_type)
+        class(domain_vector_t), intent(inout)   :: self
+        type(domain_t),         intent(in)      :: domain
+        character(*),           intent(in)      :: dof_type
 
         integer(ik) :: nelem, ierr, ielem, nterms, nfields, ntime
         integer(ik) :: dparent_g, dparent_l, eparent_g, eparent_l
         logical     :: new_elements
+        character(:),   allocatable :: error_string
 
 
         nelem = domain%nelem  ! Number of elements in the local block
 
-        !
         ! ALLOCATE SIZE FOR 'vecs'
         ! If vector was already allocated, deallocate and then reallocate vector size
         ! Reallocation would take place if the number of elements were changed
-        !
         if (allocated(self%vecs)) then
-            !
             ! If the size is already allocated, check if the number of elements has changed.
             ! If so (new_elements), then reallocate matrix size.
             ! If not, do nothing
-            !
             new_elements = (domain%nelem /= size(self%vecs))
             if (new_elements) then
                 deallocate(self%vecs)
                 allocate(self%vecs(nelem), stat=ierr)
                 if (ierr /= 0) call AllocationError
             end if
-
         else
-
             allocate(self%vecs(nelem), stat=ierr)
             if (ierr /= 0) call AllocationError
-
         end if
 
+!        ! Detect vector storage specialization
+!        if (present(vtype)) then
+!            select case (trim(vtype))
+!                case ('primal differentiation')
+!                    specialization = 'solution'
+!                case ('auxiliary differentiation')
+!                    specialization = 'auxiliary'
+!                case ('grid differentiation')
+!                    specialization = 'grid'
+!                case default
+!                    error_string = "domain_vector%init_local: Invalid parameter for 'vtype' &
+!                                    ('primal differentiation', 'auxiliary differentiation', &
+!                                    'grid differentiation')"
+!                    call chidg_signal_one(FATAL,error_string,trim(vtype))
+!            end select
+!        else
+!            specialization = 'solution'
+!        end if
 
 
-
-        !
         ! Loop through elements and call initialization for densevectors
-        !
         do ielem = 1,domain%nelem
             dparent_g = domain%elems(ielem)%idomain_g
             dparent_l = domain%elems(ielem)%idomain_l
             eparent_g = domain%elems(ielem)%ielement_g
             eparent_l = domain%elems(ielem)%ielement_l
-            nterms    = domain%elems(ielem)%nterms_s
-            nfields   = domain%elems(ielem)%nfields
             ntime     = domain%elems(ielem)%ntime
 
-            ! Call densevector initialization routine
+            select case (trim(dof_type))
+                case ('primal')
+                    nterms    = domain%elems(ielem)%nterms_s
+                    nfields   = domain%elems(ielem)%nfields
+                case ('coordinate')
+                    nterms    = domain%elems(ielem)%basis_c%nnodes_r()
+                    nfields   = 3
+                case ('auxiliary')
+                    nterms    = domain%elems(ielem)%nterms_s
+                    nfields   = 1   ! assuming auxiliary problem has only 1 field
+                case default
+                    call chidg_signal_one(FATAL,"domain_vector%init_local: Invalid internal parameter. Should never be here.",trim(dof_type))
+            end select
+
+
             call self%vecs(ielem)%init(nterms,nfields,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
 
         end do

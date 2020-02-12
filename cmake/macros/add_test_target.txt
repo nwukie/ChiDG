@@ -1,10 +1,7 @@
 macro (add_test_target target_subdirectory test_type)
 
 
-
-    #
 	# set target name
-    #
     if (${ARGV1} STREQUAL "unit")
 	    set(target_name unittest_${ARGV0})
         set(add_to_test TRUE)
@@ -14,7 +11,6 @@ macro (add_test_target target_subdirectory test_type)
         set(test_driver)
         set(run_options -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time})
         set(runstring ${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time})
-
 
     elseif (${ARGV1} STREQUAL "unit_parallel")
 	    set(target_name unittest_${ARGV0})
@@ -51,33 +47,20 @@ macro (add_test_target target_subdirectory test_type)
     endif()
 
 
-    #
 	# Create folder for parsed test files in the build directory
-    #
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/test)
 	file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/test/${testing_dir})
 	file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0})
 	
-
-    #
 	# Create input file for registering tests
-    #
 	file(REMOVE ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0}/testSuites.inc)
 	
-
-    #
 	# Include directory created above so the .inc file is available
-    #
 	include_directories(${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0})
 	
-
-    #
 	# Include access to pfunit module
-    #
 	include_directories(${PF_ROOT}/mod)
 	
-
-
 
     #------------------------------------------------------------------------------------------
     #
@@ -91,45 +74,29 @@ macro (add_test_target target_subdirectory test_type)
     #------------------------------------------------------------------------------------------
 	set(_test_sources)
     foreach (_test ${ARGN})
-        #
-    	# Get filename without extension (NAME_WE)
-        #
+
     	get_filename_component(filename ${_test} NAME_WE)
 
-
-        #
         # Get directory associated with filename
-        #
         get_filename_component(filedir ${_test} DIRECTORY)
     	
-
-        # 
     	# Test preprocessor command
-        #
         add_custom_command(
             OUTPUT ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0}/${filename}.F90
             COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/${filedir}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0}/${filename}.F90
             DEPENDS ${CMAKE_SOURCE_DIR}/${filedir}/${filename}.pf pfunit
             )
         	
-
-        #
         # Accumulate list of test sources to define target
-        #
      	set(_test_sources ${_test_sources} ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0}/${filename}.F90)
      	
-
-        #
      	# Register test in input .inc file for pftest
-        #
      	file(APPEND ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0}/testSuites.inc "ADD_TEST_SUITE(${filename}_suite)\n")
 
 	endforeach()
 	
 	set_source_files_properties(${PF_ROOT}/include/driver.F90 PROPERTIES GENERATED 1)
 	
-
-
 
 
 
@@ -144,15 +111,42 @@ macro (add_test_target target_subdirectory test_type)
 	add_executable(${target_name} EXCLUDE_FROM_ALL ${PF_ROOT}/include/driver.F90 ${_test_sources} )
 	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a chidg_library -lstdc++ -lpthread ${MPI_Fortran_LIBRARIES} ${METIS_LIBRARIES})
     	
+
+    # BLAS libraries tend not to get rpath set properly for some reason
+    # Here, we set it explicitly so when we run tests, they don't fail.
+    # Underlying problem here is that on OSX with SIP, DYLD_LIBRARY_PATH
+    # does not get propagated to processes called from system directories.
+    # So, when we run 'make test' after regenerating, it likely doesn't 
+    # have the right paths available to find all libraries unless they are
+    # explicitly linked into the executable, which is what we are doing here.
+    foreach(L ${BLAS_LIBRARIES})
+        get_filename_component(LIBDIR ${L} DIRECTORY)
+        set(_BLAS_DIRECTORIES ${_BLAS_DIRECTORIES} ${LIBDIR})
+    endforeach()
+    list(REMOVE_DUPLICATES _BLAS_DIRECTORIES)
+
+
 	set_target_properties(${target_name} PROPERTIES 
-                             COMPILE_FLAGS "-DUSE_MPI=True -DBUILD_ROBUST=True ${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
-                             LINK_FLAGS    "${CMAKE_Fortran_LINK} ${MPI_Fortran_LINK_FLAGS}")
+                                         BUILD_RPATH "${_BLAS_DIRECTORIES}"
+                                         INSTALL_RPATH "${_BLAS_DIRECTORIES}"
+                                         COMPILE_FLAGS "-DUSE_MPI=True -DBUILD_ROBUST=True ${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
+                                         LINK_FLAGS    "${CMAKE_Fortran_LINK} ${MPI_Fortran_LINK_FLAGS}"
+                                         )
 	
 	
-    #
     # Add test executable to the 'check' target. This allows the test to be build with 'make check'
-    #
     add_dependencies(check ${target_name} chidg_library)
+
+    # Add post-build code-sign if desired
+    if (APPLE AND CODESIGN) 
+        add_custom_command(TARGET ${target_name} 
+                           POST_BUILD 
+                           #COMMAND "codesign -f -s ${CODESIGN_CERTIFICATE} ${target_name}"
+                           COMMAND codesign -f -s b0146w0020530.rz.afrl-wrs.hpc.mil\ Code\ Signing\ Certificate ${target_name}
+                           WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+                           )
+    endif()
+
 
 
 	#-------------------------------------------------------------------------------------------------------
@@ -168,13 +162,6 @@ macro (add_test_target target_subdirectory test_type)
         add_test(NAME ${target_subdirectory}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
                  COMMAND ${test_driver} $<TARGET_FILE:${target_name}> ${run_options})
-        if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
-            set_property(TEST ${target_subdirectory} PROPERTY ENVIRONMENT "DYLD_LIBRARY_PATH=${CMAKE_SOURCE_DIR}/tecio/mac/lib:$ENV{DYLD_LIBRARY_PATH}")
-        elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
-            set_property(TEST ${target_subdirectory} PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_SOURCE_DIR}/tecio/linux/lib:$ENV{LD_LIBRARY_PATH}")
-        else()
-            message(SEND_ERROR "Invalid operating system detected for TecIO")
-        endif()
     endif()
 			 
 

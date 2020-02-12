@@ -77,9 +77,7 @@ contains
 
         type(AD_D), dimension(:), allocatable   ::          &
             density, mom1, mom2, mom3, density_omega, density_k,    &
-            u, v, w, invdensity, flux_1, flux_2, flux_3
-
-        real(rk),   allocatable,    dimension(:)    :: r
+            u, v, w, invdensity, flux_1, flux_2, flux_3, r
 
         !
         ! Interpolate solution to quadrature nodes

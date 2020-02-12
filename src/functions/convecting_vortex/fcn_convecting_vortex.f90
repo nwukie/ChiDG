@@ -3,7 +3,9 @@ module fcn_convecting_vortex
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, HALF, ONE, TWO, THREE, FIVE, EIGHT, PI
     use type_point,     only: point_t
+    use type_point_ad,  only: point_ad_t
     use type_function,  only: function_t
+    use DNAD_D
     implicit none
     private
 
@@ -117,16 +119,14 @@ contains
     impure elemental function compute(self,time,coord) result(val)
         class(convecting_vortex_f),     intent(inout)  :: self
         real(rk),                       intent(in)  :: time
-        type(point_t),                  intent(in)  :: coord
+        type(point_ad_t),               intent(in)  :: coord
 
-        real(rk)                                    :: val
+        type(AD_D)                                  :: val
         integer(ik)                                 :: ivar
 
-        real(rk)    :: x,   y,   z, &
-                        dx, dy, &
-                       du, dv, u, v, w, &
-                       gam, Minf, r, speedinf, rho, p, &
-                       f0, f1, f2
+        type(AD_D)  :: x, y , z, dx, dy, r, f0, f1, f2, u, v, rho, &
+                       p
+        real(rk)    :: du, dv, w , gam, Minf, speedinf
 
         x = coord%c1_
         y = coord%c2_

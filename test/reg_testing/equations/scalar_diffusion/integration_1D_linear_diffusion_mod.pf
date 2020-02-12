@@ -192,8 +192,6 @@ module integration_1D_linear_diffusion_mod
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: linear_diffusion_1D
 
-        type(chidg_t)               :: chidg
-
         integer(ik)                 :: nelem_xi
         integer(ik)                 :: order
         character(:),   allocatable :: gridtype
@@ -206,8 +204,7 @@ module integration_1D_linear_diffusion_mod
     end type linear_diffusion_1D
     !*******************************************************************************
 
-
-    
+    type(chidg_t)   :: chidg
 
 
 contains
@@ -251,8 +248,7 @@ contains
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
 
-        type(AD_D), allocatable, dimension(:)   :: source
-        real(rk),   allocatable, dimension(:)   :: x
+        type(AD_D), allocatable, dimension(:)   :: source, x
 
         ! Interpolate solution to quadrature nodes
         source = worker%get_field('u','grad1','element')
@@ -510,8 +506,8 @@ contains
 
 
         ! Initialize ChiDG environment
-        call this%chidg%start_up('mpi',ChiDG_COMM)
-        call this%chidg%start_up('core')
+        call chidg%start_up('mpi',ChiDG_COMM)
+        call chidg%start_up('core')
 
 
         !------------------------------------------------------------------------------
@@ -643,21 +639,21 @@ contains
 
 
         ! Set ChiDG components
-        call this%chidg%set('Solution Order',   integer_input=this%order)
-        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+        call chidg%set('Solution Order',   integer_input=this%order)
+        call chidg%set('Time Integrator',  algorithm=time_integrator)
+        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call chidg%set('Preconditioner',   algorithm=preconditioner)
 
 
         ! Read grid
-        call this%chidg%read_mesh(trim(this%gridfile))
+        call chidg%read_mesh(trim(this%gridfile))
 
 
         ! Initialize solution
         call create_function(fcn,'constant')
         call fcn%set_option('val',0.1_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
 
 
 
@@ -675,8 +671,8 @@ contains
         class(linear_diffusion_1D),  intent(inout)   :: this
 
         ! Close ChiDG
-        call this%chidg%shut_down('core')
-        call this%chidg%shut_down('mpi')
+        call chidg%shut_down('core')
+        call chidg%shut_down('mpi')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(trim(this%gridfile))
@@ -684,12 +680,6 @@ contains
 
     end subroutine tearDown
     !*****************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -721,30 +711,24 @@ contains
         backend_index = get_backend_index(this%backend)
 
 
-        !
         ! Run ChiDG simulation
-        !
-        call this%chidg%run(write_initial=.false., write_final=.false.)
+        call chidg%run(write_initial=.false., write_final=.false.)
 
 
-
-
-        !
         ! Store the number of nonlinear iterations that the solution converged in. Problem 
         ! is linear so it should converge in 1 Newton Step. Really, just the solution 
         ! of 1 linear system of equations.
-        !
         if (this%gridtype == 'single') then
-            nsteps_convergence(npes_index,grid_index,order_index,backend_index)         = this%chidg%nonlinear_solver%newton_iterations
+            nsteps_convergence(npes_index,grid_index,order_index,backend_index)         = chidg%nonlinear_solver%newton_iterations
         elseif (this%gridtype == 'overset') then
-            nsteps_convergence_chimera(npes_index,grid_index,order_index,backend_index) = this%chidg%nonlinear_solver%newton_iterations 
+            nsteps_convergence_chimera(npes_index,grid_index,order_index,backend_index) = chidg%nonlinear_solver%newton_iterations 
         end if
 
 
         !
         ! Compute error
         !
-        computed_error = compute_1D_linear_diffusion_error(this%chidg%data,ChiDG_COMM)
+        computed_error = compute_1D_linear_diffusion_error(chidg%data,ChiDG_COMM)
 
 
         !

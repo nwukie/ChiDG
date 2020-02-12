@@ -60,6 +60,7 @@ module integration_convecting_vortex_pmm_mod
     use type_model,             only: model_t
 
     use type_point,                     only: point_t
+    use type_point_ad,                  only: point_ad_t
     implicit none
 
 
@@ -115,8 +116,6 @@ module integration_convecting_vortex_pmm_mod
         integer(ik)     :: nelem_eta
         character(100)  :: gridfile
         integer(ik)     :: order
-
-        type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
 
     contains
@@ -125,9 +124,7 @@ module integration_convecting_vortex_pmm_mod
     end type convecting_vortex_pmm
     !*******************************************************************************
 
-
-
-
+    type(chidg_t)   :: chidg
 
 contains
 
@@ -281,7 +278,7 @@ contains
         !call toptions%set('nsteps',100)
         !call toptions%set('nwrite',0)
 
-        call this%chidg%data%time_manager%init()
+        call chidg%data%time_manager%init()
 
         ! Set linear solver options to pass during initialization
         call loptions%set('tol',1.e-10_rk)
@@ -296,8 +293,8 @@ contains
         !
         ! Initialize ChiDG environment
         !
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
+        call chidg%start_up('mpi',this%ChiDG_COMM)
+        call chidg%start_up('core')
 
 
 
@@ -357,18 +354,18 @@ contains
         !
         ! Set ChiDG components
         !
-        call this%chidg%set('Solution Order',   integer_input=this%order)
-        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+        call chidg%set('Solution Order',   integer_input=this%order)
+        call chidg%set('Time Integrator',  algorithm=time_integrator)
+        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call chidg%set('Preconditioner',   algorithm=preconditioner)
 
 
         !
         ! Read grid
         !
 
-        call this%chidg%read_mesh(this%gridfile)
+        call chidg%read_mesh(this%gridfile)
 
 
 
@@ -379,30 +376,15 @@ contains
         call create_function(fcn,'convecting_vortex')
 
         call fcn%set_option('ivar',1.0_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
         call fcn%set_option('ivar',2.0_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,2)
         call fcn%set_option('ivar',3.0_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,3)
         call fcn%set_option('ivar',4.0_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,4)
         call fcn%set_option('ivar',5.0_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
-
-        call create_function(fcn,'constant')
-!
-!        call fcn%set_option('val',1.0_rk)
-!        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
-!        call fcn%set_option('val',1.0_rk)
-!        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
-!        call fcn%set_option('val',0.0_rk)
-!        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
-!        call fcn%set_option('val',0.0_rk)
-!        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
-!        call fcn%set_option('val',50._rk)
-!        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
-
-
+        call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,5)
 
     end subroutine SetUp
     !*******************************************************************************************
@@ -417,7 +399,7 @@ contains
         class(convecting_vortex_pmm),  intent(inout)   :: this
 
         ! Close ChiDG
-        call this%chidg%shut_down('core')
+        call chidg%shut_down('core')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -465,7 +447,7 @@ contains
         !
         ! Run ChiDG simulation
         !
-        call self%chidg%run(write_initial=.false., write_final=.false.)
+        call chidg%run(write_initial=.false., write_final=.false.)
         
         print *, 'run complete'
 
@@ -474,7 +456,7 @@ contains
         !
 
         print *, 'compute error'
-        computed_error = compute_convecting_vortex_pmm_error(self%chidg%data,self%ChiDG_COMM)
+        computed_error = compute_convecting_vortex_pmm_error(chidg%data,self%ChiDG_COMM)
 
 
         print *, 'computed error'
@@ -567,13 +549,15 @@ contains
         real(rk), allocatable, dimension(:) :: &
             u_dg, u_analytical, x_gq, y_gq, gq_error_squared, ale_g_gq
 
+        type(AD_D), allocatable, dimension(:) :: &
+            u_analytical_ad
 
         integer(ik) :: idens, imom1, imom2, imom3, ienergy
         integer(ik) :: ielem, idom, ierr, itime, igq
         real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
 
         class(function_t),  allocatable :: fcn
-        type(point_t), allocatable, dimension(:) :: test_points
+        type(point_ad_t), allocatable, dimension(:) :: test_points
 
         associate (mesh   => data%mesh,     &
                    sdata  => data%sdata,    &
@@ -615,15 +599,17 @@ contains
                     x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     y_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,2)
                     do igq = 1, size(x_gq)
-                        test_points(igq)%c1_ = x_gq(igq)
-                        test_points(igq)%c2_ = y_gq(igq)
+                        call test_points(igq)%set(x_gq(igq),y_gq(igq),0.0_rk)
+                        !test_points(igq)%c1_ = x_gq(igq)
+                        !test_points(igq)%c2_ = y_gq(igq)
                     end do
 
                     ale_g_gq = mesh%domain(idom)%elems(ielem)%ale_g
 
                     u_analytical = ZERO*x_gq
                     call fcn%set_option('ivar',1.0_rk)
-                    u_analytical = fcn%compute(10.0_rk, test_points)
+                    u_analytical_ad = fcn%compute(10.0_rk, test_points)
+                    u_analytical    = u_analytical_ad%x_ad_
 
 
                     !
@@ -657,10 +643,10 @@ contains
                     !
                     ! Momentum-1
                     !
-
                     u_analytical = ZERO*x_gq
                     call fcn%set_option('ivar',2.0_rk)
-                    u_analytical = fcn%compute(10.0_rk, test_points)
+                    u_analytical_ad = fcn%compute(10.0_rk, test_points)
+                    u_analytical    = u_analytical_ad%x_ad_
 
                     !
                     ! Interpolate DG numerical solution
@@ -692,10 +678,10 @@ contains
                     !
                     ! Momentum-2
                     !
-
                     u_analytical = ZERO*x_gq
                     call fcn%set_option('ivar',3.0_rk)
-                    u_analytical = fcn%compute(10.0_rk, test_points)
+                    u_analytical_ad = fcn%compute(10.0_rk, test_points)
+                    u_analytical    = u_analytical_ad%x_ad_
 
                     !
                     ! Interpolate DG numerical solution
@@ -726,10 +712,10 @@ contains
                     !
                     ! Momentum-3
                     !
-
                     u_analytical = ZERO*x_gq
                     call fcn%set_option('ivar',4.0_rk)
-                    u_analytical = fcn%compute(10.0_rk, test_points)
+                    u_analytical_ad = fcn%compute(10.0_rk, test_points)
+                    u_analytical    = u_analytical_ad%x_ad_
 
                     !
                     ! Interpolate DG numerical solution
@@ -761,10 +747,11 @@ contains
                     !
                     ! Energy 
                     !
-
                     u_analytical = ZERO*x_gq
                     call fcn%set_option('ivar',5.0_rk)
-                    u_analytical = fcn%compute(10.0_rk, test_points)
+                    u_analytical_ad = fcn%compute(10.0_rk, test_points)
+                    u_analytical    = u_analytical_ad%x_ad_
+
 
                     !
                     ! Interpolate DG numerical solution

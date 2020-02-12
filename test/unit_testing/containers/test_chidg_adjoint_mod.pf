@@ -1,0 +1,683 @@
+!>  Test Adjoint storage initialization and reading of multiple primal solution
+!!  Procedures tested:
+!!      - init
+!!      - init_vector
+!!      - process_primal_solution
+!!      - process_adjoint_solution
+!!
+!!  Other procedure:
+!!      - read_adjoint_fields
+!!      - write_adjoint_fields
+!!
+!!
+!!  @author Matteo Ugolotti
+!!  @date   9/17/2018
+!!
+!*****************************************************************************************
+module test_chidg_adjoint_mod
+#include <messenger.h>
+    use pfunit_mod
+    use type_chidg,                 only: chidg_t
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ZERO, IO_DESTINATION, &
+                                          OUTPUT_RES
+    use type_chidg,                 only: chidg_t
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: copy_file, delete_file
+    use mod_functional,             only: create_functional
+    use type_evaluator,             only: evaluator_t
+    use type_functional_group,      only: functional_group_t
+    use type_file_properties,       only: file_properties_t
+    use mod_hdf_utilities,          only: get_properties_hdf
+    use mod_string,                 only: string_t
+    use type_bc_state,              only: bc_state_t
+    use type_bc_state_group,        only: bc_state_group_t
+    use mod_bc,                     only: create_bc
+    use mod_io
+    implicit none
+
+
+    public  :: test_chidg_adjoint
+
+
+
+    !>
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------
+    @TestCase
+    type, extends(TestCase) ::  test_chidg_adjoint
+
+        type(chidg_t)               :: chidg
+        type(chidg_t)               :: chidg1
+        character(12)               :: fileorig   = 'D1_E27_M1.h5'
+        character(18)               :: file01     = 'D1_E27_M1_step1.h5'
+        character(18)               :: file02     = 'D1_E27_M1_step2.h5'
+            
+    contains
+
+        procedure   ::  setUp
+        procedure   ::  tearDown
+
+    end type test_chidg_adjoint
+    !*****************************************************************************
+
+
+
+
+
+contains
+
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !!  derived type procedure. The argument names have to match
+    !!
+    !!  Create two hdf files with different solutions
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_chidg_adjoint),    intent(inout)   :: this
+
+        real(rk)                            :: tol, ref(1)
+        integer(ik)                         :: ielem, idom, ierr, ifunc,istep
+        type(string_t)                      :: group_names(1,6)
+        type(bc_state_group_t)              :: bc_state_groups(1)
+        class(bc_state_t),      allocatable :: bc_state
+        class(evaluator_t),     allocatable :: fcl_temp1,fcl_temp2
+        type(functional_group_t)            :: fcl_group
+
+
+        IO_DESTINATION = 'file'
+
+        ! Initialize ChiDG environment
+        call this%chidg%start_up('core')
+
+
+        ! Define functionals to add to the solution files
+        call create_functional("Test 1D Energy",fcl_temp1)
+        call fcl_temp1%set_ref_geom("01")
+        call fcl_group%add_functional(fcl_temp1)
+        call create_functional("Test 1D Integral",fcl_temp2)
+        call fcl_temp2%set_ref_geom("01")
+        call fcl_group%add_functional(fcl_temp2)
+        
+
+
+        ! Define some boudnary conditions
+        ! This is needed is we want to use chidg%read_mesh
+        bc_state_groups(1)%name = "Boundary"
+        call create_bc("Scalar Value",bc_state)
+        call bc_state%set_fcn_option("Value","val",ZERO)
+        call bc_state_groups(1)%add_bc_state(bc_state)
+
+        group_names(1,:) = [string_t("Boundary") , &
+                            string_t("Boundary") , &
+                            string_t("Boundary") , &
+                            string_t("Boundary") , &
+                            string_t("Boundary") , &
+                            string_t("Boundary")]
+        
+        
+        ! Create grid file
+        call create_mesh_file("D1 NxNxN",this%fileorig,                           &
+                                              group_names       = group_names,    &
+                                              bc_state_groups   = bc_state_groups,&
+                                              nelem_xi          = 3,              &
+                                              nelem_eta         = 3,              &
+                                              nelem_zeta        = 3,              &
+                                              functionals       = fcl_group)
+
+
+        
+        ! Copy file so that we have grid, BCs and functional info for 
+        ! this%file01 ad this%file02
+        call copy_file(this%fileorig, this%file01)
+        call copy_file(this%fileorig, this%file02)
+
+        ! Set accuracy for fields expansion
+        call this%chidg%set('Solution Order', integer_input=1)
+        call this%chidg%set('Time Integrator', algorithm='Steady')
+
+
+        ! Read grid file
+        call this%chidg%read_mesh(this%fileorig,'primal storage')
+
+
+        ! Allocate also adjoint%v so that we can define the adjoint variables
+        ! and then read them back in 
+        allocate(this%chidg%data%sdata%adjoint%v(2,2),stat = ierr)
+        if(ierr/=0) call AllocationError
+        do istep = 1,2
+            do ifunc = 1,2
+                call this%chidg%data%sdata%adjoint%v(ifunc,istep)%init(this%chidg%data%mesh,1,'primal')
+            end do
+        end do
+       
+        
+        associate ( q => this%chidg%data%sdata%q,       &
+                    v => this%chidg%data%sdata%adjoint%v)
+       
+        
+            ! Write solution at step 1 to file 01
+            !----------------------------
+
+                ! Set reference fields values
+                ref = [ONE]
+
+                ! Assign reference fields
+                do ielem = 1,this%chidg%data%mesh%domain(1)%nelem
+                    q%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
+                end do
+                
+                ! Write primary variable
+                this%chidg%data%time_manager%istep = 1
+                call this%chidg%write_primary_fields(this%file01)
+                
+                ! Set adjoint fields values for functional 1
+                ref = [THREE]
+
+                ! Assign adjoint fields
+                do ielem = 1,this%chidg%data%mesh%domain(1)%nelem
+                    v(1,1)%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
+                end do
+                
+                ! Set adjoint fields values for functional 2
+                ref = [FOUR]
+
+                ! Assign adjoint fields
+                do ielem = 1,this%chidg%data%mesh%domain(1)%nelem
+                    v(2,1)%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
+                end do
+                
+                ! Write adjoint variable
+                this%chidg%data%time_manager%istep = 1
+                call this%chidg%write_adjoint_fields(this%file01)
+
+
+
+            ! Reset q and write the second solution 
+            call q%clear()
+            
+
+            ! Write solution at step 2 to file 02
+            !----------------------------
+
+                ! Set reference fields values
+                ref = [TWO]
+
+                ! Assign reference fields
+                do ielem = 1,this%chidg%data%mesh%domain(1)%nelem
+                    q%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
+                end do
+                
+                ! Write variable
+                this%chidg%data%time_manager%istep = 2
+                call this%chidg%write_primary_fields(this%file02)
+                
+                ! Set adjoint fields values for functional 1
+                ref = [FIVE]
+
+                ! Assign adjoint fields for functional 1
+                do ielem = 1,this%chidg%data%mesh%domain(1)%nelem
+                    v(1,2)%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
+                end do
+                
+                ! Set adjoint fields values for functional 2
+                ref = [SIX]
+
+                ! Assign adjoint fields for functional 2
+                do ielem = 1,this%chidg%data%mesh%domain(1)%nelem
+                    v(2,2)%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
+                end do
+                
+                ! Write adjoint variable
+                this%chidg%data%time_manager%istep = 2
+                call this%chidg%write_adjoint_fields(this%file02)
+
+        end associate
+
+        
+    end subroutine setUp
+    !*******************************************************************************************
+
+
+
+
+
+    
+
+    !------------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_chidg_adjoint),    intent(inout)   :: this
+
+        !
+        ! Close ChiDG instance
+        !
+        call this%chidg%shut_down('core')
+        call this%chidg1%shut_down('core')
+
+        !
+        ! Delete files that were generated
+        !
+        call delete_file(this%fileorig)
+        call delete_file(this%file01)
+        call delete_file(this%file02)
+
+    end subroutine tearDown
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Initialize for adjoint and read in first solution only 
+    !!
+    !!  Testing:    init, init_vector, process_primal_solution 
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !---------------------------------------------------------------------------------
+    @Test
+    subroutine test_adjoint_read_primal_01(this)
+        class(test_chidg_adjoint),     intent(inout)   :: this 
+
+        integer(ik)             :: istep,ielem
+        type(file_properties_t) :: file_props
+        real(rk)                :: tol,ref(1)
+        
+        tol = 1.e-14_rk
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg1%start_up('core')
+        
+        !
+        ! Time manager is initialized based on the namelist inputs.
+        ! Here, we want to force the time step to be 1 so that
+        ! adjoint storage is initialized correctly.
+        !
+        this%chidg1%data%time_manager%nsteps = 1
+
+
+        !
+        ! Set accuracy for fields expansion
+        !
+        call this%chidg1%set('Solution Order', integer_input=1)
+        call this%chidg1%set('Time Integrator', algorithm='Steady')
+
+
+        !
+        ! Read grid file
+        !
+        call this%chidg1%read_mesh(this%file01,storage = 'adjoint storage')
+
+
+        !
+        ! Test initialization of adjoint storage
+        !
+        @assertEqual(2,size(this%chidg1%data%sdata%adjoint%v,1))
+        @assertEqual(1,size(this%chidg1%data%sdata%adjoint%v,2))
+        @assertEqual(2,size(this%chidg1%data%sdata%adjoint%Jq))
+        @assertEqual(1,size(this%chidg1%data%sdata%adjoint%q_time))
+        @assertEqual(2,size(this%chidg1%data%sdata%adjoint%solver_iter,1))
+        @assertEqual(1,size(this%chidg1%data%sdata%adjoint%solver_iter,2))
+        @assertEqual(2,size(this%chidg1%data%sdata%adjoint%solver_time,1))
+        @assertEqual(1,size(this%chidg1%data%sdata%adjoint%solver_time,2))
+        @assertEqual(2,size(this%chidg1%data%sdata%adjoint%solver_err,1))
+        @assertEqual(1,size(this%chidg1%data%sdata%adjoint%solver_err,2))
+        @assertTrue(this%chidg1%data%sdata%adjoint%primary_adjoint_initialized)
+        @assertFalse(this%chidg1%data%sdata%adjoint%auxiliary_adjoint_initialized)
+        @assertTrue(this%chidg1%data%sdata%lhs%transposed)
+        @assertFalse(allocated(this%chidg1%data%sdata%adjoint%Rd))
+        @assertFalse(allocated(this%chidg1%data%sdata%adjoint%vRd))
+
+
+        !
+        ! Read Primal Solution
+        !
+        call this%chidg1%read_fields(this%file01,'primary')
+        
+        
+        !
+        ! Process primal solution
+        !
+        file_props  = get_properties_hdf(this%file01)
+        istep       = file_props%istep
+        call this%chidg1%data%sdata%adjoint%process_primal_solution(this%chidg1%data%sdata%q_in,istep)
+        
+        !
+        ! Test: verify adjoint%q_time is stored correctly
+        !
+        ref = [ONE]
+
+        do ielem = 1,this%chidg1%data%mesh%domain(1)%nelem
+            @assertEqual(ref+real(ielem,rk),this%chidg1%data%sdata%adjoint%q_time(1)%dom(1)%vecs(ielem)%vec,tol)
+        end do
+        
+        !
+        ! Close ChiDG instance
+        !
+        call this%chidg1%shut_down('core')
+
+
+    end subroutine test_adjoint_read_primal_01
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Initialize for adjoint and read in first and second solution 
+    !!
+    !!  Testing:    init, init_vector, process_primal_solution 
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !---------------------------------------------------------------------------------
+    @Test
+    subroutine test_adjoint_read_primal_01_02(this)
+        class(test_chidg_adjoint),     intent(inout)   :: this 
+
+        integer(ik)             :: istep,ielem
+        type(file_properties_t) :: file_props
+        real(rk)                :: tol,ref1(1),ref2(1)
+        
+        tol = 1.e-14_rk
+
+        ! Initialize ChiDG environment
+        call this%chidg1%start_up('core')
+        
+        ! Time manager is initialized based on the namelist inputs.
+        ! Here, we want to force the time step to be 2 so that
+        ! adjoint storage is initialized correctly.
+        this%chidg1%data%time_manager%nsteps = 2
+
+
+        ! Set accuracy for fields expansion
+        call this%chidg1%set('Solution Order', integer_input=1)
+        call this%chidg1%set('Time Integrator', algorithm='Steady')
+
+
+        ! Read grid file
+        call this%chidg1%read_mesh(this%file01,storage = 'adjoint storage')
+
+
+        ! Read first Primal Solution
+        call this%chidg1%read_fields(this%file01,'primary')
+        
+        
+        ! Process primal solution
+        file_props  = get_properties_hdf(this%file01)
+        istep       = file_props%istep
+        call this%chidg1%data%sdata%adjoint%process_primal_solution(this%chidg1%data%sdata%q_in,istep)
+
+
+        ! Read second Primal Solution
+        call this%chidg1%read_fields(this%file02,'primary')
+        
+        
+        ! Process primal solution
+        file_props  = get_properties_hdf(this%file02)
+        istep       = file_props%istep
+        call this%chidg1%data%sdata%adjoint%process_primal_solution(this%chidg1%data%sdata%q_in,istep)
+
+
+        
+        ! Test: verify adjoint%q_time is stored correctly
+        ref1 = [ONE]
+        ref2 = [TWO]
+
+        do ielem = 1,this%chidg1%data%mesh%domain(1)%nelem
+            @assertEqual(ref1+real(ielem,rk),this%chidg1%data%sdata%adjoint%q_time(1)%dom(1)%vecs(ielem)%vec,tol)
+            @assertEqual(ref2+real(ielem,rk),this%chidg1%data%sdata%adjoint%q_time(2)%dom(1)%vecs(ielem)%vec,tol)
+        end do
+        
+        
+        ! Close ChiDG instance
+        call this%chidg1%shut_down('core')
+
+
+    end subroutine test_adjoint_read_primal_01_02
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Read in one adjoint solution for post-processing.
+    !!  For post-processing we do not need to initialize the adjoint storage.
+    !!  The solution vector is first stored in adjoint%v_in and then moved to
+    !!  adjoint%v by adjoint%process_adjoint_solution, that also initialize the vector/s
+    !!  adjoint%v.
+    !!
+    !!  Main testing:       process_adjoint_solution 
+    !!
+    !!  Also Testing:       read_adjoint_fields, set_fields_post
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !---------------------------------------------------------------------------------
+    @Test
+    subroutine test_adjoint_read_adjoint_post_01(this)
+        class(test_chidg_adjoint),     intent(inout)   :: this 
+
+        integer(ik)             :: istep,ielem
+        type(file_properties_t) :: file_props
+        real(rk)                :: tol,ref1(1),ref2(1)
+        logical                 :: primary_solution, adjoint_solution
+        integer(ik)             :: nfunctionals
+        
+        tol = 1.e-14_rk
+
+        ! Initialize ChiDG environment
+        call this%chidg1%start_up('core')
+        
+        ! Read file properties
+        file_props = get_properties_hdf(this%file01)
+        primary_solution = file_props%contains_primary_fields
+        adjoint_solution = file_props%contains_adjoint_fields
+        nfunctionals     = file_props%nfunctionals
+        
+        ! Set accuracy for fields expansion
+        call this%chidg1%set('Solution Order', integer_input=1)
+        call this%chidg1%set('Time Integrator', algorithm='Steady')
+
+
+        ! Read grid file
+        call this%chidg1%read_mesh(this%file01,'primal storage', interpolation = 'Uniform', level=OUTPUT_RES)
+
+
+        ! Read first adjoint Solution
+        call this%chidg1%data%set_fields_post(primary_solution,adjoint_solution,nfunctionals)
+        call this%chidg1%read_fields(this%file01,'adjoint')
+        
+        
+        ! THIS BEING TESTED: Process adjoint solution
+        call this%chidg1%data%sdata%adjoint%process_adjoint_solution()
+
+
+        
+        !
+        ! Test: verify adjoint%v is stored correctly for post processing
+        !
+        
+        ! First set of adjoint variables (func 1)
+        ref1 = [THREE]
+        do ielem = 1,this%chidg1%data%mesh%domain(1)%nelem
+            @assertEqual(ref1+real(ielem,rk),this%chidg1%data%sdata%adjoint%v(1,1)%dom(1)%vecs(ielem)%vec,tol)
+        end do
+        
+        ! Second set of adjoint variables (func 2)
+        ref2 = [FOUR]
+        do ielem = 1,this%chidg1%data%mesh%domain(1)%nelem
+            @assertEqual(ref2+real(ielem,rk),this%chidg1%data%sdata%adjoint%v(2,1)%dom(1)%vecs(ielem)%vec,tol)
+        end do
+       
+       
+        ! Close ChiDG instance
+        call this%chidg1%shut_down('core')
+
+
+    end subroutine test_adjoint_read_adjoint_post_01
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Read in two adjoint solutiona for unsteady adjointx calculation.
+    !!
+    !!  The adjoint storage is initialized. We want to make sure that the adjoint
+    !!  solution for ith step (in time) is read in correctly and located correctly
+    !!  in adjoint%v
+    !!
+    !!  Main testing:       process_adjoint_solution 
+    !!
+    !!  Also Testing:       read_adjoint_fields
+    !!
+    !!  @author Matteo Ugolotti
+    !!
+    !---------------------------------------------------------------------------------
+    @Test
+    subroutine test_adjoint_read_adjoint_01_02(this)
+        class(test_chidg_adjoint),     intent(inout)   :: this 
+
+        integer(ik)             :: istep,ielem
+        type(file_properties_t) :: file_props
+        real(rk)                :: tol,ref1(1),ref2(1)
+        logical                 :: primary_solution, adjoint_solution
+        integer(ik)             :: nfunctionals
+        
+        tol = 1.e-14_rk
+
+        ! Initialize ChiDG environment
+        call this%chidg1%start_up('core')
+        
+        ! Time manager is initialized based on the namelist time_step input.
+        ! Here, we want to force the time step to be 2 so that
+        ! adjoint storage is initialized correctly.
+        ! By default, time_step = 1 in the namelist
+        this%chidg1%data%time_manager%nsteps = 2
+        
+        
+        ! Set accuracy for fields expansion
+        call this%chidg1%set('Solution Order', integer_input=1)
+        call this%chidg1%set('Time Integrator', algorithm='Steady')
+
+
+        ! Read grid file
+        call this%chidg1%read_mesh(this%fileorig,'adjoint storage')
+
+            ! Read first adjoint Solution
+            !----------------------------
+            file_props = get_properties_hdf(this%file01)
+            nfunctionals     = file_props%nfunctionals
+            istep            = file_props%istep
+            call this%chidg1%data%set_fields_adjoint(nfunctionals)
+            call this%chidg1%read_fields(this%file01,'adjoint')
+            
+            
+            ! THIS BEING TESTED: Process adjoint solution
+            call this%chidg1%data%sdata%adjoint%process_adjoint_solution(istep)
+
+
+            ! Read second adjoint Solution
+            !-----------------------------
+            file_props = get_properties_hdf(this%file02)
+            nfunctionals     = file_props%nfunctionals
+            istep            = file_props%istep
+            call this%chidg1%data%set_fields_adjoint(nfunctionals)
+            call this%chidg1%read_fields(this%file02,'adjoint')
+            
+            
+            ! THIS BEING TESTED: Process adjoint solution
+            call this%chidg1%data%sdata%adjoint%process_adjoint_solution(istep)
+
+
+        
+        !
+        ! Test: verify adjoint%v is stored correctly for adjointx
+        !
+
+            ! First step
+            !-----------
+
+            ! First set of adjoint variables (func 1)
+            ref1 = [THREE]
+            do ielem = 1,this%chidg1%data%mesh%domain(1)%nelem
+                @assertEqual(ref1+real(ielem,rk),this%chidg1%data%sdata%adjoint%v(1,1)%dom(1)%vecs(ielem)%vec,tol)
+            end do
+            
+            ! Second set of adjoint variables (func 2)
+            ref2 = [FOUR]
+            do ielem = 1,this%chidg1%data%mesh%domain(1)%nelem
+                @assertEqual(ref2+real(ielem,rk),this%chidg1%data%sdata%adjoint%v(2,1)%dom(1)%vecs(ielem)%vec,tol)
+            end do
+           
+           
+            !
+            ! Second step
+            !------------
+
+            ! First set of adjoint variables (func 1)
+            ref1 = [FIVE]
+            do ielem = 1,this%chidg1%data%mesh%domain(1)%nelem
+                @assertEqual(ref1+real(ielem,rk),this%chidg1%data%sdata%adjoint%v(1,2)%dom(1)%vecs(ielem)%vec,tol)
+            end do
+            
+            ! Second set of adjoint variables (func 2)
+            ref2 = [SIX]
+            do ielem = 1,this%chidg1%data%mesh%domain(1)%nelem
+                @assertEqual(ref2+real(ielem,rk),this%chidg1%data%sdata%adjoint%v(2,2)%dom(1)%vecs(ielem)%vec,tol)
+            end do
+       
+        ! Close ChiDG instance
+        call this%chidg1%shut_down('core')
+
+
+    end subroutine test_adjoint_read_adjoint_01_02
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+end module test_chidg_adjoint_mod

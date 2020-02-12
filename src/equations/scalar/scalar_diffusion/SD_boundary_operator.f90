@@ -46,19 +46,13 @@ contains
     subroutine init(self)
         class(SD_boundary_operator_t),   intent(inout) :: self
         
-        !
         ! Set operator name
-        !
         call self%set_name("Scalar Diffusion Boundary Average Operator")
 
-        !
         ! Set operator type
-        !
         call self%set_operator_type("Boundary Diffusive Operator")
 
-        !
         ! Set operator equations
-        !
         call self%add_primary_field("u")
 
     end subroutine init
@@ -86,21 +80,12 @@ contains
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
 
-
-
         type(AD_D), allocatable, dimension(:)   ::  &
             grad1_u_m, grad2_u_m, grad3_u_m,        &
             grad1_u_p, grad2_u_p, grad3_u_p,        &
             flux_1_m, flux_2_m, flux_3_m,           &
             flux_1_p, flux_2_p, flux_3_p,           &
             mu_m, mu_p
-
-        real(rk),   allocatable, dimension(:)   :: r
-
-        integer(ik) :: ChiID, idonor
-
-        r = worker%coordinate('1','face interior')
-    
 
         !
         ! Interpolate solution to quadrature nodes

@@ -80,9 +80,8 @@ contains
         class(properties_t),                        intent(inout)   :: prop
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            rho_r, u_r, v_r, w_r, p_r, source 
+            rho_r, u_r, v_r, w_r, p_r, source, r
 
-        real(rk),   allocatable, dimension(:)   :: r
 
         print*, 'Computing Divergence Source'
 

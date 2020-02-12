@@ -1,17 +1,15 @@
-!>  asdf
+!>  Compute forces on bc_patch_group
 !!
 !!  @author Nathan A. Wukie
 !!  @date   3/8/2017
 !!
-!!
-!! Usage:   chidg airfoil 'chidgfile'
-!!
+!! Usage:   chidg forces 'chidgfile'
 !!
 !---------------------------------------------------------------------------------------------
 module mod_chidg_forces
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, TWO, NO_ID
+    use mod_constants,          only: ZERO, TWO, NO_ID, NO_DIFF
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
     use type_file_properties,   only: file_properties_t
@@ -24,22 +22,13 @@ module mod_chidg_forces
     use DNAD_D
     implicit none
 
-
-
-
-
-
-
 contains
-
 
 
     !>  Post-processing tool for computing airfoil relevant quantities.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   3/8/2017
-    !!
-    !!
     !!
     !-----------------------------------------------------------------------------------
     subroutine chidg_forces(filename,patch_group)
@@ -61,16 +50,16 @@ contains
         type(element_info_t)        :: elem_info
 
         real(rk),   allocatable, dimension(:)   ::  &
-            norm_1,  norm_2,  norm_3,               &
-            unorm_1, unorm_2, unorm_3,              &
-            weights, areas
+            weights
 
         type(AD_D), allocatable, dimension(:)   ::  &
+            norm_1,  norm_2,  norm_3,               &
+            unorm_1, unorm_2, unorm_3,              &
             tau_11,     tau_12,     tau_13,         &
             tau_21,     tau_22,     tau_23,         &
             tau_31,     tau_32,     tau_33,         &
             stress_x,   stress_y,   stress_z,       &
-            pressure, normal_stress
+            pressure, normal_stress, areas
 
         type(AD_D)  :: lift, drag, force(3)
 
@@ -107,10 +96,10 @@ contains
         ! Initialize solution data storage
         ! Read grid data from file
         gridfile = filename
-        call chidg%read_mesh(filename)
+        call chidg%read_mesh(filename,'primal storage')
 
         ! Read solution modes from HDF5
-        call chidg%read_fields(filename)
+        call chidg%read_fields(filename,'primary')
         
         ! Process for getting wall distance
         call chidg%process()
@@ -151,7 +140,7 @@ contains
                 call cache_handler%update(worker,chidg%data%eqnset,chidg%data%bc_state_group,   &
                                                                    components    = 'all',       &
                                                                    face          = NO_ID,       &
-                                                                   differentiate = .false.,     &
+                                                                   differentiate = NO_DIFF,     &
                                                                    lift          = .true.)     
 
                 call worker%set_face(iface)

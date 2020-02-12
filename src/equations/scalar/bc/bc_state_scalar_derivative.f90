@@ -91,22 +91,16 @@ contains
         type(mpi_comm),             intent(in)      :: bc_COMM
 
 
-        type(AD_D), allocatable, dimension(:)   :: u_bc, grad1u_bc, grad2u_bc, grad3u_bc, grad1u_t, grad2u_t, grad3u_t
-        real(rk),   allocatable, dimension(:)   :: normal_gradient
+        type(AD_D), allocatable, dimension(:)   :: u_bc, grad1u_bc, grad2u_bc, grad3u_bc, grad1u_t, grad2u_t, grad3u_t, normal_gradient
 
-
-        !
         ! Get 'u' value from face interior to extrapolate
-        !
         u_bc      = worker%get_field('u', 'value', 'face interior')
         grad1u_bc = worker%get_field('u', 'grad1', 'face interior')
         grad2u_bc = worker%get_field('u', 'grad2', 'face interior')
         grad3u_bc = worker%get_field('u', 'grad3', 'face interior')
 
 
-        !
         ! Initialize derivative arrays
-        !
 
         ! Normal gradient by taking advantage of the fact that only the normal component
         ! is felt in the flux anyways since it is dotted with the normal vector. So, just

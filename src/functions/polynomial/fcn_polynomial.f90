@@ -3,6 +3,8 @@ module fcn_polynomial
     use mod_constants,  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX
     use type_function,  only: function_t
     use type_point,     only: point_t
+    use type_point_ad,  only: point_ad_t
+    use DNAD_D
     implicit none
     private
 
@@ -76,11 +78,11 @@ contains
     impure elemental function compute(self,time,coord) result(val)
         class(polynomial_f),    intent(inout)   :: self
         real(rk),               intent(in)      :: time
-        type(point_t),          intent(in)      :: coord
+        type(point_ad_t),       intent(in)      :: coord
 
         real(rk)    :: a, b, c, d, e, f, g
-        real(rk)    :: x
-        real(rk)    :: val
+        type(AD_D)  :: x
+        type(AD_D)  :: val
 
         ! Get x
         x = coord%c1_

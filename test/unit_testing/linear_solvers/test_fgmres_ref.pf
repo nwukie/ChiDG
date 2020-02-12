@@ -30,15 +30,11 @@ subroutine test_fgmres_ref_solve()
     IO_DESTINATION  = 'file'
 
 
-    !
     ! Initialize ChiDG
-    !
     call chidg%start_up('core')
 
 
-    !
     ! Set ChiDG components
-    !
     call chidg%set('Solution Order', integer_input=1)
     call chidg%set('Time Integrator',  'steady'  )
     call chidg%set('Nonlinear Solver', 'newton'  )
@@ -46,29 +42,20 @@ subroutine test_fgmres_ref_solve()
     call chidg%set('Preconditioner',   'identity')
 
 
-    !
     ! Create grid file
-    !
     file_name = 'file.h5'
     call create_mesh_file('D1 NxNxN', file_name, equation_sets=[string_t('Scalar Advection')], &
                                                  nelem_xi=2, nelem_eta=1, nelem_zeta=1)
 
     
-    !
     ! Read grid
-    !
     call chidg%read_mesh(file_name)
 
 
-
-    !
     ! Initialize data containers
-    !
-    call A%init(chidg%data%mesh,mtype='full')
-    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
-    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
-
-
+    call A%init(chidg%data%mesh,storage_config='full',dof_type='primal')
+    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,'primal')
+    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime,'primal')
 
 
 
@@ -107,15 +94,11 @@ subroutine test_fgmres_ref_solve()
     b%dom(1)%vecs(2)%vec = ONE
 
 
-    !
     ! Finalize ChiDG initialization
-    !
     call chidg%init('algorithms')
 
 
-    !
     ! Solve matrix system. Ax=b. TESTING
-    !
     associate ( M => chidg%preconditioner )
     linear_solver%report = .false.  
     linear_solver%tol    = 1.e-13_rk
@@ -125,7 +108,6 @@ subroutine test_fgmres_ref_solve()
 
 
     ! Expecting solution
-    !
     !     [-1]
     ! x = [ 1]
     !
@@ -133,17 +115,11 @@ subroutine test_fgmres_ref_solve()
     @assertEqual(ONE,x%dom(1)%vecs(2)%vec,tol)
 
 
-
-    !
     ! Close ChiDG interface
-    !
     call chidg%shut_down('core')
 
 
-
-    !
     ! Clean up
-    !
     call delete_file(file_name)
 
 

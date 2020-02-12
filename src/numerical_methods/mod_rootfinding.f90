@@ -2,7 +2,9 @@ module mod_rootfinding
     use mod_kinds,      only: rk, ik
     use mod_constants,  only: ZERO, ONE, TWO, RKTOL
     use type_point,     only: point_t
+    use type_point_ad,  only: point_ad_t
     use type_function,  only: function_t
+    use DNAD_D
     implicit none
 
 
@@ -33,9 +35,20 @@ contains
         real(rk),           intent(in)              :: xupper
         real(rk),           intent(inout), optional :: tol_in
 
-        logical         :: not_zero
-        real(rk)        :: fa, fb, fc, time, tol, xout
-        type(point_t)   :: a, b, c
+        logical             :: not_zero
+        real(rk)            :: time, tol, xout
+        type(point_ad_t)    :: a, b, c
+        type(AD_D)          :: x_init, y_init, z_init
+        type(AD_D)          :: fa, fb, fc, sign_a, sign_c
+
+
+        ! Initialize with zero derivatives
+        x_init = AD_D(0)
+        y_init = AD_D(0)
+        z_init = AD_D(0)
+        x_init = ZERO
+        y_init = ZERO
+        z_init = ZERO
 
         call a%set(ZERO, ZERO, ZERO)
         call b%set(ZERO, ZERO, ZERO)
@@ -43,9 +56,7 @@ contains
         time = ZERO
 
 
-        !
         ! Set default tolerance
-        !
         if ( present(tol_in) ) then
             tol = tol_in
         else
@@ -53,9 +64,7 @@ contains
         end if
 
 
-        !
         ! Initialize bounds
-        !
         a%c1_ = xlower    ! lower bound - 'a'
         b%c1_ = xupper    ! upper bound - 'b'
         fa = fcn%compute(time,a) ! function value at 'a'
@@ -78,7 +87,9 @@ contains
             not_zero = ( fc > tol ) .or. ((b%c1_-a%c1_)/TWO > tol)
 
             ! Update bounds
-            if ( int(sign(ONE,fc)) == int(sign(ONE,fa)) ) then
+            sign_c = sign(ONE,fc)
+            sign_a = sign(ONE,fa)
+            if ( int(sign_c%x_ad_) == int(sign_a%x_ad_) ) then
                 a = c
                 fa = fcn%compute(time,a)
             else
@@ -89,7 +100,7 @@ contains
         end do
 
         ! Save root
-        xout = c%c1_
+        xout = c%c1_%x_ad_
 
     end function bisect
     !*************************************************************************************

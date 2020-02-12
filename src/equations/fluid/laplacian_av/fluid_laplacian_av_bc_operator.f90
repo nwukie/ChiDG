@@ -94,9 +94,7 @@ contains
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:) ::    &
             grad1, grad2, grad3, pgrad1, pgrad2, pgrad3, av, &
-            flux_1, flux_2, flux_3, integrand
-
-        real(rk),   allocatable, dimension(:)   ::  r
+            flux_1, flux_2, flux_3, integrand, r
 
 
         

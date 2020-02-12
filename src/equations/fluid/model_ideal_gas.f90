@@ -34,6 +34,7 @@ module model_ideal_gas
 
 
 
+    real(rk)    :: k_freestream
 
 
 contains

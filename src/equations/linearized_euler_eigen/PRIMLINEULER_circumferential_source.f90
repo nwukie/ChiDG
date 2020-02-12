@@ -81,9 +81,7 @@ contains
 
         type(AD_D), allocatable, dimension(:)   ::  &
             rho_r, u_r, v_r, w_r, p_r,              &
-            source
-
-        real(rk),   allocatable, dimension(:)   :: r
+            source, r
 
         print*, 'Computing C-source'
 

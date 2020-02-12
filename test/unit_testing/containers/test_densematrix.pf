@@ -8,19 +8,20 @@
 subroutine test_densematrix__init() 
     use pfunit_mod
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: TWO
+    use mod_constants,  only: TWO, dQ_DIFF
     use type_densematrix
     
     implicit none
     type(densematrix_t)  :: blk
     integer(ik)          :: nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l, &
-                            nentries, parent_proc, itime
+                            nentries, parent_proc, itime, nnodes_r
     
     !    
     ! Test initialization procedure
     !
     nterms  = 8
     nfields = 10
+    nnodes_r = 8
     nentries    = (nterms*nfields)**TWO
     dparent_g   = 1
     dparent_l   = 2
@@ -32,7 +33,7 @@ subroutine test_densematrix__init()
     !
     ! Call initialization procedure. THIS IS BEING TESTED.
     !
-    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
+    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime,nnodes_r,dQ_DIFF)
     
     @assertEqual(nterms*nfields,blk%idim())
     @assertEqual(nterms*nfields,blk%jdim())
@@ -60,13 +61,13 @@ end subroutine test_densematrix__init
 subroutine test_densematrix__reinit() 
     use pfunit_mod
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: TWO
+    use mod_constants,  only: TWO, dQ_DIFF
     use type_densematrix
     
     implicit none
     type(densematrix_t)  :: blk
     integer(ik)          :: nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l, &
-                            nentries, parent_proc, itime
+                            nentries, parent_proc, itime, nnodes_r
 
 
 
@@ -75,6 +76,7 @@ subroutine test_densematrix__reinit()
     !
     nterms  = 8
     nfields = 2
+    nnodes_r = 8
     nentries    = (nterms*nfields)**TWO
     dparent_g   = 1
     dparent_l   = 2
@@ -83,7 +85,7 @@ subroutine test_densematrix__reinit()
     parent_proc = 3
     itime       = 1
     
-    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
+    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime,nnodes_r,dQ_DIFF)
 
 
 
@@ -93,6 +95,7 @@ subroutine test_densematrix__reinit()
     !
     nterms  = 1
     nfields = 3
+    nnodes_r= 8
     nentries = (nterms*nfields)**TWO
     dparent_g   = 2
     dparent_l   = 3
@@ -101,7 +104,7 @@ subroutine test_densematrix__reinit()
     parent_proc = 2
     itime = 2
     
-    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
+    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime,nnodes_r,dQ_DIFF)
     
     @assertEqual(nterms*nfields,blk%idim())
     @assertEqual(nterms*nfields,blk%jdim())
@@ -134,13 +137,13 @@ end subroutine test_densematrix__reinit
 subroutine test_densematrix__resize()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: TWO
+    use mod_constants,  only: TWO, dQ_DIFF
     use type_densematrix
     
     implicit none
     type(densematrix_t) :: blk
     integer(ik)         :: nterms,nfields,idim,jdim,dparent_g,dparent_l,eparent_g,  &
-                           eparent_l,parent_proc,nentries,itime
+                           eparent_l,parent_proc,nentries,itime, nnodes_r
     
     
     !
@@ -148,13 +151,14 @@ subroutine test_densematrix__resize()
     !
     nterms  = 8
     nfields = 2
+    nnodes_r = 8
     dparent_g   = 2
     dparent_l   = 3
     eparent_g   = 66
     eparent_l   = 65
     parent_proc = 2
     itime = 1
-    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
+    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime,nnodes_r,dQ_DIFF)
     
     !
     ! Test resize procedure
@@ -196,7 +200,7 @@ end subroutine test_densematrix__resize
 subroutine test_densematrix__restrict()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: TWO
+    use mod_constants,  only: TWO, dQ_DIFF
     use type_densematrix
     implicit none
 
@@ -204,7 +208,7 @@ subroutine test_densematrix__restrict()
     type(densematrix_t) :: dmatrix, restricted
     real(rk)            :: tol
     integer(ik)         :: nterms,nfields,idim,jdim,dparent_g,dparent_l,eparent_g,  &
-                           eparent_l,parent_proc,nentries,itime
+                           eparent_l,parent_proc,nentries,itime, nnodes_r
 
     tol = 1.e-6_rk
     
@@ -213,13 +217,14 @@ subroutine test_densematrix__restrict()
     !
     nterms      = 8
     nfields     = 2
+    nnodes_r    = 8
     dparent_g   = 2
     dparent_l   = 3
     eparent_g   = 66
     eparent_l   = 65
     parent_proc = 2
     itime = 1
-    call dmatrix%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime)
+    call dmatrix%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,itime,nnodes_r,dQ_DIFF)
 
 
     !

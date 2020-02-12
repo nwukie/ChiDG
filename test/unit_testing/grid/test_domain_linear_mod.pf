@@ -54,7 +54,7 @@ contains
         integer(ik)                 :: ftype, ineighbor, mapping, ielem,    &
                                        ipt_xi, ipt_eta, ipt_zeta, ipt,      &
                                        nfields, nterms_s, idomain, ntime, nelements_g, &
-                                       dof_start, dof_local_start
+                                       dof_start, dof_local_start, xdof_start, xdof_local_start
         real(rk), dimension(npt)    :: x,y,z
 
         !
@@ -98,8 +98,10 @@ contains
         nelements_g     = 27
         dof_start       = 1
         dof_local_start = 1
+        xdof_start       = 1
+        xdof_local_start = 1
         call this%domain%init_geom(idomain,nelements_g,nodes,connectivity,'Cartesian')
-        call this%domain%init_sol('Quadrature',1,nterms_s,nfields,ntime,dof_start,dof_local_start)
+        call this%domain%init_sol('Quadrature',1,nterms_s,nfields,ntime,dof_start,dof_local_start,xdof_start,xdof_local_start)
         call this%domain%init_comm_local()
 
     end subroutine setUp

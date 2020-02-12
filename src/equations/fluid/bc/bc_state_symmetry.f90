@@ -45,22 +45,9 @@ contains
     subroutine init(self)
         class(symmetry_t),   intent(inout) :: self
         
-
-        !
         ! Set operator name
-        !
         call self%set_name("Symmetry")
         call self%set_family("Symmetry")
-
-
-!        !
-!        ! Set operator equations
-!        !
-!        call self%set_equation("Density"   )
-!        call self%set_equation("Momentum-1")
-!        call self%set_equation("Momentum-2")
-!        call self%set_equation("Momentum-3")
-!        call self%set_equation("Energy"    )
 
 
     end subroutine init
@@ -78,7 +65,6 @@ contains
     !!  @date   9/12/2016
     !!
     !!
-    !!
     !----------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(symmetry_t),      intent(inout)   :: self
@@ -93,17 +79,12 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            normal_momentum, normal_grad
-
-        real(rk), allocatable, dimension(:) :: &
-            unorm_1, unorm_2, unorm_3, r
+            normal_momentum, normal_grad, r, unorm_1, unorm_2, unorm_3
 
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
 
 
-        !
         ! Interpolate interior solution to quadrature nodes
-        !
         density_m = worker%get_field('Density'   , 'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
@@ -132,14 +113,11 @@ contains
         grad3_energy_m  = worker%get_field('Energy'    , 'grad3', 'face interior')
 
 
-        !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
         end if
-
 
 
         ! Initialize arrays
@@ -150,9 +128,7 @@ contains
         energy_bc  = energy_m
 
 
-        !
         ! Get unit normal vector
-        !
         unorm_1 = worker%unit_normal_ale(1)
         unorm_2 = worker%unit_normal_ale(2)
         unorm_3 = worker%unit_normal_ale(3)
@@ -176,34 +152,25 @@ contains
         !
 
 
-        !
         ! Dot relative momentum with normal vector
-        !
         grid_velocity = worker%get_grid_velocity_face('face interior')
         normal_momentum = (mom1_m-grid_velocity(:,1)*density_m)*unorm_1 + &
                           (mom2_m-grid_velocity(:,2)*density_m)*unorm_2 + &
                           (mom3_m-grid_velocity(:,3)*density_m)*unorm_3
 
-
-        !
         ! Subtract relative normal momentum from relative momentum
-        !
         mom1_bc = mom1_m  -  normal_momentum*unorm_1
         mom2_bc = mom2_m  -  normal_momentum*unorm_2
         mom3_bc = mom3_m  -  normal_momentum*unorm_3
 
 
-        !
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
-        !
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
 
 
-        !
         ! Store boundary condition state
-        !
         call worker%store_bc_state('Density'   , density_bc, 'value')
         call worker%store_bc_state('Momentum-1', mom1_bc,    'value')
         call worker%store_bc_state('Momentum-2', mom2_bc,    'value')
@@ -211,8 +178,6 @@ contains
         call worker%store_bc_state('Energy'    , energy_bc,  'value')
 
 
-        
-        
         
         !call worker%store_bc_state('Density'   , ZERO*grad1_density_m, 'grad1')
         !call worker%store_bc_state('Density'   , ZERO*grad2_density_m, 'grad2')

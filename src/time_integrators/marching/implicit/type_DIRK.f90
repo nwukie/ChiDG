@@ -30,9 +30,9 @@ module type_DIRK
 #include<messenger.h>
     use messenger,                      only: write_line
     use mod_kinds,                      only: rk, ik
-    use mod_constants,                  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, NO_ID
+    use mod_constants,                  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, &
+                                              NO_ID, dQ_DIFF, NO_DIFF
     use mod_spatial,                    only: update_space
-!    use mod_update_grid,                only: update_grid
     use mod_io,                         only: verbosity, backend
 
     use type_time_integrator_marching,  only: time_integrator_marching_t
@@ -222,7 +222,7 @@ contains
         ! Initialize update vector array
         do istage = 1, nstage
             dq(istage) = chidg_vector(trim(backend))
-            call dq(istage)%init(data%mesh, data%time_manager%ntime)
+            call dq(istage)%init(data%mesh, data%time_manager%ntime,'primal')
             call dq(istage)%set_ntime(data%time_manager%ntime)
             call dq(istage)%clear()
         end do
@@ -241,7 +241,7 @@ contains
                         select type(an => self%system)
                             type is (assemble_DIRK_t)
                                 an%q_n_stage = chidg_vector(trim(backend))
-                                call an%q_n_stage%init(data%mesh,data%time_manager%ntime)
+                                call an%q_n_stage%init(data%mesh,data%time_manager%ntime,'primal')
                                 call an%q_n_stage%set_ntime(data%time_manager%ntime)
                                 call an%q_n_stage%clear()
                         end select
@@ -313,7 +313,7 @@ contains
     subroutine assemble(self,data,differentiate,timing)
         class(assemble_DIRK_t), intent(inout)               :: self
         type(chidg_data_t),     intent(inout)               :: data
-        logical,                intent(in)                  :: differentiate
+        integer(ik),            intent(in)                  :: differentiate
         real(rk),               intent(inout),  optional    :: timing
 
         type(chidg_vector_t)        :: delta_q 
@@ -329,7 +329,7 @@ contains
 
         ! Clear data containers
         call rhs%clear()
-        if (differentiate) call lhs%clear()
+        if (differentiate == dQ_DIFF) call lhs%clear()
         
         ! Get spatial update
         call update_space(data,differentiate,timing)
@@ -348,7 +348,7 @@ contains
                     do ifield = 1,data%eqnset(elem_info%eqn_ID)%prop%nprimary_fields()
 
                         ! Add time derivative to left-hand side
-                        if (differentiate) then
+                        if (differentiate == dQ_DIFF) then
                             mat = data%mesh%domain(idom)%elems(ielem)%mass / (alpha*dt)
                             call data%sdata%lhs%scale_diagonal(mat,elem_info,ifield,itime)
                         end if
@@ -364,7 +364,7 @@ contains
 
         ! Reassemble
         call data%sdata%rhs%assemble()
-        if (differentiate) call data%sdata%lhs%assemble()
+        if (differentiate == dQ_DIFF) call data%sdata%lhs%assemble()
 
         end associate
 
@@ -399,7 +399,7 @@ contains
         integer(ik),                        intent(in)      :: niter
         real(rk),                           intent(in)      :: residual_ratio
 
-        logical :: update
+        integer(ik) :: update
 
         ! Update lhs if:
         !   1: If matrix(lhs/A) hasn't been updated before
@@ -410,13 +410,17 @@ contains
             (niter > 6)                 .or. &
             (residual_ratio > 10._rk)   .or. &
             (self%force_update_lhs) ) then
-            update = .true.
+            !update = .true.
+            update = dQ_DIFF
+            self%lhs_updated = .true.
         else
-            update = .false.
+            !update = .false.
+            update = NO_DIFF
+            self%lhs_updated = .false.
         end if
 
         ! Store action
-        self%lhs_updated = update
+        !self%lhs_updated = update
 
         ! Turn off forced update
         !self%force_update_lhs = .true.

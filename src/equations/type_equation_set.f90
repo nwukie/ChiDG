@@ -6,7 +6,8 @@ module type_equation_set
                                               BOUNDARY_DIFFUSIVE_FLUX, &
                                               VOLUME_ADVECTIVE_FLUX, VOLUME_DIFFUSIVE_FLUX, &
                                               BC_FLUX, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX,    &
-                                              ZETA_MIN, ZETA_MAX, BOUNDARY
+                                              ZETA_MIN, ZETA_MAX, BOUNDARY,                 &
+                                              dD_DIFF, dQ_DIFF, dX_DIFF, dBC_DIFF, NO_DIFF
     use mod_operators,                  only: operator_factory
     use mod_models,                     only: model_factory
     use mod_DNAD_tools,                 only: element_compute_seed, face_compute_seed
@@ -563,7 +564,7 @@ contains
     subroutine compute_boundary_advective_operators(self,worker,differentiate,diff_pattern)
         class(equation_set_t),   intent(inout)          :: self
         type(chidg_worker_t),    intent(inout)          :: worker
-        logical,                 intent(in)             :: differentiate
+        integer(ik),             intent(in)             :: differentiate
         integer(ik),             intent(in), optional   :: diff_pattern(:)
 
         integer(ik),    allocatable :: compute_pattern(:)
@@ -577,13 +578,9 @@ contains
                    iface => worker%iface,                   &
                    prop  => self%prop )
 
-
-
-        !
         ! Only call 'Boundary Advective' operators for face type:
         !   - INTERIOR
         !   - CHIMERA
-        !
         interior_face = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
         chimera_face  = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
         compute       = (interior_face .or. chimera_face)
@@ -591,12 +588,14 @@ contains
 
         if (compute) then
 
-            !
             ! Determine pattern to compute functions. Depends on if we are differentiating 
             ! or not. These will be used to set idiff, indicating the differentiation
             ! direction.
-            !
-            if (differentiate) then
+            !if (differentiate) then
+            if (differentiate == dQ_DIFF .or. &
+                differentiate == dX_DIFF .or. &
+                differentiate == dBC_DIFF .or. &
+                differentiate == dD_DIFF) then
                 ! compute function, wrt internal, external(in direction iface) states
                 compute_pattern = [DIAG,iface]
                 if (present(diff_pattern)) compute_pattern = diff_pattern
@@ -623,6 +622,7 @@ contains
                         worker%function_info%type   = BOUNDARY_ADVECTIVE_FLUX
                         worker%function_info%ifcn   = ifcn
                         worker%function_info%idiff  = idiff
+                        worker%function_info%dtype  = differentiate
 
                         compute_function       = worker%solverdata%function_status%compute_function(   worker%element_info, worker%function_info, worker%iface)
                         differentiate_function = worker%solverdata%function_status%linearize_function( worker%element_info, worker%function_info, worker%iface)
@@ -670,7 +670,7 @@ contains
     subroutine compute_boundary_diffusive_operators(self,worker,differentiate,diff_pattern)
         class(equation_set_t),  intent(inout)           :: self
         type(chidg_worker_t),   intent(inout)           :: worker
-        logical,                intent(in)              :: differentiate
+        integer(ik),            intent(in)              :: differentiate
         integer(ik),            intent(in), optional    :: diff_pattern(:)
 
         integer(ik),    allocatable :: compute_pattern(:)
@@ -711,7 +711,11 @@ contains
             ! Determine pattern to compute functions. Depends on if we are differentiating 
             ! or not. These will be used to set idiff, indicating the differentiation
             ! direction.
-            if (differentiate) then
+            !if (differentiate) then
+            if (differentiate == dQ_DIFF .or. &
+                differentiate == dX_DIFF .or. &
+                differentiate == dBC_DIFF .or. &
+                differentiate == dD_DIFF) then
                 ! compute function, wrt internal, external(in direction iface) states
                 compute_pattern = [DIAG,iface]
                 if (present(diff_pattern)) compute_pattern = diff_pattern
@@ -736,6 +740,7 @@ contains
                         worker%function_info%type   = BOUNDARY_DIFFUSIVE_FLUX
                         worker%function_info%ifcn   = ifcn
                         worker%function_info%idiff  = idiff
+                        worker%function_info%dtype  = differentiate
 
                         compute_function     = worker%solverdata%function_status%compute_function(   worker%element_info, worker%function_info, worker%iface )
                         linearize_function   = worker%solverdata%function_status%linearize_function( worker%element_info, worker%function_info, worker%iface )
@@ -786,7 +791,7 @@ contains
     subroutine compute_volume_advective_operators(self,worker,differentiate,diff_pattern)
         class(equation_set_t),      intent(inout)           :: self
         type(chidg_worker_t),       intent(inout)           :: worker
-        logical,                    intent(in)              :: differentiate
+        integer(ik),                intent(in)              :: differentiate
         integer(ik),                intent(in), optional    :: diff_pattern(:)
 
         integer(ik),    allocatable :: compute_pattern(:)
@@ -803,7 +808,11 @@ contains
         ! Determine pattern to compute functions. Depends on if we are differentiating 
         ! or not. These will be used to set idiff, indicating the differentiation
         ! direction.
-        if (differentiate) then
+        !if (differentiate) then
+        if (differentiate == dQ_DIFF .or. &
+            differentiate == dX_DIFF .or. &
+            differentiate == dBC_DIFF .or. &
+            differentiate == dD_DIFF) then
             ! compute function, wrt internal state
             compute_pattern = [DIAG]
         else
@@ -829,6 +838,7 @@ contains
                     worker%function_info%idiff   = idiff
                     worker%function_info%idepend = icompute
                     worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,icompute,idiff,worker%itime)
+                    worker%function_info%dtype   = differentiate
 
                     call self%volume_advective_operator(ifcn)%op%compute(worker,prop)
 
@@ -859,7 +869,7 @@ contains
     subroutine compute_volume_diffusive_operators(self,worker,differentiate,diff_pattern)
         class(equation_set_t),      intent(inout)           :: self
         type(chidg_worker_t),       intent(inout)           :: worker
-        logical,                    intent(in)              :: differentiate
+        integer(ik),                intent(in)              :: differentiate
         integer(ik),                intent(in), optional    :: diff_pattern(:)
 
         integer(ik),    allocatable :: compute_pattern(:)
@@ -877,7 +887,11 @@ contains
         ! Determine pattern to compute functions. Depends on if we are differentiating 
         ! or not. These will be used to set idiff, indicating the differentiation
         ! direction.
-        if (differentiate) then
+        !if (differentiate) then
+        if (differentiate == dQ_DIFF .or. &
+            differentiate == dX_DIFF .or. &
+            differentiate == dBC_DIFF .or. &
+            differentiate == dD_DIFF) then
             ! compute function, wrt (all exterior)/interior states
             compute_pattern = [1,2,3,4,5,6,DIAG]
             if (present(diff_pattern)) compute_pattern = diff_pattern
@@ -929,6 +943,7 @@ contains
                             worker%function_info%idiff   = idiff
                             worker%function_info%idepend = icompute
                             worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,icompute,idiff,worker%itime)
+                            worker%function_info%dtype   = differentiate
         
                             call self%volume_diffusive_operator(ifcn)%op%compute(worker,prop)
         
@@ -960,7 +975,7 @@ contains
         class(equation_set_t),      intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
-        logical,                    intent(in)      :: differentiate
+        integer(ik),                intent(in)      :: differentiate
 
         integer(ik),    allocatable :: compute_pattern(:)
         integer(ik)                 :: nfcn, ifcn, icompute, ncompute, group_ID, patch_ID, &
@@ -985,7 +1000,11 @@ contains
             ! Determine pattern to compute functions. Depends on if we are differentiating 
             ! or not. These will be used to set idiff, indicating the differentiation
             ! direction.
-            if (differentiate) then
+            !if (differentiate) then
+            if (differentiate == dQ_DIFF .or. &
+                differentiate == dX_DIFF .or. &
+                differentiate == dBC_DIFF .or. &
+                differentiate == dD_DIFF) then
                 ! compute function, wrt (all exterior)/interior states
                 !compute_pattern = [DIAG]
                 compute_pattern = [iface]
@@ -1008,7 +1027,11 @@ contains
                 face_ID  = mesh%domain(idom)%faces(ielem,iface)%face_ID
 
                 ! Get range of time instances we need to compute coupling for
-                if (differentiate) then
+                !if (differentiate) then
+                if (differentiate == dQ_DIFF .or. &
+                    differentiate == dX_DIFF .or. &
+                    differentiate == dBC_DIFF .or. &
+                    differentiate == dD_DIFF) then
                     if (mesh%bc_patch_group(group_ID)%patch(patch_ID)%temporal_coupling == 'Global') then
                         itime_start = 1
                         itime_end = mesh%domain(idom)%ntime
@@ -1030,6 +1053,7 @@ contains
                             worker%function_info%type   = BC_FLUX
                             worker%function_info%ifcn   = ifcn
                             worker%function_info%idiff  = idiff
+                            worker%function_info%dtype  = differentiate
 
                             ! Compute boundary flux once for each donor. 
                             !   - For interior faces ndepend == 1. 
@@ -1037,7 +1061,6 @@ contains
                             !   - For BC faces ndepend is potentially > 1.
                             do icompute = 1,ncompute
                                 ! Get coupled element to linearize against.
-                                !worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff,worker%itime)
                                 worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff,itime_couple)
                                 worker%function_info%idepend = icompute
 

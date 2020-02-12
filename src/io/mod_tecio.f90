@@ -26,7 +26,7 @@
 module mod_tecio
 #include <messenger.h>
     use mod_kinds,              only: rk,ik,rdouble,TEC
-    use mod_constants,          only: ONE, HALF, TWO, OUTPUT_RES, NO_ID, CYLINDRICAL, NO_PROC
+    use mod_constants,          only: ONE, HALF, TWO, OUTPUT_RES, NO_ID, CYLINDRICAL, NO_PROC, NO_DIFF
     use mod_chidg_mpi,          only: GLOBAL_MASTER, IRANK
     use mpi_f08,                only: MPI_AllReduce, MPI_INTEGER4, MPI_LOGICAL, MPI_MAX, MPI_CHARACTER, &
                                       mpi_comm, MPI_LOR, MPI_Send, MPI_Recv, MPI_STATUS_IGNORE
@@ -192,17 +192,10 @@ contains
 
         call write_line("   TecIO: Writing domains...",io_proc=GLOBAL_MASTER)
 
-
-        !
         ! Initialize Chidg Worker references
-        !
         call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, data%time_manager, cache)
 
-
-
-        !
         ! Loop time/domains/elements/fields
-        !
         do itime = 1,data%sdata%q_out%get_ntime()
             worker%itime = itime
 
@@ -258,7 +251,7 @@ contains
                     ! Update the element cache
                     call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'element',   &
                                                                                        face          = NO_ID,       &
-                                                                                       differentiate = .false.,     &
+                                                                                       differentiate = NO_DIFF,     &
                                                                                        lift          = .false.)
 
                     ! Retrieve name of current field, retrieve interpolation, write interpolation to file
@@ -270,7 +263,6 @@ contains
                     end do ! ifield
 
                 end do ! ielem
-
 
 
                 !
@@ -470,7 +462,7 @@ contains
                             ! Update the element cache
                             call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'interior faces',    &
                                                                                                face          = iface,               &
-                                                                                               differentiate = .false.,             &
+                                                                                               differentiate = NO_DIFF,             &
                                                                                                lift          = .false.)
 
                             ! Retrieve name of current field, retrieve interpolation, write interpolation to file

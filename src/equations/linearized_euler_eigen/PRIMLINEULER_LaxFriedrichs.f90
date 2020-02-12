@@ -86,11 +86,8 @@ contains
             v_m,     v_p,                           &
             w_m,     w_p,                           &
             p_m,     p_p,                           &
-            dissipation,  wave
-
-
-        real(rk),   allocatable, dimension(:)   ::  &
-            un, wave_c, unorm_1, unorm_2, unorm_3
+            dissipation,  wave, unorm_1, unorm_2, unorm_3, &
+            un, wave_c
 
 
         !

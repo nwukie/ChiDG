@@ -105,6 +105,7 @@ contains
 
         real(rk)    :: const, epsilon_vorticity, eps
 
+        
 
         !
         ! Interpolate solution to quadrature nodes

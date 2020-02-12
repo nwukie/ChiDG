@@ -29,7 +29,8 @@ submodule (type_chidg) type_chidg_driver
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
-    use eqn_wall_distance,      only: set_p_poisson_parameter
+    use mod_gridspace,          only: linspace
+    use eqn_wall_distance,      only: set_p_poisson_parameter, p_max, p_min, p_increment, p_sub_rtol, p_sub_nmax
     use mod_function,           only: create_function
     use type_function,          only: function_t
     use type_bc_state,          only: bc_state_t
@@ -40,8 +41,6 @@ submodule (type_chidg) type_chidg_driver
     use type_file_properties,   only: file_properties_t
     use precon_RASILU0,         only: precon_RASILU0_t
     implicit none
-
-
 
 
     !!-----------------------------------------------
@@ -71,21 +70,29 @@ contains
     !!  @date   6/25/2017
     !!
     !----------------------------------------------------------------------------------
-    module subroutine auxiliary_driver(chidg,chidg_aux,case,grid_file,aux_file)
+    module subroutine auxiliary_driver(chidg,chidg_aux,case,solver_type,grid_file,aux_file)
         type(chidg_t),  intent(inout)   :: chidg
         type(chidg_t),  intent(inout)   :: chidg_aux
         character(*),   intent(in)      :: case
+        character(*),   intent(in)      :: solver_type
         character(*),   intent(in)      :: grid_file
         character(*),   intent(in)      :: aux_file
 
         select case(trim(case))
             case('Wall Distance')
-                call wall_distance_driver(chidg         = chidg,        &
-                                          wall_distance = chidg_aux,    &
-                                          grid_file     = grid_file,    &
-                                          aux_file      = aux_file)
 
-        end select
+                select case(trim(solver_type))
+                    case ('primal problem', 'primal solver', 'primal')
+                        call wall_distance_primal_driver(chidg         = chidg,        &
+                                                         wall_distance = chidg_aux,    &
+                                                         grid_file     = grid_file,    &
+                                                         aux_file      = aux_file)
+
+                    case default
+                       call chidg_signal_one(FATAL,"chidg_driver_t%auxiliary_driver: solver type found.", trim(solver_type)) 
+                end select !Solver type
+
+        end select !Problem type
 
     end subroutine auxiliary_driver
     !**********************************************************************************
@@ -112,7 +119,7 @@ contains
     !!  @param[in]  order           Polynomial order, the field will be computed with.
     !!
     !-------------------------------------------------------------------------------------
-    subroutine wall_distance_driver(chidg,wall_distance,grid_file,aux_file)
+    subroutine wall_distance_primal_driver(chidg,wall_distance,grid_file,aux_file)
         type(chidg_t),  intent(inout)   :: chidg
         type(chidg_t),  intent(inout)   :: wall_distance
         character(*),   intent(in)      :: grid_file
@@ -124,18 +131,16 @@ contains
         type(dict_t)                    :: noptions, loptions
         class(bc_state_t),  allocatable :: dirichlet_zero, neumann_zero
         class(function_t),  allocatable :: constant
-        integer(ik)                     :: iorder, p, aux_field_index, wd_nterms_s, ierr, iproc
+        integer(ik)                     :: iorder, p_index, aux_field_index, wd_nterms_s, ierr, iproc, np_values
+        real(rk), allocatable           :: p_values(:)
+        real(rk)                        :: p
         type(file_properties_t)         :: wd_props
         logical                         :: wd_file_exists, have_wd_field
+        type(functional_group_t)        :: functionals
 
 
-        ! chidg%init('mpi') should have already been called by another ChiDG instance.
-        ! chidg%init('io')  should have already been called by another ChiDG instance.
         ! Make sure this ChiDG environment is initialized.
         call wall_distance%start_up('core')
-
-
-
 
         ! Initialize solver dictionaries
         call initialize_input_dictionaries(noptions,loptions)
@@ -143,17 +148,14 @@ contains
         call noptions%set('cfl0',1.0_rk)
         call noptions%set('nsteps',50)
         call noptions%set('search','Backtrack')
-        call noptions%set('ptc',.true.)
+        call noptions%set('ptc',.false.)
         call noptions%set('smooth',.false.)
 
         call loptions%set('tol',1.e-10_rk)  
         call loptions%set('inner_fgmres',.true.)
 
 
-
-        !
         ! Set ChiDG components
-        !
         call wall_distance%set('Time Integrator' , algorithm='Steady')
         call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
         call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
@@ -174,16 +176,13 @@ contains
 
 
         ! Set up boudary condition states to impose.
-        !
-        ! u = 0 on walls
-        !
-        ! dudn = 0 else where
+        !   u    = 0      on walls
+        !   dudn = 0      else where
         call create_bc('Scalar Value',      dirichlet_zero)
         call create_bc('Scalar Derivative', neumann_zero  )
 
         call dirichlet_zero%set_fcn_option('Value', 'val', ZERO)
         call neumann_zero%set_fcn_option('Normal Gradient', 'val', ZERO)
-
 
 
         ! Read grid, boundary conditions.
@@ -193,12 +192,14 @@ contains
         !
         ! Solid walls get dirichlet zero bc.
         ! All other families get neumann zero bc.
-        call wall_distance%read_mesh(grid_file, equation_set = 'Wall Distance : p-Poisson',  &
+        call wall_distance%read_mesh(grid_file, storage      = 'primal storage',             &
+                                                equation_set = 'Wall Distance : p-Poisson',  &
                                                 bc_wall      = dirichlet_zero,               &
                                                 bc_inlet     = neumann_zero,                 &
                                                 bc_outlet    = neumann_zero,                 &
                                                 bc_symmetry  = neumann_zero,                 &
-                                                bc_farfield  = neumann_zero )
+                                                bc_farfield  = neumann_zero,                 &
+                                                functionals  = functionals)
 
 
         ! Initialize wall_distance with chidg order in case we are going to read in a solution.
@@ -251,34 +252,47 @@ contains
             !
             !   p-Poisson Parameter:
             !       p = 2,4,6
-            !
+
+            np_values = int(((p_max-p_min)/p_increment) + 1.)
+            p_values = linspace(p_min,p_max, np_values)
+            if (size(p_values) /= np_values) call chidg_signal(FATAL,"wall_distance_driver: np_values does not equal the size of actual array of p-values.")
+
+            ! (Re)Initialize domain storage, communication, matrix/vector storage
             iorder = 2
-            call noptions%set('tol',1.e-3_rk)   
-            call noptions%set('rtol',1.e-16_rk)   
-            call noptions%set('ptc',.true.)    
-            call noptions%set('smooth',.false.)
-            call loptions%set('tol',1.e-5_rk)   ! Set linear solver options
-            call loptions%set('rtol',1.e-16_rk) ! Set linear solver options
-            call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
-            call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
-            do p = 2,6,2
+            call wall_distance%set('Solution Order', integer_input=iorder)
+            call wall_distance%init('all')
+
+            do p_index = 1,np_values
+
+                ! Update p-Poisson fidelity
+                p = p_values(p_index)
+                call set_p_poisson_parameter(p)
                 call write_line('Wall Distance Driver : Loop 1 : p = ', p)
                 
-                if (p==6) then
-                    !wall_distance%linear_solver%tol = 1.e-4_rk
-                    !wall_distance%nonlinear_solver%norders_reduction = 7
-                    !wall_distance%nonlinear_solver%norders_reduction = 30
+                if (p < p_max) then
+                    call noptions%set('tol',1.e-3_rk)   
+                    call noptions%set('rtol',p_sub_rtol)   
+                    call noptions%set('ptc',.false.)    
+                    call noptions%set('smooth',.false.)
+                    call noptions%set('nmax',p_sub_nmax)
+                    call loptions%set('tol',1.e-5_rk)   
+                    call loptions%set('rtol',1.e-16_rk) 
+                else
+                    call noptions%set('tol',1.e-4_rk)   
+                    call noptions%set('rtol',1.e-30_rk)   
+                    call noptions%set('ptc',.false.)    
+                    call noptions%set('smooth',.false.)
+                    call noptions%set('nmax',-1)
+                    call loptions%set('tol',1.e-5_rk)   
+                    call loptions%set('rtol',1.e-16_rk) 
                 end if
-                
-                ! Update p-Poisson fidelity
-                call set_p_poisson_parameter(real(p,rk))
 
-                ! (Re)Initialize domain storage, communication, matrix/vector storage
-                call wall_distance%set('Solution Order', integer_input=iorder)
-                call wall_distance%init('all')
+                call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
+                call wall_distance%set('Linear Solver'   , algorithm='fgmres', options=loptions)
+
 
                 ! Read solution if it exists.
-                if (p == 2) then
+                if (abs(p-TWO) < 1.e-6_rk) then
                     call create_function(constant,'constant')
                     call constant%set_option('val',0.001_rk)
                     !call create_function(constant,'radius')
@@ -312,14 +326,12 @@ contains
             !       p = 6
             !
 
-            !
             ! Update p-Poisson fidelity
-            !
-            p = 6
-            call set_p_poisson_parameter(real(p,rk))
+            p = p_max
+            call set_p_poisson_parameter(p)
             call noptions%set('tol',1.e-3_rk)   ! Set nonlinear solver options
             call noptions%set('rtol',1.e-16_rk) ! Set nonlinear solver options
-            call noptions%set('ptc',.true.)     ! Set nonlinear solver options
+            call noptions%set('ptc',.false.)     ! Set nonlinear solver options
             call noptions%set('smooth',.false.) ! Set nonlinear solver options
             call loptions%set('tol',1.e-7_rk)   ! Set linear solver options
             call loptions%set('rtol',1.e-16_rk) ! Set linear solver options
@@ -355,7 +367,7 @@ contains
         call chidg%read_auxiliary_field(aux_file,field='u',store_as='Wall Distance : p-Poisson')
 
 
-    end subroutine wall_distance_driver
+    end subroutine wall_distance_primal_driver
     !**************************************************************************************
 
 
